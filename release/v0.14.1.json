@@ -1,0 +1,52 @@
+{
+  "version": "0.14.1",
+  "commit": "89690a632bcc2542c465fb5d1d02e18b85de5762",
+  "tags": [
+    "v0.14.1",
+    "executor/v0.14.1"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.14.1",
+      "sum": "h1:CtfrestOxidmXXoBSVZTOd6qUwciwBw0uY8oUPCmi5w=",
+      "goModSum": "h1:hlsvaVuH2wsAoR8jzI1Rg/NeejQSFpAaN6zpIWsVbjI="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.14.1",
+      "sum": "h1:rYDmlyYpZjPjnNtAV8TEiMXHmfThsSUnz7Yr6Aigd/g=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "packages": {
+    "@synopackageland/sdk": "0.14.1",
+    "@synopackageland/app": "0.14.1",
+    "syno-pkg-land-app": "0.14.1",
+    "synopkgland_app": "0.14.1"
+  },
+  "executorDigests": {
+    "x86_64": "efe409287770f6b70e7f8465e8767eeb2413b9ab8775020cf4dffb1555d7bf1f",
+    "aarch64": "d68c9889ed2391e918b9c278679ea0a01cd04425528c11090700a3b6341fc543",
+    "armv7": "9149a05efb9f2d7d86a400707099b3d657382b1c0dbad6588be8c500e90445cc",
+    "lifecycle": {
+      "x86_64": "d65500c4f04713a32b45d360059281391acfa5e00ee24895fdd2de7b82735372",
+      "aarch64": "94f6cd119186ff482b8aea56541dd1f9d53c147566bc1efdca6f5a1c86198331",
+      "armv7": "cafc97c89f5645c14a8cf31d6d9f258394ed6f2d086478a7aebd04d57c274b4e"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-17",
+    "source": "Full release gate on builder.example containers at tagged source; no GitHub Actions",
+    "steps": [
+      "Go root/executor/conformance race/vet, Rust, Python 3.8/mypy and Node 18 passed",
+      "455 TypeScript tests against UI 0.11.4; typecheck/build/pack and consumer import passed",
+      "Three architectures and cold-cache executor/lifecycle digests equal 0.13.1",
+      "Versioned Go modules identify the annotated release tag commit",
+      "npmjs and npmmirror exact versions/latest and downloaded SDK/App tarballs equal gated archives"
+    ]
+  },
+  "npmIntegrity": {
+    "@synopackageland/sdk@0.14.1": "sha512-ZfK8z5vnu8LWyrJghDINEaCOGaNZhtfsIytU3gIPKHBItw0T68t8KKBJUCJoJ8pPZfNrAKq08tHrSB2TAJD6DA==",
+    "@synopackageland/app@0.14.1": "sha512-YORAvFwamtLnf4J2xWdqQx8gYCGtBckZ2qDDjoFuDb1dpQCFwfO+tDV+ZHN3VjsQecepg8O/yhpSL/wzU4tFpw=="
+  }
+}

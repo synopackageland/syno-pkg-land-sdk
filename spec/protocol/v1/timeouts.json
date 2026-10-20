@@ -1,0 +1,21 @@
+{
+  "$comment": "Timeouts on the call chain to the executor, in seconds unless the name says ms. Each layer waits margin_s longer than the layer it calls, so the inner answer arrives first; README.md, Timeouts.",
+  "margin_s": 10,
+  "executor": {
+    "op_s": 30,
+    "root_run_program_default_s": 20,
+    "root_run_program_max_s": 120,
+    "root_run_answer_s": 130,
+    "start_step_s": 60
+  },
+  "client": {
+    "op_s": 40,
+    "root_run_s": 140
+  },
+  "request": {
+    "default_s": 60
+  },
+  "browser": {
+    "margin_ms": 2000
+  }
+}

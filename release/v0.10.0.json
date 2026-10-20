@@ -1,0 +1,55 @@
+{
+  "version": "0.10.0",
+  "commit": "ed4e0c15fdf91e4058ea795ba0bfae4e24882ed9",
+  "tags": [
+    "v0.10.0",
+    "executor/v0.10.0"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.10.0",
+      "sum": "h1:YcKdeKZDRGqUuNuuGS1WIehCA9UgfB3cpHyP8eHYdds=",
+      "goModSum": "h1:hlsvaVuH2wsAoR8jzI1Rg/NeejQSFpAaN6zpIWsVbjI="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.10.0",
+      "sum": "h1:E0/MiFQxA+qqoFDn4sEq/aPcGmsR8QNpYLkjNg0qZYg=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "packages": {
+    "@synopackageland/sdk": "0.10.0",
+    "@synopackageland/app": "0.10.0",
+    "syno-pkg-land-app": "0.10.0",
+    "synopkgland_app": "0.10.0"
+  },
+  "executorDigests": {
+    "x86_64": "fb2df6e3421361c73a1cd720ec12198e968f0d2a58b18b53151c7781c7f4c1ef",
+    "aarch64": "0a0f6d013c0174f3ea54585182ddda14c94064f331189ac4315de813099efcdd",
+    "armv7": "3fbb5bc74a03a9767ac06a389a10ff07a353c4c56be6fda7b7555a6759992aba",
+    "lifecycle": {
+      "x86_64": "d65500c4f04713a32b45d360059281391acfa5e00ee24895fdd2de7b82735372",
+      "aarch64": "94f6cd119186ff482b8aea56541dd1f9d53c147566bc1efdca6f5a1c86198331",
+      "armv7": "cafc97c89f5645c14a8cf31d6d9f258394ed6f2d086478a7aebd04d57c274b4e"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-13",
+    "source": "digests from main before tagging",
+    "steps": [
+      "SYNOPKGLAND_DOCKER_SSH=builder.example scripts/gate.sh on macOS: exit 0, no warnings; executor-digests.sh twice, identical",
+      "scripts/executor-digests.sh 0.10.0 on Linux in golang:1.26.9-bookworm (public.ecr.aws mirror) gives the same digests",
+      "executor and lifecycle digests differ from 0.9.9: root programs, root jobs, the package stop step and the root state directory changed executor/",
+      "policy digest: an App policy that uses none of the new ops or fields keeps its digest",
+      "scripts/executor-digests.sh 0.10.0 on the executor@v0.10.0 module source from go mod download gives the same digests",
+      "a module requiring v0.10.0 builds with api, background, bridge and portal imported (empty module cache, GOPRIVATE only); proxy.golang.org answers 404 for the private repository, as for v0.9.9",
+      "go.mod sums equal 0.9.9",
+      "npm dist.integrity of @synopackageland/sdk and @synopackageland/app 0.10.0 equals the local tarballs"
+    ]
+  },
+  "npm": {
+    "@synopackageland/sdk@0.10.0": "sha512-oRwr3I4WNWCqknTPvDnlR7wjM/6pBX+UJ/GRc2U4l9+VUGrdgq0UH9gCjmGIZS9beE5y33tcxmj2ASweLUbJIg==",
+    "@synopackageland/app@0.10.0": "sha512-PGEhpNWciU9Edyu+xKWRnOPULrC9Xj8m+HX4SED3N73yQ/6dH+2w0KqPwER/A2oO/uEDsqC05zsh+yJNqhvxww=="
+  }
+}

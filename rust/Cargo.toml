@@ -1,0 +1,12 @@
+[workspace]
+resolver = "3"
+members = ["app"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+
+[profile.release]
+# Handler panics become an "internal" reply (api::Server); abort would end the CGI instead.
+panic = "unwind"

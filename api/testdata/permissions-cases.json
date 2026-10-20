@@ -1,0 +1,172 @@
+[
+  {
+    "name": "default",
+    "json": "{\"schema\": 1, \"default\": \"administrators\", \"methods\": {}}",
+    "valid": true
+  },
+  {
+    "name": "explicit exceptions",
+    "json": "{\"schema\": 1, \"default\": \"administrators\", \"methods\": {\"greeting.get\": \"authenticated\", \"health.ping\": \"public\", \"root.output\": \"administrators\"}}",
+    "valid": true
+  },
+  {
+    "name": "schema numeric equivalent",
+    "json": "{\"schema\":1.0,\"default\":\"administrators\",\"methods\":{}}",
+    "valid": true
+  },
+  {
+    "name": "empty",
+    "json": "",
+    "valid": false
+  },
+  {
+    "name": "non JSON",
+    "json": "schema: 1",
+    "valid": false
+  },
+  {
+    "name": "missing default",
+    "json": "{\"schema\": 1, \"methods\": {}}",
+    "valid": false
+  },
+  {
+    "name": "missing methods",
+    "json": "{\"schema\": 1, \"default\": \"administrators\"}",
+    "valid": false
+  },
+  {
+    "name": "weak default",
+    "json": "{\"schema\": 1, \"default\": \"authenticated\", \"methods\": {}}",
+    "valid": false
+  },
+  {
+    "name": "public default",
+    "json": "{\"schema\": 1, \"default\": \"public\", \"methods\": {}}",
+    "valid": false
+  },
+  {
+    "name": "username is not group",
+    "json": "{\"schema\": 1, \"default\": \"admin\", \"methods\": {}}",
+    "valid": false
+  },
+  {
+    "name": "singular group",
+    "json": "{\"schema\": 1, \"default\": \"administrator\", \"methods\": {}}",
+    "valid": false
+  },
+  {
+    "name": "default null",
+    "json": "{\"schema\": 1, \"default\": null, \"methods\": {}}",
+    "valid": false
+  },
+  {
+    "name": "schema null",
+    "json": "{\"schema\": null, \"default\": \"administrators\", \"methods\": {}}",
+    "valid": false
+  },
+  {
+    "name": "schema bool",
+    "json": "{\"schema\": true, \"default\": \"administrators\", \"methods\": {}}",
+    "valid": false
+  },
+  {
+    "name": "schema string",
+    "json": "{\"schema\": \"1\", \"default\": \"administrators\", \"methods\": {}}",
+    "valid": false
+  },
+  {
+    "name": "unknown field",
+    "json": "{\"schema\": 1, \"default\": \"administrators\", \"methods\": {}, \"scope\": \"admin\"}",
+    "valid": false
+  },
+  {
+    "name": "case alias",
+    "json": "{\"Schema\": 1, \"default\": \"administrators\", \"methods\": {}}",
+    "valid": false
+  },
+  {
+    "name": "null methods",
+    "json": "{\"schema\": 1, \"default\": \"administrators\", \"methods\": null}",
+    "valid": false
+  },
+  {
+    "name": "array methods",
+    "json": "{\"schema\": 1, \"default\": \"administrators\", \"methods\": []}",
+    "valid": false
+  },
+  {
+    "name": "role null",
+    "json": "{\"schema\": 1, \"default\": \"administrators\", \"methods\": {\"app.status\": null}}",
+    "valid": false
+  },
+  {
+    "name": "role alias",
+    "json": "{\"schema\": 1, \"default\": \"administrators\", \"methods\": {\"app.status\": \"admin\"}}",
+    "valid": false
+  },
+  {
+    "name": "role array",
+    "json": "{\"schema\": 1, \"default\": \"administrators\", \"methods\": {\"app.status\": [\"administrators\"]}}",
+    "valid": false
+  },
+  {
+    "name": "method uppercase",
+    "json": "{\"schema\": 1, \"default\": \"administrators\", \"methods\": {\"App.status\": \"public\"}}",
+    "valid": false
+  },
+  {
+    "name": "method trailing newline",
+    "json": "{\"schema\": 1, \"default\": \"administrators\", \"methods\": {\"app.status\\n\": \"public\"}}",
+    "valid": false
+  },
+  {
+    "name": "method no namespace",
+    "json": "{\"schema\": 1, \"default\": \"administrators\", \"methods\": {\"status\": \"public\"}}",
+    "valid": false
+  },
+  {
+    "name": "method too long",
+    "json": "{\"schema\": 1, \"default\": \"administrators\", \"methods\": {\"app.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\": \"public\"}}",
+    "valid": false
+  },
+  {
+    "name": "duplicates",
+    "json": "{\"schema\":1,\"default\":\"administrators\",\"methods\":{\"app.status\":\"authenticated\",\"app.status\":\"public\"}}",
+    "valid": false
+  },
+  {
+    "name": "escaped duplicate",
+    "json": "{\"schema\":1,\"default\":\"administrators\",\"methods\":{\"app.status\":\"authenticated\",\"app.\\u0073tatus\":\"public\"}}",
+    "valid": false
+  },
+  {
+    "name": "duplicate default",
+    "json": "{\"schema\":1,\"default\":\"administrators\",\"default\":\"administrators\",\"methods\":{}}",
+    "valid": false
+  },
+  {
+    "name": "trailing",
+    "json": "{\"schema\": 1, \"default\": \"administrators\", \"methods\": {}}{}",
+    "valid": false
+  },
+  {
+    "name": "trailing comma",
+    "json": "{\"schema\":1,\"default\":\"administrators\",\"methods\":{},}",
+    "valid": false
+  },
+  {
+    "name": "comment",
+    "json": "{\"schema\":1,\"default\":\"administrators\",\"methods\":{}/*x*/}",
+    "valid": false
+  },
+  {
+    "name": "truncated",
+    "json": "{\"schema\":1",
+    "valid": false
+  },
+  {
+    "name": "UTF-8 BOM refuses consistently",
+    "json": "\ufeff{\"schema\":1,\"default\":\"administrators\",\"methods\":{}}",
+    "valid": false
+  }
+]

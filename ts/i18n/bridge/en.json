@@ -1,0 +1,10 @@
+{
+  "app_unavailable": "The App is not available right now. Try again later.",
+  "request_timeout": "The request took too long and was stopped. Try again, or try a smaller task.",
+  "limit_exceeded": "The file is larger than allowed.",
+  "read_failed": "Unable to read the file. Please try again later.",
+  "identity_unavailable": "Unable to identify this user account. Please try again later.",
+  "APP_STOPPED": "The App is stopped. Start it in Package Center, then try again.",
+  "APP_STARTING": "The App is starting. Try again in a moment.",
+  "credential_not_ready": "DSM did not give this page its sign-in token. Sign in to DSM again with your password, then open the App from the DSM desktop."
+}

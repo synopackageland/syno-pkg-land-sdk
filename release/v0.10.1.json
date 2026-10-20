@@ -1,0 +1,53 @@
+{
+  "version": "0.10.1",
+  "commit": "a9575eecc3ae1b10ef04fc5a1423344fa3dddfb0",
+  "tags": [
+    "v0.10.1",
+    "executor/v0.10.1"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.10.1",
+      "sum": "h1:XpuacZIACIiBljWRDGedVQ7SCRZnFqqeCBaGzENsnRo=",
+      "goModSum": "h1:hlsvaVuH2wsAoR8jzI1Rg/NeejQSFpAaN6zpIWsVbjI="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.10.1",
+      "sum": "h1:xam4RpLhLUd2R/wLGLZcyL62vSLQwsxmBfTDt89u5Mo=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "packages": {
+    "@synopackageland/sdk": "0.10.1",
+    "@synopackageland/app": "0.10.1",
+    "syno-pkg-land-app": "0.10.1",
+    "synopkgland_app": "0.10.1"
+  },
+  "executorDigests": {
+    "x86_64": "51b538e6ec1cb8fa2a4e00291eda097969352d6e2d9a3e7ade5da5359f1065de",
+    "aarch64": "9038b5ad7b4822e967f18390ca28b6f0021a3044ed461809b3f7333f17400840",
+    "armv7": "22d872cc618e3af4a052955186d36a6851e9f96ad959ee8ea7d3fbb5eec968bd",
+    "lifecycle": {
+      "x86_64": "d65500c4f04713a32b45d360059281391acfa5e00ee24895fdd2de7b82735372",
+      "aarch64": "94f6cd119186ff482b8aea56541dd1f9d53c147566bc1efdca6f5a1c86198331",
+      "armv7": "cafc97c89f5645c14a8cf31d6d9f258394ed6f2d086478a7aebd04d57c274b4e"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-13",
+    "source": "digests from main before tagging",
+    "steps": [
+      "SYNOPKGLAND_DOCKER_SSH=builder.example scripts/gate.sh on macOS: exit 0, no warnings",
+      "executor digests differ from 0.10.0: the monitor finishes an anchored install before it exits and removes staged copies; lifecycle digests equal 0.10.0",
+      "scripts/executor-digests.sh 0.10.1 on the executor@v0.10.1 module source from go mod download gives the same digests",
+      "a module requiring v0.10.1 builds with api, background, bridge, delegate and portal imported (empty module cache, GOPRIVATE only); proxy.golang.org answers 404 for the private repository, as for v0.10.0",
+      "go.mod sums equal 0.10.0",
+      "npm dist.integrity of @synopackageland/sdk and @synopackageland/app 0.10.1 equals the local tarballs"
+    ]
+  },
+  "npm": {
+    "@synopackageland/sdk@0.10.1": "sha512-gs127yFWWYkrNS9lNK/2oHcQ2l0KkhH8dhOAqOScDoGvON212vweVczStdkraesn5Gway+aIMoBqz18uSsD/OA==",
+    "@synopackageland/app@0.10.1": "sha512-PEV7/8PeQQX7uF5SrpWoiCY8Sz6+Cduzw5CRj0G7XtKDjMKkG3/i/M4O4outygYpwVK4ErDAOrJpeaQqqYQ1uQ=="
+  }
+}

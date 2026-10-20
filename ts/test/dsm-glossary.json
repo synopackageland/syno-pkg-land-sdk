@@ -1,0 +1,590 @@
+{
+  "source": "DSM 7.4 UI strings, /usr/syno/synoman/webman/texts/<lang>/strings (section/key in dsm), read 2026-10-02",
+  "terms": [
+    {
+      "id": "save",
+      "dsm": "common/save",
+      "text": {
+        "en": "Save",
+        "zh-TW": "儲存",
+        "zh-CN": "保存",
+        "ja": "保存",
+        "ko": "저장",
+        "de": "Speichern",
+        "fr": "Sauvegarder",
+        "es": "Guardar",
+        "it": "Salva"
+      }
+    },
+    {
+      "id": "cancel",
+      "dsm": "common/cancel",
+      "text": {
+        "en": "Cancel",
+        "zh-TW": "取消",
+        "zh-CN": "取消",
+        "ja": "キャンセル",
+        "ko": "취소",
+        "de": "Abbrechen",
+        "fr": "Annuler",
+        "es": "Cancelar",
+        "it": "Annulla"
+      }
+    },
+    {
+      "id": "ok",
+      "dsm": "common/apply",
+      "text": {
+        "en": "OK",
+        "zh-TW": "確定",
+        "zh-CN": "确定",
+        "ja": "OK",
+        "ko": "확인",
+        "de": "OK",
+        "fr": "OK",
+        "es": "OK",
+        "it": "OK"
+      }
+    },
+    {
+      "id": "apply",
+      "dsm": "common/commit",
+      "text": {
+        "en": "Apply",
+        "zh-TW": "套用",
+        "zh-CN": "应用",
+        "ja": "適用",
+        "ko": "적용",
+        "de": "Übernehmen",
+        "fr": "Appliquer",
+        "es": "Aplicar",
+        "it": "Applica"
+      }
+    },
+    {
+      "id": "close",
+      "dsm": "common/close",
+      "text": {
+        "en": "Close",
+        "zh-TW": "關閉",
+        "zh-CN": "关闭",
+        "ja": "閉じる",
+        "ko": "종료",
+        "de": "Schließen",
+        "fr": "Fermer",
+        "es": "Cerrar",
+        "it": "Chiudi"
+      }
+    },
+    {
+      "id": "delete",
+      "dsm": "common/delete",
+      "text": {
+        "en": "Delete",
+        "zh-TW": "刪除",
+        "zh-CN": "删除",
+        "ja": "削除",
+        "ko": "삭제",
+        "de": "Löschen",
+        "fr": "Supprimer",
+        "es": "Eliminar",
+        "it": "Elimina"
+      }
+    },
+    {
+      "id": "add",
+      "dsm": "common/add",
+      "text": {
+        "en": "Add",
+        "zh-TW": "新增",
+        "zh-CN": "新增",
+        "ja": "追加",
+        "ko": "추가",
+        "de": "Hinzufügen",
+        "fr": "Ajouter",
+        "es": "Agregar",
+        "it": "Aggiungi"
+      }
+    },
+    {
+      "id": "create",
+      "dsm": "common/create",
+      "text": {
+        "en": "Create",
+        "zh-TW": "新增",
+        "zh-CN": "新增",
+        "ja": "作成",
+        "ko": "생성",
+        "de": "Erstellen",
+        "fr": "Créer",
+        "es": "Crear",
+        "it": "Crea"
+      }
+    },
+    {
+      "id": "edit",
+      "dsm": "common/alt_edit",
+      "text": {
+        "en": "Edit",
+        "zh-TW": "編輯",
+        "zh-CN": "编辑",
+        "ja": "編集",
+        "ko": "편집",
+        "de": "Bearbeiten",
+        "fr": "Modifier",
+        "es": "Editar",
+        "it": "Modifica"
+      }
+    },
+    {
+      "id": "refresh",
+      "dsm": "common/refresh",
+      "text": {
+        "en": "Refresh",
+        "zh-TW": "重新整理",
+        "zh-CN": "刷新",
+        "ja": "最新の情報に更新",
+        "ko": "새로 고침",
+        "de": "Aktualisieren",
+        "fr": "Actualiser",
+        "es": "Actualizar",
+        "it": "Aggiorna"
+      }
+    },
+    {
+      "id": "retry",
+      "dsm": "common/retry",
+      "text": {
+        "en": "Retry",
+        "zh-TW": "重試",
+        "zh-CN": "重试",
+        "ja": "再試行",
+        "ko": "재시도",
+        "de": "Neuer Versuch",
+        "fr": "Réessayer",
+        "es": "Volver a intentar",
+        "it": "Riprova"
+      }
+    },
+    {
+      "id": "back",
+      "dsm": "common/back",
+      "text": {
+        "en": "Back",
+        "zh-TW": "上一步",
+        "zh-CN": "上一步",
+        "ja": "戻る",
+        "ko": "뒤로",
+        "de": "Zurück",
+        "fr": "Retour",
+        "es": "Anterior",
+        "it": "Indietro"
+      }
+    },
+    {
+      "id": "next",
+      "dsm": "common/next",
+      "text": {
+        "en": "Next",
+        "zh-TW": "下一步",
+        "zh-CN": "下一步",
+        "ja": "次へ",
+        "ko": "다음",
+        "de": "Weiter",
+        "fr": "Suivant",
+        "es": "Siguiente",
+        "it": "Avanti"
+      }
+    },
+    {
+      "id": "done",
+      "dsm": "common/done",
+      "text": {
+        "en": "Done",
+        "zh-TW": "完成",
+        "zh-CN": "完成",
+        "ja": "完了",
+        "ko": "완료",
+        "de": "Fertig",
+        "fr": "Effectué",
+        "es": "Finalizado",
+        "it": "Fatto"
+      }
+    },
+    {
+      "id": "help",
+      "dsm": "common/help",
+      "text": {
+        "en": "Help",
+        "zh-TW": "說明",
+        "zh-CN": "说明",
+        "ja": "ヘルプ",
+        "ko": "도움말",
+        "de": "Hilfe",
+        "fr": "Aide",
+        "es": "Ayuda",
+        "it": "Guida"
+      }
+    },
+    {
+      "id": "details",
+      "dsm": "common/details",
+      "text": {
+        "en": "Details",
+        "zh-TW": "詳情",
+        "zh-CN": "详情",
+        "ja": "詳細",
+        "ko": "세부 사항",
+        "de": "Details",
+        "fr": "Détails",
+        "es": "Detalles",
+        "it": "Dettagli"
+      }
+    },
+    {
+      "id": "settings",
+      "dsm": "common/common_settings",
+      "text": {
+        "en": "Settings",
+        "zh-TW": "設定",
+        "zh-CN": "设置",
+        "ja": "設定",
+        "ko": "설정",
+        "de": "Einstellungen",
+        "fr": "Paramètres",
+        "es": "Configuración",
+        "it": "Impostazioni"
+      }
+    },
+    {
+      "id": "status",
+      "dsm": "common/status",
+      "text": {
+        "en": "Status",
+        "zh-TW": "狀態",
+        "zh-CN": "状态",
+        "ja": "状態",
+        "ko": "상태",
+        "de": "Status",
+        "fr": "Statut",
+        "es": "Estado",
+        "it": "Stato"
+      }
+    },
+    {
+      "id": "name",
+      "dsm": "common/name",
+      "text": {
+        "en": "Name",
+        "zh-TW": "名稱",
+        "zh-CN": "名称",
+        "ja": "名前",
+        "ko": "이름",
+        "de": "Name",
+        "fr": "Nom",
+        "es": "Nombre",
+        "it": "Nome"
+      }
+    },
+    {
+      "id": "user",
+      "dsm": "common/user",
+      "text": {
+        "en": "User",
+        "zh-TW": "使用者帳號",
+        "zh-CN": "用户帐号",
+        "ja": "ユーザー",
+        "ko": "사용자",
+        "de": "Benutzer",
+        "fr": "Utilisateur",
+        "es": "Usuario",
+        "it": "Utente"
+      }
+    },
+    {
+      "id": "administrator_group_users",
+      "dsm": "common/admin_group_user",
+      "text": {
+        "en": "Administrator group users",
+        "zh-TW": "管理員群組使用者",
+        "zh-CN": "管理员群组用户",
+        "ja": "管理者グループユーザー",
+        "ko": "관리자 그룹 사용자",
+        "de": "Benutzer der Administratoren-Gruppe",
+        "fr": "Utilisateurs du groupe administrateur",
+        "es": "Usuarios del grupo de administradores",
+        "it": "Utenti gruppo admin"
+      }
+    },
+    {
+      "id": "enabled",
+      "dsm": "common/enabled",
+      "text": {
+        "en": "Enabled",
+        "zh-TW": "已啟用",
+        "zh-CN": "已启动",
+        "ja": "有効",
+        "ko": "활성화됨",
+        "de": "Aktiviert",
+        "fr": "Activé",
+        "es": "Habilitado",
+        "it": "Abilitato"
+      }
+    },
+    {
+      "id": "disabled",
+      "dsm": "common/disabled",
+      "text": {
+        "en": "Disabled",
+        "zh-TW": "已停用",
+        "zh-CN": "已停用",
+        "ja": "無効",
+        "ko": "사용 안함",
+        "de": "Deaktiviert",
+        "fr": "Désactivé",
+        "es": "Deshabilitado",
+        "it": "Disabilitato"
+      }
+    },
+    {
+      "id": "loading",
+      "dsm": "common/loading",
+      "text": {
+        "en": "Loading...",
+        "zh-TW": "載入中...",
+        "zh-CN": "加载中...",
+        "ja": "読み込み中...",
+        "ko": "로드 중…",
+        "de": "Wird geladen...",
+        "fr": "Chargement...",
+        "es": "Cargando...",
+        "it": "Caricamento..."
+      }
+    },
+    {
+      "id": "folder",
+      "dsm": "common/folder",
+      "text": {
+        "en": "Folder",
+        "zh-TW": "資料夾",
+        "zh-CN": "文件夹",
+        "ja": "フォルダ",
+        "ko": "폴더",
+        "de": "Ordner",
+        "fr": "Dossier",
+        "es": "Carpeta",
+        "it": "Cartella"
+      }
+    },
+    {
+      "id": "file",
+      "dsm": "common/file",
+      "text": {
+        "en": "File",
+        "zh-TW": "檔案",
+        "zh-CN": "文件",
+        "ja": "ファイル",
+        "ko": "파일",
+        "de": "Datei",
+        "fr": "Fichier",
+        "es": "Archivo",
+        "it": "File"
+      }
+    },
+    {
+      "id": "version",
+      "dsm": "update/version",
+      "text": {
+        "en": "Version",
+        "zh-TW": "版本",
+        "zh-CN": "版本",
+        "ja": "バージョン",
+        "ko": "버전",
+        "de": "Version",
+        "fr": "Version",
+        "es": "Versión",
+        "it": "Versione"
+      }
+    },
+    {
+      "id": "package_name",
+      "dsm": "pkgmgr/pkgmgr_pkg_name",
+      "text": {
+        "en": "Package name",
+        "zh-TW": "套件名稱",
+        "zh-CN": "套件名称",
+        "ja": "パッケージ名",
+        "ko": "패키지 이름",
+        "de": "Paketname",
+        "fr": "Nom du paquet",
+        "es": "Nombre del paquete",
+        "it": "Nome pacchetto"
+      }
+    },
+    {
+      "id": "package_center",
+      "dsm": "tree/leaf_packagemanage",
+      "text": {
+        "en": "Package Center",
+        "zh-TW": "套件中心",
+        "zh-CN": "套件中心",
+        "ja": "パッケージ センター",
+        "ko": "패키지 센터",
+        "de": "Paket-Zentrum",
+        "fr": "Centre de paquets",
+        "es": "Centro de paquetes",
+        "it": "Centro pacchetti"
+      }
+    },
+    {
+      "id": "control_panel",
+      "dsm": "tree/leaf_control_panel",
+      "text": {
+        "en": "Control Panel",
+        "zh-TW": "控制台",
+        "zh-CN": "控制面板",
+        "ja": "コントロール パネル",
+        "ko": "제어판",
+        "de": "Systemsteuerung",
+        "fr": "Panneau de configuration",
+        "es": "Panel de control",
+        "it": "Pannello di controllo"
+      }
+    },
+    {
+      "id": "shared_folder",
+      "dsm": "tree/leaf_sharefolder",
+      "text": {
+        "en": "Shared Folder",
+        "zh-TW": "共用資料夾",
+        "zh-CN": "共享文件夹",
+        "ja": "共有フォルダ",
+        "ko": "공유 폴더",
+        "de": "Freigegebener Ordner",
+        "fr": "Dossier partagé",
+        "es": "Carpeta compartida",
+        "it": "Cartella condivisa"
+      }
+    },
+    {
+      "id": "volume",
+      "dsm": "tree/leaf_volume",
+      "text": {
+        "en": "Volume",
+        "zh-TW": "儲存空間",
+        "zh-CN": "存储空间",
+        "ja": "ボリューム",
+        "ko": "볼륨",
+        "de": "Volume",
+        "fr": "Volume",
+        "es": "Volumen",
+        "it": "Volume"
+      }
+    },
+    {
+      "id": "recycle_bin",
+      "dsm": "share/recycle_bin",
+      "text": {
+        "en": "Recycle Bin",
+        "zh-TW": "資源回收筒",
+        "zh-CN": "回收站",
+        "ja": "ごみ箱",
+        "ko": "휴지통",
+        "de": "Papierkorb",
+        "fr": "Corbeille",
+        "es": "Papelera de reciclaje",
+        "it": "Cestino"
+      }
+    },
+    {
+      "id": "session_expired",
+      "dsm": "login/error_timeout",
+      "text": {
+        "en": "Connection expired. Please sign in again.",
+        "zh-TW": "連線逾時。請重新登入。",
+        "zh-CN": "联机超时，请重新登录。",
+        "ja": "接続の期限が切れています。もう 1 度サイン インしてください。",
+        "ko": "연결 만료됨. 다시 로그인 해 주십시오.",
+        "de": "Verbindung abgelaufen. Melden Sie sich erneut an.",
+        "fr": "La connexion a expiré. Reconnectez-vous.",
+        "es": "Conexión caducada. Vuelva a conectarse.",
+        "it": "Connessione scaduta. Accedere nuovamente."
+      }
+    },
+    {
+      "id": "no_privilege",
+      "dsm": "error/error_privilege_not_enough",
+      "text": {
+        "en": "Sorry, this user account has not been assigned proper privileges to perform this action.",
+        "zh-TW": "抱歉，此使用者帳號權限不足，無法執行此動作。",
+        "zh-CN": "抱歉，此用户帐户权限不足，无法执行此操作。",
+        "ja": "申し訳ありませんが、このユーザー アカウントにはこの操作を行うための権限が与えられていません。",
+        "ko": "죄송합니다. 이 사용자 계정에는 이 작업을 수행하기에 적절한 권한이 할당되지 않았습니다.",
+        "de": "Dieses Benutzerkonto verfügt nicht über die erforderlichen Berechtigungen, um diese Aktion durchzuführen.",
+        "fr": "Désolé, ce compte utilisateur ne dispose pas des droits nécessaires pour accomplir cette action.",
+        "es": "A esta cuenta de usuario no se le han asignado los privilegios adecuados para realizar esta acción.",
+        "it": "Siamo spiacenti, a questo account utente non sono stati assegnati privilegi appropriati per eseguire questa azione."
+      }
+    },
+    {
+      "id": "connection_failed",
+      "dsm": "common/commfail",
+      "text": {
+        "en": "Connection failed. Please check your network settings.",
+        "zh-TW": "無法連線，請檢查你的網路設定。",
+        "zh-CN": "无法联机，请检查你的网络设置。",
+        "ja": "接続に失敗しました。ネットワーク設定を確認してください。",
+        "ko": "연결 실패. 네트워크 설정을 확인해 주십시오.",
+        "de": "Verbindung fehlgeschlagen. Bitte überprüfen Sie Ihre Netzwerkeinstellungen.",
+        "fr": "La connexion a échoué. Vérifiez vos paramètres réseau.",
+        "es": "Error de la conexión. Compruebe su conexión de red.",
+        "it": "Connessione non riuscita. Controllare le impostazioni di rete."
+      }
+    },
+    {
+      "id": "operation_failed",
+      "dsm": "error/unable_to_perform_operation",
+      "text": {
+        "en": "Unable to perform this operation. Please try again later.",
+        "zh-TW": "無法執行此操作。請稍後再試。",
+        "zh-CN": "无法执行此操作。请稍后再试。",
+        "ja": "この操作は実行できません。後でもう一度お試しください。",
+        "ko": "이 작업을 수행할 수 없습니다. 나중에 다시 시도하십시오.",
+        "de": "Dieser Vorgang kann nicht ausgeführt werden. Bitte versuchen Sie es später erneut.",
+        "fr": "Impossible d'effectuer cette opération. Veuillez réessayer ultérieurement.",
+        "es": "No se puede realizar esta operación. Vuelva a intentarlo más tarde.",
+        "it": "Impossibile eseguire questa operazione. Riprovare più tardi."
+      }
+    },
+    {
+      "id": "save_failed",
+      "dsm": "error/save",
+      "text": {
+        "en": "Save failed. Please try again later.",
+        "zh-TW": "儲存失敗，請稍後再試。",
+        "zh-CN": "保存失败，请稍后再试。",
+        "ja": "保存できませんでした。後からやり直してください。",
+        "ko": "저장 실패. 이후에 다시 시도해 주십시오.",
+        "de": "Speichern fehlgeschlagen. Versuchen Sie es später erneut.",
+        "fr": "Échec de l’enregistrement. Réessayez ultérieurement.",
+        "es": "Error al guardar. Vuelva a intentarlo más tarde.",
+        "it": "Salvataggio non riuscito. Riprovare più tardi."
+      }
+    },
+    {
+      "id": "system_busy",
+      "dsm": "error/target_busy",
+      "text": {
+        "en": "System busy. Please try again later.",
+        "zh-TW": "系統忙碌中，請稍後再試。",
+        "zh-CN": "系统繁忙。请稍后再试。",
+        "ja": "システムがビジー状態です。後でやり直してください。",
+        "ko": "시스템이 사용 중입니다. 나중에 다시 시도하십시오.",
+        "de": "Das System ist ausgelastet. Bitte versuchen Sie es später erneut.",
+        "fr": "Système occupé. Réessayez ultérieurement.",
+        "es": "Sistema ocupado. Vuelva a intentarlo más tarde.",
+        "it": "Sistema occupato. Riprovare in seguito."
+      }
+    }
+  ]
+}

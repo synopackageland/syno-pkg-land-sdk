@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 synopkgland
+# SDK-authored runtime fixture; not copied from the Vaultwarden wiki.
+services:
+  vaultwarden:
+    image: vaultwarden/server:latest
+    restart: always
+    container_name: vaultwarden
+    environment: {SIGNUPS_ALLOWED: "true"}
+    volumes:
+      - type: bind
+        source: ./vw-data
+        target: /data
+        bind: {create_host_path: true}
+    ports:
+      - target: 80
+        published: "11001"
+        protocol: tcp

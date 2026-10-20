@@ -1,0 +1,93 @@
+{
+  "manifest": {
+    "scope": "home",
+    "operations": [
+      "files.moveFromStaging"
+    ],
+    "destinations": [
+      "save"
+    ],
+    "lifetime": "until-revoked"
+  },
+  "select": {
+    "key": "save",
+    "path": "/home/exports"
+  },
+  "grant": {
+    "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "key": "save",
+    "path": "/home/exports",
+    "username": "fixtureuser1",
+    "lifetime": "until-revoked"
+  },
+  "move": {
+    "delegation_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "job_id": "export-20261009",
+    "staging": "exports/report.csv",
+    "name": "report.csv",
+    "size": 1048576
+  },
+  "request": {
+    "v": 1,
+    "op": "files.moveFromStaging",
+    "params": {
+      "delegation_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "job_id": "export-20261009",
+      "staging": "exports/report.csv",
+      "name": "report.csv",
+      "size": 1048576
+    }
+  },
+  "states": [
+    "queued",
+    "copying",
+    "committed",
+    "canceled",
+    "interrupted",
+    "uncertain"
+  ],
+  "admitted": {
+    "ok": true,
+    "result": {
+      "job_id": "export-20261009",
+      "state": "queued"
+    }
+  },
+  "committed": {
+    "ok": true,
+    "result": {
+      "job_id": "export-20261009",
+      "state": "committed",
+      "receipt": {
+        "path": "/home/exports/report.csv",
+        "size": 1048576
+      }
+    }
+  },
+  "status": {
+    "method": "delegate.status",
+    "params": {},
+    "result": {
+      "state": "ready",
+      "disabled": false,
+      "lifetime": "until-revoked",
+      "destinations": [
+        "save"
+      ]
+    }
+  },
+  "operations": {
+    "method": "delegate.operations.list",
+    "params": {},
+    "result": {
+      "operations": [
+        {
+          "delegation_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "job_id": "export-20261009",
+          "name": "report.csv",
+          "state": "uncertain"
+        }
+      ]
+    }
+  }
+}

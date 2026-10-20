@@ -1,0 +1,41 @@
+{
+  "version": "0.9.0",
+  "commit": "fc719e6b9767e0eb19ea9e69e505d25fb5c03058",
+  "tags": [
+    "v0.9.0",
+    "executor/v0.9.0"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.9.0",
+      "sum": "h1:dAQcppyVC14P1mXhixgo5905suPf02cDXqMOq6J8AR0=",
+      "goModSum": "h1:JNoqISvR4biA9IuLi0CFe4c272tsKzCN9Nyj71nrXsQ="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.9.0",
+      "sum": "h1:hJH264v32K9ugoXE70vOOcA37BNM9l8ZGHmC/T/HV0U=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "executorDigests": {
+    "x86_64": "e009eb882e79e001fa8e6faf43e58525948c132f01f873562353284e5ac53b69",
+    "aarch64": "f9b84fb9b4a945abf28af6efe1bee0e11067dd0cc5ae26e53f8a949175d519a9",
+    "armv7": "05b670757c9a6cdea17596769ddd471c0563c044af75a564e1570caac8e37bd2",
+    "lifecycle": {
+      "x86_64": "819459580135e016184ad80c258350d57194d6134e8aa4cf1caf5237085b1004",
+      "aarch64": "5abcfc21403e84a0af15d972bcb819ac6fedfd9aaf5898ddc8c4bb06130f9f59",
+      "armv7": "b65a14f0fc77a1d3221c7dc6781eb66059aa200956b094d58a62bd1cad10f116"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-11",
+    "source": "git (private repository): GOPRIVATE=github.com/synopackageland/*, GOFLAGS=, GOWORK=off, empty GOMODCACHE; not proxy.golang.org",
+    "steps": [
+      "go list -m both modules at v0.9.0",
+      "go get the root module and go build a module importing api",
+      "go mod download the executor module and build it with scripts/executor-digests.sh 0.9.0",
+      "the digests equal cli/src/runtime/executor-digests.json"
+    ]
+  }
+}

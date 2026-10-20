@@ -1,0 +1,39 @@
+Compose fixture notices
+======================
+
+immich.yaml, immich.env
+  Project / attribution: Immich and its contributors
+  Upstream revision: v3.3.3
+  Source: https://github.com/immich-app/immich/releases/tag/v3.3.3
+  License: GNU Affero General Public License, version 3 (AGPL-3.0)
+  License copy: licenses/immich-AGPL-3.0.txt
+  Upstream license: https://github.com/immich-app/immich/blob/v3.3.3/LICENSE
+
+openlist.yaml
+  Project / attribution: OpenList and its contributors
+  Upstream revision: 3b28270a4066ea52943a69ecddd850d83f7e8bdc
+  Source: https://github.com/OpenListTeam/OpenList/tree/3b28270a4066ea52943a69ecddd850d83f7e8bdc
+  License: GNU Affero General Public License, version 3 (AGPL-3.0)
+  License copy: licenses/openlist-AGPL-3.0.txt
+  Upstream license: https://github.com/OpenListTeam/OpenList/blob/3b28270a4066ea52943a69ecddd850d83f7e8bdc/LICENSE
+
+These three upstream source files are redistributed verbatim, including their
+existing comments/notices. They are provided under their upstream licenses,
+without warranty; see the accompanying license texts for the full terms.
+Their exact source URLs and SHA256 values are in README.md. When redistributing
+these fixtures, retain their source, this notice and the applicable license
+text. This notice does not relicense these fixtures under the SDK's MIT license.
+
+vaultwarden.yaml
+  Copyright (c) 2026 synopkgland
+  License: MIT (the repository root LICENSE, ../../LICENSE)
+  Independently authored SDK fixture, 2026-10-18. The previously included
+  Vaultwarden wiki excerpt was replaced because its license was not established.
+  No wiki prose or comments are retained. Container image names identify the
+  applications used by tests; container images are not included in these files.
+
+Scope
+  This notice covers the Compose YAML/env fixtures, not container image licenses
+  or the SDK planner's Go dependencies. The latter are documented separately in
+  ../THIRD_PARTY_NOTICES.txt. The fixture source files are test data; they are not
+  embedded in the planner executable.

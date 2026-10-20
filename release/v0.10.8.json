@@ -1,0 +1,53 @@
+{
+  "version": "0.10.8",
+  "commit": "da4ccd1589f42b1d99a09676d5f2c82105bfae2e",
+  "tags": [
+    "v0.10.8",
+    "executor/v0.10.8"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.10.8",
+      "sum": "h1:ef3wIUsgwYd6IpZAVnlC9KdesCDkex73BGoYkwSOgvI=",
+      "goModSum": "h1:hlsvaVuH2wsAoR8jzI1Rg/NeejQSFpAaN6zpIWsVbjI="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.10.8",
+      "sum": "h1:X5c14ho+MW05oB2z4eACkS+B7HI5cPXrRlzwJeFMxss=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "packages": {
+    "@synopackageland/sdk": "0.10.8",
+    "@synopackageland/app": "0.10.8",
+    "syno-pkg-land-app": "0.10.8",
+    "synopkgland_app": "0.10.8"
+  },
+  "executorDigests": {
+    "x86_64": "ba38f5764d5f0510706afe39979eef18bf2b8a72421a3a495810c628db0c962d",
+    "aarch64": "b5129b26714c25c0eda83931f3a66961fa9ecd059074c534159db6a68aefd8f7",
+    "armv7": "359005fbab7714c29d0d0598f09f3b011aa643be26d0368726a023edbef53b8e",
+    "lifecycle": {
+      "x86_64": "d65500c4f04713a32b45d360059281391acfa5e00ee24895fdd2de7b82735372",
+      "aarch64": "94f6cd119186ff482b8aea56541dd1f9d53c147566bc1efdca6f5a1c86198331",
+      "armv7": "cafc97c89f5645c14a8cf31d6d9f258394ed6f2d086478a7aebd04d57c274b4e"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-15",
+    "source": "digests from the release commit before tagging",
+    "steps": [
+      "SYNOPKGLAND_DOCKER_SSH=builder.example scripts/gate.sh (full) on macOS, ts and Rust in builder.example containers: exit 0 in 263 s",
+      "executor/ changed since v0.10.7 (task_check.go, executor.go, main.go): the executor digests change; executor/internal/lifecycle did not, so the lifecycle digests equal 0.10.7",
+      "an App rebuilt on 0.10.8 is approved once more after the upgrade, as its executor digest changed",
+      "scripts/executor-digests.sh 0.10.8 on the executor@v0.10.8 module source from go mod download gives the same digests",
+      "npm dist.integrity of @synopackageland/sdk and @synopackageland/app 0.10.8 equals the local tarballs packed from a clone of v0.10.8; npmmirror answers the same",
+      "ExecutorApproval shows its loading text forever beside the pages when no ExecutorSetup is provided; fixed in 0.10.9"
+    ]
+  },
+  "npm": {
+    "@synopackageland/sdk@0.10.8": "sha512-8U3aPuIddi17j9eU9C67t/46qMrOQ3kNYkhfwpNm/Oc4xPUadPwBugp4hVxm/iqda9Xbu5kDemQLVx+fyw/Iig==",
+    "@synopackageland/app@0.10.8": "sha512-/kUUYJmFiSv1wCDHtKDbXEwQGyoPw9NNfBDje2n7phW7pCDjFXrWVvpd3u157PS3Jav5l4uIrOGAoBCYCqzGcA=="
+  }
+}

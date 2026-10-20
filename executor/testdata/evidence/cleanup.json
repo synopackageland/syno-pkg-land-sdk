@@ -1,0 +1,24 @@
+{
+  "accounts_present": {
+    "p2probe1": false,
+    "p2probe2": false,
+    "p2probeadm": false,
+    "p2probepkg": false
+  },
+  "paths_present": {
+    "/usr/local/etc/synopkgland/p2probepkg": false,
+    "/var/packages/p2probepkg": false,
+    "/run/synopkgland/p2probepkg": false,
+    "/var/services/homes/p2probe1": false,
+    "/var/services/homes/p2probe2": false,
+    "/var/services/homes/p2probeadm": false,
+    "/var/services/homes/p2probepkg": false,
+    "/tmp/p2probe-executor.test": false,
+    "/tmp/p2probe-executor-setup.py": false,
+    "/tmp/p2probe-executor-live.py": false,
+    "/tmp/p2probe-executor-final.py": false
+  },
+  "executor_processes": [],
+  "tasks_created": 0,
+  "administrators_probe_members": []
+}

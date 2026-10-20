@@ -1,0 +1,10 @@
+{
+  "app_unavailable": "App 当前不可用，请稍后重试。",
+  "request_timeout": "请求处理时间过长，已停止。请重试，或缩小范围后再试。",
+  "limit_exceeded": "文件超过允许的大小。",
+  "read_failed": "无法读取文件。请稍后再试。",
+  "identity_unavailable": "无法识别此用户账号。请稍后再试。",
+  "APP_STOPPED": "App 已停止。请在套件中心启动后重试。",
+  "APP_STARTING": "App 正在启动，请稍后重试。",
+  "credential_not_ready": "DSM 没有为此页面提供登录令牌。请使用密码重新登录 DSM，然后从 DSM 桌面打开 App。"
+}

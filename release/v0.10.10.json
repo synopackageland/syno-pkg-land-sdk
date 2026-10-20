@@ -1,0 +1,53 @@
+{
+  "version": "0.10.10",
+  "commit": "e9063b14ae93c1aa58177acdf14e5ce070691569",
+  "tags": [
+    "v0.10.10",
+    "executor/v0.10.10"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.10.10",
+      "sum": "h1:bsZY23WrFayZAwwoHV31yYQrRFC9msWeR2ZpJsf9fxI=",
+      "goModSum": "h1:hlsvaVuH2wsAoR8jzI1Rg/NeejQSFpAaN6zpIWsVbjI="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.10.10",
+      "sum": "h1:1PcQ1gm14nyut4BTWVVSyg5fGp2lQekrWwC+EzQe+8M=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "packages": {
+    "@synopackageland/sdk": "0.10.10",
+    "@synopackageland/app": "0.10.10",
+    "syno-pkg-land-app": "0.10.10",
+    "synopkgland_app": "0.10.10"
+  },
+  "executorDigests": {
+    "x86_64": "9c2c6f92edd2536b3061f8b9eef8b500a1f064909deb4c1b44b496465879b90d",
+    "aarch64": "175731dafb52b83f771878cd41407cae6353a90628649ec78118d6a1e1ffb9fb",
+    "armv7": "27402fa2aa47732a280434cefaa876b0cfe8202a6dc103fd9dd1984e9dc69c81",
+    "lifecycle": {
+      "x86_64": "d65500c4f04713a32b45d360059281391acfa5e00ee24895fdd2de7b82735372",
+      "aarch64": "94f6cd119186ff482b8aea56541dd1f9d53c147566bc1efdca6f5a1c86198331",
+      "armv7": "cafc97c89f5645c14a8cf31d6d9f258394ed6f2d086478a7aebd04d57c274b4e"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-15",
+    "source": "Release commit based exactly on 48046efe31333d898f623cf28fcc677edd3d831f; all builds/tests on builder.example containers",
+    "steps": [
+      "Full gate Rust and Go segments passed before the environment uvx failure (169 seconds); all remaining segments passed (191 seconds), without repeating passed segments",
+      "60 TypeScript test files / 423 tests, consumer import and 189 packed files passed",
+      "Python generator, mypy, Python 3.8 and Node 18 bridge checks passed",
+      "Cross-architecture Go vet/build passed for root and executor; warm and cold executor/lifecycle digests match",
+      "Go module sums from canonical module archives of the released tags; recomputed module-source executor digests match",
+      "npmjs and npmmirror metadata and downloaded tarballs match the verified local archives"
+    ]
+  },
+  "npmIntegrity": {
+    "@synopackageland/sdk@0.10.10": "sha512-lsCK4MGyOs6PcswJGqXAkKdV6kWiCvVlFX7dt5fhTRhfxp6WbVcTzD3JWWplIszgf/dwartlFoP5kG7b3Y6leA==",
+    "@synopackageland/app@0.10.10": "sha512-dfL6qVKHATdqoaRKJvRB1hXMsyBhXEnhpCzoTSSv30rI3jtzQ4LJS/wrG+OcAq4bu1pGvMFXXNxyGOV6pei5Lg=="
+  }
+}

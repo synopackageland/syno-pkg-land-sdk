@@ -1,0 +1,23 @@
+{"scenario": "status", "response": {"ok": true, "result": {"executor_digest": "4b0ae64de9e55f5c09de107ee5158791d114c0a31ddcb890fd848ee8dd9997fc", "policy_digest": "ccd9a4932bedd460f7b4f4d54d64449241f510721c19daa9caa426a12415fd6c", "ready": true, "version": "1"}}}
+{"scenario": "wrong peer", "response": {"closed": true}}
+{"scenario": "delegate.create /home", "response": {"ok": true, "result": {"delegation_id": "2758bd7d59f186c0e8cf3b09c6f347020616e42ae8286032e0bac5732e526393", "expires_at": "2026-10-08T01:33:23.604403596Z", "subject": {"uid": 1231, "username": "p2probe1"}}}}
+{"scenario": "files.write own home", "response": {"ok": true, "result": {"path": "/home/p2probe-output"}}}
+{"scenario": "owner", "uid": 1231, "gid": 100, "mode": "0o711", "content": "P2 executor content\n"}
+{"scenario": "ACL readback", "acl": "ACL version: 1 \nArchive: is_inherit,is_support_ACL \nOwner: [p2probe1(user)] \n--------------------- \n\t [0] user:p2probe1:allow:rwxpdDaARWcCo:---- (level:1)\n\t [1] group:administrators:allow:rwxpdDaARWc--:---- (level:2)\n\t [3] user:p2probe1:allow:rwxpdDaARWcCo:---- (level:2)\n\t [4] everyone::allow:--x----------:---- (level:2)", "note": "Unrelated inherited ACL rows omitted; parent ACL was not changed."}
+{"scenario": "no overwrite", "response": {"ok": false, "code": "WRITE_FAILED", "message": "write failed"}}
+{"scenario": "other home", "response": {"ok": false, "code": "SCOPE_DENIED", "message": "scope denied"}}
+{"scenario": "symlink escape", "response": {"ok": false, "code": "SCOPE_DENIED", "message": "scope denied"}}
+{"scenario": "cross job", "response": {"ok": false, "code": "DELEGATION_DENIED", "message": "delegation denied"}}
+{"scenario": "admin runner", "response": {"ok": false, "code": "INELIGIBLE", "message": "ineligible"}}
+{"scenario": "root.run admin", "response": {"ok": true, "result": {"output": "0\n"}}}
+{"scenario": "root.run regular", "response": {"ok": false, "code": "ADMIN_REQUIRED", "message": "admin required"}}
+{"scenario": "files.list", "response": {"ok": true, "result": {"files": [{"isdir": false, "name": "p2probe-output", "path": "/home/p2probe-output"}], "offset": 0, "total": 1}}}
+{"scenario": "files.info", "response": {"ok": true, "result": {"files": [{"isdir": false, "name": "p2probe-output", "path": "/home/p2probe-output"}]}}}
+{"scenario": "files.createFolder", "response": {"ok": true, "result": {"folders": [{"isdir": true, "name": "p2probe-folder", "path": "/home/p2probe-folder"}]}}}
+{"scenario": "files.checkPermission", "response": {"ok": true, "result": {"blSkip": false}}}
+{"scenario": "disabled runner", "response": {"ok": false, "code": "INELIGIBLE", "message": "ineligible"}}
+{"scenario": "AppPriv deny", "response": {"ok": false, "code": "APP_DENIED", "message": "app denied"}}
+{"scenario": "revoke", "response": {"ok": true, "result": {"revoked": true}}}
+{"scenario": "revoked", "response": {"ok": false, "code": "DELEGATION_DENIED", "message": "delegation denied"}}
+{"scenario": "delegate.create /home", "response": {"ok": true, "result": {"delegation_id": "fd1401cfacf74a51571c9991007b74f3b00d1965d0c024555e4950b0c2764885", "expires_at": "2026-10-08T01:33:50.727843683Z", "subject": {"uid": 1233, "username": "p2probe2"}}}}
+{"scenario": "deleted runner", "response": {"ok": false, "code": "INELIGIBLE", "message": "ineligible"}}

@@ -1,0 +1,45 @@
+{
+  "version": "0.9.8",
+  "commit": "af09d3ee156e631edc81025561dcbb6e120fef32",
+  "tags": [
+    "v0.9.8",
+    "executor/v0.9.8"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.9.8",
+      "sum": "h1:V59KMPcCcnwmQI10U0fDRIbCNhjJkysJ/HzdIr1kH+I=",
+      "goModSum": "h1:hlsvaVuH2wsAoR8jzI1Rg/NeejQSFpAaN6zpIWsVbjI="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.9.8",
+      "sum": "h1:Ma/AbKJcbwtn36rqN1wMxe10WQuWxFdfo0JRnLQPdI4=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "executorDigests": {
+    "x86_64": "d029ca6129e76cdc5b7016378722af166b511fb346fd1002082e611bec0aef4d",
+    "aarch64": "ac8018a9846a8aaca6f06323f033a27f7abef6705601efde57ea02565105a48d",
+    "armv7": "f7b4ee5fb90c8f2dd2c56ec1eeb7749300ad117a23d9df6da6840d8b2eff83b8",
+    "lifecycle": {
+      "x86_64": "f2f0a6aa83399688441b111adee3958d7df50e9d8e33939e3951da393f013819",
+      "aarch64": "d0f0d42f367093d5c9318afb4719b9ac76b1019574f1db34dd0fcb3aba44945b",
+      "armv7": "02da8b7016abfe00b8f18e27ef2d69bcff1ca376b43e17b8c04983ca6a6ef37d"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-13",
+    "source": "digests from main before tagging; commit and module sums from the v0.9.8 tags (go mod download in an empty module cache, GOPRIVATE only)",
+    "steps": [
+      "scripts/executor-digests.sh 0.9.8 on macOS (gate.sh, twice, identical)",
+      "scripts/executor-digests.sh 0.9.8 on Linux in golang:1.26.9-bookworm (public.ecr.aws mirror)",
+      "both builds give the same digests",
+      "executor and lifecycle digests equal 0.9.7: only ts/ changed since v0.9.7 (BackgroundPanel)",
+      "policy digest unchanged: no executor operation changed",
+      "scripts/executor-digests.sh 0.9.8 on the executor@v0.9.8 module source from go mod download gives the same digests",
+      "a module requiring v0.9.8 builds with api, background and portal imported (empty module cache, GOPRIVATE only)",
+      "go.mod sums equal 0.9.7"
+    ]
+  }
+}

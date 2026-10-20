@@ -1,0 +1,52 @@
+{
+  "version": "0.13.1",
+  "commit": "f1f6d41cfac35123b8833ffd131ad4dd5c41ecf3",
+  "tags": [
+    "v0.13.1",
+    "executor/v0.13.1"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.13.1",
+      "sum": "h1:TzAYoaHqPomI6qaTDOiT2wbVU2540ZnFJ4Q90yNXpH4=",
+      "goModSum": "h1:hlsvaVuH2wsAoR8jzI1Rg/NeejQSFpAaN6zpIWsVbjI="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.13.1",
+      "sum": "h1:jW6R95Ovgq61ieEfQvnOHTNsADZbKzaOg6uhMMcEHhg=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "packages": {
+    "@synopackageland/sdk": "0.13.1",
+    "@synopackageland/app": "0.13.1",
+    "syno-pkg-land-app": "0.13.1",
+    "synopkgland_app": "0.13.1"
+  },
+  "executorDigests": {
+    "x86_64": "efe409287770f6b70e7f8465e8767eeb2413b9ab8775020cf4dffb1555d7bf1f",
+    "aarch64": "d68c9889ed2391e918b9c278679ea0a01cd04425528c11090700a3b6341fc543",
+    "armv7": "9149a05efb9f2d7d86a400707099b3d657382b1c0dbad6588be8c500e90445cc",
+    "lifecycle": {
+      "x86_64": "d65500c4f04713a32b45d360059281391acfa5e00ee24895fdd2de7b82735372",
+      "aarch64": "94f6cd119186ff482b8aea56541dd1f9d53c147566bc1efdca6f5a1c86198331",
+      "armv7": "cafc97c89f5645c14a8cf31d6d9f258394ed6f2d086478a7aebd04d57c274b4e"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-17",
+    "source": "Full release gate on builder.example containers at tagged commit; no GitHub Actions",
+    "steps": [
+      "Full scripts/gate.sh passed: Go root/executor/conformance race/vet, Rust, Python 3.8/mypy and Node 18",
+      "455 TypeScript tests against UI 0.11.0, including FileBrowser server paging and filler selection; consumer import/build/pack passed",
+      "All three executor/lifecycle digests reproduce from a cold cache and equal 0.13.0; unchanged Apps keep approval",
+      "Released root/executor modules identify the tagged commit",
+      "npmjs and npmmirror exact versions/latest and full downloaded SDK/App tarballs match gated local archives and integrity"
+    ]
+  },
+  "npmIntegrity": {
+    "@synopackageland/sdk@0.13.1": "sha512-Uw7T2jMXTb7SQogej2GjVeCQC4baoneoDolt5cjxl+Buqjw5a+Sd4/8FpLTMTdIzKZSwJYTVVegagTXBh1r30Q==",
+    "@synopackageland/app@0.13.1": "sha512-y89wnhF7o5JmJEkTBdqHbQhVV1bojGUFtieX9kmeE0RnEzn8JlF6AO9CYFQIV/FaHtrq+QA9ggCLHYfF0mHutg=="
+  }
+}

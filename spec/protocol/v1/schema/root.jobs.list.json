@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/synopackageland/syno-pkg-land-sdk/spec/protocol/v1/schema/root.jobs.list.json",
+  "title": "root.jobs.list",
+  "description": "Administrator whom Application Privileges allow to use the App: list the package's root jobs, newest first.",
+  "since": "0.10.0",
+  "auth": "required",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}

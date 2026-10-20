@@ -1,0 +1,29 @@
+{
+  "title": "Iniciar sesión con su cuenta de Synology",
+  "intro": "Use su cuenta de este NAS para iniciar sesión en la aplicación.",
+  "httpsTitle": "Se requiere HTTPS",
+  "failedTitle": "Error al iniciar sesión",
+  "account": "Cuenta",
+  "password": "Contraseña",
+  "otpPrompt": "Introduzca el código de verificación de su aplicación de autenticación.",
+  "otp": "Código de verificación",
+  "signingIn": "Iniciando sesión…",
+  "verify": "Verificar e iniciar sesión",
+  "signIn": "Iniciar sesión",
+  "otherAccount": "Usar otra cuenta",
+  "continueDSM": "Continuar con DSM",
+  "errors": {
+    "rate_limited": "Demasiados intentos de inicio de sesión. Espere un minuto e inténtelo de nuevo.",
+    "https_required": "Abra esta aplicación con HTTPS para iniciar sesión.",
+    "auth_unavailable": "El inicio de sesión de DSM no está disponible. Inténtelo de nuevo.",
+    "session_required": "Inicie sesión en DSM en este navegador e inténtelo de nuevo.",
+    "cross_origin": "Se rechazó el inicio de sesión: el navegador no indicó que procediera de la página de esta App. Vuelva a abrir la App en un navegador actual.",
+    "origin_required": "Se rechazó el inicio de sesión: el navegador no indicó que procediera de la página de esta App. Vuelva a abrir la App en un navegador actual.",
+    "failed": "No se pudo completar el inicio de sesión. Compruebe sus credenciales o póngase en contacto con su administrador."
+  },
+  "notices": {
+    "expired": "Su sesión ha caducado. Vuelva a iniciar sesión.",
+    "revalidate": "Inicie sesión en DSM en este navegador y luego elija «Continuar con DSM».",
+    "unavailable": "El inicio de sesión no está disponible. Actualice e inténtelo de nuevo."
+  }
+}

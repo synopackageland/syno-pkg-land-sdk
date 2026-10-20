@@ -1,0 +1,10 @@
+{
+  "app_unavailable": "Die App ist derzeit nicht verfügbar. Versuchen Sie es später erneut.",
+  "request_timeout": "Die Anfrage hat zu lange gedauert und wurde abgebrochen. Versuchen Sie es erneut oder mit einer kleineren Aufgabe.",
+  "limit_exceeded": "Die Datei ist größer als zulässig.",
+  "read_failed": "Die Datei kann nicht gelesen werden. Bitte versuchen Sie es später erneut.",
+  "identity_unavailable": "Dieses Benutzerkonto kann nicht ermittelt werden. Bitte versuchen Sie es später erneut.",
+  "APP_STOPPED": "Die App ist angehalten. Starten Sie sie im Paket-Zentrum und versuchen Sie es dann erneut.",
+  "APP_STARTING": "Die App wird gestartet. Versuchen Sie es gleich erneut.",
+  "credential_not_ready": "DSM hat dieser Seite kein Anmeldetoken gegeben. Melden Sie sich mit Ihrem Kennwort erneut bei DSM an und öffnen Sie die App dann über den DSM-Desktop."
+}

@@ -1,0 +1,29 @@
+{
+  "compiler": "Zig 0.16.0",
+  "abi": "GNU libc 2.17",
+  "files": {
+    "admin_check.c": "87dbc9be7742f52bdde6ed3bf73ea79facc6f0708b317696eff03624b4c3276b",
+    "apppriv_check.c": "08249e0a7d3e03fbb02da43f8c7323af11b914448d4a5928f99d39bb430a553c",
+    "build.sh": "64f90741c989a48bf334a3bb837fbcaab3496b84d52cbe814e81a4d01e979c1d",
+    "admin-x86_64.elf": "cb14c60b74a59847f14d27e9361f874f82d99f6416407df861655b742c3a976c",
+    "admin-aarch64.elf": "2a8f33a8c31837bfc498a486baf78ac9b0549f743a9adf89de6d094db61e8baa",
+    "apppriv-x86_64.elf": "62b62a00d2b7bb725d4e10a3aecfd59005f943f98355a129cb418213a4595363",
+    "apppriv-aarch64.elf": "8ef803709f0bb775cac607833f1d45f3025371da268297ec6c0253f7431a9167",
+    "admin-armv7.elf": "da4a0f986adcb66ab7d09d1e8478ee8b22ae9d6ccb1461ea4552789a7663f1f8",
+    "apppriv-armv7.elf": "19d86118414f0d04f0806b5f3e199f26092b5521f24e70847093532a2b84b2a7",
+    "account_check.c": "677712d60951f6741d31c38d13d4e6f3b720d9090d64904f09ad67f4bd5b0e30",
+    "account-x86_64.elf": "2179865efbde39a7ea0fc5080e44c64d41337a09360b03228f59a4c79a751d7f",
+    "account-aarch64.elf": "db0be70943b5d0e0ab01bba0b7d08cb35e6aec648f4077435725491ddd54c0d9",
+    "account-armv7.elf": "58a6de387efe45440e3a8105e4732677a1c964a24df308bd748be247b31c8240"
+  },
+  "sdkSymbol": "SLIBGroupIsAdminGroupMem",
+  "sdkRealtime": true,
+  "appPrivSymbol": "SLIBAppPrivUserHas",
+  "accountSymbols": [
+    "SLIBUserExpiryDayGet",
+    "SYNOUserCheckExpired",
+    "SLIBGroupIsAdminGroupMem",
+    "wbcPingDc",
+    "wbcGetpwnam"
+  ]
+}

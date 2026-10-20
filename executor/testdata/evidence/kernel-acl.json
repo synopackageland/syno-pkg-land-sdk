@@ -1,0 +1,6 @@
+{
+  "scenario": "kernel ACL denies existing other home",
+  "target_exists": true,
+  "exit_code": 1,
+  "stderr": "executor: open /volume1/homes/p2probeadm: permission denied\n"
+}

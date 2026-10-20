@@ -1,0 +1,53 @@
+{
+  "version": "0.11.0",
+  "commit": "bbef5c765fdb73d2c24c9b124c9f9ed89abb1a06",
+  "tags": [
+    "v0.11.0",
+    "executor/v0.11.0"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.11.0",
+      "sum": "h1:/YdyhH7dL7aBDGzlNDAkhIX74lhy1yHZWbyiFz+mPL0=",
+      "goModSum": "h1:hlsvaVuH2wsAoR8jzI1Rg/NeejQSFpAaN6zpIWsVbjI="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.11.0",
+      "sum": "h1:KeD8T+oC2k22/h/+76fPcRbpkjgpLNYJC9BdQYgc2+Q=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "packages": {
+    "@synopackageland/sdk": "0.11.0",
+    "@synopackageland/app": "0.11.0",
+    "syno-pkg-land-app": "0.11.0",
+    "synopkgland_app": "0.11.0"
+  },
+  "executorDigests": {
+    "x86_64": "abe0a42699fed06aeeb7520e5a4f3393cae64f83a66773b70630f0db0c5ed107",
+    "aarch64": "1fdf171a665279f16ca1c2605a54996b2359fa69531c6fe4e890f5bda61c1bef",
+    "armv7": "946f73df833929283f94289f025fd73897416777be5e0867d1e73f0b6c3031d7",
+    "lifecycle": {
+      "x86_64": "d65500c4f04713a32b45d360059281391acfa5e00ee24895fdd2de7b82735372",
+      "aarch64": "94f6cd119186ff482b8aea56541dd1f9d53c147566bc1efdca6f5a1c86198331",
+      "armv7": "cafc97c89f5645c14a8cf31d6d9f258394ed6f2d086478a7aebd04d57c274b4e"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-16",
+    "source": "Merged SDK PR #1; full release gate on builder.example containers; DSM 7.3.2 runner and background Calendar conformance",
+    "steps": [
+      "Full scripts/gate.sh passed, including 445 TypeScript tests and consumer import",
+      "Go root/executor/conformance race/vet, Python 3.8/mypy, Node 18 and Rust/Linux bridges passed",
+      "Three architecture executor/lifecycle builds and warm/cold digest reproducibility passed",
+      "Released Go module source matches tested executor source (module cache adds LICENSE only)",
+      "npmjs latest/version metadata and downloaded tarball integrity verified for both packages",
+      "consenting-user background Calendar create/get/delete passed; cross-user access, Core API and runner injection denied; revocation and protected audit verified"
+    ]
+  },
+  "npmIntegrity": {
+    "@synopackageland/sdk@0.11.0": "sha512-1Tu6zCosa90SC6IQW8C6NxYikw1Se/Jp/Tw3Lv//5Evj0+007UT2YSSbG8hvR+l9PSs5IAvoRSUwp8hFL2BDhQ==",
+    "@synopackageland/app@0.11.0": "sha512-2yom0GS3V/KdUsDe2zImP8vUHHh61DC+N/R/w8bNkzm+YC7WE1keOqXB1nMjNbYkSZHgo5GacBW8nf3BGkHTpw=="
+  }
+}

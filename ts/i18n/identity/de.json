@@ -1,0 +1,29 @@
+{
+  "title": "Mit Ihrem Synology-Konto anmelden",
+  "intro": "Melden Sie sich mit Ihrem Konto auf diesem NAS bei der App an.",
+  "httpsTitle": "HTTPS erforderlich",
+  "failedTitle": "Anmeldung fehlgeschlagen",
+  "account": "Konto",
+  "password": "Passwort",
+  "otpPrompt": "Geben Sie den Bestätigungscode aus Ihrer Authentifizierungs-App ein.",
+  "otp": "Bestätigungscode",
+  "signingIn": "Anmeldung läuft…",
+  "verify": "Bestätigen und anmelden",
+  "signIn": "Anmelden",
+  "otherAccount": "Anderes Konto verwenden",
+  "continueDSM": "Mit DSM fortfahren",
+  "errors": {
+    "rate_limited": "Zu viele Anmeldeversuche. Warten Sie eine Minute und versuchen Sie es erneut.",
+    "https_required": "Öffnen Sie diese App über HTTPS, um sich anzumelden.",
+    "auth_unavailable": "Die DSM-Anmeldung ist nicht verfügbar. Versuchen Sie es erneut.",
+    "session_required": "Melden Sie sich in diesem Browser bei DSM an und versuchen Sie es dann erneut.",
+    "cross_origin": "Die Anmeldung wurde abgelehnt: Der Browser hat nicht angegeben, dass sie von der Seite dieser App stammt. Öffnen Sie die App in einem aktuellen Browser erneut.",
+    "origin_required": "Die Anmeldung wurde abgelehnt: Der Browser hat nicht angegeben, dass sie von der Seite dieser App stammt. Öffnen Sie die App in einem aktuellen Browser erneut.",
+    "failed": "Die Anmeldung konnte nicht abgeschlossen werden. Prüfen Sie Ihre Anmeldedaten oder wenden Sie sich an Ihren Administrator."
+  },
+  "notices": {
+    "expired": "Ihre Sitzung ist abgelaufen. Melden Sie sich erneut an.",
+    "revalidate": "Melden Sie sich in diesem Browser bei DSM an und wählen Sie dann „Mit DSM fortfahren“.",
+    "unavailable": "Die Anmeldung ist nicht verfügbar. Aktualisieren Sie die Ansicht und versuchen Sie es erneut."
+  }
+}

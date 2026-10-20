@@ -1,0 +1,12 @@
+{
+  "title": "DSM App 访问",
+  "admin_required": "此 App 需要 DSM 管理员权限。",
+  "group_required": "您的 DSM 账户不属于获准使用此 App 的群组。请联系 DSM 管理员。",
+  "sign_in_required": "请先在此地址登录 DSM，然后重试。",
+  "verification_failed": "DSM 无法验证您的登录。请稍后重试。",
+  "sign_in": "登录 DSM",
+  "retry": "重试",
+  "direct_title": "直接连接到 App",
+  "direct_notice": "此 App 无法使用 DSM 管理的 HTTPS。直接连接可能显示证书警告，或使用未加密的 HTTP。",
+  "direct_continue": "继续使用直接连接"
+}

@@ -1,0 +1,44 @@
+{
+  "version": "0.9.4",
+  "commit": "92cb932a60d3208e033c8e0d72bd49eb13219116",
+  "tags": [
+    "v0.9.4",
+    "executor/v0.9.4"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.9.4",
+      "sum": "h1:ZfM5aZ/zjbIqpRda4fdeMYnibLh6UjGtxJudFlk/Dno=",
+      "goModSum": "h1:JNoqISvR4biA9IuLi0CFe4c272tsKzCN9Nyj71nrXsQ="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.9.4",
+      "sum": "h1:99tVy1ABjdAi0cSld/0QCieA79ijAm7sCRLVrA61njY=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "executorDigests": {
+    "x86_64": "fc3c206b6a8e30b7470cedabf6676c027960311469685eab2fe544fe6cc671ac",
+    "aarch64": "aa1a8a1b88758ad47ca69d30e9649a24a93b94b5b5fc181ce782035c2c77c497",
+    "armv7": "0c39cb98b67735fede6bbbe91471695e26707f377cbc50dd860a1d9a7fe06fcf",
+    "lifecycle": {
+      "x86_64": "819459580135e016184ad80c258350d57194d6134e8aa4cf1caf5237085b1004",
+      "aarch64": "5abcfc21403e84a0af15d972bcb819ac6fedfd9aaf5898ddc8c4bb06130f9f59",
+      "armv7": "b65a14f0fc77a1d3221c7dc6781eb66059aa200956b094d58a62bd1cad10f116"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-12",
+    "source": "digests from main before tagging; commit and module sums from the v0.9.4 tags (go mod download in an empty module cache, GOPRIVATE only)",
+    "steps": [
+      "scripts/executor-digests.sh 0.9.4 on macOS",
+      "scripts/executor-digests.sh 0.9.4 on Linux in golang:1.26.9-bookworm (public.ecr.aws mirror)",
+      "both builds give the same digests",
+      "lifecycle digests equal 0.9.3",
+      "executor go test -race on Linux as root, including the Linux-only App Privileges bridge tests, passes",
+      "policy digest unchanged: api/, the policy format, the root task scripts and api/sdk-permissions.json did not change",
+      "scripts/executor-digests.sh 0.9.4 on the executor@v0.9.4 module source from go mod download gives the same digests"
+    ]
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "baseline": "e13b651",
+  "host": "darwin/arm64 Go 1.26.0",
+  "linux_host": "nas.example DSM 7.4-90069 x86_64",
+  "executor_tests": {
+    "host_cases_passed": 52,
+    "host_top_level_tests": 21,
+    "linux_cases_passed": 61,
+    "linux_top_level_tests": 30
+  },
+  "gates": {
+    "native-go": {
+      "result": "PASS",
+      "checks": [
+        "executor race/vet/gofmt",
+        "Linux amd64/arm64 vet, static build, test compilation",
+        "native-go backend race/vet/gofmt"
+      ]
+    },
+    "daemon-gateway": {
+      "result": "PASS"
+    },
+    "npm": {
+      "result": "PASS",
+      "cli": {
+        "tests": 795,
+        "pass": 793,
+        "skip": 2,
+        "fail": 0
+      },
+      "package_source": {
+        "tests": 64,
+        "pass": 64,
+        "fail": 0
+      },
+      "release_scripts": {
+        "tests": 6,
+        "pass": 6,
+        "fail": 0
+      },
+      "shell_scripts": "PASS"
+    },
+    "website": {
+      "result": "PASS",
+      "tests": 41,
+      "pass": 41,
+      "fail": 0,
+      "astro_errors": 0,
+      "astro_hints": 1
+    }
+  },
+  "final_live_executor_sha256": "bc6d66fb667abf19a2a15f45da3aa90fc84e26fceaf9198bf904b6f8daa1b960",
+  "live_policy_sha256": "ccd9a4932bedd460f7b4f4d54d64449241f510721c19daa9caa426a12415fd6c",
+  "spk": "Not built; CLI/SPK integration is outside this task ownership."
+}

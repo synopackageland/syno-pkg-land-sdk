@@ -1,0 +1,12 @@
+{
+  "title": "DSM App へのアクセス",
+  "admin_required": "この App には DSM 管理者権限が必要です。",
+  "group_required": "お使いの DSM アカウントは、この App の使用を許可されたグループに属していません。DSM 管理者にお問い合わせください。",
+  "sign_in_required": "まずこのアドレスで DSM にサインインしてから、もう一度お試しください。",
+  "verification_failed": "DSM はサインインを確認できませんでした。しばらくしてからもう一度お試しください。",
+  "sign_in": "DSM にサインイン",
+  "retry": "再試行",
+  "direct_title": "App への直接接続",
+  "direct_notice": "この App では DSM が管理する HTTPS を利用できません。直接接続すると証明書の警告が表示されるか、暗号化されていない HTTP が使用される場合があります。",
+  "direct_continue": "直接接続を続行"
+}

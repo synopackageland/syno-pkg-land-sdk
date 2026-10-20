@@ -1,0 +1,9 @@
+{"scenario": "final status", "response": {"ok": true, "result": {"executor_digest": "bc6d66fb667abf19a2a15f45da3aa90fc84e26fceaf9198bf904b6f8daa1b960", "policy_digest": "ccd9a4932bedd460f7b4f4d54d64449241f510721c19daa9caa426a12415fd6c", "ready": true, "version": "1"}}}
+{"scenario": "delegate.create /home", "response": {"ok": true, "result": {"delegation_id": "eb56c3b83d12021ad31958a51fb2a79007455f5511fab79c2e2a501041d22821", "expires_at": "2026-10-08T01:37:34.700143938Z", "subject": {"uid": 1231, "username": "p2probe1"}}}}
+{"scenario": "final list", "response": {"ok": true, "result": {"files": [{"isdir": true, "name": "p2probe-folder", "path": "/home/p2probe-folder"}, {"isdir": false, "name": "p2probe-output", "path": "/home/p2probe-output"}], "offset": 0, "total": 2}}}
+{"scenario": "final info", "response": {"ok": true, "result": {"files": [{"isdir": false, "name": "p2probe-output", "path": "/home/p2probe-output"}]}}}
+{"scenario": "final createFolder", "response": {"ok": true, "result": {"folders": [{"isdir": true, "name": "p2probe-final-folder", "path": "/home/p2probe-final-folder"}]}}}
+{"scenario": "final checkPermission", "response": {"ok": true, "result": {"blSkip": false}}}
+{"scenario": "kernel ACL denies other home", "exit_code": 1, "stderr": "executor: open /volume1/homes/p2probe2: no such file or directory\n", "note": "Target had already been deleted. This establishes missing-path refusal only; see separate existing-home kernel probe."}
+{"scenario": "duplicate serve", "exit_code": 1, "stderr": "executor: already running\n"}
+{"scenario": "final revoke", "response": {"ok": true, "result": {"revoked": true}}}

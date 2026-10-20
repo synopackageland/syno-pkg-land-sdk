@@ -1,0 +1,526 @@
+{
+  "$comment": "Single source of protocol v1 codes. kind: refusal = response code with ok false; outcome = operation record code; reason = operation record reason; client = produced by a client, never sent by the executor. httpStatus is the status an HTTP adapter SHOULD use.",
+  "since": "0.9.0",
+  "codes": [
+    {
+      "code": "AUTH_DENIED",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 401,
+      "en": "The DSM session in auth is missing, invalid or expired.",
+      "zh-TW": "auth 中的 DSM 工作階段缺少、無效或已過期。"
+    },
+    {
+      "code": "INELIGIBLE",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 403,
+      "en": "The DSM account cannot be delegated: system account, expired, or not the caller.",
+      "zh-TW": "此 DSM 帳號無法委派：系統帳號、已過期，或不是呼叫者本人。"
+    },
+    {
+      "code": "APP_DENIED",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 403,
+      "en": "DSM Application Privileges do not allow the account to use the app or File Station.",
+      "zh-TW": "DSM 應用程式權限不允許此帳號使用 App 或 File Station。"
+    },
+    {
+      "code": "ADMIN_REQUIRED",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 403,
+      "en": "The operation needs a DSM administrator.",
+      "zh-TW": "此操作需要 DSM 管理員。"
+    },
+    {
+      "code": "DELEGATION_DENIED",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 403,
+      "en": "The grant does not exist, belongs to another user or package, or was revoked.",
+      "zh-TW": "授權不存在、屬於其他使用者或套件，或已撤銷。"
+    },
+    {
+      "code": "SCOPE_DENIED",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 403,
+      "en": "The path is outside the grant or the approved folder scope.",
+      "zh-TW": "路徑超出授權或已核准的資料夾範圍。"
+    },
+    {
+      "code": "POLICY_DENIED",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 403,
+      "en": "The operation is not in the approved policy.",
+      "zh-TW": "此操作不在已核准的政策內。"
+    },
+    {
+      "code": "PEER_DENIED",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 403,
+      "en": "The socket peer is not the package user or root.",
+      "zh-TW": "socket 對端不是套件使用者或 root。"
+    },
+    {
+      "code": "PERMISSION_DENIED",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 403,
+      "en": "The delegated user cannot access the path in DSM.",
+      "zh-TW": "受委派的使用者在 DSM 中無法存取該路徑。"
+    },
+    {
+      "code": "UNKNOWN_OP",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 400,
+      "en": "The executor does not know the operation.",
+      "zh-TW": "executor 不認得此操作。"
+    },
+    {
+      "code": "INVALID_REQUEST",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 400,
+      "en": "The request or its params are not valid.",
+      "zh-TW": "請求或其 params 不合法。"
+    },
+    {
+      "code": "REQUEST_TOO_LARGE",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 413,
+      "en": "The request line is larger than 64 KiB.",
+      "zh-TW": "請求行超過 64 KiB。"
+    },
+    {
+      "code": "EXECUTOR_PAUSED",
+      "kind": "refusal",
+      "retryable": true,
+      "httpStatus": 503,
+      "en": "The executor is paused, for example while the package stops or upgrades.",
+      "zh-TW": "executor 已暫停，例如套件停止或升級期間。"
+    },
+    {
+      "code": "EXECUTOR_STARTING",
+      "kind": "refusal",
+      "retryable": true,
+      "httpStatus": 503,
+      "en": "The executor is running the App's start step after an install or upgrade; status answers state starting until it ends.",
+      "zh-TW": "executor 正在執行安裝或升級後的 App start 步驟；結束前 status 回報 state starting。"
+    },
+    {
+      "code": "STORAGE_ERROR",
+      "kind": "refusal",
+      "retryable": true,
+      "httpStatus": 500,
+      "en": "The executor could not read or write its protected state.",
+      "zh-TW": "executor 無法讀寫其受保護的狀態。"
+    },
+    {
+      "code": "INTERNAL",
+      "kind": "refusal",
+      "retryable": true,
+      "httpStatus": 500,
+      "en": "The executor failed unexpectedly.",
+      "zh-TW": "executor 發生非預期的失敗。"
+    },
+    {
+      "code": "WRITE_FAILED",
+      "kind": "refusal",
+      "retryable": true,
+      "httpStatus": 500,
+      "en": "The executor could not write the file.",
+      "zh-TW": "executor 無法寫入檔案。"
+    },
+    {
+      "code": "READ_FAILED",
+      "kind": "refusal",
+      "retryable": true,
+      "httpStatus": 500,
+      "en": "The executor could not copy the file into staging.",
+      "zh-TW": "executor 無法把檔案複製到 staging。"
+    },
+    {
+      "code": "DSM_FAILED",
+      "kind": "refusal",
+      "retryable": true,
+      "httpStatus": 502,
+      "en": "A DSM call made by the executor failed.",
+      "zh-TW": "executor 呼叫 DSM 失敗。"
+    },
+    {
+      "code": "ROOT_FAILED",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 500,
+      "en": "The root program could not run, ended by a signal, or its output could not be kept.",
+      "zh-TW": "root 程式無法執行、被訊號終止，或其輸出無法保存。"
+    },
+    {
+      "code": "ROOT_TIMEOUT",
+      "kind": "refusal",
+      "retryable": true,
+      "httpStatus": 504,
+      "en": "The root program ran past its policy timeout and was killed.",
+      "zh-TW": "root 程式超過 policy 的時限，已被終止。"
+    },
+    {
+      "code": "ROOT_BUSY",
+      "kind": "refusal",
+      "retryable": true,
+      "httpStatus": 429,
+      "en": "The package already runs as many root programs as it may.",
+      "zh-TW": "此套件同時執行的 root 程式已達上限。"
+    },
+    {
+      "code": "ROOT_STAGING_FULL",
+      "kind": "refusal",
+      "retryable": true,
+      "httpStatus": 507,
+      "en": "Root output waiting in the staging folder already fills its quota.",
+      "zh-TW": "staging 資料夾中等待取走的 root 輸出已達配額。"
+    },
+    {
+      "code": "ROOT_JOB_NOT_FOUND",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 404,
+      "en": "No root job of the package has this job_id.",
+      "zh-TW": "此套件沒有這個 job_id 的 root 工作。"
+    },
+    {
+      "code": "PORTAL_FAILED",
+      "kind": "refusal",
+      "retryable": true,
+      "httpStatus": 502,
+      "en": "DSM did not accept the Application Portal change; status portal says whether the entry needs another removal.",
+      "zh-TW": "DSM 未接受應用程式入口的變更；status 的 portal 說明是否需要再移除一次。"
+    },
+    {
+      "code": "NO_SPACE",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 507,
+      "en": "The destination volume is full.",
+      "zh-TW": "目的地的儲存空間已滿。"
+    },
+    {
+      "code": "SCOPE_APPROVAL_STALE",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 409,
+      "en": "The folder scope approval is out of date.",
+      "zh-TW": "資料夾範圍的核准已過期。"
+    },
+    {
+      "code": "IDENTITY_CHANGED",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 409,
+      "en": "The DSM account or folder the grant is bound to changed.",
+      "zh-TW": "授權所綁定的 DSM 帳號或資料夾已變更。"
+    },
+    {
+      "code": "needs-scope-confirmation",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 409,
+      "en": "An administrator must confirm the folder scope first.",
+      "zh-TW": "管理員必須先確認資料夾範圍。"
+    },
+    {
+      "code": "disabled",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 409,
+      "en": "An administrator turned the integration off.",
+      "zh-TW": "管理員已關閉這項整合。"
+    },
+    {
+      "code": "invalid-destination",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 400,
+      "en": "The destination key is not in the policy.",
+      "zh-TW": "目的地不在政策內。"
+    },
+    {
+      "code": "invalid-size",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 400,
+      "en": "The size is missing, negative or too large.",
+      "zh-TW": "檔案大小缺少、為負數或過大。"
+    },
+    {
+      "code": "operation-conflict",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 409,
+      "en": "The same job id was sent again with different input.",
+      "zh-TW": "相同的 job id 又以不同的輸入送出。"
+    },
+    {
+      "code": "operation-not-found",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 404,
+      "en": "The operation is not known for this grant and caller.",
+      "zh-TW": "此授權與呼叫者沒有這項操作。"
+    },
+    {
+      "code": "destination-exists",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 409,
+      "en": "A file with that name already exists and conflict does not allow replacing it.",
+      "zh-TW": "目的地已有同名檔案，且 conflict 不允許取代。"
+    },
+    {
+      "code": "invalid-path",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 400,
+      "en": "A name or path is empty, reserved, too long or contains a forbidden character.",
+      "zh-TW": "名稱或路徑為空、保留字、過長或含禁止字元。"
+    },
+    {
+      "code": "path-too-deep",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 400,
+      "en": "The name has more than 16 folders.",
+      "zh-TW": "名稱超過 16 層資料夾。"
+    },
+    {
+      "code": "destination-not-directory",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 409,
+      "en": "A folder in the name exists as a file or symlink, or is on another volume.",
+      "zh-TW": "名稱中的某個資料夾其實是檔案或符號連結，或位於另一個磁碟區。"
+    },
+    {
+      "code": "name-too-long",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 400,
+      "en": "The volume refused a name as too long.",
+      "zh-TW": "磁碟區認為名稱過長而拒絕。"
+    },
+    {
+      "code": "not-found",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 404,
+      "en": "The path does not exist.",
+      "zh-TW": "路徑不存在。"
+    },
+    {
+      "code": "not-a-file",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 400,
+      "en": "The path is a folder or a special file.",
+      "zh-TW": "路徑是資料夾或特殊檔案。"
+    },
+    {
+      "code": "recursive-required",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 400,
+      "en": "The path is a folder and recursive is not set.",
+      "zh-TW": "路徑是資料夾，且未設定 recursive。"
+    },
+    {
+      "code": "recycle-bin-disabled",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 409,
+      "en": "The Shared Folder has no recycle bin and permanent is not set.",
+      "zh-TW": "共用資料夾沒有資源回收筒，且未設定 permanent。"
+    },
+    {
+      "code": "task-not-found",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 404,
+      "en": "The task belongs to another job, or the executor restarted.",
+      "zh-TW": "任務屬於其他工作，或 executor 已重新啟動。"
+    },
+    {
+      "code": "too-many-tasks",
+      "kind": "refusal",
+      "retryable": true,
+      "httpStatus": 429,
+      "en": "The executor already tracks 64 tasks.",
+      "zh-TW": "executor 已在追蹤 64 個任務。"
+    },
+    {
+      "code": "queue-full",
+      "kind": "refusal",
+      "retryable": true,
+      "httpStatus": 429,
+      "en": "The executor operation queue is full.",
+      "zh-TW": "executor 的操作佇列已滿。"
+    },
+    {
+      "code": "limit-exceeded",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 413,
+      "en": "The file is larger than max_bytes, or root output is larger than its policy max_output.",
+      "zh-TW": "檔案超過 max_bytes，或 root 輸出超過 policy 的 max_output。"
+    },
+    {
+      "code": "OPERATION_CANCELED",
+      "kind": "outcome",
+      "retryable": false,
+      "httpStatus": 409,
+      "en": "The operation was canceled; reason says why.",
+      "zh-TW": "操作已取消；reason 說明原因。"
+    },
+    {
+      "code": "CANCEL_REQUESTED",
+      "kind": "outcome",
+      "retryable": false,
+      "httpStatus": 202,
+      "en": "Cancel was requested and the copy has not stopped yet.",
+      "zh-TW": "已要求取消，複製尚未停止。"
+    },
+    {
+      "code": "CLEANUP_PENDING",
+      "kind": "outcome",
+      "retryable": true,
+      "httpStatus": 500,
+      "en": "The operation ended but its partial file is not removed yet.",
+      "zh-TW": "操作已結束，但部分檔案尚未清除。"
+    },
+    {
+      "code": "grant-revoked",
+      "kind": "reason",
+      "retryable": false,
+      "httpStatus": 409,
+      "en": "The grant was revoked.",
+      "zh-TW": "授權已撤銷。"
+    },
+    {
+      "code": "destination-replaced",
+      "kind": "reason",
+      "retryable": false,
+      "httpStatus": 409,
+      "en": "A newer grant replaced this destination.",
+      "zh-TW": "較新的授權取代了此目的地。"
+    },
+    {
+      "code": "integration-disabled",
+      "kind": "reason",
+      "retryable": false,
+      "httpStatus": 409,
+      "en": "An administrator disabled the integration.",
+      "zh-TW": "管理員停用了此整合。"
+    },
+    {
+      "code": "validation-denied",
+      "kind": "reason",
+      "retryable": false,
+      "httpStatus": 403,
+      "en": "The grant failed revalidation against DSM.",
+      "zh-TW": "授權未通過 DSM 的重新驗證。"
+    },
+    {
+      "code": "scope-changed",
+      "kind": "reason",
+      "retryable": false,
+      "httpStatus": 409,
+      "en": "The approved folder scope changed.",
+      "zh-TW": "已核准的資料夾範圍已變更。"
+    },
+    {
+      "code": "storage-error",
+      "kind": "reason",
+      "retryable": true,
+      "httpStatus": 500,
+      "en": "Protected state could not be written.",
+      "zh-TW": "受保護的狀態無法寫入。"
+    },
+    {
+      "code": "operation-canceled-by-user",
+      "kind": "reason",
+      "retryable": false,
+      "httpStatus": 409,
+      "en": "The owner canceled the operation.",
+      "zh-TW": "擁有者取消了操作。"
+    },
+    {
+      "code": "operation-deadline-exceeded",
+      "kind": "reason",
+      "retryable": true,
+      "httpStatus": 504,
+      "en": "The operation ran past its deadline.",
+      "zh-TW": "操作超過期限。"
+    },
+    {
+      "code": "EXECUTOR_UNAVAILABLE",
+      "kind": "client",
+      "retryable": true,
+      "httpStatus": 503,
+      "en": "The client could not connect to the executor socket.",
+      "zh-TW": "用戶端無法連到 executor socket。"
+    },
+    {
+      "code": "APP_STOPPED",
+      "kind": "client",
+      "retryable": true,
+      "httpStatus": 503,
+      "en": "The package is stopped: its lifecycle mailbox asks the executor to stop. The client sent nothing.",
+      "zh-TW": "套件已停止：生命週期信箱要求 executor 停止。用戶端沒有送出任何內容。"
+    },
+    {
+      "code": "APP_STARTING",
+      "kind": "client",
+      "retryable": true,
+      "httpStatus": 503,
+      "en": "The package was just started and its executor is not listening yet. The client sent nothing.",
+      "zh-TW": "套件剛啟動，executor 尚未開始接聽。用戶端沒有送出任何內容。"
+    },
+    {
+      "code": "EXECUTOR_TIMEOUT",
+      "kind": "client",
+      "retryable": true,
+      "httpStatus": 504,
+      "en": "The executor did not answer in time.",
+      "zh-TW": "executor 未及時回應。"
+    },
+    {
+      "code": "EXECUTOR_TOO_LARGE",
+      "kind": "client",
+      "retryable": false,
+      "httpStatus": 413,
+      "en": "The request or reply is larger than 64 KiB.",
+      "zh-TW": "請求或回應超過 64 KiB。"
+    },
+    {
+      "code": "EXECUTOR_PROTOCOL",
+      "kind": "client",
+      "retryable": false,
+      "httpStatus": 502,
+      "en": "The executor reply is not a valid v1 response.",
+      "zh-TW": "executor 的回應不是有效的 v1 回應。"
+    },
+    {
+      "code": "WEBAPI_UNCERTAIN",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 502,
+      "en": "The WebAPI outcome is unknown: execution, reply validation or audit completion failed. Do not automatically retry a mutation.",
+      "zh-TW": "WebAPI 結果不確定：執行、回覆驗證或稽核完成失敗。請勿自動重試寫入操作。"
+    }
+  ]
+}

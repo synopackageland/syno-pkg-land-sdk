@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/synopackageland/syno-pkg-land-sdk/spec/protocol/v1/schema/root.jobs.stop.json",
+  "title": "root.jobs.stop",
+  "description": "Administrator whom Application Privileges allow to use the App: ask a running root job to cancel; it is killed after its grace.",
+  "since": "0.10.0",
+  "auth": "required",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "job_id"
+  ]
+}

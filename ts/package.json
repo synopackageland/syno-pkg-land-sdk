@@ -1,0 +1,70 @@
+{
+  "name": "@synopackageland/sdk",
+  "version": "0.19.0",
+  "description": "Frontend SDK for DSM packages built with synopkgland: headless client and Vue components",
+  "license": "MIT",
+  "homepage": "https://github.com/synopackageland/syno-pkg-land-sdk/tree/main/ts#readme",
+  "bugs": {
+    "url": "https://github.com/synopackageland/syno-pkg-land-sdk/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/synopackageland/syno-pkg-land-sdk.git",
+    "directory": "ts"
+  },
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./vue": {
+      "types": "./dist/src/vue.d.ts",
+      "import": "./dist/vue.js"
+    },
+    "./vue/style.css": "./dist/style.css",
+    "./native": {
+      "types": "./dist/src/native.d.ts",
+      "import": "./dist/native.js"
+    },
+    "./i18n/*": "./dist/i18n/*"
+  },
+  "files": [
+    "dist",
+    "spec/protocol"
+  ],
+  "scripts": {
+    "prepack": "test -d node_modules || { echo '@synopackageland/sdk: run npm ci before npm pack' >&2; exit 1; }; npm run build",
+    "build": "vite build && vue-tsc -p tsconfig.build.json && cp -R i18n dist/ && rm -rf spec && cp -R ../spec spec",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@lucide/vue": "^1.48.0",
+    "@synopackageland/ui": ">=0.10.1 <0.13.0",
+    "vue": "^3.5.0"
+  },
+  "peerDependenciesMeta": {
+    "@lucide/vue": {
+      "optional": true
+    },
+    "@synopackageland/ui": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@lucide/vue": "1.48.0",
+    "@synopackageland/ui": "0.12.0",
+    "@types/node": "24.19.2",
+    "@vitejs/plugin-vue": "6.0.9",
+    "jsdom": "29.1.1",
+    "typescript": "5.9.3",
+    "vite": "7.3.6",
+    "vitest": "4.1.11",
+    "vue": "3.5.43",
+    "vue-tsc": "3.3.11"
+  }
+}

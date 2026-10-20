@@ -1,0 +1,70 @@
+{
+  "version": "0.17.0",
+  "commit": "91fa899beec935af9668a04c24ccd64b0d03b00b",
+  "tags": [
+    "v0.17.0",
+    "executor/v0.17.0"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.17.0",
+      "sum": "h1:DaYDHCDlukkXtTm+3m26p7pU86r298MTasKDrV/tRl4=",
+      "goModSum": "h1:vixf5Lo4PssQDGU5zam0Mb5sFu9wPUP4Ck36BMAVbNc="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.17.0",
+      "sum": "h1:NZfEoMLHON2Lo6e6NWuN3rHdxTSVenD0E5K5jj3vRr4=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "packages": {
+    "@synopackageland/sdk": "0.17.0",
+    "@synopackageland/app": "0.17.0",
+    "syno-pkg-land-app": "0.17.0",
+    "synopkgland_app": "0.17.0"
+  },
+  "executorDigests": {
+    "x86_64": "68f372684997258adc61312f2c353e1a286a6b5aaa556f716b4e6ba6f33893d0",
+    "aarch64": "f6950301e201a4ebc14577a4554fa1b671f90d0f354d1e8809f4d1dafb57c723",
+    "armv7": "e77c9b6ae22ecfa85d9834af3350192e445987265a7ca6c02ca9b01d88a1b4f7",
+    "lifecycle": {
+      "x86_64": "d65500c4f04713a32b45d360059281391acfa5e00ee24895fdd2de7b82735372",
+      "aarch64": "94f6cd119186ff482b8aea56541dd1f9d53c147566bc1efdca6f5a1c86198331",
+      "armv7": "cafc97c89f5645c14a8cf31d6d9f258394ed6f2d086478a7aebd04d57c274b4e"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-19",
+    "source": "Full release gate on Linux containers; no GitHub Actions or NAS",
+    "steps": [
+      "Go root/executor/conformance race/vet, Rust fmt/clippy/tests and three DSM targets passed",
+      "Python and Node tests including Python 3.8 and Node 18 passed",
+      "495 TypeScript tests, typecheck/build/pack and packed consumer import passed",
+      "Three-architecture Linux vet/build and cold-cache executor/lifecycle reproducibility passed",
+      "arm64 and armv7 taskscript binaries passed under qemu user emulation",
+      "Versioned Go modules fetched through remote tags and checked against the tagged source",
+      "All tracked Node adapter files match the gated npm App artifact",
+      "npmjs and npmmirror version/latest/integrity equal the gated SDK/App archives"
+    ],
+    "comparisonWith0.16.0": "All three executor digests changed; all three lifecycle digests are unchanged (go1.26.9).",
+    "approvalImpact": "Rebuild Apps to ship the corrected executor. An unchanged approved policy retains the existing INFO-anchored upgrade flow; no NAS upgrade certification was performed.",
+    "rustCratePublished": false
+  },
+  "npmIntegrity": {
+    "@synopackageland/sdk@0.17.0": "sha512-arcJcoG6XIihSKPC4RCZItV89ldQi2xAk4hyQhF4GfxMf7jMhTJWo/SNB1t3tB7A44LOLkI5WTZBMv4rd+FdSQ==",
+    "@synopackageland/app@0.17.0": "sha512-2UKX5NZTqg44oB2/uKaABRB94MCL66ex6NF9+DLIBgsTbfJoz9P1ViatQ122hgKeKdBdBssCBukVSHSVCG1Nog=="
+  },
+  "npmMirror": {
+    "@synopackageland/sdk": {
+      "version": "0.17.0",
+      "latest": "0.17.0",
+      "integrity": "sha512-arcJcoG6XIihSKPC4RCZItV89ldQi2xAk4hyQhF4GfxMf7jMhTJWo/SNB1t3tB7A44LOLkI5WTZBMv4rd+FdSQ=="
+    },
+    "@synopackageland/app": {
+      "version": "0.17.0",
+      "latest": "0.17.0",
+      "integrity": "sha512-2UKX5NZTqg44oB2/uKaABRB94MCL66ex6NF9+DLIBgsTbfJoz9P1ViatQ122hgKeKdBdBssCBukVSHSVCG1Nog=="
+    }
+  }
+}

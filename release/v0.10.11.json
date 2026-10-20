@@ -1,0 +1,53 @@
+{
+  "version": "0.10.11",
+  "commit": "d1302fb4ae11eb51039fc4c70cdca8c01cd8e1a9",
+  "tags": [
+    "v0.10.11",
+    "executor/v0.10.11"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.10.11",
+      "sum": "h1:RVxE1PpSU/mXW8Cqoq8cwIgARl402On3fqLsjhh5w1g=",
+      "goModSum": "h1:hlsvaVuH2wsAoR8jzI1Rg/NeejQSFpAaN6zpIWsVbjI="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.10.11",
+      "sum": "h1:zXYX/t5AZPxG/MU/kvPmVbb2T1TaGWOKX4f/Yixe1Ec=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "packages": {
+    "@synopackageland/sdk": "0.10.11",
+    "@synopackageland/app": "0.10.11",
+    "syno-pkg-land-app": "0.10.11",
+    "synopkgland_app": "0.10.11"
+  },
+  "executorDigests": {
+    "x86_64": "7fe3118a8de76b2d83ff4410ce76dd1aca791388286a0929602beaf4536a7194",
+    "aarch64": "0d44c4da7c464d62fcdba8d0ea5f65b935fc505e0faaa8bd61bbb5ec4deb1cea",
+    "armv7": "720a321c56669f31bc289e303627b9b88a56b9ca195ce837821639479491ab8f",
+    "lifecycle": {
+      "x86_64": "d65500c4f04713a32b45d360059281391acfa5e00ee24895fdd2de7b82735372",
+      "aarch64": "94f6cd119186ff482b8aea56541dd1f9d53c147566bc1efdca6f5a1c86198331",
+      "armv7": "cafc97c89f5645c14a8cf31d6d9f258394ed6f2d086478a7aebd04d57c274b4e"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-15",
+    "source": "Release commit based exactly on f1972e4dd79feb2bac11c4a5f987c1fbc0fedaeb; builds/tests on builder.example containers",
+    "steps": [
+      "Full scripts/gate.sh passed once in 311 seconds",
+      "61 TypeScript test files / 430 tests and consumer import passed; 191 packed SDK files",
+      "Rust, Go root/executor/conformance fmt/tidy/vet/race tests, Python generator/mypy/Python 3.8 and Node 18 bridge checks passed",
+      "Cross-architecture Go vet/build passed; warm and cold executor/lifecycle digests match",
+      "Canonical released-tag module source executor digests match",
+      "npmjs and npmmirror metadata, latest and downloaded tarballs match the verified local archives"
+    ]
+  },
+  "npmIntegrity": {
+    "@synopackageland/sdk@0.10.11": "sha512-i4pg+kWvwWId6ao9eifnxeooue7+TG6KskEla4Pk1zT1xBdv1exE7c/m9UQJOaUmXsHrdManQaB9tkqtSqPbdA==",
+    "@synopackageland/app@0.10.11": "sha512-gAP/aa0dtmPwe0gPzbsR1qr3HBP4tqm/CrYmLqUsUZKalFMT518H/rOH3ysSLCsSD+bhyj1ifGlm61BBTHkbiA=="
+  }
+}

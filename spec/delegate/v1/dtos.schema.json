@@ -1,0 +1,402 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "App backend delegate DTOs v1",
+  "$defs": {
+    "SelectDestination": {
+      "type": "object",
+      "x-go-name": "SelectDestinationParams",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "path"
+      ],
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "x-go-order": [
+        "key",
+        "path"
+      ]
+    },
+    "ScopeSelection": {
+      "type": "object",
+      "x-go-name": "ScopeSelection",
+      "description": "Executor evidence; an installation draft is never authority.",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "root",
+        "generation"
+      ],
+      "properties": {
+        "scope": {
+          "type": "string"
+        },
+        "root": {
+          "type": "string"
+        },
+        "generation": {
+          "type": "integer",
+          "x-go-type": "uint64"
+        }
+      },
+      "x-go-order": [
+        "scope",
+        "root",
+        "generation"
+      ]
+    },
+    "DestinationStatus": {
+      "type": "string",
+      "enum": [
+        "active",
+        "missing",
+        "revoked",
+        "reselection-required",
+        "needs-scope-confirmation",
+        "disabled"
+      ]
+    },
+    "DestinationState": {
+      "type": "object",
+      "x-go-name": "DestinationState",
+      "description": "Contains only this caller's destination reference; never persist the caller's DSM session.",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "selection",
+        "destination",
+        "status"
+      ],
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "selection": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ScopeSelection"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "destination": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DestinationGrant"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "$ref": "#/$defs/DestinationStatus"
+        }
+      },
+      "x-go-order": [
+        "key",
+        "selection",
+        "destination",
+        "status"
+      ]
+    },
+    "DestinationGrant": {
+      "type": "object",
+      "x-go-name": "DestinationGrant",
+      "description": "Picker-facing reference; excludes numeric identities and legacy job/expiry metadata.",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "key",
+        "path",
+        "username",
+        "lifetime"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "lifetime": {
+          "type": "string",
+          "const": "until-revoked"
+        }
+      },
+      "x-go-order": [
+        "id",
+        "key",
+        "path",
+        "username",
+        "lifetime"
+      ]
+    },
+    "DelegateOperationState": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "copying",
+        "committed",
+        "canceled",
+        "interrupted",
+        "uncertain"
+      ]
+    },
+    "OperationRef": {
+      "type": "object",
+      "x-go-name": "OperationRef",
+      "additionalProperties": false,
+      "required": [
+        "delegation_id",
+        "job_id"
+      ],
+      "properties": {
+        "delegation_id": {
+          "type": "string"
+        },
+        "job_id": {
+          "type": "string"
+        }
+      },
+      "x-go-order": [
+        "delegation_id",
+        "job_id"
+      ]
+    },
+    "Receipt": {
+      "type": "object",
+      "x-go-name": "Receipt",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "size"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer",
+          "x-go-type": "int64"
+        }
+      },
+      "x-go-order": [
+        "path",
+        "size"
+      ]
+    },
+    "OperationResult": {
+      "type": "object",
+      "x-go-name": "OperationResult",
+      "additionalProperties": false,
+      "required": [
+        "job_id",
+        "state"
+      ],
+      "properties": {
+        "job_id": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/$defs/DelegateOperationState"
+        },
+        "receipt": {
+          "$ref": "#/$defs/Receipt",
+          "x-go-pointer": true
+        },
+        "code": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "x-go-order": [
+        "job_id",
+        "state",
+        "receipt",
+        "code",
+        "reason"
+      ]
+    },
+    "MoveMirror": {
+      "type": "object",
+      "x-go-name": "MoveMirror",
+      "description": "App-owned display metadata; only a live OperationResult is executor evidence.",
+      "additionalProperties": false,
+      "required": [
+        "job_id",
+        "delegation_id",
+        "name",
+        "state"
+      ],
+      "properties": {
+        "job_id": {
+          "type": "string"
+        },
+        "delegation_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/$defs/DelegateOperationState"
+        },
+        "refusal": {
+          "type": "string"
+        }
+      },
+      "x-go-order": [
+        "job_id",
+        "delegation_id",
+        "name",
+        "state",
+        "refusal"
+      ]
+    },
+    "Capability": {
+      "type": "object",
+      "x-go-name": "Capability",
+      "additionalProperties": false,
+      "required": [
+        "state"
+      ],
+      "properties": {
+        "state": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "disabled": {
+          "type": "boolean",
+          "x-go-pointer": true
+        },
+        "lifetime": {
+          "type": "string"
+        },
+        "destinations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scope_mode": {
+          "type": "string"
+        },
+        "preselection": {
+          "type": "string"
+        },
+        "selection": {
+          "$ref": "#/$defs/ScopeSelection",
+          "x-go-pointer": true
+        },
+        "mismatch": {
+          "type": "boolean"
+        }
+      },
+      "x-go-order": [
+        "state",
+        "reason",
+        "disabled",
+        "lifetime",
+        "destinations",
+        "scope_mode",
+        "preselection",
+        "selection",
+        "mismatch"
+      ]
+    },
+    "Subject": {
+      "type": "object",
+      "x-go-name": "Subject",
+      "additionalProperties": false,
+      "required": [
+        "username",
+        "uid"
+      ],
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "uid": {
+          "type": "integer",
+          "x-go-type": "json.Number"
+        }
+      },
+      "x-go-order": [
+        "username",
+        "uid"
+      ]
+    },
+    "DelegateGrant": {
+      "type": "object",
+      "x-go-name": "Grant",
+      "additionalProperties": false,
+      "required": [
+        "delegation_id",
+        "subject",
+        "expires_at",
+        "revoked"
+      ],
+      "properties": {
+        "delegation_id": {
+          "type": "string"
+        },
+        "subject": {
+          "$ref": "#/$defs/Subject"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lifetime": {
+          "type": "string"
+        },
+        "destination": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "scope_generation": {
+          "type": "integer",
+          "x-go-type": "uint64"
+        },
+        "revoked": {
+          "type": "boolean"
+        }
+      },
+      "x-go-order": [
+        "delegation_id",
+        "subject",
+        "expires_at",
+        "lifetime",
+        "destination",
+        "path",
+        "scope",
+        "scope_generation",
+        "revoked"
+      ]
+    }
+  }
+}

@@ -1,0 +1,123 @@
+=== RUN   TestDSMAccountFailClosed
+=== RUN   TestDSMAccountFailClosed/valid
+=== RUN   TestDSMAccountFailClosed/success_empty
+=== RUN   TestDSMAccountFailClosed/success_no_user
+=== RUN   TestDSMAccountFailClosed/missing_expiry
+=== RUN   TestDSMAccountFailClosed/disabled
+=== RUN   TestDSMAccountFailClosed/uid_mismatch
+=== RUN   TestDSMAccountFailClosed/name_mismatch
+--- PASS: TestDSMAccountFailClosed (0.00s)
+    --- PASS: TestDSMAccountFailClosed/valid (0.00s)
+    --- PASS: TestDSMAccountFailClosed/success_empty (0.00s)
+    --- PASS: TestDSMAccountFailClosed/success_no_user (0.00s)
+    --- PASS: TestDSMAccountFailClosed/missing_expiry (0.00s)
+    --- PASS: TestDSMAccountFailClosed/disabled (0.00s)
+    --- PASS: TestDSMAccountFailClosed/uid_mismatch (0.00s)
+    --- PASS: TestDSMAccountFailClosed/name_mismatch (0.00s)
+=== RUN   TestDSMAppPrivilege
+=== RUN   TestDSMAppPrivilege/allow
+=== RUN   TestDSMAppPrivilege/deny
+=== RUN   TestDSMAppPrivilege/custom
+=== RUN   TestDSMAppPrivilege/missing
+=== RUN   TestDSMAppPrivilege/duplicate
+--- PASS: TestDSMAppPrivilege (0.01s)
+    --- PASS: TestDSMAppPrivilege/allow (0.00s)
+    --- PASS: TestDSMAppPrivilege/deny (0.00s)
+    --- PASS: TestDSMAppPrivilege/custom (0.00s)
+    --- PASS: TestDSMAppPrivilege/missing (0.00s)
+    --- PASS: TestDSMAppPrivilege/duplicate (0.00s)
+=== RUN   TestDSMVerify
+--- PASS: TestDSMVerify (0.00s)
+=== RUN   TestDSMArgvAndEmbeddedError
+--- PASS: TestDSMArgvAndEmbeddedError (0.00s)
+=== RUN   TestRootRequiresVerifiedAdmin
+--- PASS: TestRootRequiresVerifiedAdmin (0.00s)
+=== RUN   TestSubdirectoryBinding
+--- PASS: TestSubdirectoryBinding (0.00s)
+=== RUN   TestDSMEmptyOperationDataDenied
+--- PASS: TestDSMEmptyOperationDataDenied (0.00s)
+=== RUN   TestRejections
+=== RUN   TestRejections/missing_account
+=== RUN   TestRejections/disabled
+=== RUN   TestRejections/unknown_disabled_state
+=== RUN   TestRejections/admin_runner
+=== RUN   TestRejections/system_runner
+=== RUN   TestRejections/uid_reuse
+=== RUN   TestRejections/app_deny
+=== RUN   TestRejections/expired
+=== RUN   TestRejections/revoked
+=== RUN   TestRejections/job
+=== RUN   TestRejections/scope
+=== RUN   TestRejections/dotdot
+=== RUN   TestRejections/name
+=== RUN   TestRejections/outside_staging
+--- PASS: TestRejections (0.01s)
+    --- PASS: TestRejections/missing_account (0.00s)
+    --- PASS: TestRejections/disabled (0.00s)
+    --- PASS: TestRejections/unknown_disabled_state (0.00s)
+    --- PASS: TestRejections/admin_runner (0.00s)
+    --- PASS: TestRejections/system_runner (0.00s)
+    --- PASS: TestRejections/uid_reuse (0.00s)
+    --- PASS: TestRejections/app_deny (0.00s)
+    --- PASS: TestRejections/expired (0.00s)
+    --- PASS: TestRejections/revoked (0.00s)
+    --- PASS: TestRejections/job (0.00s)
+    --- PASS: TestRejections/scope (0.00s)
+    --- PASS: TestRejections/dotdot (0.00s)
+    --- PASS: TestRejections/name (0.00s)
+    --- PASS: TestRejections/outside_staging (0.00s)
+=== RUN   TestUnknownAndPolicy
+--- PASS: TestUnknownAndPolicy (0.00s)
+=== RUN   TestSpoofedUsername
+--- PASS: TestSpoofedUsername (0.00s)
+=== RUN   TestScopeSymlink
+--- PASS: TestScopeSymlink (0.00s)
+=== RUN   TestOperationDelegation
+--- PASS: TestOperationDelegation (0.00s)
+=== RUN   TestListAndRevokeOwnership
+--- PASS: TestListAndRevokeOwnership (0.00s)
+=== RUN   TestProtocol
+=== RUN   TestProtocol/oversize
+=== RUN   TestProtocol/unknown_field
+=== RUN   TestProtocol/duplicate
+=== RUN   TestProtocol/utf8
+=== RUN   TestProtocol/version
+--- PASS: TestProtocol (0.00s)
+    --- PASS: TestProtocol/oversize (0.00s)
+    --- PASS: TestProtocol/unknown_field (0.00s)
+    --- PASS: TestProtocol/duplicate (0.00s)
+    --- PASS: TestProtocol/utf8 (0.00s)
+    --- PASS: TestProtocol/version (0.00s)
+=== RUN   TestWrongPeer
+--- PASS: TestWrongPeer (0.00s)
+=== RUN   TestStorePersistence
+--- PASS: TestStorePersistence (0.00s)
+=== RUN   TestFileStationPrivilegeRequiredSeparately
+--- PASS: TestFileStationPrivilegeRequiredSeparately (0.00s)
+=== RUN   TestSharedScope
+--- PASS: TestSharedScope (0.00s)
+=== RUN   TestPolicyValidation
+--- PASS: TestPolicyValidation (0.00s)
+=== RUN   TestFilenameAndTTL
+--- PASS: TestFilenameAndTTL (0.00s)
+=== RUN   TestStoreRejectSymlinkAndMode
+--- PASS: TestStoreRejectSymlinkAndMode (0.00s)
+=== RUN   TestDropOrderAndFailures
+--- PASS: TestDropOrderAndFailures (0.00s)
+=== RUN   TestLinuxStagingSymlinks
+--- PASS: TestLinuxStagingSymlinks (0.00s)
+=== RUN   TestLinuxCopyScopeAndNoOverwrite
+--- PASS: TestLinuxCopyScopeAndNoOverwrite (0.00s)
+=== RUN   TestLinuxPeerCredential
+--- PASS: TestLinuxPeerCredential (0.00s)
+=== RUN   TestLinuxPIDLock
+--- PASS: TestLinuxPIDLock (0.00s)
+=== RUN   TestScriptDigest
+--- PASS: TestScriptDigest (0.00s)
+=== RUN   TestLinuxStagingRootSymlink
+--- PASS: TestLinuxStagingRootSymlink (0.00s)
+=== RUN   TestLinuxStagingHardlinkAndOwner
+--- PASS: TestLinuxStagingHardlinkAndOwner (0.00s)
+=== RUN   TestScriptTimeoutAndOutputLimit
+--- PASS: TestScriptTimeoutAndOutputLimit (0.11s)
+PASS

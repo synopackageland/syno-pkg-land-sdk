@@ -1,0 +1,90 @@
+{
+  "host": "nas.example",
+  "dsm": "7.4-90069",
+  "arch": "x86_64",
+  "measurements": [
+    {
+      "path": "/usr/syno/etc/packages",
+      "owner": "root",
+      "group": "root",
+      "mode": "0o755",
+      "resolved": "/usr/syno/etc/packages",
+      "symlink": false
+    },
+    {
+      "path": "/usr/syno/etc/packages/FileStation",
+      "owner": "FileStation",
+      "group": "FileStation",
+      "mode": "0o755",
+      "resolved": "/usr/syno/etc/packages/FileStation",
+      "symlink": false
+    },
+    {
+      "path": "/var/packages/FileStation/etc",
+      "owner": "root",
+      "group": "root",
+      "mode": "0o777",
+      "resolved": "/usr/syno/etc/packages/FileStation",
+      "symlink": true
+    },
+    {
+      "path": "/usr/local",
+      "owner": "root",
+      "group": "root",
+      "mode": "0o755",
+      "resolved": "/usr/local",
+      "symlink": false
+    },
+    {
+      "path": "/usr/local/etc",
+      "owner": "root",
+      "group": "root",
+      "mode": "0o755",
+      "resolved": "/usr/local/etc",
+      "symlink": false
+    },
+    {
+      "path": "/usr/local/etc/synopkgland/p2probepkg",
+      "owner": "root",
+      "group": "root",
+      "mode": "0o700",
+      "resolved": "/usr/local/etc/synopkgland/p2probepkg",
+      "symlink": false
+    },
+    {
+      "path": "/usr/local/etc/synopkgland/p2probepkg/runtime",
+      "owner": "root",
+      "group": "root",
+      "mode": "0o700",
+      "resolved": "/usr/local/etc/synopkgland/p2probepkg/runtime",
+      "symlink": false
+    },
+    {
+      "path": "/usr/local/etc/synopkgland/p2probepkg/delegations",
+      "owner": "root",
+      "group": "root",
+      "mode": "0o700",
+      "resolved": "/usr/local/etc/synopkgland/p2probepkg/delegations",
+      "symlink": false
+    },
+    {
+      "path": "/run/synopkgland/p2probepkg",
+      "owner": "root",
+      "group": "users",
+      "mode": "0o750",
+      "resolved": "/run/synopkgland/p2probepkg",
+      "symlink": false
+    },
+    {
+      "path": "/run/synopkgland/p2probepkg/executor.sock",
+      "owner": "root",
+      "group": "users",
+      "mode": "0o660",
+      "resolved": "/run/synopkgland/p2probepkg/executor.sock",
+      "symlink": false
+    }
+  ],
+  "reboot_retention": "unverified in this task",
+  "package_upgrade_retention": "unverified in this task",
+  "dsm_update_retention": "unknown"
+}

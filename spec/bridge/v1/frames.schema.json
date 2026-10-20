@@ -1,0 +1,330 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/synopackageland/syno-pkg-land-sdk/spec/bridge/v1/frames.schema.json",
+  "title": "Bridge channel v1 frame",
+  "$comment": "One frame is one line of UTF-8 JSON. runtime: sent by the Go runtime; app: sent by the App. Prototype status: see README.md.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/runtimeHello"
+    },
+    {
+      "$ref": "#/$defs/appHello"
+    },
+    {
+      "$ref": "#/$defs/call"
+    },
+    {
+      "$ref": "#/$defs/cancel"
+    },
+    {
+      "$ref": "#/$defs/svc"
+    },
+    {
+      "$ref": "#/$defs/svcResult"
+    },
+    {
+      "$ref": "#/$defs/result"
+    },
+    {
+      "$ref": "#/$defs/batch"
+    }
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,32}$"
+    },
+    "method": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^([a-z][a-z0-9_]{0,63}|[A-Z][A-Z0-9_]{0,63})$",
+          "$comment": "The App's own lower-case code, except the runtime's reserved ones (README, Errors), or an upper-case refusal of spec/protocol/v1/errors.json."
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 1024
+        }
+      }
+    },
+    "svcError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+          "$comment": "an api code, or a code of spec/protocol/v1/errors.json"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "runtimeHello": {
+      "$comment": "runtime, first frame",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t",
+        "versions"
+      ],
+      "properties": {
+        "t": {
+          "const": "hello"
+        },
+        "versions": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "minItems": 1
+        },
+        "batch": {
+          "type": "integer",
+          "const": 1
+        }
+      }
+    },
+    "appHello": {
+      "$comment": "app, answers runtimeHello",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t",
+        "version",
+        "sdk",
+        "methods"
+      ],
+      "properties": {
+        "t": {
+          "const": "hello"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sdk": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "methods": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/method"
+          },
+          "uniqueItems": true
+        },
+        "batch": {
+          "type": "integer",
+          "const": 1
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "user",
+        "admin",
+        "locale",
+        "request_id",
+        "deadline_ms"
+      ],
+      "properties": {
+        "user": {
+          "type": "string",
+          "$comment": "DSM principal from authenticate.cgi; empty for a public method"
+        },
+        "admin": {
+          "type": "boolean"
+        },
+        "locale": {
+          "type": "string",
+          "$comment": "first Accept-Language tag, or empty"
+        },
+        "request_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "deadline_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "$comment": "time left when the call was sent"
+        }
+      }
+    },
+    "call": {
+      "$comment": "runtime, once per channel",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t",
+        "id",
+        "method",
+        "params",
+        "ctx"
+      ],
+      "properties": {
+        "t": {
+          "const": "call"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "method": {
+          "$ref": "#/$defs/method"
+        },
+        "params": {
+          "$comment": "the request's params, any JSON value"
+        },
+        "ctx": {
+          "$ref": "#/$defs/context"
+        }
+      }
+    },
+    "cancel": {
+      "$comment": "runtime, at most once, after call",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t",
+        "id",
+        "reason"
+      ],
+      "properties": {
+        "t": {
+          "const": "cancel"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "reason": {
+          "enum": [
+            "deadline",
+            "canceled"
+          ]
+        }
+      }
+    },
+    "svc": {
+      "$comment": "app, any number, between call and result",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t",
+        "id",
+        "op",
+        "params"
+      ],
+      "properties": {
+        "t": {
+          "const": "svc"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "op": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-zA-Z0-9_]*)+$"
+        },
+        "params": {},
+        "batch_id": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 7
+        }
+      }
+    },
+    "svcResult": {
+      "$comment": "runtime, one per svc, same id",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t",
+        "id",
+        "ok"
+      ],
+      "properties": {
+        "t": {
+          "const": "svc_result"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "result": {},
+        "error": {
+          "$ref": "#/$defs/svcError"
+        }
+      }
+    },
+    "result": {
+      "$comment": "app, last frame",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t",
+        "ok"
+      ],
+      "properties": {
+        "t": {
+          "const": "result"
+        },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "data": {},
+        "error": {
+          "$ref": "#/$defs/error"
+        }
+      }
+    },
+    "batch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t",
+        "v",
+        "calls"
+      ],
+      "properties": {
+        "t": {
+          "const": "batch"
+        },
+        "v": {
+          "const": 1,
+          "type": "integer"
+        },
+        "calls": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/call"
+          }
+        }
+      }
+    }
+  }
+}

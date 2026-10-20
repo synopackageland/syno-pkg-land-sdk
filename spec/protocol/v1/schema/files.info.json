@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/synopackageland/syno-pkg-land-sdk/spec/protocol/v1/schema/files.info.json",
+  "title": "files.info",
+  "description": "Describe a path as the delegated user.",
+  "since": "0.9.0",
+  "auth": "optional",
+  "type": "object",
+  "properties": {
+    "delegation_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "job_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$"
+    },
+    "path": {
+      "type": "string",
+      "pattern": "^/",
+      "maxLength": 4096
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "delegation_id",
+    "job_id",
+    "path"
+  ]
+}

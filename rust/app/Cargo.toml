@@ -1,0 +1,19 @@
+[package]
+name = "syno-pkg-land-app"
+version = "0.19.0"
+description = "Rust App SDK for Synology DSM packages behind the synopkgland Go runtime"
+readme = "README.md"
+homepage = "https://synopkgland.com"
+documentation = "https://synopkgland.com/docs/guides/native-app/"
+keywords = ["synology", "dsm", "sdk", "rpc"]
+categories = ["api-bindings", "network-programming"]
+include = ["/Cargo.toml", "/README.md", "/LICENSE", "/src/**", "/examples/**"]
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = ["crates-io"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+libc = "0.2"
+serde_json = { version = "1", features = ["raw_value"] }

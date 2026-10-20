@@ -1,0 +1,11 @@
+{
+  "status": "상태",
+  "background": "백그라운드 작업",
+  "administrator": "관리자",
+  "dsmUser": "DSM 사용자",
+  "deniedTitle": "액세스할 수 없음",
+  "deniedMessage": "이 DSM 계정에는 이 앱을 사용할 권한이 없습니다. 관리자에게 DSM 응용 프로그램 권한에서 허용하도록 요청하십시오.",
+  "notes": "참고",
+  "notesCount": "참고 ({count})",
+  "loading": "불러오는 중…"
+}

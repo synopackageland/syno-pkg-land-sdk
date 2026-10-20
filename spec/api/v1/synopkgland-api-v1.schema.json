@@ -1,0 +1,423 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Syno Package Land API 描述 v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "synopkgland.api"
+    },
+    "version": {
+      "const": 1
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "package": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9_.+-]{0,127}$"
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "displayName": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          },
+          "required": [
+            "id",
+            "version",
+            "displayName"
+          ]
+        },
+        "aliases": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 8,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-zA-Z][a-zA-Z0-9-]{0,63}$"
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "developedBy": {
+              "enum": [
+                "synopkgland",
+                "third-party",
+                "unknown"
+              ]
+            },
+            "generator": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          },
+          "required": [
+            "developedBy",
+            "generator"
+          ]
+        },
+        "entry": {
+          "enum": [
+            "policy",
+            "admin-only",
+            "app-privilege"
+          ]
+        },
+        "transport": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^/webman/3rdparty/[A-Za-z][A-Za-z0-9_.+-]{0,127}/cgi/api\\.cgi$"
+            },
+            "auth": {
+              "enum": [
+                "dsm-session",
+                "dsm-app-session"
+              ]
+            }
+          },
+          "required": [
+            "path",
+            "auth"
+          ]
+        },
+        "bindings": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 1024,
+          "propertyNames": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "effect": {
+                "enum": [
+                  "read",
+                  "write",
+                  "destructive"
+                ]
+              },
+              "permission": {
+                "enum": [
+                  "public",
+                  "authenticated",
+                  "administrators"
+                ]
+              }
+            },
+            "required": [
+              "effect",
+              "permission"
+            ]
+          }
+        },
+        "commands": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 1024,
+          "propertyNames": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "summary": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "cli": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 8,
+                "items": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9-]*$"
+                }
+              },
+              "effect": {
+                "enum": [
+                  "read",
+                  "write",
+                  "destructive"
+                ]
+              },
+              "permission": {
+                "enum": [
+                  "public",
+                  "authenticated",
+                  "administrators"
+                ]
+              },
+              "paramsSchema": {
+                "type": "object"
+              },
+              "resultSchema": {
+                "type": "object"
+              },
+              "examples": {
+                "type": "array",
+                "maxItems": 16,
+                "items": {
+                  "type": "object"
+                }
+              },
+              "flow": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "type": {
+                        "const": "invoke"
+                      },
+                      "method": {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "method"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "type": {
+                        "const": "ndjson"
+                      },
+                      "method": {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "method"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "type": {
+                        "const": "upload"
+                      },
+                      "method": {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+                      },
+                      "fileParam": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024
+                      },
+                      "parentParam": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024
+                      },
+                      "nameParam": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "method",
+                      "fileParam",
+                      "parentParam",
+                      "nameParam"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "type": {
+                        "const": "paginate"
+                      },
+                      "method": {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+                      },
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024
+                      },
+                      "offsetParam": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024
+                      },
+                      "limitParam": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024
+                      },
+                      "pageSize": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1000
+                      },
+                      "maxPages": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1000
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "method",
+                      "items",
+                      "offsetParam",
+                      "limitParam",
+                      "pageSize",
+                      "maxPages"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "type": {
+                        "const": "job"
+                      },
+                      "start": {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+                      },
+                      "poll": {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+                      },
+                      "result": {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+                      },
+                      "jobId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024
+                      },
+                      "idParam": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024
+                      },
+                      "state": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024
+                      },
+                      "done": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 1024
+                        }
+                      },
+                      "failed": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 1024
+                        }
+                      },
+                      "intervalMs": {
+                        "type": "integer",
+                        "minimum": 10,
+                        "maximum": 60000
+                      },
+                      "timeoutMs": {
+                        "type": "integer",
+                        "minimum": 10,
+                        "maximum": 3600000
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "start",
+                      "poll",
+                      "jobId",
+                      "idParam",
+                      "state",
+                      "done",
+                      "failed",
+                      "intervalMs",
+                      "timeoutMs"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "summary",
+              "cli",
+              "effect",
+              "permission",
+              "flow"
+            ]
+          }
+        }
+      },
+      "required": [
+        "package",
+        "aliases",
+        "provenance",
+        "entry",
+        "transport",
+        "bindings",
+        "commands"
+      ]
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "required": [
+    "format",
+    "version",
+    "payload",
+    "sha256"
+  ]
+}

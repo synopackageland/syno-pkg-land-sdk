@@ -1,0 +1,181 @@
+{
+  "format": "synopkgland.api",
+  "version": 1,
+  "payload": {
+    "package": {
+      "id": "ExampleNotes",
+      "version": "1.0.0-0001",
+      "displayName": "Example Notes"
+    },
+    "aliases": [
+      "notes"
+    ],
+    "provenance": {
+      "developedBy": "third-party",
+      "generator": "handwritten/spec-v1"
+    },
+    "entry": "app-privilege",
+    "transport": {
+      "path": "/webman/3rdparty/ExampleNotes/cgi/api.cgi",
+      "auth": "dsm-session"
+    },
+    "bindings": {
+      "notes.list": {
+        "effect": "read",
+        "permission": "authenticated"
+      },
+      "nas.files.upload": {
+        "effect": "write",
+        "permission": "authenticated"
+      },
+      "scan.start": {
+        "effect": "write",
+        "permission": "administrators"
+      },
+      "scan.status": {
+        "effect": "read",
+        "permission": "administrators"
+      },
+      "scan.result": {
+        "effect": "read",
+        "permission": "administrators"
+      }
+    },
+    "commands": {
+      "notes.list": {
+        "summary": "List my notes",
+        "cli": [
+          "list"
+        ],
+        "effect": "read",
+        "permission": "authenticated",
+        "paramsSchema": {
+          "type": "object",
+          "required": [
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "description": "Note status",
+              "enum": [
+                "pending",
+                "done"
+              ],
+              "default": "pending",
+              "examples": [
+                "pending"
+              ]
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          "additionalProperties": false
+        },
+        "examples": [
+          {
+            "status": "pending",
+            "limit": 20
+          }
+        ],
+        "flow": {
+          "type": "invoke",
+          "method": "notes.list"
+        }
+      },
+      "files.upload": {
+        "summary": "Upload a local regular file",
+        "cli": [
+          "files",
+          "upload"
+        ],
+        "effect": "write",
+        "permission": "authenticated",
+        "paramsSchema": {
+          "type": "object",
+          "required": [
+            "file",
+            "parent",
+            "name"
+          ],
+          "properties": {
+            "file": {
+              "type": "string",
+              "description": "Local regular file"
+            },
+            "parent": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "examples": [
+          {
+            "file": "./example.txt",
+            "parent": "/home",
+            "name": "example.txt"
+          }
+        ],
+        "flow": {
+          "type": "upload",
+          "method": "nas.files.upload",
+          "fileParam": "file",
+          "parentParam": "parent",
+          "nameParam": "name"
+        }
+      },
+      "scan.start": {
+        "summary": "Start a scan and wait for its result",
+        "cli": [
+          "scan",
+          "start"
+        ],
+        "effect": "write",
+        "permission": "administrators",
+        "paramsSchema": {
+          "type": "object",
+          "required": [
+            "target"
+          ],
+          "properties": {
+            "target": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "examples": [
+          {
+            "target": "/volume1/example"
+          }
+        ],
+        "flow": {
+          "type": "job",
+          "start": "scan.start",
+          "poll": "scan.status",
+          "result": "scan.result",
+          "jobId": "job_id",
+          "idParam": "job_id",
+          "state": "state",
+          "done": [
+            "completed"
+          ],
+          "failed": [
+            "failed",
+            "cancelled"
+          ],
+          "intervalMs": 1000,
+          "timeoutMs": 60000
+        }
+      }
+    }
+  },
+  "sha256": "c902fa8204c0ccd2236a6b4002cec7cc5fe18d40963bc2f9b07036505460eabb"
+}

@@ -1,0 +1,10 @@
+{
+  "app_unavailable": "App 目前無法使用，請稍後再試。",
+  "request_timeout": "請求處理太久已停止，請再試一次或縮小範圍。",
+  "limit_exceeded": "檔案超過允許的大小。",
+  "read_failed": "無法讀取檔案。請稍後再試。",
+  "identity_unavailable": "無法識別此使用者帳號。請稍後再試。",
+  "APP_STOPPED": "App 已停止。請在套件中心啟動後再試一次。",
+  "APP_STARTING": "App 正在啟動，請稍後再試。",
+  "credential_not_ready": "DSM 沒有提供此頁面的登入權杖。請以密碼重新登入 DSM，再從 DSM 桌面開啟 App。"
+}

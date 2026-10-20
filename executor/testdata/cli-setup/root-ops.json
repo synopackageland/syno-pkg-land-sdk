@@ -1,0 +1,33 @@
+{
+  "package": "ContractApp",
+  "executorDigest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "policyDigest": "c77b7e2a1812dd33e5eb2c4b86117c467d15830d1588aef4b4f48a9d7c5fb64a",
+  "policy": {
+    "v": 1,
+    "package": "ContractApp",
+    "app": "SYNO.SDS.ContractApp.Instance",
+    "operations": [
+      "root.run",
+      "status"
+    ],
+    "root": {
+      "whoami": "ee6eb844a4e981747f865d557cc003407533f82388057a8280b54bd1b194af8e"
+    }
+  },
+  "tasks": [
+    {
+      "kind": "boot",
+      "name": "ContractApp executor boot",
+      "header": "#!/bin/sh\n# synopkgland executor boot\n",
+      "script": "#!/bin/sh\n# synopkgland executor boot\nset -eu\numask 77\nexport PATH=/usr/bin:/bin\np=ContractApp\nq=/var/packages/$p\ns=$q/target/executor\nr=/usr/local/etc/synopkgland/$p\nd=$r/runtime\no=\"--package $p\"\nv(){ echo \"$2c77b7e2a1812dd33e5eb2c4b86117c467d15830d1588aef4b4f48a9d7c5fb64a  ${1}policy.json\"|sha256sum -c - >/dev/null||{ logger digest;exit 1;};}\na=purge\nif [ -d $q ];then\na=stop\n[ \"$(cat $q/var/executor/control)\" != purge ] || { a=purge;[ -e $d ] || [ -L $d ] || { logger purged;exit 0;};}\nelse [ -d $r ] || exit 0;fi\nmkdir -p -m 700 $d\n[ \"$(find $d -maxdepth 0 -uid 0 -type d -perm 700)\" = $d ]\ncd $d\n[ $a = stop ] || { v ./ \"\";exec ./executor control purge $o;}\ne=$(sed -n 's/^synopkgland_executor_sha256=\"\\([0-9a-f]*\\)\"$/\\1/p' $q/INFO)\n[ ${#e} = 64 ]\ncp $s/executor .executor\ncp $s/policy.json .policy.json\nv . \"$e  .executor\n\"\nchmod 700 .executor\nfor f in executor policy.json;do mv .$f $f;done\n./executor install-root $o\n./executor control start $o\n"
+    },
+    {
+      "kind": "control",
+      "name": "ContractApp executor control",
+      "header": "#!/bin/sh\n# synopkgland executor control\n",
+      "script": "#!/bin/sh\n# synopkgland executor control\nset -eu\numask 77\nexport PATH=/usr/bin:/bin\np=ContractApp\nq=/var/packages/$p\ns=$q/target/executor\nr=/usr/local/etc/synopkgland/$p\nd=$r/runtime\nrefuse(){ rm -f \"$d/.executor\" \"$d/.policy.json\";logger -t synopkgland \"$p: $1\";exit 1;}\nv(){ echo \"$3c77b7e2a1812dd33e5eb2c4b86117c467d15830d1588aef4b4f48a9d7c5fb64a  $1/$2policy.json\"|sha256sum -c - >/dev/null || refuse digest;}\nmkdir -p -m 700 \"$d\"\n[ \"$(find \"$d\" -maxdepth 0 -uid 0 -type d -perm 700)\" = \"$d\" ]\na=$(cat \"$q/var/executor/control\")\ncase \"$a\" in start|stop|purge) ;; *) exit 1;; esac\nif [ \"$a\" = stop ]; then\nv \"$d\" '' ''\nexec \"$d/executor\" control stop --package \"$p\"\nfi\n# Root runs only executor bytes anchored in the root-owned INFO, under the approved policy.\ne=$(sed -n 's/^synopkgland_executor_sha256=\"\\([0-9a-f]*\\)\"$/\\1/p' \"$q/INFO\") || refuse anchor\n[ ${#e} = 64 ] || refuse anchor\ncp \"$s/executor\" \"$d/.executor\" || refuse digest\ncp \"$s/policy.json\" \"$d/.policy.json\" || refuse digest\nv \"$d\" . \"$e  $d/.executor\n\"\nchmod 700 \"$d/.executor\"\n[ \"$a\" = start ] || exec \"$d/.executor\" control purge --package \"$p\"\nfor f in executor policy.json; do mv \"$d/.$f\" \"$d/$f\"; done\n\"$d/executor\" install-root --package \"$p\"\n\"$d/executor\" control start --package \"$p\"\n"
+    }
+  ],
+  "implementation": "executor",
+  "sdk": "0.9.1"
+}

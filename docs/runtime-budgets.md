@@ -1,0 +1,66 @@
+# Runtime budgets
+
+Work budgets do not change session, token, grant, login-rate or WebSocket
+revalidation bounds. Configure work through existing manifest settings and rebuild
+with a matching CLI/SDK. Lifecycle budgets are policy limits, not evidence that
+DSM or Container Manager permits that much time.
+
+| Work | Author setting | Behavior |
+| --- | --- | --- |
+| Compose start | `compose.startup_timeout_seconds` (120, 2–900) | One monotonic deadline includes lock, status, spawn, readiness, stability and handoff. The 900-second cap remains until native outer limits are verified. |
+| Native lifecycle | `daemon.timeouts` | Start/stop/uninstall accept 2–3600 seconds; status accepts 1–3600. Defaults remain 30/30/60/5. A declaration containing only `timeouts` starts no daemon and works with Compose and background workers. |
+| Request/operation | `backend.timeout_seconds` (60, 1–3600) | Reaches supervisor health window, gateway token adapter and approved executor policy. Each nested operation is clipped to remaining caller time and leaves reply reserve. Binary/Compose Apps without a CGI request setting can enlarge the shared operation allowance through `daemon.timeouts.status` (at least the 60-second default). |
+| Bridge cold start | `backend.timeout_seconds` | Interpreter detection and hello share half the request allowance, leaving time for the call and cancellation. An explicit Go `Config.StartTimeout` overrides the boot share. |
+| App uninstall hook | `uninstall.purge.timeout` (60, 2–3600) | Includes TERM/reap reserve, uses elapsed monotonic time on Linux, and retains a pending marker when termination cannot be confirmed. |
+| CLI transport/wait | `ctl --timeout` (1–3600 seconds) | Applies to discovery, JSON calls, polling and transfer inactivity. Default transport allowance is 62 seconds. An operation shares its remaining allowance across calls; jobs retain their descriptor wait default when no override is supplied. |
+| Jobs | Existing background and root program limits | Execution bounds remain separate from requests; shutdown grace is clipped to the lifecycle stop allowance. |
+
+After startup, one failed or delayed availability probe closes new ingress and
+reports unknown without stopping the running App. Successful recovery reopens
+admission. Persistent availability failure exhausts the operation window and stops
+the supervised child. Policy, network ownership, installed version and lifecycle
+generation failures remain immediately fatal. The window never extends on retries.
+Public and passthrough upstream routes use the same readiness gate.
+
+An offline request without an observed executor transition remains pending.
+A stop shares its deadline across command lock, supervisor dispatch, child TERM,
+reap and final inventory retirement. Executor job drain starts its total stop
+allowance before the root stop step. Purge has a separate bounded cleanup allowance;
+unconfirmed AppPriv/portal cleanup retains protected state and the pending request.
+Portal rollback has its own small bounded reserve and retains cleanup-required on
+failure. No HTTP caller can enlarge a pinned privileged work budget.
+
+Blocking filesystem I/O, process reap in an uninterruptible kernel state and DSM's
+outer lifecycle limits remain outside a cooperative deadline guarantee. The package
+helper acknowledges accepted work separately from confirmed cleanup; no NAS
+acceptance is implied by configuration validation.
+
+### Remaining work deadline
+
+A single-request frame may include `deadline_ms` (integer 1–3600000). It is
+remaining work time measured immediately before dispatch, excluding the client's
+response reserve. The executor uses the lesser of this and the approved policy's
+operation budget; `root.run` retains its existing program and reply caps. Omitted
+or zero preserves the legacy operation bound. Negative or excessive values are
+refused. A deadline grants no authority and never changes any credential lifetime.
+A timeout after dispatch leaves a mutation's completion uncertain; clients must
+read back state and must not replay it automatically. Batch caps are unchanged.
+
+An optional policy `timeouts` object pins `start`, `stop`, `purge`, and `operation`
+seconds (`start`/`stop`/`purge` 2–3600; `operation` 1–3600). Changes require approval of the new policy digest. The
+package helper reads its own copy only to bound its wait. Its JSON result separates
+`accepted`, `cleanup-complete`, and `cleanup-pending`; a successful helper exit
+acknowledges the retained request, and does not prove cleanup completed.
+## Readiness status during a probe
+
+The supervisor queues at most 64 authenticated status requests while its current
+readiness probe runs, bounded by the existing status timeout. It returns that
+probe's result instead of briefly answering `unknown` every time the one-second
+poll begins. It does not reuse an old healthy result. Real failed probes still
+deny admission; timeout, shutdown or queue saturation fails closed. Timers close
+abandoned waiters and shutdown closes pending sockets without delaying stop.
+
+The regression test executes the compiled controller as a nonroot fixture with
+a deliberately held HTTP probe: no reply while pending, `ok` after HTTP 204,
+and `unknown` after HTTP 503. The original implementation answered `unknown`
+immediately during the held healthy probe.

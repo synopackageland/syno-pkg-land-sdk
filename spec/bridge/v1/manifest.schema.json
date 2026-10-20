@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/synopackageland/syno-pkg-land-sdk/spec/bridge/v1/manifest.schema.json",
+  "title": "bridge.json: the App manifest the package build writes and the runtime reads",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "runtime", "entry", "mode", "methods"],
+  "properties": {
+    "schema": { "const": 1 },
+    "runtime": { "enum": ["python", "node", "rust"], "$comment": "The App's language. rust: a thin App on the syno-pkg-land-app crate, built for the package's architecture." },
+    "entry": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^(?!/)(?!.*(^|/)\\.\\.?(/|$))[A-Za-z0-9._/-]+$",
+      "$comment": "Relative to the App directory, inside it. python: the script, run as <python3> <entry>. node: the module, run as <node> <entry>. rust: the executable, run directly."
+    },
+    "mode": { "const": "exec", "$comment": "One process per call. \"socket\" is reserved for a later version and refused by v1 runtimes." },
+    "methods": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1024,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$" },
+      "$comment": "The App's methods. The App's hello MUST list exactly these. They MUST NOT be SDK methods (api/sdk-permissions.json)."
+    },
+    "access": { "enum": ["admin-only", "app-privilege"], "$comment": "Entry restriction (dsm.NewEntryGate). Absent: permissions.json alone decides." },
+    "timeout_seconds": { "type": "integer", "minimum": 1, "maximum": 3600, "$comment": "Request deadline. Absent: api.DefaultRequestTimeout (60 s). The browser client must wait longer." },
+    "max_request_bytes": { "type": "integer", "minimum": 1, "maximum": 16777216, "$comment": "JSON request body limit. Absent: api.MaxRequestBytes." },
+    "env": {
+      "type": "object",
+      "maxProperties": 64,
+      "propertyNames": { "pattern": "^(?!HTTP_|SYNOPKGLAND_|LD_|DYLD_|PATH$)[A-Z_][A-Z0-9_]{0,63}$" },
+      "additionalProperties": { "type": "string", "maxLength": 4096, "pattern": "^[^\\u0000]*$" },
+      "$comment": "Extra environment for the App, on top of what the runtime sets (README, App manifest). Nothing is inherited from the CGI."
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package"],
+      "properties": {
+        "package": { "type": "string", "pattern": "^Node\\.js_v[0-9]{2}$", "$comment": "Package Center package the SPK depends on; the runtime runs /var/packages/<package>/target/usr/local/bin/node." }
+      },
+      "$comment": "Required when runtime is node, absent otherwise."
+    },
+    "transfers": {
+      "type": "object",
+      "maxProperties": 1024,
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$" },
+      "additionalProperties": { "enum": ["upload", "download"] },
+      "$comment": "Added in v1 (additive). Methods of `methods` the browser calls as an HTTP transfer (?method=): upload streams the request body into the spool, download streams the file the App wrote there (README, Transfers)."
+    },
+    "max_upload_bytes": { "type": "integer", "minimum": 1, "maximum": 17179869184, "$comment": "Added in v1 (additive). Upload limit. Absent: 16 GiB (filestation.MaxUploadBytes)." },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "files": { "const": "session", "$comment": "Serves the nas.* File Station routes with the caller's DSM session, and the svc files.*." },
+        "identity": { "const": "standalone", "$comment": "The SDK's App sign-in (identity.*) authenticates instead of DSM." },
+        "portal": { "type": "boolean", "$comment": "true serves portal.status, to the browser and as the svc portal.status." },
+        "jobs": { "type": "boolean", "$comment": "Added in v1 (additive). true offers the svc bg.submit, bg.get and bg.cancel on the package's job store." },
+        "webapi": { "type": "boolean", "$comment": "Since 0.11.0: profile grant/list/revoke and JSON call services through the executor." },
+        "root": { "type": "boolean", "$comment": "Added in v1 (additive). true offers the svc root.run, root.start, root.jobs.list, root.jobs.get and root.jobs.stop: the runtime forwards them to the package's executor with the request's DSM session, and the executor's policy and the App privilege decide. It also serves the browser routes executor.status and executor.control (README, Executor routes)." },
+        "delegate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scope", "destinations", "executor_digest", "policy_digest"],
+          "properties": {
+            "scope": { "type": "string", "pattern": "^(home|install-selected|shared:[^/\\\\:\\u0000-\\u001f]{1,255})$" },
+            "destinations": { "type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$" } },
+            "executor_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "policy_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          },
+          "$comment": "Added in v1 (additive). The package's executor integration (lifetime until-revoked, operation files.moveFromStaging): serves the delegate.* routes and the svc delegate.*."
+        }
+      },
+      "$comment": "SDK routes the runtime serves in Go, never through the App. Later versions add capabilities as new members."
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "runtime": { "const": "node" } } },
+      "then": { "required": ["node"] },
+      "else": { "not": { "required": ["node"] } }
+    }
+  ]
+}

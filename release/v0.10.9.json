@@ -1,0 +1,52 @@
+{
+  "version": "0.10.9",
+  "commit": "8ae214256950cb8e53f0b1d2bea52f5def93d90a",
+  "tags": [
+    "v0.10.9",
+    "executor/v0.10.9"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.10.9",
+      "sum": "h1:QuRK6UbSrbfotMxfpJG62xEzZq0cQVy6VSFb9HpdoQk=",
+      "goModSum": "h1:hlsvaVuH2wsAoR8jzI1Rg/NeejQSFpAaN6zpIWsVbjI="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.10.9",
+      "sum": "h1:NB4JJsXwlctcDltMI5UFzUYV4cs16VNz+rg5W6lF8og=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "packages": {
+    "@synopackageland/sdk": "0.10.9",
+    "@synopackageland/app": "0.10.9",
+    "syno-pkg-land-app": "0.10.9",
+    "synopkgland_app": "0.10.9"
+  },
+  "executorDigests": {
+    "x86_64": "ba38f5764d5f0510706afe39979eef18bf2b8a72421a3a495810c628db0c962d",
+    "aarch64": "b5129b26714c25c0eda83931f3a66961fa9ecd059074c534159db6a68aefd8f7",
+    "armv7": "359005fbab7714c29d0d0598f09f3b011aa643be26d0368726a023edbef53b8e",
+    "lifecycle": {
+      "x86_64": "d65500c4f04713a32b45d360059281391acfa5e00ee24895fdd2de7b82735372",
+      "aarch64": "94f6cd119186ff482b8aea56541dd1f9d53c147566bc1efdca6f5a1c86198331",
+      "armv7": "cafc97c89f5645c14a8cf31d6d9f258394ed6f2d086478a7aebd04d57c274b4e"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-15",
+    "source": "digests from the release commit before tagging",
+    "steps": [
+      "SYNOPKGLAND_DOCKER_SSH=builder.example scripts/gate.sh (full) on macOS, ts and Rust in builder.example containers: exit 0 in 244 s",
+      "executor/ did not change since v0.10.8: the executor and lifecycle digests equal 0.10.8",
+      "scripts/executor-digests.sh 0.10.9 on the executor@v0.10.9 module source from go mod download gives the same digests",
+      "go.mod sums equal 0.10.8",
+      "npm dist.integrity of @synopackageland/sdk and @synopackageland/app 0.10.9 equals the local tarballs packed from a clone of v0.10.9; npmmirror answers the same"
+    ]
+  },
+  "npm": {
+    "@synopackageland/sdk@0.10.9": "sha512-g96I1I+3uPe1NReK/VrLc0c3CmL0AU4xg0uYOeldxjM5W5Ns+MtcOpGS0oqq1CeSJbTGetqGr/qnG5IHSfhakQ==",
+    "@synopackageland/app@0.10.9": "sha512-5BmDNecZRJ3VaazeQr9BJOT9zAGYAiSDB3tDpsDDLW7leh8jT+bWZbxLgPBhi5BQC33URiIKlDJu2FSIaqyi6g=="
+  }
+}

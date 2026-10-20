@@ -1,0 +1,46 @@
+{
+  "version": "0.9.9",
+  "commit": "28da1726b0c06f4428153555314d33c7a3ca8a8b",
+  "tags": [
+    "v0.9.9",
+    "executor/v0.9.9"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.9.9",
+      "sum": "h1:TUsblZtIwlBO0DpBTUOj6gd8+xTi60Y0CwkKNb+OR3M=",
+      "goModSum": "h1:hlsvaVuH2wsAoR8jzI1Rg/NeejQSFpAaN6zpIWsVbjI="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.9.9",
+      "sum": "h1:yINw1b3tQIVS3s5RHWh+teMM19qGyU4sCv+pci5YiHA=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "executorDigests": {
+    "x86_64": "690251a20f66f8578a99f1f805e109072d4436e9454edef6656c95c75675c8f3",
+    "aarch64": "549dea62c460683b3e214bb8ad26e808ab8fde91f7b3ca028d1d174255d46e49",
+    "armv7": "27c0856c4fad404169116d2674e86ec04bb8cb840b2a07900b26b6d83eec60fd",
+    "lifecycle": {
+      "x86_64": "f2f0a6aa83399688441b111adee3958d7df50e9d8e33939e3951da393f013819",
+      "aarch64": "d0f0d42f367093d5c9318afb4719b9ac76b1019574f1db34dd0fcb3aba44945b",
+      "armv7": "02da8b7016abfe00b8f18e27ef2d69bcff1ca376b43e17b8c04983ca6a6ef37d"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-13",
+    "source": "digests from main before tagging",
+    "steps": [
+      "scripts/executor-digests.sh 0.9.9 on macOS (gate.sh, twice, identical)",
+      "scripts/executor-digests.sh 0.9.9 on Linux in golang:1.26.9-bookworm (public.ecr.aws mirror)",
+      "both builds give the same digests",
+      "executor digests differ from 0.9.8: executor/portal_entry.go changed",
+      "lifecycle digests equal 0.9.8",
+      "policy digest unchanged: no executor operation, spec/ file or api/sdk-permissions.json changed since v0.9.8",
+      "scripts/executor-digests.sh 0.9.9 on the executor@v0.9.9 module source from go mod download gives the same digests",
+      "a module requiring v0.9.9 builds with api, background and portal imported (empty module cache, GOPRIVATE only)",
+      "go.mod sums equal 0.9.8"
+    ]
+  }
+}

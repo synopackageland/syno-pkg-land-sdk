@@ -1,0 +1,10 @@
+{
+  "app_unavailable": "L’App n’est pas disponible pour le moment. Réessayez plus tard.",
+  "request_timeout": "La requête a pris trop de temps et a été arrêtée. Réessayez ou essayez une tâche plus petite.",
+  "limit_exceeded": "Le fichier dépasse la taille autorisée.",
+  "read_failed": "Impossible de lire le fichier. Veuillez réessayer ultérieurement.",
+  "identity_unavailable": "Impossible d'identifier ce compte utilisateur. Veuillez réessayer ultérieurement.",
+  "APP_STOPPED": "L’App est arrêtée. Démarrez-la dans le Centre de paquets, puis réessayez.",
+  "APP_STARTING": "L’App démarre. Réessayez dans un instant.",
+  "credential_not_ready": "DSM n’a pas fourni de jeton de connexion à cette page. Reconnectez-vous à DSM avec votre mot de passe, puis ouvrez l’App depuis le bureau DSM."
+}

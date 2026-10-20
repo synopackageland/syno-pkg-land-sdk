@@ -1,0 +1,29 @@
+{
+  "title": "Accedi con l’account Synology",
+  "intro": "Usare l’account di questo NAS per accedere all’app.",
+  "httpsTitle": "HTTPS obbligatorio",
+  "failedTitle": "Accesso non riuscito",
+  "account": "Account",
+  "password": "Password",
+  "otpPrompt": "Inserire il codice di verifica dell’app di autenticazione.",
+  "otp": "Codice di verifica",
+  "signingIn": "Accesso in corso…",
+  "verify": "Verifica e accedi",
+  "signIn": "Accedi",
+  "otherAccount": "Usa un altro account",
+  "continueDSM": "Continua con DSM",
+  "errors": {
+    "rate_limited": "Troppi tentativi di accesso. Attendere un minuto e riprovare.",
+    "https_required": "Aprire questa app tramite HTTPS per accedere.",
+    "auth_unavailable": "L’accesso a DSM non è disponibile. Riprovare.",
+    "session_required": "Accedere a DSM in questo browser, quindi riprovare.",
+    "cross_origin": "L’accesso è stato rifiutato: il browser non ha indicato che proviene dalla pagina di questa App. Riaprire l’App in un browser aggiornato.",
+    "origin_required": "L’accesso è stato rifiutato: il browser non ha indicato che proviene dalla pagina di questa App. Riaprire l’App in un browser aggiornato.",
+    "failed": "Impossibile completare l’accesso. Controllare le credenziali o contattare l’amministratore."
+  },
+  "notices": {
+    "expired": "La sessione è scaduta. Accedere di nuovo.",
+    "revalidate": "Accedere a DSM in questo browser, quindi scegliere «Continua con DSM».",
+    "unavailable": "L’accesso non è disponibile. Aggiornare e riprovare."
+  }
+}

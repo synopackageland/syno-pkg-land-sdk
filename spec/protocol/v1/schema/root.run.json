@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/synopackageland/syno-pkg-land-sdk/spec/protocol/v1/schema/root.run.json",
+  "title": "root.run",
+  "description": "Administrator whom Application Privileges allow to use the App: run a root program pinned by digest in the policy. Params reach the program on stdin as JSON, checked against the entry's schema; the reply carries its exit code, stderr and output, or a staging file for large output.",
+  "since": "0.9.0",
+  "auth": "required",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$"
+    },
+    "params": {
+      "type": "object",
+      "description": "The program's params; without a schema in the policy only {} is accepted."
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "name"
+  ]
+}

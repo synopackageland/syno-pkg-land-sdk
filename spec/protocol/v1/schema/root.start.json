@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/synopackageland/syno-pkg-land-sdk/spec/protocol/v1/schema/root.start.json",
+  "title": "root.start",
+  "description": "Administrator whom Application Privileges allow to use the App: start a root job, a pinned program with job limits, in the background. Params reach it on stdin; it reports progress on fd 5 and is told to cancel on fd 4.",
+  "since": "0.10.0",
+  "auth": "required",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$"
+    },
+    "params": {
+      "type": "object",
+      "description": "The job's params; without a schema in the policy only {} is accepted."
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "name"
+  ]
+}

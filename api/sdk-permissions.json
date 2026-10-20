@@ -1,0 +1,70 @@
+{
+  "files": {
+    "nas.session.status": "authenticated",
+    "nas.files.shares": "authenticated",
+    "nas.files.list": "authenticated",
+    "nas.files.info": "authenticated",
+    "nas.files.create_folder": "authenticated",
+    "nas.files.download": "authenticated",
+    "nas.files.upload": "authenticated"
+  },
+  "jobs": {
+    "bg.status": "authenticated",
+    "bg.browse": "authenticated",
+    "bg.jobs.submit": "authenticated",
+    "bg.jobs.list": "authenticated",
+    "bg.jobs.get": "authenticated",
+    "bg.jobs.cancel": "authenticated",
+    "bg.jobs.pause": "authenticated",
+    "bg.jobs.resume": "authenticated",
+    "bg.jobs.result": "authenticated",
+    "bg.schedules.list": "authenticated",
+    "bg.schedules.create": "authenticated",
+    "bg.schedules.disable": "authenticated",
+    "bg.schedules.delete": "authenticated",
+    "bg.jobs.purge": "administrators",
+    "bg.schedules.enable": "administrators"
+  },
+  "portal": {
+    "portal.status": "authenticated",
+    "portal.register": "administrators",
+    "portal.unregister": "administrators"
+  },
+  "identity": {
+    "identity.status": "public",
+    "identity.login": "public",
+    "identity.session": "public",
+    "identity.logout": "public"
+  },
+  "rootOps": {
+    "executor.status": "authenticated",
+    "executor.control": "administrators",
+    "root.run": "administrators"
+  },
+  "delegate": {
+    "delegate.destination": "authenticated",
+    "delegate.status": "authenticated",
+    "delegate.create": "authenticated",
+    "delegate.list": "authenticated",
+    "delegate.revoke": "authenticated",
+    "delegate.jobs.submit": "authenticated",
+    "delegate.jobs.list": "authenticated",
+    "delegate.jobs.cancel": "authenticated",
+    "delegate.select_destination": "authenticated",
+    "delegate.move_from_staging": "authenticated",
+    "delegate.operations.get": "authenticated",
+    "delegate.operations.list": "authenticated",
+    "delegate.operations.cancel": "authenticated",
+    "delegate.disable": "administrators",
+    "delegate.enable": "administrators",
+    "delegate.audit": "authenticated",
+    "delegate.example.export": "authenticated"
+  },
+  "sharedFolders": {
+    "sharedfolder.status": "authenticated"
+  },
+  "gateway": {
+    "gateway.passthrough.status": "administrators",
+    "gateway.passthrough.set": "administrators"
+  }
+}

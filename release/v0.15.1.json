@@ -1,0 +1,55 @@
+{
+  "version": "0.15.1",
+  "commit": "ff453241ef9eff897e6e534d8e88ecb31f52706a",
+  "tags": [
+    "v0.15.1",
+    "executor/v0.15.1"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.15.1",
+      "sum": "h1:RxG9aWn6PpAe/0o4jkbfDekrVImuIMSfx21X3lcnn24=",
+      "goModSum": "h1:msR4MhJQnVZ8NKLb0E/1K79ldZUvcOJmWhKq+gPEa+4="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.15.1",
+      "sum": "h1:9kmQQrsKQ9U+b2CY7LhWHfC7L+Dk++P+q+m6KhoA8os=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "packages": {
+    "@synopackageland/sdk": "0.15.1",
+    "@synopackageland/app": "0.15.1",
+    "syno-pkg-land-app": "0.15.1",
+    "synopkgland_app": "0.15.1"
+  },
+  "executorDigests": {
+    "x86_64": "4f47fb43f6e60dbad064afb0bbec96dd009fa046670e2c4b590b128a855cb404",
+    "aarch64": "c903b09ad657a838f0c62b6688e65e9094572b22b969770fca92fcc3640a5364",
+    "armv7": "8178d90de7ea720530bb9496e50ed118086b0e57382d84675aadc68f482d219f",
+    "lifecycle": {
+      "x86_64": "d65500c4f04713a32b45d360059281391acfa5e00ee24895fdd2de7b82735372",
+      "aarch64": "94f6cd119186ff482b8aea56541dd1f9d53c147566bc1efdca6f5a1c86198331",
+      "armv7": "cafc97c89f5645c14a8cf31d6d9f258394ed6f2d086478a7aebd04d57c274b4e"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-18",
+    "source": "Full release gate on builder.example containers at annotated release source; no GitHub Actions",
+    "steps": [
+      "Go root/executor/conformance race/vet, Rust three DSM targets, Python 3.8/mypy and Node 18 passed",
+      "455 TypeScript tests against UI 0.11.4; typecheck/build/pack and packed consumer import passed",
+      "Three-architecture Linux vet/build and cold-cache executor/lifecycle digest reproducibility passed",
+      "arm64 and armv7 taskscript test binaries passed under qemu user emulation; not NAS/kernel compatibility certification",
+      "Versioned Go modules identify the annotated release tag commit",
+      "npmjs exact versions/latest and downloaded SDK/App tarballs equal gated archives"
+    ],
+    "approvalImpact": "Executor task definitions change. Apps rebuilt with SDK 0.15.1 require one administrator reapproval after upgrade.",
+    "comparisonWith0.15.0": "All three executor digests change because control.sh is embedded; all lifecycle digests remain unchanged."
+  },
+  "npmIntegrity": {
+    "@synopackageland/sdk@0.15.1": "sha512-KeXeyGbf7p4qqWX+2ygQdmZG61yKMFVkTedSq3OQNhzopt/Sg1R7+Olhmw2gk91SPm7OmBwgw4ODZkufb9hY4g==",
+    "@synopackageland/app@0.15.1": "sha512-oAJ7s2XwNEQm4jtPpuNlOI4tDeWXnhKwvt80JFJAGGfjfrbGLZ7jzpsjrrqOxsKSXzPgN86KB2pqCTfc1tie2g=="
+  }
+}

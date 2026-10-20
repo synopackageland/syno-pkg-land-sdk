@@ -1,0 +1,409 @@
+{
+ "package": "VectorApp",
+ "policyDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+ "outdatedPolicyDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+ "cases": [
+  {
+   "name": "boot exact definition",
+   "kind": "boot",
+   "get": {
+    "task_name": "@NAME@",
+    "owner": {
+     "0": "root"
+    },
+    "enable": true,
+    "event": "bootup",
+    "operation_type": "script",
+    "operation": "@SCRIPT@"
+   },
+   "expect": "ready"
+  },
+  {
+   "name": "boot get answers no data for a missing name",
+   "kind": "boot",
+   "get": null,
+   "expect": "task_missing"
+  },
+  {
+   "name": "boot get answers an empty object for a missing name",
+   "kind": "boot",
+   "get": {},
+   "expect": "task_missing"
+  },
+  {
+   "name": "boot owned by another user",
+   "kind": "boot",
+   "get": {
+    "task_name": "@NAME@",
+    "owner": {
+     "0": "admin"
+    },
+    "enable": true,
+    "event": "bootup",
+    "operation_type": "script",
+    "operation": "@SCRIPT@"
+   },
+   "expect": "task_unverified"
+  },
+  {
+   "name": "boot disabled",
+   "kind": "boot",
+   "get": {
+    "task_name": "@NAME@",
+    "owner": {
+     "0": "root"
+    },
+    "enable": false,
+    "event": "bootup",
+    "operation_type": "script",
+    "operation": "@SCRIPT@"
+   },
+   "expect": "task_unverified"
+  },
+  {
+   "name": "boot on another event",
+   "kind": "boot",
+   "get": {
+    "task_name": "@NAME@",
+    "owner": {
+     "0": "root"
+    },
+    "enable": true,
+    "event": "shutdown",
+    "operation_type": "script",
+    "operation": "@SCRIPT@"
+   },
+   "expect": "task_unverified"
+  },
+  {
+   "name": "boot runs a command, not a script",
+   "kind": "boot",
+   "get": {
+    "task_name": "@NAME@",
+    "owner": {
+     "0": "root"
+    },
+    "enable": true,
+    "event": "bootup",
+    "operation_type": "command",
+    "operation": "@SCRIPT@"
+   },
+   "expect": "task_unverified"
+  },
+  {
+   "name": "boot get names another task",
+   "kind": "boot",
+   "get": {
+    "task_name": "Other executor boot",
+    "owner": {
+     "0": "root"
+    },
+    "enable": true,
+    "event": "bootup",
+    "operation_type": "script",
+    "operation": "@SCRIPT@"
+   },
+   "expect": "task_unverified"
+  },
+  {
+   "name": "boot script of an earlier policy",
+   "kind": "boot",
+   "get": {
+    "task_name": "@NAME@",
+    "owner": {
+     "0": "root"
+    },
+    "enable": true,
+    "event": "bootup",
+    "operation_type": "script",
+    "operation": "@OUTDATED@"
+   },
+   "expect": "task_outdated"
+  },
+  {
+   "name": "boot unrelated script",
+   "kind": "boot",
+   "get": {
+    "task_name": "@NAME@",
+    "owner": {
+     "0": "root"
+    },
+    "enable": true,
+    "event": "bootup",
+    "operation_type": "script",
+    "operation": "#!/bin/sh\necho other\n"
+   },
+   "expect": "task_conflict"
+  },
+  {
+   "name": "control exact definition",
+   "kind": "control",
+   "list": [
+    {
+     "id": 7,
+     "name": "@NAME@",
+     "real_owner": "root"
+    },
+    {
+     "id": 1000,
+     "name": "VectorApp executor boot",
+     "real_owner": "root"
+    }
+   ],
+   "get": {
+    "id": 7,
+    "name": "@NAME@",
+    "owner": "root",
+    "real_owner": "root",
+    "enable": false,
+    "type": "script",
+    "extra": {
+     "script": "@SCRIPT@"
+    }
+   },
+   "expect": "ready"
+  },
+  {
+   "name": "control not listed",
+   "kind": "control",
+   "list": [
+    {
+     "id": 1000,
+     "name": "VectorApp executor boot",
+     "real_owner": "root"
+    }
+   ],
+   "get": null,
+   "expect": "task_missing"
+  },
+  {
+   "name": "control name listed twice",
+   "kind": "control",
+   "list": [
+    {
+     "id": 7,
+     "name": "@NAME@",
+     "real_owner": "root"
+    },
+    {
+     "id": 8,
+     "name": "@NAME@",
+     "real_owner": "root"
+    },
+    {
+     "id": 1000,
+     "name": "VectorApp executor boot",
+     "real_owner": "root"
+    }
+   ],
+   "get": {
+    "id": 7,
+    "name": "@NAME@",
+    "owner": "root",
+    "real_owner": "root",
+    "enable": false,
+    "type": "script",
+    "extra": {
+     "script": "@SCRIPT@"
+    }
+   },
+   "expect": "task_duplicate"
+  },
+  {
+   "name": "control runs as another user",
+   "kind": "control",
+   "list": [
+    {
+     "id": 7,
+     "name": "@NAME@",
+     "real_owner": "root"
+    },
+    {
+     "id": 1000,
+     "name": "VectorApp executor boot",
+     "real_owner": "root"
+    }
+   ],
+   "get": {
+    "id": 7,
+    "name": "@NAME@",
+    "owner": "root",
+    "real_owner": "admin",
+    "enable": false,
+    "type": "script",
+    "extra": {
+     "script": "@SCRIPT@"
+    }
+   },
+   "expect": "task_unverified"
+  },
+  {
+   "name": "control owned by another user",
+   "kind": "control",
+   "list": [
+    {
+     "id": 7,
+     "name": "@NAME@",
+     "real_owner": "root"
+    },
+    {
+     "id": 1000,
+     "name": "VectorApp executor boot",
+     "real_owner": "root"
+    }
+   ],
+   "get": {
+    "id": 7,
+    "name": "@NAME@",
+    "owner": "admin",
+    "real_owner": "root",
+    "enable": false,
+    "type": "script",
+    "extra": {
+     "script": "@SCRIPT@"
+    }
+   },
+   "expect": "task_unverified"
+  },
+  {
+   "name": "control enabled on a schedule",
+   "kind": "control",
+   "list": [
+    {
+     "id": 7,
+     "name": "@NAME@",
+     "real_owner": "root"
+    },
+    {
+     "id": 1000,
+     "name": "VectorApp executor boot",
+     "real_owner": "root"
+    }
+   ],
+   "get": {
+    "id": 7,
+    "name": "@NAME@",
+    "owner": "root",
+    "real_owner": "root",
+    "enable": true,
+    "type": "script",
+    "extra": {
+     "script": "@SCRIPT@"
+    }
+   },
+   "expect": "task_unverified"
+  },
+  {
+   "name": "control is not a script task",
+   "kind": "control",
+   "list": [
+    {
+     "id": 7,
+     "name": "@NAME@",
+     "real_owner": "root"
+    },
+    {
+     "id": 1000,
+     "name": "VectorApp executor boot",
+     "real_owner": "root"
+    }
+   ],
+   "get": {
+    "id": 7,
+    "name": "@NAME@",
+    "owner": "root",
+    "real_owner": "root",
+    "enable": false,
+    "type": "service",
+    "extra": {
+     "script": "@SCRIPT@"
+    }
+   },
+   "expect": "task_unverified"
+  },
+  {
+   "name": "control get answers another id",
+   "kind": "control",
+   "list": [
+    {
+     "id": 7,
+     "name": "@NAME@",
+     "real_owner": "root"
+    },
+    {
+     "id": 1000,
+     "name": "VectorApp executor boot",
+     "real_owner": "root"
+    }
+   ],
+   "get": {
+    "id": 8,
+    "name": "@NAME@",
+    "owner": "root",
+    "real_owner": "root",
+    "enable": false,
+    "type": "script",
+    "extra": {
+     "script": "@SCRIPT@"
+    }
+   },
+   "expect": "task_unverified"
+  },
+  {
+   "name": "control script of an earlier policy",
+   "kind": "control",
+   "list": [
+    {
+     "id": 7,
+     "name": "@NAME@",
+     "real_owner": "root"
+    },
+    {
+     "id": 1000,
+     "name": "VectorApp executor boot",
+     "real_owner": "root"
+    }
+   ],
+   "get": {
+    "id": 7,
+    "name": "@NAME@",
+    "owner": "root",
+    "real_owner": "root",
+    "enable": false,
+    "type": "script",
+    "extra": {
+     "script": "@OUTDATED@"
+    }
+   },
+   "expect": "task_outdated"
+  },
+  {
+   "name": "control unrelated script",
+   "kind": "control",
+   "list": [
+    {
+     "id": 7,
+     "name": "@NAME@",
+     "real_owner": "root"
+    },
+    {
+     "id": 1000,
+     "name": "VectorApp executor boot",
+     "real_owner": "root"
+    }
+   ],
+   "get": {
+    "id": 7,
+    "name": "@NAME@",
+    "owner": "root",
+    "real_owner": "root",
+    "enable": false,
+    "type": "script",
+    "extra": {
+     "script": "#!/bin/sh\necho other\n"
+    }
+   },
+   "expect": "task_conflict"
+  }
+ ]
+}

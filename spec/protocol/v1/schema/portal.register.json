@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/synopackageland/syno-pkg-land-sdk/spec/protocol/v1/schema/portal.register.json",
+  "title": "portal.register",
+  "description": "Administrator: register the policy's Application Portal entry in DSM's app.d (DSM before 7.2 refuses the web-config resource of unsigned packages).",
+  "since": "0.9.6",
+  "auth": "required",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}

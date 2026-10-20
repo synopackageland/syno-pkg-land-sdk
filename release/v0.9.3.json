@@ -1,0 +1,43 @@
+{
+  "version": "0.9.3",
+  "commit": "09027ff2a201e11281bf0fcbc793afa861c38942",
+  "tags": [
+    "v0.9.3",
+    "executor/v0.9.3"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.9.3",
+      "sum": "h1:lr0OREzdTKGHLoIgN4nCL1PdXriD756AuaDCpUXvdNw=",
+      "goModSum": "h1:JNoqISvR4biA9IuLi0CFe4c272tsKzCN9Nyj71nrXsQ="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.9.3",
+      "sum": "h1:f6DAT+C2IwwY4K3e2NFOrKxjAkSaHbkgmmQRBJPoVHo=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "executorDigests": {
+    "x86_64": "89c26f18ef05b601963341da6cce43f588bdf2a74039feaf3dfcffdd1295207f",
+    "aarch64": "6616953ac1721da64a134898ed1bec93d8e5a81fc044f8bc822751df1a871bdd",
+    "armv7": "d9c62b601454b8806a6eeef18a503385b508a8a3b947afa9b433a092979cc6da",
+    "lifecycle": {
+      "x86_64": "819459580135e016184ad80c258350d57194d6134e8aa4cf1caf5237085b1004",
+      "aarch64": "5abcfc21403e84a0af15d972bcb819ac6fedfd9aaf5898ddc8c4bb06130f9f59",
+      "armv7": "b65a14f0fc77a1d3221c7dc6781eb66059aa200956b094d58a62bd1cad10f116"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-12",
+    "source": "digests from main before tagging; commit and module sums from the v0.9.3 tags (go mod download in an empty module cache, GOPRIVATE only)",
+    "steps": [
+      "scripts/executor-digests.sh 0.9.3 on macOS",
+      "scripts/executor-digests.sh 0.9.3 on Linux in golang:1.26.9-bookworm (public.ecr.aws mirror)",
+      "both builds give the same digests",
+      "executor and lifecycle digests equal 0.9.2: 0.9.3 changes only ts/i18n",
+      "policy digest unchanged: api/, the policy format, the root task scripts and api/sdk-permissions.json did not change",
+      "scripts/executor-digests.sh 0.9.3 on the executor@v0.9.3 module source from go mod download gives the same digests"
+    ]
+  }
+}

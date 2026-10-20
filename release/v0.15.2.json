@@ -1,0 +1,56 @@
+{
+  "version": "0.15.2",
+  "commit": "be41eaef61f2a4e67b77902efd5d86abfc38cd63",
+  "tags": [
+    "v0.15.2",
+    "executor/v0.15.2"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.15.2",
+      "sum": "h1:IeIe7pb9MnFBYKj/m5AtjCch+vgdDc7VbzQMBVSxM3A=",
+      "goModSum": "h1:msR4MhJQnVZ8NKLb0E/1K79ldZUvcOJmWhKq+gPEa+4="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.15.2",
+      "sum": "h1:Dm58l4pKUEVC+o9ehOqMrySfvCzvPlb3NyYPFLpSug8=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "packages": {
+    "@synopackageland/sdk": "0.15.2",
+    "@synopackageland/app": "0.15.2",
+    "syno-pkg-land-app": "0.15.2",
+    "synopkgland_app": "0.15.2"
+  },
+  "executorDigests": {
+    "x86_64": "4f47fb43f6e60dbad064afb0bbec96dd009fa046670e2c4b590b128a855cb404",
+    "aarch64": "c903b09ad657a838f0c62b6688e65e9094572b22b969770fca92fcc3640a5364",
+    "armv7": "8178d90de7ea720530bb9496e50ed118086b0e57382d84675aadc68f482d219f",
+    "lifecycle": {
+      "x86_64": "d65500c4f04713a32b45d360059281391acfa5e00ee24895fdd2de7b82735372",
+      "aarch64": "94f6cd119186ff482b8aea56541dd1f9d53c147566bc1efdca6f5a1c86198331",
+      "armv7": "cafc97c89f5645c14a8cf31d6d9f258394ed6f2d086478a7aebd04d57c274b4e"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-18",
+    "source": "Full release gate on Linux builder containers, with Rust gate on the same builder; no GitHub Actions",
+    "steps": [
+      "Go root/executor/conformance race/vet, Rust fmt/clippy/tests and three DSM targets passed",
+      "Python mypy/22 tests including Python 3.8 and Node 31 tests including Node 18 passed",
+      "463 TypeScript tests against UI 0.12.0; typecheck/build/pack and packed consumer import passed",
+      "Three-architecture Linux vet/build and cold-cache executor/lifecycle reproducibility passed",
+      "arm64 and armv7 taskscript binaries passed under qemu user emulation; not NAS/kernel certification",
+      "Versioned Go modules fetched through remote tags into separate clean GOMODCACHE directories identify the release source",
+      "npmjs exact versions/latest and downloaded SDK/App tarballs equal gated archives"
+    ],
+    "approvalImpact": "All six executor/lifecycle digests match 0.15.1. Upgrading from 0.15.1 adds no administrator reapproval requirement; upgrades from 0.15.0 retain the one-time approval introduced in 0.15.1.",
+    "comparisonWith0.15.1": "All three executor and all three lifecycle digests are unchanged (go1.26.9)."
+  },
+  "npmIntegrity": {
+    "@synopackageland/sdk@0.15.2": "sha512-am3V3HcYj00wj0Zs1XXDU6aNMh6KlXTkwqklIoIaCd7QxozDec53Nyj6jBRD/nkB7m7MDHQp+4habkRtrEF5sw==",
+    "@synopackageland/app@0.15.2": "sha512-rDBMCu/ST4m3sbYKZeeJRYiY+6KH2jdfYu4zi5CjtNJhF2/F+7oGN+oYaVR9XgwtvKdcx64Z2kjUoBrFNzD90g=="
+  }
+}

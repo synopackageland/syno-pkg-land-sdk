@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/synopackageland/syno-pkg-land-sdk/spec/protocol/v1/schema/root.jobs.get.json",
+  "title": "root.jobs.get",
+  "description": "Administrator whom Application Privileges allow to use the App: one root job with its state, latest progress and result.",
+  "since": "0.10.0",
+  "auth": "required",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "job_id"
+  ]
+}

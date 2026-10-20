@@ -1,0 +1,52 @@
+{
+  "version": "0.13.0",
+  "commit": "667897f95f27a0685b1f311ad2fbdd977bf8121b",
+  "tags": [
+    "v0.13.0",
+    "executor/v0.13.0"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.13.0",
+      "sum": "h1:1OjpAbqEJX56zUm+VnxcCkq/JACCMn8lEgecw1JGJuY=",
+      "goModSum": "h1:hlsvaVuH2wsAoR8jzI1Rg/NeejQSFpAaN6zpIWsVbjI="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.13.0",
+      "sum": "h1:zkaiiG59z9+ne+oy2J8dOlYIdn2BAGTVxfabGqieEKE=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "packages": {
+    "@synopackageland/sdk": "0.13.0",
+    "@synopackageland/app": "0.13.0",
+    "syno-pkg-land-app": "0.13.0",
+    "synopkgland_app": "0.13.0"
+  },
+  "executorDigests": {
+    "x86_64": "efe409287770f6b70e7f8465e8767eeb2413b9ab8775020cf4dffb1555d7bf1f",
+    "aarch64": "d68c9889ed2391e918b9c278679ea0a01cd04425528c11090700a3b6341fc543",
+    "armv7": "9149a05efb9f2d7d86a400707099b3d657382b1c0dbad6588be8c500e90445cc",
+    "lifecycle": {
+      "x86_64": "d65500c4f04713a32b45d360059281391acfa5e00ee24895fdd2de7b82735372",
+      "aarch64": "94f6cd119186ff482b8aea56541dd1f9d53c147566bc1efdca6f5a1c86198331",
+      "armv7": "cafc97c89f5645c14a8cf31d6d9f258394ed6f2d086478a7aebd04d57c274b4e"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-17",
+    "source": "Full release gate on builder.example containers at tagged commit; no GitHub Actions",
+    "steps": [
+      "Full scripts/gate.sh passed: Go root/executor/conformance race/vet, Rust, Python 3.8/mypy and Node 18",
+      "454 TypeScript tests, tested against UI 0.10.5; consumer import/build/pack passed",
+      "All three executor/lifecycle digests reproduce from a cold cache and equal 0.12.2; unchanged Apps keep approval",
+      "Released root/executor modules identify the tagged commit",
+      "npmjs and npmmirror exact versions/latest and complete downloaded SDK/App tarballs match gated local archives and integrity"
+    ]
+  },
+  "npmIntegrity": {
+    "@synopackageland/sdk@0.13.0": "sha512-YD9BE+90TrxaipYG/7VB3am9J9US7ZLQ1JpiQ3CAB9gFIHRFonB2OO18cuP/JgSPjNJb1+rjZPUlmcgPuyTNdg==",
+    "@synopackageland/app@0.13.0": "sha512-3la5EmRbDG+243kf1QOj74jCu9jA1RAfSzeAjeGu0PTCSKlH6bFdG295NKXNQDA7Q4hwi9hoIA8hN69QFziXNQ=="
+  }
+}

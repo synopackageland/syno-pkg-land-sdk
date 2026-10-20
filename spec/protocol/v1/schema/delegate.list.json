@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/synopackageland/syno-pkg-land-sdk/spec/protocol/v1/schema/delegate.list.json",
+  "title": "delegate.list",
+  "description": "List the caller's grants for this package.",
+  "since": "0.9.0",
+  "auth": "required",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}

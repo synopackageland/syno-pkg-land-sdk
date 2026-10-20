@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/synopackageland/syno-pkg-land-sdk/spec/protocol/v1/schema/portal.unregister.json",
+  "title": "portal.unregister",
+  "description": "Administrator: remove the App's Application Portal entry, its saved alias and every nginx conf DSM generated for it.",
+  "since": "0.9.6",
+  "auth": "required",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}

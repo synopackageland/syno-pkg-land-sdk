@@ -1,0 +1,53 @@
+{
+  "version": "0.10.2",
+  "commit": "3255e7ef0cfdfc89ae1308bfe1ddf2eabfe6f1b6",
+  "tags": [
+    "v0.10.2",
+    "executor/v0.10.2"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.10.2",
+      "sum": "h1:2sQTuKCkwbFk5vnnY+21N3xIBKu7D8PVydgwxmIeGWI=",
+      "goModSum": "h1:hlsvaVuH2wsAoR8jzI1Rg/NeejQSFpAaN6zpIWsVbjI="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.10.2",
+      "sum": "h1:Hpbva+zLqyiwTrrOTwuUdRLbLxaqd9IzgycW80PYzuc=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "packages": {
+    "@synopackageland/sdk": "0.10.2",
+    "@synopackageland/app": "0.10.2",
+    "syno-pkg-land-app": "0.10.2",
+    "synopkgland_app": "0.10.2"
+  },
+  "executorDigests": {
+    "x86_64": "bb7aebb120562633e852d590007870489b7839ea2c943db897b7a71dea743fae",
+    "aarch64": "2fd8365aabfa2ea2ea7c767f89fa8222d7f4fc04cbdde6b7d510c74002a5bb89",
+    "armv7": "6f757614eab802fa07c2601c801bcf2c14ad3076d7c01f9ed20d62744ef13979",
+    "lifecycle": {
+      "x86_64": "d65500c4f04713a32b45d360059281391acfa5e00ee24895fdd2de7b82735372",
+      "aarch64": "94f6cd119186ff482b8aea56541dd1f9d53c147566bc1efdca6f5a1c86198331",
+      "armv7": "cafc97c89f5645c14a8cf31d6d9f258394ed6f2d086478a7aebd04d57c274b4e"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-14",
+    "source": "digests from main before tagging",
+    "steps": [
+      "SYNOPKGLAND_DOCKER_SSH=builder.example scripts/gate.sh on macOS: exit 0, no warnings",
+      "executor digests differ from 0.10.1: the executor adds check-policy, applies the canonical-key rule to a request's own auth and params only, and names the reason it refuses a policy; lifecycle digests equal 0.10.1",
+      "scripts/executor-digests.sh 0.10.2 on the executor@v0.10.2 module source from go mod download gives the same digests",
+      "a module requiring v0.10.2 builds with api, background, bridge, delegate and portal imported (empty module cache, GOPRIVATE only); proxy.golang.org answers 404 for the private repository, as for v0.10.1",
+      "go.mod sums equal 0.10.1",
+      "npm dist.integrity of @synopackageland/sdk and @synopackageland/app 0.10.2 equals the local tarballs"
+    ]
+  },
+  "npm": {
+    "@synopackageland/sdk@0.10.2": "sha512-ZX854q5grp/dpCFze/JxmbWS/a6CKOGA8YpgXutMrY807G1JU0PGlfAeeQ4zQ37vZ741VNgOUEo9x5hZDdSB+w==",
+    "@synopackageland/app@0.10.2": "sha512-S7sc84ebZ+E3xEsw0drXi4UpNQQ21SkDqltvL4jwIVpN90D8bo4HLjV8ygPFP+eeZAccG2kFfTKtzkIEa7OdaQ=="
+  }
+}

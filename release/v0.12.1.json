@@ -1,0 +1,56 @@
+{
+  "version": "0.12.1",
+  "commit": "2ff9b749ca18d1f59597835ba93dcb24324968b0",
+  "tags": [
+    "v0.12.1",
+    "executor/v0.12.1"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.12.1",
+      "sum": "h1:MI9e6eX4TuL6kZ2M3AbHnKB2a2LknwWoxuXJgVb9bF0=",
+      "goModSum": "h1:hlsvaVuH2wsAoR8jzI1Rg/NeejQSFpAaN6zpIWsVbjI="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.12.1",
+      "sum": "h1:XvFjJUA97Zde1/BV+/3ndql+x2Z10A4v2zqmw6upa6U=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "packages": {
+    "@synopackageland/sdk": "0.12.1",
+    "@synopackageland/app": "0.12.1",
+    "syno-pkg-land-app": "0.12.1",
+    "synopkgland_app": "0.12.1"
+  },
+  "executorDigests": {
+    "x86_64": "efe409287770f6b70e7f8465e8767eeb2413b9ab8775020cf4dffb1555d7bf1f",
+    "aarch64": "d68c9889ed2391e918b9c278679ea0a01cd04425528c11090700a3b6341fc543",
+    "armv7": "9149a05efb9f2d7d86a400707099b3d657382b1c0dbad6588be8c500e90445cc",
+    "lifecycle": {
+      "x86_64": "d65500c4f04713a32b45d360059281391acfa5e00ee24895fdd2de7b82735372",
+      "aarch64": "94f6cd119186ff482b8aea56541dd1f9d53c147566bc1efdca6f5a1c86198331",
+      "armv7": "cafc97c89f5645c14a8cf31d6d9f258394ed6f2d086478a7aebd04d57c274b4e"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-16",
+    "source": "Full local SDK release gate; Linux bridge/TS segments on builder.example containers; exact source at SDK PR #4 squash commit; no CI settings changed",
+    "steps": [
+      "Full scripts/gate.sh passed: root/executor/conformance race/vet, Python 3.8/mypy, Rust and Node 18 bridge checks",
+      "447 TypeScript tests and consumer imports/build/pack passed",
+      "Three-architecture executor/lifecycle builds and warm/cold reproducibility passed",
+      "Released root/executor modules point to the release tags and tested commit; executor module files match tested source",
+      "independent package-account no-session calls: 294-byte inline MIME and 22958953-byte staged MIME exactly match IMAP originals by SHA-256",
+      "16 MiB attachment hash matches; cross-grant/cross-mailbox/revoked background calls refused; private staging consumed and deleted",
+      "Probe, protected state, sockets, AppPriv, test mail and disposable tasks removed; task 19/staff baseline unchanged",
+      "Official npm SDK/App exact versions/latest and anonymous downloaded tarballs match the verified local archives/integrity",
+      "Packaged CLI consumer builds/inspects the WebAPI-only Python App using released SDK 0.12.1 modules: no local override, zero findings, recorded digest matches"
+    ]
+  },
+  "npmIntegrity": {
+    "@synopackageland/sdk@0.12.1": "sha512-UE0vLYrZ46jxZFHVThJbNVzfwL7oqRlGn/oCmfqvlSzTV5OuTS7V9VKogEHquJsKwmgjBVdMMGfKZQZmuIJHcg==",
+    "@synopackageland/app@0.12.1": "sha512-WRCteLX73YsKLCun2tsts88EawmM67u4NTUF/UYLRTtN0pEclwk/2dV57k/CmmhHh5rcCC5rL15UqCKue9DJdQ=="
+  }
+}

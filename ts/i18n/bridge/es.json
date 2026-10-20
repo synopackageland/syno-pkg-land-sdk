@@ -1,0 +1,10 @@
+{
+  "app_unavailable": "La App no está disponible en este momento. Vuelva a intentarlo más tarde.",
+  "request_timeout": "La solicitud tardó demasiado y se detuvo. Vuelva a intentarlo o pruebe con una tarea más pequeña.",
+  "limit_exceeded": "El archivo supera el tamaño permitido.",
+  "read_failed": "No se puede leer el archivo. Vuelva a intentarlo más tarde.",
+  "identity_unavailable": "No se puede identificar esta cuenta de usuario. Vuelva a intentarlo más tarde.",
+  "APP_STOPPED": "La App está detenida. Iníciela en el Centro de paquetes y vuelva a intentarlo.",
+  "APP_STARTING": "La App se está iniciando. Vuelva a intentarlo en un momento.",
+  "credential_not_ready": "DSM no proporcionó a esta página su token de inicio de sesión. Inicie sesión de nuevo en DSM con su contraseña y abra la App desde el escritorio de DSM."
+}

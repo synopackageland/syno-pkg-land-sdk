@@ -1,0 +1,5 @@
+The administrator bridge is built with Zig 0.16.0 and dynamically links DSM GNU libc and libsynosdk.
+Bridge source, build command and hashes accompany this notice.
+GNU libc startup sources and build headers are distributed with Zig 0.16.0.
+Exact compiler and corresponding startup sources: https://ziglang.org/download/0.16.0/
+The DSM SDK libraries remain installed DSM components and are not redistributed.

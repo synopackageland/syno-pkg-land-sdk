@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/synopackageland/syno-pkg-land-sdk/spec/protocol/v1/schema/webapi.call.json",
+  "title": "webapi.call",
+  "description": "Call an exact approved WebAPI as the profile grant owner. JSON returns the DSM envelope; raw (since 0.12.1) requires profile raw_max_bytes and returns content_type, size, sha256 and base64 body or private staging handle. Never retried.",
+  "since": "0.11.0",
+  "auth": "optional",
+  "type": "object",
+  "properties": {
+    "response_type": {
+      "type": "string",
+      "enum": ["json", "raw"],
+      "description": "Defaults to json. Raw requires an explicitly approved raw_max_bytes profile."
+    },
+    "delegation_id": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "job_id": {
+      "type": "string"
+    },
+    "api": {
+      "type": "string"
+    },
+    "method": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535
+    },
+    "params": {
+      "type": "object",
+      "description": "JSON API arguments, at most 32768 encoded bytes; authentication, runner and dispatch keys are forbidden."
+    }
+  },
+  "required": [
+    "delegation_id",
+    "api",
+    "method",
+    "version",
+    "params"
+  ],
+  "additionalProperties": false
+}

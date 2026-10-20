@@ -1,0 +1,53 @@
+{
+  "version": "0.12.0",
+  "commit": "213a28dea17290db8432fff2ee845d98ae7dce0e",
+  "tags": [
+    "v0.12.0",
+    "executor/v0.12.0"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.12.0",
+      "sum": "h1:C3Q9mMOiSnSy3R/YiTrqJzfu97YVofauQlfBOATj3s4=",
+      "goModSum": "h1:hlsvaVuH2wsAoR8jzI1Rg/NeejQSFpAaN6zpIWsVbjI="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.12.0",
+      "sum": "h1:8MFOloC5Z0zkKG7O/nz9o7NR5hNxQRyECs1uo2yVFJk=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "packages": {
+    "@synopackageland/sdk": "0.12.0",
+    "@synopackageland/app": "0.12.0",
+    "syno-pkg-land-app": "0.12.0",
+    "synopkgland_app": "0.12.0"
+  },
+  "executorDigests": {
+    "x86_64": "abe0a42699fed06aeeb7520e5a4f3393cae64f83a66773b70630f0db0c5ed107",
+    "aarch64": "1fdf171a665279f16ca1c2605a54996b2359fa69531c6fe4e890f5bda61c1bef",
+    "armv7": "946f73df833929283f94289f025fd73897416777be5e0867d1e73f0b6c3031d7",
+    "lifecycle": {
+      "x86_64": "d65500c4f04713a32b45d360059281391acfa5e00ee24895fdd2de7b82735372",
+      "aarch64": "94f6cd119186ff482b8aea56541dd1f9d53c147566bc1efdca6f5a1c86198331",
+      "armv7": "cafc97c89f5645c14a8cf31d6d9f258394ed6f2d086478a7aebd04d57c274b4e"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-16",
+    "source": "UI 0.10.1 from npm; main c1e471b plus UI 0.10 dialog/notice changes; builds/tests on builder.example containers; published from this machine (GitHub Actions unavailable)",
+    "steps": [
+      "Full scripts/gate.sh passed: 334 seconds",
+      "63 TypeScript test files / 447 tests and consumer import passed; 195 packed SDK files",
+      "Rust, Go root/executor/conformance, Python 3.8/mypy and Node 18 bridge checks passed",
+      "Three-architecture executor/lifecycle builds and warm/cold digest reproducibility passed",
+      "Executor source and all executor/lifecycle digests equal 0.11.0, also when built from the released Go module",
+      "npmjs and npmmirror metadata, latest and downloaded tarballs match the verified local archives"
+    ]
+  },
+  "npmIntegrity": {
+    "@synopackageland/sdk@0.12.0": "sha512-YxRMkNOAUtxfLfNAAZMuDaz6DpPeLjaMUROBk5FwVoUbC1PUImspXeeXsFl4laWJzN7DoMSjWYJ4YNkSbkFwFg==",
+    "@synopackageland/app@0.12.0": "sha512-odmyekDiGEZML/A9wyMu9FZGPRAOm6v1JpUpYx7HDDWDQlTQqgq7QNO0yd6Thyl/q07jwxOUZYoHNWtSGlOkJw=="
+  }
+}

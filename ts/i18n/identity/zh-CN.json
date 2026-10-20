@@ -1,0 +1,29 @@
+{
+  "title": "使用 Synology 账户登录",
+  "intro": "使用这台 NAS 上的账户登录此 App。",
+  "httpsTitle": "需要 HTTPS",
+  "failedTitle": "登录失败",
+  "account": "账户",
+  "password": "密码",
+  "otpPrompt": "请输入身份验证器 App 中的验证码。",
+  "otp": "验证码",
+  "signingIn": "正在登录…",
+  "verify": "验证并登录",
+  "signIn": "登录",
+  "otherAccount": "使用其他账户",
+  "continueDSM": "通过 DSM 继续",
+  "errors": {
+    "rate_limited": "登录尝试次数过多，请等待一分钟后重试。",
+    "https_required": "请使用 HTTPS 打开此 App 以登录。",
+    "auth_unavailable": "DSM 登录暂时不可用，请重试。",
+    "session_required": "请先在此浏览器中登录 DSM，然后重试。",
+    "cross_origin": "登录已被拒绝：浏览器没有表明它来自此 App 的页面。请使用新版浏览器重新打开 App。",
+    "origin_required": "登录已被拒绝：浏览器没有表明它来自此 App 的页面。请使用新版浏览器重新打开 App。",
+    "failed": "无法完成登录。请检查账户和密码，或联系管理员。"
+  },
+  "notices": {
+    "expired": "登录已过期，请重新登录。",
+    "revalidate": "请先在此浏览器中登录 DSM，然后选择“通过 DSM 继续”。",
+    "unavailable": "登录暂时不可用，请刷新后重试。"
+  }
+}

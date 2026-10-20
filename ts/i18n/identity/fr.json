@@ -1,0 +1,29 @@
+{
+  "title": "Se connecter avec votre compte Synology",
+  "intro": "Utilisez votre compte sur ce NAS pour vous connecter à l’application.",
+  "httpsTitle": "HTTPS requis",
+  "failedTitle": "Échec de la connexion",
+  "account": "Compte",
+  "password": "Mot de passe",
+  "otpPrompt": "Saisissez le code de vérification de votre application d’authentification.",
+  "otp": "Code de vérification",
+  "signingIn": "Connexion…",
+  "verify": "Vérifier et se connecter",
+  "signIn": "Se connecter",
+  "otherAccount": "Utiliser un autre compte",
+  "continueDSM": "Continuer avec DSM",
+  "errors": {
+    "rate_limited": "Trop de tentatives de connexion. Patientez une minute et réessayez.",
+    "https_required": "Ouvrez cette application en HTTPS pour vous connecter.",
+    "auth_unavailable": "La connexion DSM n’est pas disponible. Réessayez.",
+    "session_required": "Connectez-vous à DSM dans ce navigateur, puis réessayez.",
+    "cross_origin": "La connexion a été refusée : le navigateur n’a pas indiqué qu’elle provenait de la page de cette App. Rouvrez l’App dans un navigateur récent.",
+    "origin_required": "La connexion a été refusée : le navigateur n’a pas indiqué qu’elle provenait de la page de cette App. Rouvrez l’App dans un navigateur récent.",
+    "failed": "La connexion n’a pas pu aboutir. Vérifiez vos identifiants ou contactez votre administrateur."
+  },
+  "notices": {
+    "expired": "Votre session a expiré. Reconnectez-vous.",
+    "revalidate": "Connectez-vous à DSM dans ce navigateur, puis choisissez « Continuer avec DSM ».",
+    "unavailable": "La connexion n’est pas disponible. Actualisez et réessayez."
+  }
+}

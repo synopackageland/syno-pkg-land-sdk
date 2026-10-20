@@ -1,0 +1,12 @@
+{
+  "title": "DSM App 存取",
+  "admin_required": "此 App 需要 DSM 管理員權限。",
+  "group_required": "您的 DSM 帳號不屬於允許使用此 App 的群組。請聯絡 DSM 管理員。",
+  "sign_in_required": "請先在此位址登入 DSM，再試一次。",
+  "verification_failed": "DSM 無法驗證您的登入。請稍後再試。",
+  "sign_in": "登入 DSM",
+  "retry": "再試一次",
+  "direct_title": "直接連線至 App",
+  "direct_notice": "此 App 無法使用 DSM 管理的 HTTPS。直接連線可能顯示憑證警告，或使用未加密的 HTTP。",
+  "direct_continue": "繼續使用直接連線"
+}

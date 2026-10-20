@@ -1,0 +1,12 @@
+{
+  "title": "Acceso a la App de DSM",
+  "admin_required": "Esta App requiere un administrador de DSM.",
+  "group_required": "Su cuenta de DSM no pertenece a un grupo autorizado para usar esta App. Póngase en contacto con su administrador de DSM.",
+  "sign_in_required": "Inicie sesión en DSM en esta dirección y vuelva a intentarlo.",
+  "verification_failed": "DSM no pudo verificar su inicio de sesión. Vuelva a intentarlo en unos instantes.",
+  "sign_in": "Iniciar sesión en DSM",
+  "retry": "Volver a intentar",
+  "direct_title": "Conexión directa a la App",
+  "direct_notice": "El HTTPS administrado por DSM no está disponible para esta App. La conexión directa puede mostrar una advertencia de certificado o utilizar HTTP sin cifrar.",
+  "direct_continue": "Continuar con la conexión directa"
+}

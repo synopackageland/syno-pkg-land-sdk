@@ -1,0 +1,29 @@
+{
+  "title": "Sign in with your Synology account",
+  "intro": "Use your account on this NAS to sign in to the app.",
+  "httpsTitle": "HTTPS required",
+  "failedTitle": "Sign-in failed",
+  "account": "Account",
+  "password": "Password",
+  "otpPrompt": "Enter the verification code from your authenticator app.",
+  "otp": "Verification code",
+  "signingIn": "Signing in…",
+  "verify": "Verify and sign in",
+  "signIn": "Sign in",
+  "otherAccount": "Use another account",
+  "continueDSM": "Continue with DSM",
+  "errors": {
+    "rate_limited": "Too many sign-in attempts. Wait one minute and try again.",
+    "https_required": "Open this app using HTTPS to sign in.",
+    "auth_unavailable": "DSM sign-in is unavailable. Try again.",
+    "session_required": "Sign in to DSM in this browser, then try again.",
+    "cross_origin": "Sign-in was refused: the browser did not show that it came from this App's page. Open the App again in a current browser.",
+    "origin_required": "Sign-in was refused: the browser did not show that it came from this App's page. Open the App again in a current browser.",
+    "failed": "Sign-in could not be completed. Check your credentials or contact your administrator."
+  },
+  "notices": {
+    "expired": "Your session expired. Sign in again.",
+    "revalidate": "Sign in to DSM in this browser, then choose Continue with DSM.",
+    "unavailable": "Sign-in is unavailable. Refresh to try again."
+  }
+}

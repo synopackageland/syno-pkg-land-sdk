@@ -1,0 +1,53 @@
+{
+  "version": "0.15.0",
+  "commit": "a68ee74f311b2fa7b980330c340bd61bd146aec4",
+  "tags": [
+    "v0.15.0",
+    "executor/v0.15.0"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.15.0",
+      "sum": "h1:M/QoJFpARKzLbK/xRk5GU3FEdCl7drgeO8prgHgD/y4=",
+      "goModSum": "h1:msR4MhJQnVZ8NKLb0E/1K79ldZUvcOJmWhKq+gPEa+4="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.15.0",
+      "sum": "h1:O0Rh/Y00oaPFXqsMSjgWYfBcWEqregrUxhpvI7oFia8=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "packages": {
+    "@synopackageland/sdk": "0.15.0",
+    "@synopackageland/app": "0.15.0",
+    "syno-pkg-land-app": "0.15.0",
+    "synopkgland_app": "0.15.0"
+  },
+  "executorDigests": {
+    "x86_64": "efe409287770f6b70e7f8465e8767eeb2413b9ab8775020cf4dffb1555d7bf1f",
+    "aarch64": "d68c9889ed2391e918b9c278679ea0a01cd04425528c11090700a3b6341fc543",
+    "armv7": "9149a05efb9f2d7d86a400707099b3d657382b1c0dbad6588be8c500e90445cc",
+    "lifecycle": {
+      "x86_64": "d65500c4f04713a32b45d360059281391acfa5e00ee24895fdd2de7b82735372",
+      "aarch64": "94f6cd119186ff482b8aea56541dd1f9d53c147566bc1efdca6f5a1c86198331",
+      "armv7": "cafc97c89f5645c14a8cf31d6d9f258394ed6f2d086478a7aebd04d57c274b4e"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-18",
+    "source": "Full release gate on builder.example containers at annotated release source; no GitHub Actions",
+    "steps": [
+      "Go root/executor/conformance race/vet, Rust, Python 3.8/mypy and Node 18 passed",
+      "455 TypeScript tests against UI 0.11.4; typecheck/build/pack and packed consumer import passed",
+      "Three architectures and cold-cache executor/lifecycle digests equal 0.14.1",
+      "Versioned Go modules identify the annotated release tag commit",
+      "npmjs and npmmirror exact versions/latest and downloaded SDK/App tarballs equal gated archives"
+    ],
+    "approvalImpact": "SDK version alone does not require reapproval when policy, capabilities and root payload stay unchanged"
+  },
+  "npmIntegrity": {
+    "@synopackageland/sdk@0.15.0": "sha512-Y8NRMedQ96Plex8Ori5SmsiqY8X7edhyyHm7oaot1/PizinyOBrW3zE9ZhjrvSu5Kh6PFwEE+Uz7SM8yK2wJpw==",
+    "@synopackageland/app@0.15.0": "sha512-jeYSfqAUZFDRLrdiEtV5EwkaKFYAQ7cZY0UpFYTkMrv5GjmuLjkL7faV+VSSAOQ1VAGhykv8h6TBCzi4PdPBKQ=="
+  }
+}

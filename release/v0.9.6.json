@@ -1,0 +1,46 @@
+{
+  "version": "0.9.6",
+  "commit": "b8a79e32a78e7b5edd222a2538ee452f94fb1e81",
+  "tags": [
+    "v0.9.6",
+    "executor/v0.9.6"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.9.6",
+      "sum": "h1:jc5AmFKWKkpwxwG7RKiKgzI5WbA/DEm0FRfDbQwWXnQ=",
+      "goModSum": "h1:hlsvaVuH2wsAoR8jzI1Rg/NeejQSFpAaN6zpIWsVbjI="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.9.6",
+      "sum": "h1:llbWHMpn7eqVDC/vaM+BjP8DE1kEzjR0saZeFzO+mvQ=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "executorDigests": {
+    "x86_64": "4241dfebd2b819c2566eca062ee0021b99e7f86bbe4703f50833874f79b3cf54",
+    "aarch64": "923514aca8cf6576c6c52c737d53c2c7cc4bfcec40591dcec995005be41add95",
+    "armv7": "df959648ac8e6201f1cf9b86b57730c09ba1afb7ecc151ba2f530ad15dd90ccf",
+    "lifecycle": {
+      "x86_64": "819459580135e016184ad80c258350d57194d6134e8aa4cf1caf5237085b1004",
+      "aarch64": "5abcfc21403e84a0af15d972bcb819ac6fedfd9aaf5898ddc8c4bb06130f9f59",
+      "armv7": "b65a14f0fc77a1d3221c7dc6781eb66059aa200956b094d58a62bd1cad10f116"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-12",
+    "source": "digests from main before tagging; commit and module sums from the v0.9.6 tags (go mod download in an empty module cache, GOPRIVATE only)",
+    "steps": [
+      "scripts/executor-digests.sh 0.9.6 on macOS (gate.sh, twice, identical)",
+      "scripts/executor-digests.sh 0.9.6 on Linux in golang:1.26.9-bookworm (public.ecr.aws mirror)",
+      "both builds give the same digests",
+      "executor digests differ from 0.9.5: portal.register/unregister, the uninstall portal cleanup, the grant's browser address and status with auth",
+      "lifecycle digests equal 0.9.5",
+      "policy digest changes only for Apps whose executor registers a portal entry (policy portal member and portal.register/unregister); other policies are unchanged",
+      "scripts/executor-digests.sh 0.9.6 on the executor@v0.9.6 module source from go mod download gives the same digests",
+      "a module requiring v0.9.6 builds with api and portal imported (empty module cache, GOPRIVATE only)",
+      "root go.mod sum differs from 0.9.5: go.mod ignores ./rust"
+    ]
+  }
+}

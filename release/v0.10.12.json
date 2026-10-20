@@ -1,0 +1,53 @@
+{
+  "version": "0.10.12",
+  "commit": "b55e5c8fe31ef6f21956dfc29ae707be57de8fc9",
+  "tags": [
+    "v0.10.12",
+    "executor/v0.10.12"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.10.12",
+      "sum": "h1:w6K6ClRYQpHPwjiDyMXBUgjh5TmBzVwINqD4fniSDjM=",
+      "goModSum": "h1:hlsvaVuH2wsAoR8jzI1Rg/NeejQSFpAaN6zpIWsVbjI="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.10.12",
+      "sum": "h1:anPpbYMoIxJHJUWLDJHzJNpKkAxH4C7OqeoMPE4gPNE=",
+      "goModSum": "h1:KAvaTf+lJa7Dt30pRedMcDwKFbWM0qAF/I4jIjQB3fg="
+    }
+  },
+  "packages": {
+    "@synopackageland/sdk": "0.10.12",
+    "@synopackageland/app": "0.10.12",
+    "syno-pkg-land-app": "0.10.12",
+    "synopkgland_app": "0.10.12"
+  },
+  "executorDigests": {
+    "x86_64": "7fe3118a8de76b2d83ff4410ce76dd1aca791388286a0929602beaf4536a7194",
+    "aarch64": "0d44c4da7c464d62fcdba8d0ea5f65b935fc505e0faaa8bd61bbb5ec4deb1cea",
+    "armv7": "720a321c56669f31bc289e303627b9b88a56b9ca195ce837821639479491ab8f",
+    "lifecycle": {
+      "x86_64": "d65500c4f04713a32b45d360059281391acfa5e00ee24895fdd2de7b82735372",
+      "aarch64": "94f6cd119186ff482b8aea56541dd1f9d53c147566bc1efdca6f5a1c86198331",
+      "armv7": "cafc97c89f5645c14a8cf31d6d9f258394ed6f2d086478a7aebd04d57c274b4e"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-15",
+    "source": "UI 0.9.10 from npm; main 29a7555 plus fast-forwarded PageInfo and gate script fixes; builds/tests on builder.example containers",
+    "steps": [
+      "Full scripts/gate.sh passed: 269 seconds",
+      "62 TypeScript test files / 444 tests and consumer import passed; 193 packed SDK files",
+      "Rust, Go root/executor/conformance fmt/tidy/vet/race, Python generator/mypy/Python 3.8 and Node 18 bridge checks passed",
+      "Three-architecture Go vet/build and warm/cold executor/lifecycle digest reproducibility passed",
+      "Executor source and all executor/lifecycle digests equal 0.10.11; canonical released-tag module source digests match",
+      "npmjs and npmmirror metadata, latest and downloaded tarballs match the verified local archives"
+    ]
+  },
+  "npmIntegrity": {
+    "@synopackageland/sdk@0.10.12": "sha512-+NI9gVxJTFYNp8B+zO6wTNDok1JbnHGbVJ081PEWLed3cxobb8TTP4Bx4Xw+GVVM+wS9aQyF5Vu1LQd9epiHig==",
+    "@synopackageland/app@0.10.12": "sha512-B6vSCT36MuXnN1TK1gzFDaNPLiwJBVoiICMkNfhGsqQQk8HTicVC8q6BCgqN7ordk3OdtZVk8KPjG2FtIjUjxA=="
+  }
+}
