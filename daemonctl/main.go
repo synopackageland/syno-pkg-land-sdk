@@ -34,6 +34,7 @@ type deadlines struct {
 	Uninstall int `json:"uninstall"`
 }
 type config struct {
+	Restart          *restartPolicy    `json:"restart,omitempty"`
 	OperationSeconds int               `json:"operation_seconds,omitempty"`
 	Network          *networkPolicy    `json:"network,omitempty"`
 	Package          string            `json:"package"`
@@ -44,10 +45,14 @@ type config struct {
 	Timeouts         deadlines         `json:"timeouts"`
 }
 type record struct {
-	Supervisor int    `json:"supervisor"`
-	Child      int    `json:"child"`
-	Birth      string `json:"birth"`
-	Digest     string `json:"digest"`
+	State      string    `json:"state,omitempty"`
+	Reason     string    `json:"reason,omitempty"`
+	Restarts   int       `json:"restarts,omitempty"`
+	RetryAt    time.Time `json:"retry_at,omitempty"`
+	Supervisor int       `json:"supervisor"`
+	Child      int       `json:"child"`
+	Birth      string    `json:"birth"`
+	Digest     string    `json:"digest"`
 }
 type controller struct {
 	acquireGeneration string
@@ -101,6 +106,13 @@ func load(dest, data string) (*controller, error) {
 	}
 	if err := validateDeadlines(cfg); err != nil {
 		return nil, err
+	}
+	cfg.Restart, err = normalizeRestart(cfg.Restart)
+	if err != nil {
+		return nil, err
+	}
+	if cfg.Restart != nil && cfg.Restart.Mode != "off" && cfg.Network != nil {
+		return nil, errors.New("daemon restart policy requires a native daemon without Compose network supervision")
 	}
 	hash := sha256.Sum256(raw)
 	c := &controller{config: cfg, dest: dest, data: data, dir: filepath.Join(data, "daemon"), digest: hex.EncodeToString(hash[:])}
@@ -175,7 +187,7 @@ func (c *controller) run(action string) (int, error) {
 	if action == "uninstall" {
 		budget += c.Timeouts.Uninstall
 	}
-	if action != "start" && action != "stop" && action != "status" && action != "restart" && action != "uninstall" && action != "acquire" && action != "release" {
+	if action != "start" && action != "stop" && action != "status" && action != "status-json" && action != "restart" && action != "uninstall" && action != "acquire" && action != "release" {
 		return 1, errors.New("unsupported daemon action")
 	}
 	until := time.Now().Add(time.Duration(budget) * time.Second)
@@ -184,6 +196,9 @@ func (c *controller) run(action string) (int, error) {
 		return 1, err
 	}
 	defer lock.Close()
+	if action == "status-json" {
+		return c.statusJSON(until)
+	}
 	if action == "acquire" || action == "release" {
 		err := c.recordAcquire(action == "acquire")
 		if err != nil {
@@ -194,6 +209,8 @@ func (c *controller) run(action string) (int, error) {
 	if action == "status" {
 		if err := c.request("status", until); err == nil {
 			return 0, nil
+		} else if err.Error() == "DAEMON_RESTART_BACKOFF" || err.Error() == "DAEMON_RESTART_STARTING" {
+			return 1, err
 		}
 		if _, err := os.Lstat(filepath.Join(c.dir, "daemon.pid")); os.IsNotExist(err) {
 			owner, err := c.lock("owner.lock", time.Now())
@@ -202,7 +219,7 @@ func (c *controller) run(action string) (int, error) {
 				return 3, nil
 			}
 		}
-		return 1, errors.New("daemon failed or supervisor unavailable")
+		return 1, errors.New(c.savedReason())
 	}
 	if action == "stop" || action == "restart" || action == "uninstall" {
 		stopUntil := time.Now().Add(time.Duration(c.Timeouts.Stop) * time.Second)
@@ -287,11 +304,24 @@ func (c *controller) request(action string, until time.Time) error {
 	if _, err := fmt.Fprintf(conn, "%s %s%s\n", action, c.digest, token); err != nil {
 		return err
 	}
-	raw, err := bufio.NewReader(io.LimitReader(conn, 256)).ReadString('\n')
+	raw, err := bufio.NewReader(io.LimitReader(conn, 4096)).ReadString('\n')
 	if err != nil {
 		return err
 	}
 	if raw != "ok\n" {
+		if action == "snapshot" {
+			var snapshot record
+			if json.Unmarshal([]byte(raw), &snapshot) == nil && snapshot.Digest == c.digest && snapshot.Supervisor == r.Supervisor {
+				json.NewEncoder(os.Stdout).Encode(snapshot)
+				if snapshot.State != "running" {
+					return &snapshotError{}
+				}
+				return nil
+			}
+		}
+		if raw == "DAEMON_RESTART_BACKOFF\n" || raw == "DAEMON_RESTART_STARTING\n" {
+			return errors.New(strings.TrimSpace(raw))
+		}
 		return errors.New("daemon operation refused")
 	}
 	return nil
@@ -321,6 +351,23 @@ func (c *controller) retired() error {
 }
 
 func (c *controller) stop(until time.Time) error {
+	// Fence automatic restarts before dispatch, including a crash/backoff race.
+	// Only an explicit start under command.lock and owner.lock clears this gate.
+	launch, err := c.lock("launch.lock", until)
+	if err != nil {
+		return err
+	}
+	gate, err := safeFile(filepath.Join(c.dir, "stop.request"))
+	if err != nil {
+		launch.Close()
+		return err
+	}
+	err = gate.Sync()
+	gate.Close()
+	launch.Close()
+	if err != nil {
+		return err
+	}
 	if err := c.request("stop", until); err != nil {
 		owner, lockErr := c.lock("owner.lock", time.Now())
 		if lockErr != nil {
@@ -346,6 +393,10 @@ func (c *controller) start(until time.Time) error {
 		return err
 	}
 	if err := c.retired(); err != nil {
+		owner.Close()
+		return err
+	}
+	if err := os.Remove(filepath.Join(c.dir, "stop.request")); err != nil && !os.IsNotExist(err) {
 		owner.Close()
 		return err
 	}
@@ -460,7 +511,7 @@ func (c *controller) uninstallUntil(until time.Time) error {
 		return err
 	}
 	done := make(chan error, 1)
-	go func() { done <- cmd.Wait() }()
+	go func(child *exec.Cmd, result chan<- error) { result <- child.Wait() }(cmd, done)
 	select {
 	case err := <-done:
 		return err
@@ -532,9 +583,12 @@ func (c *controller) supervise() error {
 		return err
 	}
 	done := make(chan error, 1)
-	go func() { done <- cmd.Wait() }()
+	go func(child *exec.Cmd, result chan<- error) { result <- child.Wait() }(cmd, done)
 	stopUntil := time.Time{}
 	stop := func() error {
+		if done == nil {
+			return nil
+		}
 		if stopUntil.IsZero() {
 			stopUntil = time.Now().Add(time.Duration(c.Timeouts.Stop) * time.Second)
 		}
@@ -564,21 +618,8 @@ func (c *controller) supervise() error {
 		stop()
 		return errors.New("daemon start timeout")
 	}
-	r := record{Supervisor: os.Getpid(), Child: cmd.Process.Pid, Birth: processBirth(cmd.Process.Pid), Digest: c.digest}
-	raw, _ := json.Marshal(r)
-	f, err := safeFile(filepath.Join(c.dir, "daemon.pid"))
-	if err != nil {
-		stop()
-		return err
-	}
-	err = f.Truncate(0)
-	if err == nil {
-		_, err = f.Write(raw)
-	}
-	if err == nil {
-		err = f.Sync()
-	}
-	f.Close()
+	r := record{Supervisor: os.Getpid(), Child: cmd.Process.Pid, Birth: processBirth(cmd.Process.Pid), Digest: c.digest, State: "running"}
+	err = c.writeRecord(r)
 	if err != nil {
 		stop()
 		return err
@@ -662,10 +703,121 @@ func (c *controller) supervise() error {
 		}
 		statusWaiters = nil
 	}
+	budget := restartBudget{policy: c.Restart}
+	var restartTimer, stableTimer *time.Timer
+	var restartC, stableC <-chan time.Time
+	defer func() {
+		if restartTimer != nil {
+			restartTimer.Stop()
+		}
+		if stableTimer != nil {
+			stableTimer.Stop()
+		}
+	}()
+	childExited := func(exitErr error) (bool, error) {
+		done = nil // The child has been reaped; stop must not wait on it again.
+		healthy = false
+		flushStatus()
+		stableC = nil
+		if stableTimer != nil {
+			stableTimer.Stop()
+		}
+		r.RetryAt = time.Time{}
+		if exitErr == nil {
+			r.State, r.Reason = "exited", "DAEMON_CHILD_EXIT"
+			fmt.Fprintln(os.Stderr, r.Reason)
+			return false, c.writeRecord(r)
+		}
+		r.State, r.Reason = "failed", "DAEMON_CHILD_FAILED"
+		if delay, ok := budget.next(time.Now()); ok {
+			r.Restarts++
+			r.State, r.Reason = "restarting", "DAEMON_RESTART_BACKOFF"
+			r.RetryAt = time.Now().Add(delay)
+			fmt.Fprintf(os.Stderr, "%s attempt=%d delay=%s\n", r.Reason, r.Restarts, delay)
+			if err := c.writeRecord(r); err != nil {
+				return false, err
+			}
+			restartTimer = time.NewTimer(delay)
+			restartC = restartTimer.C
+			return true, nil
+		}
+		if c.Restart != nil && c.Restart.Mode == "on-failure" {
+			r.Reason = "DAEMON_RESTART_LIMIT"
+		}
+		fmt.Fprintf(os.Stderr, "%s attempts=%d; manual start required\n", r.Reason, r.Restarts)
+		if err := c.writeRecord(r); err != nil {
+			return false, err
+		}
+		return false, errors.New(r.Reason)
+	}
 	for {
+		// Give a queued lifecycle stop priority over an expired backoff timer.
 		select {
+		case <-signals:
+			err := stop()
+			clean = err == nil
+			return err
+		default:
+		}
+		select {
+		case <-restartC:
+			restartC = nil
+			select {
+			case <-signals:
+				clean = true
+				return nil
+			default:
+			}
+			launch, err := c.lock("launch.lock", time.Now().Add(time.Duration(c.Timeouts.Stop)*time.Second))
+			if err != nil {
+				return err
+			}
+			if _, err := os.Lstat(filepath.Join(c.dir, "stop.request")); !os.IsNotExist(err) {
+				launch.Close()
+				clean = true
+				return nil
+			}
+			cmd = c.child(c.Args)
+			cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+			err = cmd.Start()
+			launch.Close()
+			if err != nil {
+				if again, err := childExited(err); !again {
+					return err
+				}
+				continue
+			}
+			done = make(chan error, 1)
+			// Capture each generation rather than the mutable loop variables.
+			go func(child *exec.Cmd, result chan<- error) { result <- child.Wait() }(cmd, done)
+			r.Child, r.Birth = cmd.Process.Pid, processBirth(cmd.Process.Pid)
+			r.State, r.Reason, r.RetryAt = "starting", "DAEMON_RESTART_STARTING", time.Time{}
+			if err := c.writeRecord(r); err != nil {
+				stop()
+				return err
+			}
+			stableTimer = time.NewTimer(time.Second)
+			stableC = stableTimer.C
+		case <-stableC:
+			stableC = nil
+			// A child that died before the stability timer is never reported ready.
+			select {
+			case err := <-done:
+				if again, err := childExited(err); !again {
+					return err
+				}
+				continue
+			default:
+			}
+			healthy = true
+			r.State, r.Reason = "running", ""
+			if err := c.writeRecord(r); err != nil {
+				stop()
+				return err
+			}
+			fmt.Fprintf(os.Stderr, "DAEMON_RESTART_RECOVERED attempts=%d\n", r.Restarts)
 		case <-tick.C:
-			if !probing {
+			if done != nil && stableC == nil && !probing {
 				healthy = false
 				probing = true
 				probeStarted = time.Now()
@@ -686,8 +838,10 @@ func (c *controller) supervise() error {
 			}
 			healthy = err == nil
 			flushStatus()
-		case <-done:
-			return nil
+		case err := <-done:
+			if again, err := childExited(err); !again {
+				return err
+			}
 		case <-signals:
 			err := stop()
 			clean = err == nil
@@ -699,13 +853,34 @@ func (c *controller) supervise() error {
 				conn.Close()
 				continue
 			}
-			if raw == "status "+c.digest+"\n" {
+			if raw == "snapshot "+c.digest+"\n" || raw == "status "+c.digest+"\n" {
 				select {
-				case <-done:
-					conn.Write([]byte("failed\n"))
-					conn.Close()
-					return nil
+				case exitErr := <-done:
+					again, exitErr := childExited(exitErr)
+					if !again {
+						if strings.HasPrefix(raw, "snapshot ") {
+							json.NewEncoder(conn).Encode(r)
+						} else {
+							fmt.Fprintln(conn, "failed")
+						}
+						conn.Close()
+						return exitErr
+					}
 				default:
+				}
+			}
+			if raw == "snapshot "+c.digest+"\n" {
+				snapshot := r
+				if snapshot.State == "running" && !healthy {
+					snapshot.State, snapshot.Reason = "unavailable", "DAEMON_READINESS_PENDING"
+				}
+				json.NewEncoder(conn).Encode(snapshot)
+				conn.Close()
+			} else if raw == "status "+c.digest+"\n" {
+				if r.State == "restarting" || r.State == "starting" {
+					fmt.Fprintln(conn, r.Reason)
+					conn.Close()
+				} else {
 					if probing && len(statusWaiters) < 64 {
 						queueStatus(conn)
 						continue
