@@ -74,7 +74,7 @@ is guessed or stripped. This adapter declares `message/rfc822`. Other raw calls
 retain the bounded CGI stdout path and need their own compatibility probe before
 shipping. Caller-supplied `outfile` is permanently refused in both modes.
 
-Use SDK/App/CLI and templates 0.24.0 with the published UI 0.14.0 template pin.
+Use SDK/App/CLI and templates 0.26.0 with the published UI 0.14.3 template pin.
 Upgrade backend/frontend exact pins together and rebuild the App. A changed
 profile policy requires administrator approval and fresh user grants. The
 optional profile is declared by the consuming App; no template overlay is needed.

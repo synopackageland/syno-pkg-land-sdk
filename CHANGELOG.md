@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.26.0 (2026-10-22)
+
+- Check the package account's selected shared-folder access before Compose startup and show actionable permission guidance in the App dialog. Recheck access when retrying startup.
+- Add bounded native daemon restart policies with backoff, restart limits and health reporting; intentional stops do not restart the daemon.
+- Align SDK/App and runtime identifiers at 0.26.0, validating against UI 0.14.3 while retaining the optional UI peer range `>=0.10.1 <0.15.0`. Reuse executor/v0.24.0: executor, lifecycle and canonical task definitions are unchanged.
+- Known limitations: approval retention still requires unchanged policy, protected programs and task definitions. Rust crate publication remains deferred. No NAS upgrade certification is claimed.
+
 ## 0.25.0 (2026-10-22)
 
 - Resume cold DSM sign-in from the classless `open.cgi` URL launcher for OIDC Apps using `oidc.browser`, including native UI entries with a separate admin console. Retain the transaction and declared-port checks.
