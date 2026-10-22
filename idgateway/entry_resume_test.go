@@ -56,3 +56,38 @@ func TestClasslessOIDCEntryResumesOnlyDeclaredTransaction(t *testing.T) {
 		}
 	}
 }
+
+// A native App with a browser bridge and a separate admin console keeps its
+// classless url launcher, so DSM resumes a cold sign-in through open.cgi.
+func TestClasslessBrowserBridgeEntryResumesDeclaredTransaction(t *testing.T) {
+	cfg := Config{Package: "Reader", Mode: ModeOIDC, NativeIngress: true, Listen: Listen{HTTPS: 28443}, OIDC: &OIDCConfig{Browser: &BrowserConfig{Start: "/sso", LoginPaths: []string{"/login"}}}, AuthorizeCGI: "/webman/3rdparty/Reader/sso/authorize.cgi"}
+	h := entryHandler(cfg, func() error { return nil })
+	indexed := url.Values{}
+	for n, ch := range []byte("ssoResume=opaque_txn:28443") {
+		indexed.Set(strconv.Itoa(n), string(ch))
+	}
+	r := httptest.NewRequest("GET", "https://nas.example:5001/webman/3rdparty/Reader/sso/open.cgi?launchParam="+url.QueryEscape(indexed.Encode()), nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	u, err := url.Parse(w.Header().Get("Location"))
+	if err != nil || u.Path != cfg.AuthorizeCGI || u.Query().Get("txn") != "opaque_txn" || u.Query().Get("return") != "https://nas.example:28443/_sso/dsm-return" {
+		t.Fatalf("browser bridge lost classless resume: %d %s", w.Code, w.Header().Get("Location"))
+	}
+	r = httptest.NewRequest("GET", "https://nas.example:5001/webman/3rdparty/Reader/sso/open.cgi?ssoResume=opaque_txn%3A5001", nil)
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != 400 {
+		t.Fatalf("undeclared resume port accepted: %d", w.Code)
+	}
+}
+
+func TestClasslessEntryWithoutResumeIgnoresLaunchParam(t *testing.T) {
+	cfg := Config{Package: "Reader", Mode: ModeOIDC, NativeIngress: true, Listen: Listen{HTTPS: 28443}, OIDC: &OIDCConfig{}, AuthorizeCGI: "/webman/3rdparty/Reader/sso/authorize.cgi"}
+	h := entryHandler(cfg, func() error { return nil })
+	r := httptest.NewRequest("GET", "https://nas.example:5001/webman/3rdparty/Reader/sso/open.cgi?ssoResume=opaque_txn%3A28443", nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != 400 {
+		t.Fatalf("resume accepted without native login or browser bridge: %d", w.Code)
+	}
+}

@@ -81,6 +81,12 @@ same-origin authorize CGI URL; caller-provided URLs are never navigated. A secon
 missing-session response fails visibly instead of repeating the login redirect.
 Gateway transactions expire in five minutes and remain browser/origin-bound.
 
+A classless url launcher resumes the same way without a window class: DSM
+forwards the launch parameter to `sso/open.cgi`, which accepts only one
+`ssoResume=<transaction>:<declared port>` value and redirects to the
+same-origin authorize CGI. This applies when `oidc.native_login` is set or an
+`oidc.browser` bridge is configured; any other resume request is refused.
+
 ## Fixed menu destination
 
 `launch_path: /#/sso?identifier=fixed-organization` selects a fixed local App

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.25.0 (2026-10-22)
+
+- Resume cold DSM sign-in from the classless `open.cgi` URL launcher for OIDC Apps using `oidc.browser`, including native UI entries with a separate admin console. Retain the transaction and declared-port checks.
+- Let `AppShell` select the first declared page from the app brand. Apps can override this with `@brand.prevent`; observing `@brand` preserves the default. Requires UI 0.14.3+ for interactive branding.
+- Align SDK/App and runtime identifiers at 0.25.0, validating against UI 0.14.3 while retaining the optional UI peer range `>=0.10.1 <0.15.0`. Reuse executor/v0.24.0; no new executor approval is required solely by this release. Approval retention still requires unchanged policy, protected programs and task definitions. Rust crate publication remains deferred.
+
 ## 0.24.1 (2026-10-22)
 
 - `AppShell` handles the UI layout’s `brand` action by selecting the first declared page. Apps can override it with `@brand.prevent`; observing `@brand` alone keeps the default. Requires UI 0.14.3+; older supported UI versions retain their static branding.

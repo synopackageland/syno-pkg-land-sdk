@@ -146,7 +146,7 @@ func entryHandler(cfg Config, preflight func() error) http.Handler {
 		// into a server-managed OIDC consumer's HTML.
 		query := r.URL.Query()
 		values, resume := query["ssoResume"]
-		if nested, present := query["launchParam"]; present && cfg.OIDC != nil && cfg.OIDC.NativeLogin {
+		if nested, present := query["launchParam"]; present && cfg.OIDC.resumesColdLogin() {
 			if len(nested) != 1 || len(nested[0]) > 4096 || resume {
 				http.Error(w, "invalid sign-in resume", 400)
 				return
@@ -165,7 +165,7 @@ func entryHandler(cfg Config, preflight func() error) http.Handler {
 			}
 		}
 		if resume {
-			if cfg.Mode != ModeOIDC || cfg.OIDC == nil || !cfg.OIDC.NativeLogin || len(values) != 1 {
+			if cfg.Mode != ModeOIDC || !cfg.OIDC.resumesColdLogin() || len(values) != 1 {
 				http.Error(w, "invalid sign-in resume", 400)
 				return
 			}
@@ -194,6 +194,12 @@ func entryHandler(cfg Config, preflight func() error) http.Handler {
 		}
 		http.Redirect(w, r, target, http.StatusFound)
 	})
+}
+
+// resumesColdLogin reports whether the url launcher may resume a cold DSM
+// sign-in: native OIDC login and the browser bridge both start from it.
+func (o *OIDCConfig) resumesColdLogin() bool {
+	return o != nil && (o.NativeLogin || o.Browser != nil)
 }
 
 // The SDK emits typed JSON resume values. Normalize DSM's bounded URL-launch
