@@ -14,7 +14,7 @@ const fakeTask = ['t', 1234].join('-');
 test('generic policy detects synthetic forbidden inputs without echoing content', () => {
   const values = [fakeAddress, ['192', '168', '1', '2'].join('.'), ['172', '31', '2', '3'].join('.'),
     ['', 'Users', 'example', 'project'].join('/'), 'threads/' + fakeTask, fakeTask,
-    ['qa', 'synology.com'].join('@'), ['npm', 'synology', 'inc'].join('.'),
+    ['qa', ['synology', 'com'].join('.')].join('@'), ['npm', 'synology', 'inc'].join('.'),
     ['admin', 'password'].join(':'), ['NAS', 'browser', 'readback'].join(' ')];
   for (const value of values) {
     const result = findings('fixture', value, INTERNAL);

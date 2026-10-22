@@ -482,6 +482,16 @@ const items = await ctx.call<Item[]>('items.list', {}, {signal: controller.signa
 
 ## Localized copy
 
+For UI/locale copy we author, remove the final sentence-ending period in every
+language, including `.` and `。`, even in multi-sentence text; keep periods
+between sentences. Preserve question marks, exclamation marks, ellipses,
+abbreviations (`etc.`), version numbers, URLs and trailing `{key}` placeholders.
+This covers the SDK, UI package, templates, our Apps and UI copy we add under
+an upstream fork's `synology/` (such as DSM install wizards and gateway pages).
+Leave upstream UI/locale strings and release notes unchanged; future checks
+must scan only our owned files. See the CLI skill's
+[UI copy and i18n rule and examples](https://github.com/synopackageland/syno-pkg-land-cli/blob/main/skills/reference/ui-vue.md#ui-copy-and-i18n).
+
 `format(message, values, locale)` fills `{key}` placeholders from `values`; a
 placeholder with no value stays visible. A message may be plural forms keyed by
 the `Intl.PluralRules` categories (`zero`, `one`, `two`, `few`, `many`, `other`;
