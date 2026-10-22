@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.24.1 (2026-10-22)
+
+- `AppShell` handles the UI layout’s `brand` action by selecting the first declared page. Apps can override it with `@brand.prevent`; observing `@brand` alone keeps the default. Requires UI 0.14.3+; older supported UI versions retain their static branding.
+
+- Validate with UI 0.14.3 while keeping the optional UI peer range `>=0.10.1 <0.15.0`. Align SDK/App and generated runtime identifiers at 0.24.1; reuse executor/v0.24.0. Rust crate publication remains deferred.
+
 ## 0.24.0 (2026-10-22)
 
 - Rebuild Go SDK runtimes, executor and lifecycle with Go 1.26.10, fixing crypto/x509 GO-2026-6809. Pin the same toolchain in all Go modules and build environments.

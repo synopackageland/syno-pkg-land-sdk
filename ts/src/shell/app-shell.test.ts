@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import {afterEach,expect,expectTypeOf,test,vi} from 'vitest'
-import {Fragment,createApp,createCommentVNode,createTextVNode,defineComponent,h,nextTick,ref,type Slots} from 'vue'
+import {Fragment,createApp,createCommentVNode,createTextVNode,defineComponent,h,nextTick,ref} from 'vue'
 import AppShell from './AppShell.vue'
 import {appRefusal} from '../authorization/refusal'
 import type {Context,HostAdapter,HostPlatformSnapshot,ShellContext} from '../context'
@@ -13,10 +13,10 @@ vi.mock('@synopackageland/ui',async importOriginal=>{
  const {defineComponent,h}=await import('vue')
  return {...ui,
   ensureDeviceViewport:()=>{seen.viewport++;return ()=>{seen.restored++}},
-  AppLayout:defineComponent({props:['wideLayout','navigation','sidebarStorageKey','brandName','brandIcon','minHeight'],setup(props,{slots}:{slots:Slots}){
+  AppLayout:defineComponent({props:['wideLayout','navigation','sidebarStorageKey','brandName','brandIcon','minHeight'],emits:['brand'],setup(props,{slots,emit}){
    return ()=>{
     seen.layout={...props};seen.footer=!!slots['sidebar-footer']
-    return h('section',[slots.sidebar?.(),slots['sidebar-footer']&&h('footer',slots['sidebar-footer']()),slots.toolbar&&h('header',slots.toolbar()),slots.default?.()])
+    return h('section',[h('button',{'data-test-brand':'',onClick:(event:MouseEvent)=>emit('brand',event)},'App'),slots.sidebar?.(),slots['sidebar-footer']&&h('footer',slots['sidebar-footer']()),slots.toolbar&&h('header',slots.toolbar()),slots.default?.()])
    }
   }}),
   AppRoot:defineComponent({props:['modalScope','dialogBounds'],emits:['activate'],setup(props,{slots,emit,attrs}){
@@ -65,6 +65,45 @@ test('the public navigation prop accepts only the supported modes',()=>{
  // @ts-expect-error Navigation is an AppLayout mode, not arbitrary text.
  const invalid:InstanceType<typeof AppShell>['$props']['navigation']='bottom'
  void invalid
+})
+
+test.each([
+ {entries:['status','background'],first:'status'},
+ {entries:[{id:'home',title:'Home'},{id:'logs',title:'Logs'}],first:'home'},
+])('a brand activation requests the first declared page: $first',async({entries,first})=>{
+ const update=vi.fn()
+ const shell=await mount({pages:entries,modelValue:'elsewhere','onUpdate:modelValue':update})
+ try{
+  shell.root.querySelector<HTMLButtonElement>('[data-test-brand]')!.click()
+  expect(update).toHaveBeenCalledExactlyOnceWith(first)
+ }finally{shell.unmount()}
+})
+
+test('an App can cancel the default brand navigation and choose its own home',async()=>{
+ const update=vi.fn()
+ const onBrand=vi.fn((event:MouseEvent)=>{event.preventDefault();update('own-home')})
+ const shell=await mount({pages:[{id:'first',title:'First'}],onBrand,'onUpdate:modelValue':update})
+ try{
+  shell.root.querySelector<HTMLButtonElement>('[data-test-brand]')!.click()
+  expect(onBrand).toHaveBeenCalledOnce()
+  expect(update).toHaveBeenCalledExactlyOnceWith('own-home')
+ }finally{shell.unmount()}
+})
+
+test('a brand observer keeps the default and an empty page list emits no selection',async()=>{
+ const update=vi.fn(),onBrand=vi.fn()
+ const shell=await mount({onBrand,'onUpdate:modelValue':update})
+ try{
+  shell.root.querySelector<HTMLButtonElement>('[data-test-brand]')!.click()
+  expect(onBrand).toHaveBeenCalledOnce()
+  expect(update).toHaveBeenCalledExactlyOnceWith('status')
+ }finally{shell.unmount()}
+ update.mockClear()
+ const empty=await mount({pages:[],'onUpdate:modelValue':update})
+ try{
+  empty.root.querySelector<HTMLButtonElement>('[data-test-brand]')!.click()
+  expect(update).not.toHaveBeenCalled()
+ }finally{empty.unmount()}
 })
 
 // An App lives inside one DSM window; the shell's wide layout follows that window, not the viewport.

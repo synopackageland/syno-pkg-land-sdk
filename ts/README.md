@@ -135,6 +135,23 @@ const ctx = createStandaloneContext({locale: 'zh-TW', call: (method, params) => 
 
 ## App pages
 
+The default logo and app name return to the first entry in `pages` (including a
+hidden entry) through `v-model`. With no pages, activation changes no selection.
+This needs UI 0.14.3 or later; older supported
+UI versions keep their static brand. Pointer, Enter and Space share the same
+native button action; the phone drawer closes on activation.
+
+`@brand` receives the original `MouseEvent`. To replace the default selection,
+prevent that event and set the page or call your router:
+
+```vue
+<AppShell v-model="page" :ctx="ctx" :locale="ctx.locale" :pages="pages"
+  @brand.prevent="page = 'dashboard'" />
+```
+
+An observer that does not prevent the event keeps the default first-page action.
+This does not change the DSM window title bar or DSM's own Portal header.
+
 `AppShell` lays out the App's own pages too. Each `AppShellPage` has an `id`,
 a `title` the App has already translated, and optionally an `icon`, a `group`
 label (pages with the same label sit together), a `badge`, a `component` to

@@ -128,3 +128,29 @@ test('a loading shell draws the sidebar and title with a loading body in place o
  expect(root.textContent).not.toContain('Loading…')
  app.unmount();root.remove()
 })
+
+// Exercise the published UI brand event with the real shell, including App overrides.
+test.each([1365,390])('the published UI brand selects home and allows an App override at %spx',async width=>{
+ vi.spyOn(HTMLElement.prototype,'getBoundingClientRect').mockReturnValue({width} as DOMRect)
+ const root=document.createElement('div');document.body.append(root)
+ const page=ref('logs'),override=ref(false)
+ const app=createApp({render:()=>h(AppShell,{
+  appRoot:true,locale:'en',modelValue:page.value,'onUpdate:modelValue':(value:string)=>{page.value=value},
+  pages:[{id:'home',title:'Home',hidden:true},{id:'logs',title:'Logs'},{id:'custom',title:'Custom home'}],
+  ctx:{fullPage:true,displayName:'My App'},
+  onBrand:(event:MouseEvent)=>{if(override.value){event.preventDefault();page.value='custom'}},
+ })})
+ try{
+  app.mount(root);await nextTick();await nextTick()
+  const selector=width===390?'[data-ui-mobile-navigation] [data-ui-brand-action]':'[data-ui-layout-sidebar] [data-ui-brand-action]'
+  const brand=root.querySelector<HTMLButtonElement>(selector)!
+  expect(brand).not.toBeNull()
+  brand.click();await nextTick()
+  expect(page.value).toBe('home')
+  expect(root.querySelector('[data-ui-page-header]')?.textContent).toContain('Home')
+  page.value='logs';override.value=true;await nextTick()
+  brand.click();await nextTick()
+  expect(page.value).toBe('custom')
+  expect(root.querySelector('[data-ui-page-header]')?.textContent).toContain('Custom home')
+ }finally{app.unmount();root.remove();vi.restoreAllMocks()}
+})

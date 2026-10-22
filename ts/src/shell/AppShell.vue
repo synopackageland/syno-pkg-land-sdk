@@ -49,7 +49,13 @@ const props = defineProps<{
   // the page body shows a loading area and the App's actions wait for them.
   loading?: boolean
 }>()
-const emit = defineEmits<{'update:modelValue': [value: string]}>()
+const emit = defineEmits<{'update:modelValue': [value: string]; brand: [event: MouseEvent]}>()
+// Apps can use @brand.prevent to replace the default home selection.
+function onBrand(event: MouseEvent) {
+  emit('brand', event)
+  const first = pages.value[0]
+  if(!event.defaultPrevented && first) emit('update:modelValue', first.id)
+}
 const copy = computed(() => shellCopy(props.locale))
 // Older supported UI declarations do not include 'none'. Forward it unchanged:
 // UI 0.12.5+ supplies its rendering; leave the default to the installed UI.
@@ -134,7 +140,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
     <slot name="denied"><Callout tone="danger"><span role="alert">{{ denied.message ?? refusal?.message ?? copy.deniedMessage }}</span></Callout></slot>
   </PageContent>
   <AppLayout v-else ref="layout" :class="['app-shell', {'app-shell-fill': page?.fill, 'app-shell-portal-brand': portalChrome.brand}]" min-height="0" :wide-layout="wideLayout ?? (fullPage ? 'web' : 'window')" :sidebar-storage-key="sidebarStorageKey"
-    :navigation="navigation" :brand-name="brandName ?? ctx?.displayName" :brand-icon="brandIcon ?? ctx?.appIcon">
+    :navigation="navigation" :brand-name="brandName ?? ctx?.displayName" :brand-icon="brandIcon ?? ctx?.appIcon" @brand="onBrand">
     <template #sidebar>
       <AppSidebar :model-value="modelValue" :groups="groups" @update:model-value="emit('update:modelValue', $event)" />
     </template>
