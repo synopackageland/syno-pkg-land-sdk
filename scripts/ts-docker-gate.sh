@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs scripts/ts-gate.sh on x86_64 Linux in Docker (scripts/docker-tree.sh),
 # in a gate slot, so this machine's load cannot time out its tests. The image
-# is Node.js 24.20.0's, the version of the synopkgland frontend gate image;
+# is Node.js 24.22.1's, the version of the synopkgland frontend gate image;
 # node_modules is installed there, with the npm cache in the host's shared
 # synopkgland-cache-npm volume. ts-gate.sh lists spec/ with git, so the tree is
 # committed to a fresh repository there. SYNOPKGLAND_UI_TARBALL follows that tree.
@@ -33,7 +33,7 @@ fi
 ca=/etc/ssl/certs/ca-certificates.crt
 args="$args \$(test -f $ca && echo -v $ca:/tmp/host-ca.crt:ro -e NODE_EXTRA_CA_CERTS=/tmp/host-ca.crt)"
 
-image=public.ecr.aws/docker/library/node:24.20.0-bookworm@sha256:be23f54a88d34e8824c741b19b91064094f92c1c97b194144bfc8b50d67258e2
+image=public.ecr.aws/docker/library/node:24.22.1-bookworm@sha256:5630d96570d4ca4a8523fda3d169d0114554d0f48293e1ae3db6be7c79b42a17
 cache_volumes "$image" synopkgland-cache-npm
 SYNOPKGLAND_DOCKER_SLOT=1 SYNOPKGLAND_DOCKER_ARGS="$args" \
 "$root/scripts/docker-tree.sh" "${SYNOPKGLAND_TS_GATE_CONTAINER:-$prefix-ts-gate}" "$image" \

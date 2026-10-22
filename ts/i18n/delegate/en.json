@@ -75,5 +75,16 @@
   "statusUnreachable": "The app's system service did not respond. Open the app from the DSM desktop or refresh the page.",
   "statusStarting": "The app's background service is still starting. Refresh the page in a moment.",
   "retry": "Retry",
-  "rawLimit": "Raw response limit (bytes)"
+  "rawLimit": "Raw response limit (bytes)",
+  "upgradeTitle": "Review this update",
+  "upgradePrograms": "System programs updated. Administrator approval is required.",
+  "upgradeTasks": "Approval task definitions updated. Administrator approval is required.",
+  "upgradePolicy": "Approval policy updated. Administrator approval is required.",
+  "upgradeUnchanged": "Permissions unchanged.",
+  "upgradeExpanded": "Permissions expanded. Review the changes before approving.",
+  "upgradeReview": "Permissions or parameters changed. Review the changes before approving.",
+  "upgradePolicyLabel": "Policy",
+  "upgradeChanges": "Permission and parameter changes",
+  "upgradeUnknown": "The previous protected runtime did not provide comparison details. Changes and permission expansion cannot be determined. Administrator approval is required.",
+  "upgradeConsentTitle": "Approve this update"
 }

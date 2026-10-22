@@ -167,6 +167,8 @@ func TestWebAPIReturnsDSMEnvelopeAndNeverRetries(t *testing.T) {
 func TestWebAPIWireAndAdapter(t *testing.T) {
 	for _, raw := range []string{
 		`{"v":1,"op":"webapi.call","params":{"delegation_id":"x","api":"SYNO.Cal.Event","method":"list","version":6,"params":{"someOption":true}}}`,
+		// delegate.Client adds deadline_ms whenever its context has a deadline.
+		`{"deadline_ms":2500,"v":1,"op":"webapi.call","params":{"delegation_id":"x","api":"SYNO.Cal.Event","method":"list","version":6,"params":{}}}`,
 	} {
 		var request Request
 		if err := strictJSON([]byte(raw), &request); err != nil {
@@ -177,6 +179,8 @@ func TestWebAPIWireAndAdapter(t *testing.T) {
 		`{"v":1,"op":"webapi.call","params":{"params":{"a":1,"a":2}}}`,
 		`{"v":1,"op":"webapi.call","auth":{"dsm_cookie":"a","DSM_COOKIE":"b"},"params":{}}`,
 		`{"v":1,"op":"webapi.call","Params":{}}`,
+		`{"v":1,"op":"webapi.call","Deadline_ms":1,"params":{}}`,
+		`{"v":1,"op":"webapi.call","deadline_ms":1,"deadline_ms":2,"params":{}}`,
 	} {
 		var request Request
 		if strictJSON([]byte(raw), &request) == nil {

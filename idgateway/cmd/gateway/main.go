@@ -81,7 +81,7 @@ func authorizeHandler(path string) (http.Handler, error) {
 			ports = append(ports, p)
 		}
 	}
-	verifier, err := dsm.NewEntryGate(dsm.NewAuthenticator(), cfg.Entry, cfg.Package, cfg.StateDir)
+	verifier, err := dsm.NewEntryGate(dsm.NewAuthenticator(), cfg.IssuerEntry(), cfg.Package, cfg.StateDir)
 	if err != nil {
 		return nil, err
 	}

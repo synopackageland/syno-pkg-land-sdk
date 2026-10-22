@@ -99,10 +99,12 @@ func TestRegistryCheckTLSAndDeadlineAreRealTransportFailures(t *testing.T) {
 	}
 	slow := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { <-r.Context().Done() }))
 	defer slow.Close()
+	// Prepare the filesystem fixture before spending the network timeout budget.
+	slowProject := diagnosisProject(t, strings.TrimPrefix(slow.URL, "https://")+"/app"+diagnosisDigest)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
 	defer cancel()
 	begin := time.Now()
-	results = checkRegistries(ctx, diagnosisProject(t, strings.TrimPrefix(slow.URL, "https://")+"/app"+diagnosisDigest), "preinst", slow.Client().Transport)
+	results = checkRegistries(ctx, slowProject, "preinst", slow.Client().Transport)
 	if len(results) != 1 || results[0].Cause != ImageUnreachable || time.Since(begin) > time.Second {
 		t.Fatalf("%+v elapsed=%s", results, time.Since(begin))
 	}

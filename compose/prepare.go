@@ -6,6 +6,7 @@ import (
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/composeingress"
 	"net"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -35,16 +36,39 @@ func Prepare(project, pkg, pkgvar string) error {
 		return problem("COMPOSE_STORAGE_NOT_READY", "invalid package var path")
 	}
 	var directories []string
+	var shareEnvironment string
 	if raw, err := os.ReadFile(filepath.Join(project, "compose.lock.json")); err == nil {
 		var lock struct {
-			Package       string      `json:"package"`
-			Services      []Inventory `json:"services"`
-			MountsBlocked bool        `json:"mounts_blocked"`
-			Ingress       *Ingress    `json:"ingress"`
-			ProjectName   string      `json:"project_name"`
+			Devices             *DeviceInventory     `json:"devices"`
+			SHA256              string               `json:"effective_sha256"`
+			Package             string               `json:"package"`
+			Services            []Inventory          `json:"services"`
+			MountsBlocked       bool                 `json:"mounts_blocked"`
+			Ingress             *Ingress             `json:"ingress"`
+			ProjectName         string               `json:"project_name"`
+			InstallSharedFolder *InstallSharedFolder `json:"install_shared_folder"`
 		}
 		if len(raw) > 4<<20 || json.Unmarshal(raw, &lock) != nil || lock.Package != pkg {
 			return problem("COMPOSE_LOCK_INVALID", "private storage inventory is invalid")
+		}
+		if lock.Devices != nil {
+			account, err := user.Lookup(pkg)
+			if err != nil || account.Uid != strconv.Itoa(os.Geteuid()) || account.Gid != strconv.Itoa(os.Getegid()) {
+				return problem("COMPOSE_GPU_INVALID", "GPU materialization requires the matching native package UID:GID")
+			}
+		}
+		if err := prepareGPU(project, lock.Devices, lock.SHA256); err != nil {
+			return err
+		}
+		if lock.InstallSharedFolder != nil {
+			account, err := user.Lookup(pkg)
+			if err != nil || account.Uid != strconv.Itoa(os.Geteuid()) || account.Gid != strconv.Itoa(os.Getegid()) || lock.MountsBlocked {
+				return problem("COMPOSE_SHARE_INVALID", "native shares require the matching package UID:GID and an enabled native plan")
+			}
+			shareEnvironment, err = nativeShareEnvironment(lock.InstallSharedFolder, pkgvar, "/")
+			if err != nil {
+				return err
+			}
 		}
 		if err := prepareRuntimeSecrets(project, pkg, pkgvar, lock.Services); err != nil {
 			return err
@@ -153,7 +177,7 @@ func Prepare(project, pkg, pkgvar string) error {
 		f.Close()
 		return err
 	}
-	_, err = fmt.Fprintf(f, "SYNOPKGLAND_UID=%s\nSYNOPKGLAND_GID=%s\nSYNOPKG_PKGVAR=%s\n", strconv.Itoa(os.Geteuid()), strconv.Itoa(os.Getegid()), pkgvar)
+	_, err = fmt.Fprintf(f, "SYNOPKGLAND_UID=%s\nSYNOPKGLAND_GID=%s\nSYNOPKG_PKGVAR=%s\n%s", strconv.Itoa(os.Geteuid()), strconv.Itoa(os.Getegid()), dotenvLiteral(pkgvar), shareEnvironment)
 	if err == nil {
 		err = f.Sync()
 	}

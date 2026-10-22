@@ -71,9 +71,13 @@ func applyStorageInit(pkg string, s *types.ServiceConfig, init *StorageInitializ
 		slices.Sort(keys)
 		for _, key := range keys {
 			e := init.Runtime.Environment[key]
-			target := "/synopkgland/secrets/" + e.filename()
+			directory := "secrets"
+			if e.Setting != "" {
+				directory = "settings"
+			}
+			target := "/synopkgland/" + directory + "/" + e.filename()
 			for _, m := range originalMounts {
-				if m.Target == "/synopkgland" || m.Target == "/synopkgland/secrets" || m.Target == target {
+				if m.Target == "/synopkgland" || m.Target == "/synopkgland/secrets" || m.Target == "/synopkgland/settings" || m.Target == target {
 					return invalid()
 				}
 			}
@@ -85,7 +89,11 @@ func applyStorageInit(pkg string, s *types.ServiceConfig, init *StorageInitializ
 				}
 			}
 			if !found {
-				s.Volumes = append(s.Volumes, types.ServiceVolumeConfig{Type: "bind", Source: "/var/packages/" + pkg + "/target/compose/secrets/" + e.filename(), Target: target, ReadOnly: true, Bind: &types.ServiceVolumeBind{CreateHostPath: false}})
+				source := "/var/packages/" + pkg + "/target/compose/" + directory + "/" + e.filename()
+				if e.Setting != "" {
+					source = "/var/packages/" + pkg + "/target/install/values/" + e.filename()
+				}
+				s.Volumes = append(s.Volumes, types.ServiceVolumeConfig{Type: "bind", Source: source, Target: target, ReadOnly: true, Bind: &types.ServiceVolumeBind{CreateHostPath: false}})
 			}
 		}
 	}

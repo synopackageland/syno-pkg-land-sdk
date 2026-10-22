@@ -74,8 +74,7 @@ is guessed or stripped. This adapter declares `message/rfc822`. Other raw calls
 retain the bounded CGI stdout path and need their own compatibility probe before
 shipping. Caller-supplied `outfile` is permanently refused in both modes.
 
-Release only on the 0.12 line. Use SDK/App/CLI 0.12.1 with UI 0.10.1.
-Studio Office must upgrade backend/frontend exact pins together and rebuild,
-then approve the changed profile policy and create fresh user grants. There is
-no 0.11 raw maintenance release. Templates need no change: the optional profile
-is added by the consuming App, and the 0.12 CLI already uses 0.12 templates.
+Use SDK/App/CLI and templates 0.24.0 with the published UI 0.14.0 template pin.
+Upgrade backend/frontend exact pins together and rebuild the App. A changed
+profile policy requires administrator approval and fresh user grants. The
+optional profile is declared by the consuming App; no template overlay is needed.

@@ -17,9 +17,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/hostudp"
+
 	"github.com/compose-spec/compose-go/v2/loader"
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/distribution/reference"
+	"github.com/synopackageland/syno-pkg-land-sdk/installsettings"
 	"go.yaml.in/yaml/v4"
 )
 
@@ -28,26 +31,30 @@ const PackageUser = "${SYNOPKGLAND_UID}:${SYNOPKGLAND_GID}"
 
 // Request contains only package differences; Files are never rewritten.
 type Request struct {
-	StartupTimeoutSeconds *int `json:"startup_timeout_seconds,omitempty"`
+	InstallSettings       map[string]installsettings.Setting `json:"install_settings,omitempty"`
+	HostUDP               []HostUDPListener                  `json:"host_udp,omitempty"`
+	Devices               *Devices                           `json:"devices,omitempty"`
+	StartupTimeoutSeconds *int                               `json:"startup_timeout_seconds,omitempty"`
 
-	ResourcePrefix  string                   `json:"resource_prefix,omitempty"`
-	Root            string                   `json:"root"`
-	Package         string                   `json:"package"`
-	Files           []string                 `json:"files"`
-	EnvFiles        []string                 `json:"env_files,omitempty"`
-	Profiles        []string                 `json:"profiles,omitempty"`
-	Web             *Web                     `json:"web,omitempty"`
-	Data            map[string]Storage       `json:"data,omitempty"`
-	Shares          map[string]Share         `json:"shares,omitempty"`
-	Network         Network                  `json:"network"`
-	Services        map[string]ServicePolicy `json:"services,omitempty"`
-	IdentityMode    string                   `json:"identity_mode,omitempty"`
-	ComposeMounts   bool                     `json:"compose_mounts,omitempty"`
-	RegistryMirrors map[string]string        `json:"registry_mirrors,omitempty"`
-	ResolveImages   bool                     `json:"resolve_images,omitempty"`
-	Architecture    string                   `json:"architecture,omitempty"`
-	ImageProofs     map[string]ImageProof    `json:"image_proofs,omitempty"`
-	ImageDigests    map[string]string        `json:"image_digests,omitempty"`
+	ResourcePrefix      string                   `json:"resource_prefix,omitempty"`
+	Root                string                   `json:"root"`
+	Package             string                   `json:"package"`
+	Files               []string                 `json:"files"`
+	EnvFiles            []string                 `json:"env_files,omitempty"`
+	Profiles            []string                 `json:"profiles,omitempty"`
+	Web                 *Web                     `json:"web,omitempty"`
+	Data                map[string]Storage       `json:"data,omitempty"`
+	Shares              map[string]Share         `json:"shares,omitempty"`
+	InstallSharedFolder *InstallSharedFolder     `json:"install_shared_folder,omitempty"`
+	Network             Network                  `json:"network"`
+	Services            map[string]ServicePolicy `json:"services,omitempty"`
+	IdentityMode        string                   `json:"identity_mode,omitempty"`
+	ComposeMounts       bool                     `json:"compose_mounts,omitempty"`
+	RegistryMirrors     map[string]string        `json:"registry_mirrors,omitempty"`
+	ResolveImages       bool                     `json:"resolve_images,omitempty"`
+	Architecture        string                   `json:"architecture,omitempty"`
+	ImageProofs         map[string]ImageProof    `json:"image_proofs,omitempty"`
+	ImageDigests        map[string]string        `json:"image_digests,omitempty"`
 }
 type Web struct {
 	Service  string  `json:"service"`
@@ -136,8 +143,11 @@ type AppData struct {
 }
 
 type Plan struct {
-	AppData               *AppData `json:"app_data,omitempty"`
-	StartupTimeoutSeconds int      `json:"startup_timeout_seconds"`
+	HostUDP               []HostUDPListener    `json:"host_udp,omitempty"`
+	Devices               *DeviceInventory     `json:"devices,omitempty"`
+	InstallSharedFolder   *InstallSharedFolder `json:"install_shared_folder,omitempty"`
+	AppData               *AppData             `json:"app_data,omitempty"`
+	StartupTimeoutSeconds int                  `json:"startup_timeout_seconds"`
 
 	Ingress       *Ingress              `json:"ingress,omitempty"`
 	ImageProofs   map[string]ImageProof `json:"image_proofs,omitempty"`
@@ -156,6 +166,10 @@ type Plan struct {
 }
 
 var packageName = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]{1,63}$`)
+
+// HostUDPListener records an exact unprivileged UDP port and its declared intent.
+type HostUDPListener = hostudp.Listener
+
 var envName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 var digestImage = regexp.MustCompile(`^\S+@sha256:[a-f0-9]{64}$`)
 
@@ -166,6 +180,19 @@ func problem(code, format string, args ...any) error {
 // Build loads with the reference Compose loader, applies DSM policy, and emits
 // both a true replacement override and the tag-free single worker document.
 func Build(ctx context.Context, r Request) (*Plan, error) {
+	if r.InstallSettings != nil {
+		if err := (installsettings.Config{Schema: 1, Package: r.Package, Settings: r.InstallSettings}).Validate(); err != nil {
+			return nil, problem("COMPOSE_STORAGE_INIT_INVALID", "invalid install.settings declaration")
+		}
+	}
+
+	hostUDP, err := hostudp.Normalize(r.HostUDP)
+	if err != nil {
+		return nil, problem("COMPOSE_HOST_UDP_INVALID", "%v", err)
+	}
+	if len(hostUDP) > 0 && (r.Web == nil || r.Services[r.Web.Service].Network != "host") {
+		return nil, problem("COMPOSE_HOST_UDP_INVALID", "host_udp requires the verified nonroot host Web topology")
+	}
 	startup := DefaultStartupTimeoutSeconds
 	if r.StartupTimeoutSeconds != nil {
 		startup = *r.StartupTimeoutSeconds
@@ -234,6 +261,17 @@ func Build(ctx context.Context, r Request) (*Plan, error) {
 	if len(project.Services) == 0 {
 		return nil, problem("COMPOSE_MODEL_INVALID", "no active services in the selected profiles")
 	}
+	deviceInventory, err := planDevices(r)
+	if err != nil {
+		return nil, err
+	}
+	if deviceInventory != nil {
+		for _, name := range deviceInventory.GPU.Services {
+			if _, ok := project.Services[name]; !ok {
+				return nil, problem("COMPOSE_GPU_INVALID", "GPU service %s is not active", name)
+			}
+		}
+	}
 	for name := range r.Services {
 		if _, ok := project.Services[name]; !ok {
 			return nil, problem("COMPOSE_SERVICE_UNKNOWN", "services.%s is not active", name)
@@ -253,14 +291,32 @@ func Build(ctx context.Context, r Request) (*Plan, error) {
 			return nil, problem("COMPOSE_BASE_PATH_UNSUPPORTED", "use the upstream's dedicated origin at /; automatic subpath asset rewriting is not supported")
 		}
 	}
-	p := &Plan{ProjectName: r.ResourcePrefix + strings.ToLower(r.Package), Schema: PlannerVersion, Package: r.Package, Effective: project, Blockers: []string{"DSM_DOCKER_PROJECT_MODEL", "DSM_STORAGE_OWNERSHIP_TIMING", "DSM_EGRESS_BOUNDARY"}}
+	r.Shares = maps.Clone(r.Shares)
+	for key, share := range r.Shares {
+		if share.Permission == "" {
+			share.Permission = "ro"
+			r.Shares[key] = share
+		}
+	}
+	native, err := nativeShares(r)
+	if err != nil {
+		return nil, err
+	}
+	p := &Plan{InstallSharedFolder: native, ProjectName: r.ResourcePrefix + strings.ToLower(r.Package), Schema: PlannerVersion, Package: r.Package, Effective: project, Blockers: []string{"DSM_DOCKER_PROJECT_MODEL", "DSM_STORAGE_OWNERSHIP_TIMING", "DSM_EGRESS_BOUNDARY"}}
+	p.Devices = deviceInventory
+	if deviceInventory != nil {
+		p.Blockers = append(p.Blockers, "DSM_GPU_NATIVE_GRANT_TIMING", "DSM_GPU_HARDWARE_TRANSCODE")
+	}
 	p.StartupTimeoutSeconds = startup
+	p.HostUDP = hostUDP
 	if len(r.Shares) > 0 {
 		if !r.ComposeMounts {
 			return nil, problem("COMPOSE_SHARE_NEEDS_APPROVAL", "declare capabilities.composeMounts: true; user destination grants cannot authorize package mounts")
 		}
-		p.MountsBlocked = true
-		p.Blockers = append(p.Blockers, "COMPOSE_PROJECT_CONTROL_UNAVAILABLE", "DSM_MOUNT_ACL_REVOKE")
+		if native == nil {
+			p.MountsBlocked = true
+			p.Blockers = append(p.Blockers, "COMPOSE_PROJECT_CONTROL_UNAVAILABLE", "DSM_MOUNT_ACL_REVOKE")
+		}
 	}
 	mappings := map[string]Storage{}
 	for key, d := range r.Data {
@@ -275,7 +331,7 @@ func Build(ctx context.Context, r Request) (*Plan, error) {
 	}
 	shared := map[string]string{}
 	for key, share := range r.Shares {
-		if !envName.MatchString(key) || (share.Select != "admin-after-install" && share.Select != "install-draft") || (share.Permission != "ro" && share.Permission != "rw") || len(share.Mounts) == 0 {
+		if !envName.MatchString(key) || (share.Select != "admin-after-install" && share.Select != "install-draft" && share.Select != "install") || (share.Permission != "ro" && share.Permission != "rw") || len(share.Mounts) == 0 {
 			return nil, problem("COMPOSE_SHARE_INVALID", "shares.%s needs admin selection, ro/rw and fixed mounts", key)
 		}
 		for _, m := range share.Mounts {
@@ -519,6 +575,11 @@ func Build(ctx context.Context, r Request) (*Plan, error) {
 		}
 		if policy.StorageInit != nil && policy.StorageInit.Runtime != nil {
 			for _, e := range policy.StorageInit.Runtime.Environment {
+				if e.Setting != "" {
+					if _, ok := r.InstallSettings[e.Setting]; !ok {
+						return nil, problem("COMPOSE_STORAGE_INIT_INVALID", "runtime setting must reference install.settings")
+					}
+				}
 				if e.OIDCClient != "" && r.IdentityMode != "oidc" {
 					return nil, problem("COMPOSE_STORAGE_INIT_INVALID", "OIDC runtime environment requires oidc identity mode")
 				}
@@ -691,16 +752,19 @@ func (p *Plan) LockJSON() ([]byte, error) {
 		inputs[i] = Input{Path: in.Path, SHA256: in.SHA256}
 	}
 	return json.MarshalIndent(struct {
-		AppData       *AppData    `json:"app_data,omitempty"`
-		Ingress       *Ingress    `json:"ingress,omitempty"`
-		ProjectName   string      `json:"project_name"`
-		Schema        int         `json:"schema"`
-		Package       string      `json:"package"`
-		Inputs        []Input     `json:"inputs"`
-		SHA256        string      `json:"effective_sha256"`
-		Images        []Image     `json:"images"`
-		Services      []Inventory `json:"services"`
-		Blockers      []string    `json:"acceptance_blockers"`
-		MountsBlocked bool        `json:"mounts_blocked"`
-	}{p.AppData, p.Ingress, p.ProjectName, p.Schema, p.Package, inputs, p.SHA256, p.Images, p.Services, p.Blockers, p.MountsBlocked}, "", "  ")
+		HostUDP             []HostUDPListener    `json:"host_udp,omitempty"`
+		Devices             *DeviceInventory     `json:"devices,omitempty"`
+		AppData             *AppData             `json:"app_data,omitempty"`
+		Ingress             *Ingress             `json:"ingress,omitempty"`
+		ProjectName         string               `json:"project_name"`
+		Schema              int                  `json:"schema"`
+		Package             string               `json:"package"`
+		Inputs              []Input              `json:"inputs"`
+		SHA256              string               `json:"effective_sha256"`
+		Images              []Image              `json:"images"`
+		Services            []Inventory          `json:"services"`
+		Blockers            []string             `json:"acceptance_blockers"`
+		MountsBlocked       bool                 `json:"mounts_blocked"`
+		InstallSharedFolder *InstallSharedFolder `json:"install_shared_folder,omitempty"`
+	}{p.HostUDP, p.Devices, p.AppData, p.Ingress, p.ProjectName, p.Schema, p.Package, inputs, p.SHA256, p.Images, p.Services, p.Blockers, p.MountsBlocked, p.InstallSharedFolder}, "", "  ")
 }

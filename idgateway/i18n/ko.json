@@ -8,5 +8,6 @@
   "retry": "다시 시도",
   "direct_title": "App에 직접 연결",
   "direct_notice": "이 App에서는 DSM이 관리하는 HTTPS를 사용할 수 없습니다. 직접 연결하면 인증서 경고가 표시되거나 암호화되지 않은 HTTP가 사용될 수 있습니다.",
-  "direct_continue": "직접 연결 계속"
+  "direct_continue": "직접 연결 계속",
+  "app_privilege_denied": "DSM 계정에 이 App을 사용할 권한이 없습니다. DSM 관리자에게 문의하세요."
 }

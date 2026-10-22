@@ -59,6 +59,10 @@ func HandleResponse(method string, h ResponseHandler) Route {
 // StreamHandler handles a query-selected HTTP transfer without reading JSON.
 type StreamHandler func(context.Context, Caller, http.ResponseWriter, *http.Request) error
 
+// HandleStream registers an HTTP transfer. Before the response starts, errors
+// return a JSON envelope with an HTTP error status (see streamStatus). A handler
+// must finish checks before writing; errors after headers/body start are logged
+// without appending JSON to the transfer. JSON calls retain HTTP 200 envelopes.
 func HandleStream(method string, h StreamHandler) Route {
 	return Route{method: method, streamHandler: h}
 }

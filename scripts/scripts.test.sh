@@ -35,7 +35,7 @@ check "slot command tries slot 0, then slot 1" \
 	"/tmp/synopkgland-gate.slot0.lock /tmp/synopkgland-gate.slot1.lock" "$(tr '\n' ' ' <"$work/log" | sed 's/ $//')"
 
 # ts-gate.sh on SYNOPKGLAND_DOCKER_SSH: in Docker on that host, in a gate slot,
-# in Node.js 24.20.0's image. A fake ssh logs the host's commands.
+# in Node.js 24.22.1's image. A fake ssh logs the host's commands.
 cat >"$work/bin/ssh" <<'EOF'
 #!/bin/sh
 shift
@@ -48,7 +48,7 @@ SSH_LOG="$work/ssh.log" VITEST_MAX_WORKERS= PATH="$work/bin:$PATH" SYNOPKGLAND_D
 run=$(grep -e '--name t-ts-gate' "$work/ssh.log")
 has() { case $run in *"$1"*) echo yes ;; *) echo "no: $1" ;; esac; }
 check "ts in Docker: a gate slot" yes "$(has 'synopkgland-gate.slot$slot.lock')"
-check "ts in Docker: Node.js 24.20.0" yes "$(has 'library/node:24.20.0-bookworm@sha256:')"
+check "ts in Docker: Node.js 24.22.1" yes "$(has 'library/node:24.22.1-bookworm@sha256:')"
 check "ts in Docker: the shared npm cache" yes "$(has '-v synopkgland-cache-npm:/cache/npm -e npm_config_cache=/cache/npm')"
 check "ts in Docker: the registry" yes "$(has '-e npm_config_registry=https://mirror.invalid/')"
 check "ts in Docker: vitest takes half the host's CPUs" yes "$(has '-e VITEST_MAX_WORKERS=$(($(nproc) / 2))')"

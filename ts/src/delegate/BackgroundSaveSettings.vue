@@ -130,7 +130,7 @@ onBeforeUnmount(()=>{disposed=true})
   <Callout v-if="status?.disabled" tone="warning"><span class="save-alert"><span>{{ copy.disabled }}</span><Button v-if="admin" variant="secondary" size="sm" :disabled="busy" @click="enable">{{ copy.enable }}</Button></span></Callout>
   <Callout v-if="ready&&destinations.some(d=>d.status==='reselection-required')" tone="warning">{{ copy.reselect }}</Callout>
 
-  <component :is="consent?ExecutorConsent:'div'" v-if="approvingForm||changing" v-bind="consent?{admin:true,locale,files:true}:{}">
+  <component :is="consent?ExecutorConsent:'div'" v-if="approvingForm||changing" v-bind="consent?{admin:true,locale,files:true,status:approval.status.value}:{}">
    <Form direction="vertical" class="save-form" @submit.prevent="approval.submit">
     <p v-if="changing" class="save-help">{{ copy.changeHelp }}</p>
     <FormItem v-if="dynamic" :label="copy.folder" :description="consent?copy.approveHelp:undefined" data-save-row="folder"><Select id="save-scope" v-model="chosen" :options="options" :disabled="approving" /></FormItem>

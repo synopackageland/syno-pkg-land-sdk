@@ -8,5 +8,6 @@
   "retry": "再試一次",
   "direct_title": "直接連線至 App",
   "direct_notice": "此 App 無法使用 DSM 管理的 HTTPS。直接連線可能顯示憑證警告，或使用未加密的 HTTP。",
-  "direct_continue": "繼續使用直接連線"
+  "direct_continue": "繼續使用直接連線",
+  "app_privilege_denied": "您的 DSM 帳號沒有使用此 App 的權限。請聯絡 DSM 管理員。"
 }

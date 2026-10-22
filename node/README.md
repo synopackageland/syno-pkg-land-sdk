@@ -1,8 +1,8 @@
 # @synopackageland/app
 
 The Node SDK for the backend of a Synology Package Land App written in
-TypeScript or JavaScript. Node 18 or later (DSM Package Center's
-`Node.js_v18`, `Node.js_v20`, `Node.js_v22`), ESM only, no runtime
+TypeScript or JavaScript. Node 22 or later (DSM Package Center's
+`Node.js_v22`), ESM only, no runtime
 dependencies.
 
 The package's CGI is the synopkgland Go runtime (`bridge/cmd/runtime`). It
@@ -216,8 +216,8 @@ npm run build      # dist/: ESM and .d.ts
 `spec/bridge/v1/frames.schema.json`) and `src/refusals.ts` (from
 `spec/protocol/v1/errors.json`) are generated and committed; a test fails
 when they differ from `spec/`. `scripts/gate.sh` also runs the tests, the
-bridge's golden runner and the hello example on Node 18 in Docker
-(`scripts/node18-test.sh`).
+bridge's golden runner and the hello example on Node 22 in Docker
+(`scripts/node22-test.sh`).
 
 With bridge capability `webapi:true` and approved executor profiles, the existing
 runtime service interface supports profile grants and calls:

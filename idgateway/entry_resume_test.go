@@ -9,7 +9,7 @@ import (
 )
 
 func TestClasslessOIDCEntryResumesOnlyDeclaredTransaction(t *testing.T) {
-	cfg := Config{Package: "Reader", Mode: ModeOIDC, NativeIngress: true, ContainerApp: true, Listen: Listen{HTTPS: 28443}, OIDC: &OIDCConfig{NativeLogin: true}, AuthorizeCGI: "/webman/3rdparty/Reader/sso/authorize.cgi"}
+	cfg := Config{LaunchPath: "/#/native-sso?organization=fixed", Package: "Reader", Mode: ModeOIDC, NativeIngress: true, ContainerApp: true, Listen: Listen{HTTPS: 28443}, OIDC: &OIDCConfig{NativeLogin: true}, AuthorizeCGI: "/webman/3rdparty/Reader/sso/authorize.cgi"}
 	h := entryHandler(cfg, func() error { return nil })
 	r := httptest.NewRequest("GET", "https://nas.example:5001/webman/3rdparty/Reader/sso/open.cgi?ssoResume=opaque_txn%3A28443", nil)
 	w := httptest.NewRecorder()

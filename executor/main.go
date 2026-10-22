@@ -470,6 +470,15 @@ func serve(e *Executor, uid, gid int, revived bool) error {
 		return e.openStarted(ctx, listen, inventory, step, func(s string) { log.Print(s) })
 	}
 	samePins := func(ctx context.Context) bool {
+		// Remove stale diagnostics on a failed read. This file is never approval evidence.
+		readback := filepath.Join(sockDir, "approval.json")
+		if diff, err := approvalReadback(ctx, e.Policy.Package, runtime, target, packageInfo); err == nil {
+			if err := writeApprovalReadback(readback, gid, diff); err != nil {
+				os.Remove(readback)
+			}
+		} else {
+			os.Remove(readback)
+		}
 		state := packagePins(ctx, target, packageInfo, rootOwnedReadOnly, e.ExecutorDigest, e.PolicyDigest)
 		install := func() error { return installAnchored(ctx, target, packageInfo, rootOwnedReadOnly, runtime) }
 		start := func() error {

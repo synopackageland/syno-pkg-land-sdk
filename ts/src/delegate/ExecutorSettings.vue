@@ -43,7 +43,7 @@ defineExpose({refresh})
    </div>
    <Callout v-if="state==='blocked'&&!consent" tone="warning">{{ files?copy.blocked:copy.executorBlocked }}</Callout>
    <Callout v-if="scope?.mismatch" tone="warning">{{ copy.scopeMismatch }}</Callout>
-   <component :is="consent?ExecutorConsent:'div'" v-if="form" v-bind="consent?{admin:true,locale,files,purpose,layout,webapiProfiles}:{}">
+   <component :is="consent?ExecutorConsent:'div'" v-if="form" v-bind="consent?{admin:true,locale,files,purpose,layout,webapiProfiles,status}:{}">
     <Form direction="vertical" class="executor-form" @submit.prevent="submit">
      <FormItem v-if="dynamic" :label="copy.scopeLabel" :description="copy.preselectionHelp"><Select id="delegate-scope" v-model="chosen" :options="options" :disabled="busy||error" /></FormItem>
      <FormItem :label="copy.password" :description="confirming?copy.confirmingHelp:copy.passwordNote" :help="passwordError" :validate-status="passwordError?'error':undefined" validate-message-display-mode="text">

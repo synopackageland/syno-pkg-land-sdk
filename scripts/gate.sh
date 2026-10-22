@@ -116,8 +116,8 @@ const missing = ["LICENSE", "README.md", "dist/index.js", "dist/index.d.ts"].fil
 if (bad.length || missing.length) { console.error("node: unexpected pack contents", {bad, missing}); process.exit(1) }
 console.log("node: " + files.length + " files packed")'
 )
-# Node 18, the oldest Node.js package in DSM's Package Center, in Docker.
-want node && "$root/scripts/node18-test.sh"
+# Supported DSM Node.js_v22 runtime compatibility, in Docker.
+want node && "$root/scripts/node22-test.sh"
 
 # ts: @synopackageland/sdk (scripts/ts-gate.sh).
 want ts && "$root/scripts/ts-gate.sh"

@@ -21,7 +21,7 @@ SYNOPKGLAND_DOCKER_ARGS="-v synopkgland-cache-cargo:/cache/cargo -e CARGO_HOME=/
 	"{ SYNOPKGLAND_RUST_TOOLCHAIN=1.97.1 bash scripts/rust-gate.sh; } >&2 && \
 tar -c rust/target/debug/examples/golden rust/target/debug/examples/hello" >"$examples/examples.tar"
 
-golang=public.ecr.aws/docker/library/golang:1.26.9-bookworm
+golang=public.ecr.aws/docker/library/golang:1.26.10-bookworm
 cache_volumes "$golang" synopkgland-cache-gomod synopkgland-cache-gobuild
 SYNOPKGLAND_DOCKER_TAR="$examples/examples.tar" \
 SYNOPKGLAND_DOCKER_ARGS="-v synopkgland-cache-gomod:/cache/synopkgland-cache-gomod -e GOMODCACHE=/cache/synopkgland-cache-gomod \

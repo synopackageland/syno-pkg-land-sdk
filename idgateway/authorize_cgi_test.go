@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -178,6 +179,19 @@ func TestCGIFailsClosedWhenTheVerifierErrs(t *testing.T) {
 	loc, _ := url.Parse(w.Header().Get("Location"))
 	if loc.Query().Get("error") != "temporarily_unavailable" || loc.Query().Get("assertion") != "" {
 		t.Fatalf("%s", loc)
+	}
+}
+
+func TestCGIAppPrivilegeDenialPreservesAccessDeniedReason(t *testing.T) {
+	h := newCGI(&fakeDSM{})
+	h.LoginApp = "Fixture"
+	h.Verifier = verifierFunc(func(*http.Request) (api.Identity, error) {
+		return api.Identity{}, fmt.Errorf("wrapped: %w", api.ErrAppPrivilegeDenied)
+	})
+	w := cgiPost(t, h, cgiQuery("https://nas.example:18443/_sso/dsm-return"), "tok")
+	loc, err := url.Parse(w.Header().Get("Location"))
+	if err != nil || w.Code != http.StatusFound || loc.Path != ReturnPath || loc.Query().Get("error") != "access_denied" || loc.Query().Get("error_reason") != "app_privilege_denied" || loc.Query().Get("assertion") != "" {
+		t.Fatalf("App privilege denial: %d %s %v", w.Code, loc, err)
 	}
 }
 

@@ -89,7 +89,7 @@ test('a failed check offers a retry inside its message',async()=>{
 test('the confirmed scope shows as PathDisplay',async()=>{
  const ctx={async call<T>(method:string){return (method==='delegate.status'?{scope_mode:'fixed',selection:{scope:'shared:media',root:'/media',generation:1}}:{shares:[],total:0,offset:0}) as T}}
  const p=await settings({state:'ready'},ctx)
- try{expect(p.root.querySelector('.ui-path-display [data-ui-path-text][title="/media"]')).not.toBeNull()}finally{p.done()}
+ try{expect(p.root.querySelector('.ui-path-display [data-ui-path-text][data-ui-tooltip-text="/media"]')).not.toBeNull()}finally{p.done()}
 })
 // a root-ops App shows this panel too; only the executor's reported
 // file scope makes it speak of files.

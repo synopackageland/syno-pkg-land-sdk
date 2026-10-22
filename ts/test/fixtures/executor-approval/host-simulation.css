@@ -1,0 +1,41 @@
+/* A stand-in for a DSM desktop's stylesheets, written for these tests (no DSM
+   CSS is copied, SPEC §8). Like the real ones it is unlayered and styles bare
+   elements, with values chosen to be obvious in a screenshot when they leak
+   into the app root. */
+body {
+  font-family: Georgia, serif;
+  font-size: 11px;
+  line-height: 1;
+  color: #c00000;
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0;
+}
+
+div, p, h1, h2, h3, ul, ol, li, dl, dd, form, fieldset, label, span, nav, section,
+header, footer, table, th, td, input, textarea, select, button {
+  margin: 0;
+  padding: 0;
+}
+
+h1, h2, h3 { font-size: 100%; font-weight: normal; }
+ul, ol { list-style: none; }
+table { border-collapse: collapse; border-spacing: 0; }
+th { text-align: left; font-weight: normal; }
+fieldset, img { border: 0; }
+div { box-sizing: content-box; line-height: 1.1; }
+span { vertical-align: top; }
+label { display: block; font-weight: bold; }
+a { color: purple; text-decoration: none; }
+
+body button { font-family: "Courier New", monospace; }
+body button:lang(zh-TW), body button:lang(en) { font-family: "Courier New", monospace; }
+button {
+  background-color: yellow;
+  border: 2px solid green;
+  border-radius: 0;
+  text-transform: uppercase;
+  white-space: normal;
+}
+input, textarea, select { position: relative; font-family: "Courier New", monospace; font-size: 10px; }
+input { top: 3px; }
+*:focus { outline: 3px solid magenta; }

@@ -153,38 +153,50 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// DSM's CGI gateway cuts the reply short if the CGI exits with request
 	// bytes unread, so drain whatever the handling below did not consume.
 	defer io.Copy(io.Discard, r.Body)
+	writeFailure := writeError
+	if r.URL.Query().Get("method") != "" {
+		transfer := &transferResponse{ResponseWriter: w}
+		w = transfer
+		writeFailure = func(_ http.ResponseWriter, err error) {
+			if transfer.started {
+				log.Printf("transfer failed after response started: %v", err)
+				return
+			}
+			writeStreamError(transfer, err)
+		}
+	}
 	defer func() {
 		if p := recover(); p != nil {
 			log.Printf("handler panic: %v", p)
-			writeError(w, internalError)
+			writeFailure(w, internalError)
 		}
 	}()
 	if method := r.URL.Query().Get("method"); method != "" {
 		if e := CheckOrigin(r); e != nil {
-			writeError(w, e)
+			writeFailure(w, e)
 			return
 		}
 		if e := PrepareTransferRequest(w, r); e != nil {
-			writeError(w, e)
+			writeFailure(w, e)
 			return
 		}
 		caller, route, e := s.authorize(r, method)
 		if e != nil {
-			writeError(w, e)
+			writeFailure(w, e)
 			return
 		}
 		if route.streamHandler == nil {
-			writeError(w, BadRequest("not an HTTP transfer method"))
+			writeFailure(w, BadRequest("not an HTTP transfer method"))
 			return
 		}
 		if err := route.streamHandler(r.Context(), caller, w, r); err != nil {
-			writeError(w, asRequestError(ctx, err))
+			writeFailure(w, asRequestError(ctx, err))
 		}
 		return
 	}
 	req, apiErr := readRequest(w, r, s.maxRequestBytes)
 	if apiErr != nil {
-		writeError(w, apiErr)
+		writeFailure(w, apiErr)
 		return
 	}
 	if req.Calls != nil {
@@ -193,16 +205,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	caller, route, apiErr := s.authorize(r, req.Method)
 	if apiErr != nil {
-		writeError(w, apiErr)
+		writeFailure(w, apiErr)
 		return
 	}
 	if route.streamHandler != nil {
-		writeError(w, BadRequest("use HTTP transfer endpoint"))
+		writeFailure(w, BadRequest("use HTTP transfer endpoint"))
 		return
 	}
 	if route.responseHandler != nil {
 		if err := route.responseHandler(r.Context(), caller, w, r, req.Params); err != nil {
-			writeError(w, asRequestError(ctx, err))
+			writeFailure(w, asRequestError(ctx, err))
 		}
 		return
 	}
@@ -214,7 +226,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		data, err = route.handler(r.Context(), caller, req.Params)
 	}
 	if err != nil {
-		writeError(w, asRequestError(ctx, err))
+		writeFailure(w, asRequestError(ctx, err))
 		return
 	}
 	WriteData(w, data)

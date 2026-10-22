@@ -1,0 +1,46 @@
+{
+  "version": "0.23.2",
+  "executorVersion": "0.20.0",
+  "executorRootSDK": "v0.19.0",
+  "packages": {
+    "@synopackageland/sdk": "0.23.2",
+    "@synopackageland/app": "0.23.2",
+    "syno-pkg-land-app": "0.23.2",
+    "synopkgland_app": "0.23.2"
+  },
+  "executorDigests": {
+    "x86_64": "e27cfeb85fed221b06f9c58166f02c0f701a724308cd17c96a43a843a0b5c4aa",
+    "aarch64": "908db00cbd37d072f6ffc339e7bca24da5efb8cddd4befcbad02c7398beb7191",
+    "armv7": "a0f35d62ec80a1bf3fb49f5e2d1a5f7576eda569a6fd0695084cec6cb8e100bc",
+    "lifecycle": {
+      "x86_64": "9bb53301670b43cdcd6e21cebac99ab7abd82962d874f32423a81e6cb49d4972",
+      "aarch64": "38fe873c86eb102c850baa1f304114a83a31d1df72defd22792bc37610fec9bb",
+      "armv7": "256fb348b275da7ac5728a3cb7cb7c65660de0d5c2c59430ab4f5ade1b0a3681"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "fullGate": true,
+    "gateResumedAfterUpdatingUIPinAssertion": true,
+    "coldCacheReproducible": true,
+    "crossArchitectures": [
+      "amd64",
+      "arm64",
+      "armv7"
+    ],
+    "frontendTestFiles": 72,
+    "frontendTests": 516,
+    "nodeTests": 31,
+    "node18": true,
+    "python38": true,
+    "rustTargets": 3,
+    "executorSourceUnchanged": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false
+  },
+  "ui": {
+    "tested": "0.14.0",
+    "peer": ">=0.10.1 <0.15.0"
+  }
+}

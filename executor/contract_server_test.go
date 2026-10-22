@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -39,6 +40,16 @@ func (d contractDSM) Allow(context.Context, Subject, string, string) error      
 func (d contractDSM) ScopeRoot(context.Context, Subject, string) (string, error) { return d.root, nil }
 func (d contractDSM) API(context.Context, string, string, map[string]any) (json.RawMessage, error) {
 	return json.RawMessage(`{"allowed":true}`), nil
+}
+
+// WebAPI answers with the time the executor left the call, so a client test
+// sees whether the request's deadline_ms bounded it.
+func (d contractDSM) WebAPI(ctx context.Context, _, _, _ string, _ int, _ map[string]any) (json.RawMessage, error) {
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return nil, errors.New("unbounded WebAPI call")
+	}
+	return json.RawMessage(`{"success":true,"data":{"remaining_ms":` + strconv.FormatInt(time.Until(deadline).Milliseconds(), 10) + `}}`), nil
 }
 
 type contractWriter struct{ control string }

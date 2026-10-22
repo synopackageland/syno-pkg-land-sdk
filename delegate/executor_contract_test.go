@@ -291,6 +291,42 @@ func TestRealExecutorAdapterContract(t *testing.T) {
 		}
 		f.attempts(t, in.JobID, 1)
 	})
+	t.Run("webapi-call-under-request-deadline", func(t *testing.T) {
+		f := newContractFixture(t, binary)
+		policy := `{"v":1,"package":"contract","app":"app","operations":["status","delegate.create","delegate.list","delegate.revoke","webapi.call"],"webapi":{"calendar":{"purpose":"Create calendar reminders","apis":{"SYNO.Cal.Event":{"list":[6]}}}}}`
+		if err := os.WriteFile(filepath.Join(f.dir, "policy.json"), []byte(policy), 0600); err != nil {
+			t.Fatal(err)
+		}
+		f.restart(t)
+		// A CGI request always has a deadline, so the client sends deadline_ms.
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		grant, err := CreateWebAPIGrant(ctx, f.s.Client, contractAuth("alice"), "calendar", WebAPIGrantOptions{UntilRevoked: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		remaining := func(ctx context.Context) int64 {
+			t.Helper()
+			out, err := JobContext{Client: f.s.Client, DelegationID: grant.DelegationID}.WebAPI().Call(ctx, "SYNO.Cal.Event", "list", 6, nil)
+			var envelope struct {
+				Data struct {
+					RemainingMS int64 `json:"remaining_ms"`
+				} `json:"data"`
+			}
+			if err != nil || json.Unmarshal(out, &envelope) != nil {
+				t.Fatalf("webapi.call: %s %v", out, err)
+			}
+			return envelope.Data.RemainingMS
+		}
+		// The executor bounds the call by the request's deadline, and keeps
+		// its own 10-second WebAPI bound without one.
+		if got := remaining(ctx); got <= 0 || got > 2000 {
+			t.Fatalf("deadline_ms not applied: %d ms left", got)
+		}
+		if got := remaining(context.Background()); got <= 2000 {
+			t.Fatalf("call without deadline_ms bounded to %d ms", got)
+		}
+	})
 	t.Run("http-owner-and-admin-management", func(t *testing.T) {
 		f := newContractFixture(t, binary)
 		grant := f.grant(t)

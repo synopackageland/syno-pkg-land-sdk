@@ -20,11 +20,16 @@ type RuntimeConfiguration struct {
 // RuntimeEnvironment reads one SDK-generated secret after entering the
 // container. Values never occur in the plan, argv, lock or public SPK.
 type RuntimeEnvironment struct {
+	// Setting reads a package-owned value supplied by the App installation flow.
+	Setting    string `json:"setting,omitempty"`
 	OIDCClient string `json:"oidc_client,omitempty"`
 	Secret     string `json:"secret,omitempty"`
 }
 
 func (e RuntimeEnvironment) filename() string {
+	if e.Setting != "" {
+		return e.Setting + ".value"
+	}
 	if e.OIDCClient != "" {
 		return "oidc-" + e.OIDCClient + ".secret"
 	}
@@ -108,10 +113,19 @@ func validateRuntime(i StorageInitialization) error {
 	}
 	for key, e := range r.Environment {
 		id := e.Secret
+		count := 0
+		for _, v := range []string{e.Secret, e.OIDCClient, e.Setting} {
+			if v != "" {
+				count++
+			}
+		}
+		if e.Setting != "" {
+			id = e.Setting
+		}
 		if e.OIDCClient != "" {
 			id = e.OIDCClient
 		}
-		if !envName.MatchString(key) || (e.Secret == "") == (e.OIDCClient == "") || !runtimeSecretName.MatchString(id) || strings.HasPrefix(key, "SYNOPKGLAND_") {
+		if !envName.MatchString(key) || count != 1 || !runtimeSecretName.MatchString(id) || strings.HasPrefix(key, "SYNOPKGLAND_") {
 			return bad()
 		}
 	}

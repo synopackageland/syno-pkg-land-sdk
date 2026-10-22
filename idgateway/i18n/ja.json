@@ -8,5 +8,6 @@
   "retry": "再試行",
   "direct_title": "App への直接接続",
   "direct_notice": "この App では DSM が管理する HTTPS を利用できません。直接接続すると証明書の警告が表示されるか、暗号化されていない HTTP が使用される場合があります。",
-  "direct_continue": "直接接続を続行"
+  "direct_continue": "直接接続を続行",
+  "app_privilege_denied": "お使いの DSM アカウントには、この App を使用する権限がありません。DSM 管理者にお問い合わせください。"
 }

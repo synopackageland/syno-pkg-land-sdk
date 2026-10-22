@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// DSM-style shell: a fixed left navigation and one right-hand page with a
+// DSM-style shell: navigation and one page with a
 // header. A page the default slot renders stays mounted (v-show) so provider
 // leases and job polling keep running while the user moves between pages; a
 // page's own component is rendered only while it is the current page.
@@ -29,6 +29,8 @@ const props = defineProps<{
   // ctx.executor, every page shows ExecutorNotice while it is not approved.
   ctx?: ShellContext
   wideLayout?: WideLayout
+  /** Forwarded to AppLayout; omitted keeps its sidebar default. 'top' needs UI 0.13.1+. */
+  navigation?: 'sidebar' | 'top'
   sidebarStorageKey?: string
   brandName?: string
   brandIcon?: string
@@ -132,7 +134,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
     <slot name="denied"><Callout tone="danger"><span role="alert">{{ denied.message ?? refusal?.message ?? copy.deniedMessage }}</span></Callout></slot>
   </PageContent>
   <AppLayout v-else ref="layout" :class="['app-shell', {'app-shell-fill': page?.fill, 'app-shell-portal-brand': portalChrome.brand}]" min-height="0" :wide-layout="wideLayout ?? (fullPage ? 'web' : 'window')" :sidebar-storage-key="sidebarStorageKey"
-    :brand-name="brandName ?? ctx?.displayName" :brand-icon="brandIcon ?? ctx?.appIcon">
+    :navigation="navigation" :brand-name="brandName ?? ctx?.displayName" :brand-icon="brandIcon ?? ctx?.appIcon">
     <template #sidebar>
       <AppSidebar :model-value="modelValue" :groups="groups" @update:model-value="emit('update:modelValue', $event)" />
     </template>
@@ -157,7 +159,9 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
 <style scoped>
 /* The library clips AppLayout at window height; the page body scrolls while
    the sidebar keeps its own height. Modeled on syno-reclaim's AppShell. */
-.app-shell { height: 100%; min-width: 0; grid-template-rows: minmax(0, 1fr); }
+.app-shell { height: 100%; min-width: 0; }
+/* Top navigation owns two rows in the UI; keep its bar above the page. */
+.app-shell:not([data-ui-navigation='top']) { grid-template-rows: minmax(0, 1fr); }
 /* Keep the UI's navigation and collapse controls; remove the duplicate brand block. */
 .app-shell-portal-brand :deep([data-ui-sidebar-brand]) { display: none; }
 .app-shell :deep(> div) { min-height: 0; }

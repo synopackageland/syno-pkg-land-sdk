@@ -243,7 +243,7 @@ func strictJSON(b []byte, v any) error {
 	if _, ok := v.(*Request); ok {
 		var head map[string]json.RawMessage
 		if json.Unmarshal(b, &head) == nil && string(head["op"]) == `"webapi.call"` {
-			return strictWebJSON(b, v, "v op auth params")
+			return strictWebJSON(b, v, "v op auth params deadline_ms")
 		}
 	}
 

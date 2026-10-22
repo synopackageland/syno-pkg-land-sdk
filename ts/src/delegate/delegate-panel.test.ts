@@ -32,7 +32,7 @@ test('fields stack above their controls',async()=>{
 test('a delegated folder shows as PathDisplay',async()=>{
  const v=mountPanel()
  v.call.mockImplementation(async(method:string):Promise<unknown>=>method==='delegate.status'?{state:'ready'}:method==='delegate.list'?{delegations:[{delegation_id:'d',job_id:'j',path:'/downloads/films',expires_at:'2026-10-14T00:00:00Z'}]}:{jobs:[]})
- try{await settle();await v.refresh();await settle();expect(v.root.querySelector('.ui-path-display [data-ui-path-text][title="/downloads/films"]')).not.toBeNull()}finally{v.done()}
+ try{await settle();await v.refresh();await settle();expect(v.root.querySelector('.ui-path-display [data-ui-path-text][data-ui-tooltip-text="/downloads/films"]')).not.toBeNull()}finally{v.done()}
 })
 // DSM lists jobs as rows with the state in its own column, not strung onto the name.
 test('a job row shows its name and its state as a badge, and a delegation when it expires',async()=>{

@@ -8,5 +8,6 @@
   "retry": "Riprova",
   "direct_title": "Connessione diretta all’App",
   "direct_notice": "HTTPS gestito da DSM non è disponibile per questa App. La connessione diretta potrebbe mostrare un avviso sul certificato o utilizzare HTTP non crittografato.",
-  "direct_continue": "Continua con la connessione diretta"
+  "direct_continue": "Continua con la connessione diretta",
+  "app_privilege_denied": "Il tuo account DSM non è autorizzato a usare questa App. Contatta il tuo amministratore DSM."
 }

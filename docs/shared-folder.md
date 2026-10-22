@@ -12,6 +12,11 @@ folder if needed and grants the package account `permission` at package startup.
 Checks remain useful after permission changes. See the
 [native DSM investigation and design](shared-folder-permission-design.md).
 
+Compose packages can reuse `mode: select` through
+[`compose.shares` with `select: install`](compose.md#shared-folder-authority).
+The container runs as the same fixed package UID:GID. Selecting is still not a
+grant, and ACL revocation does not recall already-open file descriptors.
+
 ## What the SDK decides and who decides it
 
 | Question | Answer comes from |

@@ -38,7 +38,7 @@ async function mount(o:Options={}){
  const buttons=()=>Array.from(root.querySelectorAll('button')).map(b=>b.textContent!.trim())
  const press=async(label:string)=>{Array.from(document.querySelectorAll('button')).find(b=>b.textContent!.trim()===label)!.click();await settle()}
  const type=async(selector:string,value:string)=>{const input=root.querySelector<HTMLInputElement>(selector)!;input.value=value;input.dispatchEvent(new Event('input'));await settle()}
- const paths=(path:string)=>root.querySelectorAll(`.ui-path-display [data-ui-path-text][title="${path}"]`).length
+ const paths=(path:string)=>root.querySelectorAll(`.ui-path-display [data-ui-path-text][data-ui-tooltip-text="${path}"]`).length
  const labels=()=>Array.from(root.querySelectorAll('[data-save-row]')).map(r=>r.getAttribute('data-save-row'))
  return {root,calls,buttons,press,type,paths,labels,refresh:()=>exposed!.refresh(),done:()=>{app.unmount();root.remove()}}
 }

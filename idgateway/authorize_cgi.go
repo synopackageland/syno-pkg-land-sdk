@@ -115,6 +115,9 @@ func (h *AuthorizeCGI) verify(w http.ResponseWriter, r *http.Request, ret *url.U
 		uid, err = h.Accounts.UID(r.Context(), id.User)
 	}
 	switch {
+	case errors.Is(err, api.ErrAppPrivilegeDenied):
+		q.Set("error", "access_denied")
+		q.Set("error_reason", "app_privilege_denied")
 	case errors.Is(err, api.ErrAdminRequired) || errors.Is(err, ErrGroupRequired):
 		q.Set("error", "access_denied")
 	case errors.Is(err, api.ErrNoSession) || errors.Is(err, ErrNoAccount):

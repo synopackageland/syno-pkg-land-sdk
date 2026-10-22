@@ -2,7 +2,8 @@
 
 The identity gateway distinguishes DSM authentication from App admission. A
 verified DSM session does not grant administrator or admitted-group membership.
-The authorize CGI returns `access_denied` for either admission refusal, and the
+The authorize CGI returns `access_denied` for admission refusals, including DSM
+App privilege denial, and the
 gateway renders a policy-specific explanation without a retry link or automatic
 redirect. It checks membership again when redeeming the assertion and on each
 protected App request, so demotion takes effect on the next request.
@@ -11,11 +12,16 @@ protected App request, so demotion takes effect on the next request.
 | --- | --- | --- | --- |
 | 403 | `dsm_admin_required` | `gateway.admin_required` | Use an account admitted as a DSM administrator |
 | 403 | `dsm_group_required` | `gateway.group_required` | Ask the DSM administrator about App access |
+| 403 | `dsm_app_privilege_denied` | `gateway.app_privilege_denied` | Ask the DSM administrator to grant this App's privilege |
 | 401 | `dsm_sign_in_required` | `gateway.sign_in_required` | Sign in to DSM at this address, then retry |
 | 503 | `dsm_verification_failed` | `gateway.verification_failed` | Retry when DSM verification is available |
 
 A failed membership lookup is a verification failure, not evidence that the
 account lacks permission. Backend error details are never returned to browsers.
+The CGI carries App privilege refusal as `error=access_denied` with the fixed
+`error_reason=app_privilege_denied`, so it is not mistaken for administrator or
+group policy. This applies to OIDC, header, token and gateway-only modes. Silent
+OIDC still returns the standard `access_denied` protocol error.
 
 For navigations, a missing gateway session first redirects to the DSM authorize
 CGI. Its result page always uses HTML. Later navigation failures use the same
@@ -48,8 +54,8 @@ permanent `passthrough`. For example, the CLI manifest can declare:
 
 ```yaml
 identity_gateway:
-  # Other gateway fields omitted. This capability requires SDK 0.19.0+.
-  sdk: 0.19.0
+  # Other gateway fields omitted. This capability requires SDK 0.24.0.
+  sdk: 0.24.0
   optional_passthrough:
     mobile:
       prefixes: [/dav, /api/mobile]

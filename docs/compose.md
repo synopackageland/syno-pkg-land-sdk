@@ -158,13 +158,13 @@ a build operator trust decision. `check`/`inspect` remain offline.
 | Private bind data | DSM build rejects COMPOSE_PRIVATE_BIND_TIMING_UNSUPPORTED: clean-install preinst precedes pkgvar creation, while worker acquire precedes postinst; no root initialization or automatic volume conversion |
 | Image VOLUME | Build inventories verified image config and assigns a stable named volume |
 | Existing external volume | Rejected without trusted admin ownership/driver readback |
-| Existing Shared Folder | Explicit opt-in intent only; blocked settings page until official protected ACL/project control exists |
+| Existing Shared Folder | Native install selection plus DSM package-user ACL; dynamic admin-after-install authority stays blocked |
 | Bridge | Default no-publish dedicated internal bridge with a package-derived fixed IP; availability requires App health, TCP and the current lifecycle acquire record; no Docker identity attestation |
 | Host | Explicit verified OIDC web consumer with address_env forced to 127.0.0.1; no container-root; internet access is visible |
 | Egress | isolated internal networks, or explicit internet outbound bridge; fine allowlist declarations fail |
 | Public ports | All upstream publishes removed; the host gateway dials the declared web service on its fixed bridge IP; auxiliary ingress is unsupported |
 | Root | Fixed package UID/GID by default; per-service container-root requires reason, bridge and no host binds; only CHOWN/FOWNER/SETUID/SETGID opt-ins |
-| Build, hooks, privileged, host PID/IPC, devices, sockets | Rejected; no host root workaround |
+| Build, hooks, privileged, host PID/IPC, arbitrary devices, sockets | Rejected; Intel render devices require the explicit GPU capability below |
 | Secret/config file resources, plugins, replicas/deploy | Rejected until their bounded delivery/runtime contract exists |
 | Subpath hosting | Unsupported; use the app's dedicated origin at / |
 
@@ -188,7 +188,48 @@ modification and deletion. DSM identity/account bridge and file authority are
 separate features. Per-DSM-user filesystem access requires a File Station session
 or Broker Adapter; it is outside this change and cannot be obtained through a mount.
 
-Declare `capabilities: {composeMounts: true}` and, for example:
+For one existing Shared Folder, reuse the native install/upgrade wizard:
+
+```yaml
+capabilities: {composeMounts: true}
+install:
+  sharedFolder: {mode: select, key: media, permission: ro}
+compose:
+  shares:
+    media:
+      select: install
+      # Omitted permission defaults to ro. For rw, set rw in both declarations.
+      mounts: [{service: web, target: /media}]
+```
+
+The share key and permission must match `install.sharedFolder` exactly. This
+route supports `mode: select`; `create` resource ordering is not supported.
+The package-account preinst resolves the chosen name on `/volumeN` and writes
+only the fixed source placeholder into the worker's private `.env`. Missing,
+ambiguous or symlinked sources fail installation. Host paths are never wizard
+answers. Every mounted service uses the fixed package UID:GID, drops all Linux
+capabilities and has no-new-privileges. Container-root cannot mount Shares.
+
+**Selecting an existing share does not grant permission.** An administrator must
+grant the package account access in **Control Panel > Shared Folder > Edit >
+Permissions > System internal user**. Until then, container file operations fail
+under the kernel's ACL checks. No root helper, ACL writer or Docker socket is
+given to the App. Grant directly to the package account; supplementary DSM groups
+are not added to the container. See [Shared Folder permission](shared-folder.md).
+
+The upgrade wizard keeps the saved name unless its change checkbox is selected.
+CLI deployment uses `--param media=Media` on first install, and
+`--param CHANGE_media=true --param media=OtherMedia` to change it on upgrade.
+Stop/disable and uninstall use DSM's official project worker; source data and
+administrator-managed ACL entries are retained. A moved share needs a new
+upgrade to resolve its volume path; start does not rematerialize the bind.
+
+ACL changes affect subsequent filesystem operations. Already-open file
+descriptors and data already read are not recalled. To stop existing streams,
+stop the package before removing its access. This native route does not promise
+automatic container termination or recreation on ACL changes.
+
+For dynamic selection after install, declare the separate, blocked authority:
 
 ```yaml
 compose:
@@ -206,12 +247,24 @@ upstream docker-project is acquired. The independent authority purpose is
 `compose-mount`; a user destination grant from Download Hub/delegate never
 permits a package-wide mount.
 
-The current implementation does **not** issue a mount grant, invoke ACL tools,
+The dynamic implementation does **not** issue a mount grant, invoke ACL tools,
 install a protected executor for Compose, or activate/revoke an upstream project.
 Confirmation returns `COMPOSE_PROJECT_CONTROL_UNAVAILABLE`. It must remain
 unsupported until an official ACL plus fixed project-control adapter can use
 protected policy/digest/generation authority, stop/recreate/read back and revoke
 without reviving stale grants. No app runs as host root to bypass this boundary.
+
+| Acceptance blocker | Native install selection |
+| --- | --- |
+| `DSM_DOCKER_PROJECT_MODEL` | Uses the existing official docker-project worker; device acceptance still applies. |
+| `DSM_STORAGE_OWNERSHIP_TIMING` | Existing shares need no package-created directory or chown; private package binds remain unsupported. |
+| `DSM_EGRESS_BOUNDARY` | Unchanged independent network acceptance condition. |
+| `COMPOSE_PROJECT_CONTROL_UNAVAILABLE` | Bypassed through native install/upgrade/stop/uninstall, without a dynamic controller. |
+| `DSM_MOUNT_ACL_REVOKE` | Native kernel ACL semantics above; immediate stream cancellation remains outside this route. |
+
+The first three general device acceptance labels remain in the plan. Dynamic
+`admin-after-install` and `install-draft` keep all five blockers and
+`mounts_blocked: true`; mixing dynamic authority with native selection is refused.
 
 ## Gateway transport
 
@@ -264,11 +317,56 @@ declared availability readiness, LAN isolation/egress, protected grant lifecycle
 ACLs, two-user visibility and clean install/upgrade/reboot/stop/uninstall before
 calling the package supported on a NAS. No NAS is accessed by the build gate.
 
-The unified Compose contract uses SDK/templates 0.17.0 with CLI 0.17.0. Use the published, matching versions together; the legacy packaging route and bridge publish mode are removed.
+The unified Compose contract uses SDK/templates 0.24.0 with CLI 0.24.0. Use these published, matching versions together. DSM bridge ingress uses a dedicated internal network without published container ports.
 
 Primary override files, and each included override set, must share a directory. Cross-directory override bases are rejected before loader I/O. Included implicit .env files are confined, inventoried and preserved; symlinks are rejected.
 
-## DSM bridge availability readiness
+## DSM availability readiness
+
+### Host networking
+
+Declare optional non-loopback UDP listeners explicitly:
+
+```yaml
+compose:
+  host_udp:
+    - {port: 5353, purpose: mdns}
+    - {port: 1900, purpose: ssdp}
+  # Retain the verified host service, loopback listener and Web health policy.
+```
+
+This requires the existing nonroot host Web topology. Up to 32 distinct UDP
+ports from 1024 through 65535 are allowed; privileged ports, ranges and wildcard
+exceptions are rejected. Each purpose is a lowercase label of 1–64 characters,
+beginning with a letter, followed by letters, digits or hyphens. The list is
+sorted in the plan and lock and carried into daemon policy. `inspect` reports
+the allowed ports and purposes and verifies the packaged policy against the
+reconstructed plan. Use a CLI and SDK that both support this declaration;
+older planners fail closed.
+
+The exception applies to the whole package UID, to IPv4/IPv6 UDP only. Declared
+sockets are optional and do not satisfy Web TCP readiness. Undeclared
+non-loopback TCP/UDP listeners retain the existing rejection behavior; TCP Web
+binding and health checks remain required. No root or added capability is
+requested. This does not reserve ports, configure multicast reuse, prove LAN
+discovery, inspect packet content or isolate host networking. Verify upstream
+multicast coexistence without changing DSM discovery services. See the
+[security boundaries](host-udp-design.md).
+
+Host networking retains the package-UID and loopback binding guard. When
+`compose.web.health` declares a relative path and an expected 2xx status, the
+gateway also waits for that exact HTTP response. Redirects are not followed.
+A temporary startup listener returning an unready status, including a gap before
+the final server binds, cannot admit the gateway. The existing startup deadline
+bounds the wait; extending it cannot make an unready response count as ready.
+
+After admission, the supervisor continues probing health and listener ownership.
+A missing listener or invalid binding remains fatal; temporary HTTP failures
+close ingress and receive the existing bounded health recovery window. Host
+profiles without a health declaration retain listener-only readiness. Rebuild
+with matching CLI and SDK changes so the health declaration reaches the daemon.
+Host mode does not require the bridge lifecycle-generation file. These checks
+provide availability and binding evidence, not Docker identity attestation.
 
 ### Startup budget
 
@@ -395,9 +493,13 @@ On nas.example DSM 7.4/Docker 24.0.2, internal networks blocked tested external 
 and external DNS, but allowed NAS host services through the bridge gateway and
 NAS LAN address. Therefore `isolated` is not a host-service firewall. IPv6 had
 no usable default route on this fixture, which is not proof of an IPv6 firewall.
-The official worker added NET_BIND_SERVICE to the capability bounding set even
-with cap_drop ALL; effective/permitted/ambient capabilities were zero for the
-nonroot fixture. Do not claim an empty bounding set or complete NAS isolation.
+The DSM docker-project provider adds NET_BIND_SERVICE to the capability bounding
+set for Compose packages, including non-GPU packages. The SDK emits `cap_drop:
+[ALL]` and never requests `cap_add`. With the nonroot package UID and
+`no-new-privileges`, the tested process has zero effective, permitted and ambient
+capabilities; the remaining bounding set is `0x400`. This is general DSM platform
+behavior, not a GPU acceptance blocker. Do not claim an empty bounding set or
+complete NAS isolation.
 
 DSM cookie names `id`, `did`, `_SSID`, `_CrPoSt`, `stay_login` and the complete
 `synopkgland_sso_` namespace are reserved in both request Cookie and response
@@ -548,3 +650,47 @@ Start only starts existing containers and cannot repair that installation. Use
 the same package identity and preserve app data and named volumes when repairing;
 verify the package's own migration and uninstall scripts separately. This
 feature does not guarantee arbitrary third-party App hooks preserve data.
+
+## Intel GPU render devices
+
+GPU support is an opt-in and requires DSM's native `video-driver` resource.
+The runtime defers the discovered constant group ID until Compose interpolation,
+so DSM's intermediate YAML rewrite cannot turn a numeric group string into an
+integer rejected by its Compose version. The manifest cannot supply that ID.
+Native resource grant timing and a real hardware transcode require device
+acceptance; a successful build does not prove hardware acceleration works.
+The general DSM provider capability behavior above also applies to GPU packages.
+
+```yaml
+compose:
+  files: [compose.yaml]
+  devices:
+    gpu:
+      services: [media]
+```
+
+The SDK plans this capability without probing the developer's machine. `inspect`
+reports the selected services, `video-driver` resource, native `videodriver` GID
+source, runtime render path selection, and software fallback. The package-account
+installer detects Intel DRM render nodes using sysfs vendor `0x8086`, character
+device major 226/minor 128–191, and a matching `videodriver` device GID with group
+read/write access. It maps each accepted `/dev/dri/renderD*` node individually,
+with `rw` access, and adds only the discovered numeric GID to selected containers.
+It does not map `/dev/dri` as a directory or expose `card*` nodes.
+
+The CLI emits the native resource. DSM owns group authorization; the SDK never
+changes group membership, device ownership or mode. No Docker socket, root hook,
+`privileged`, `cap_add`, arbitrary path or manifest-supplied GID is accepted. GPU
+services keep the package UID:GID, drop all capabilities and retain
+`no-new-privileges`. The package-account materializer verifies its native account
+and a hash-bound `gpu.template.yaml` before writing the worker document.
+
+A missing or unsupported GPU, inaccessible discovery metadata, or mismatched GID
+produces no device/group mapping. Containers receive
+`SYNOPKGLAND_GPU_STATUS=software` and an empty `SYNOPKGLAND_GPU_DEVICE`. A mapped
+render device produces `available` and the first accepted device path. These
+values describe device mapping, not a proven codec/driver; the App must probe its
+upstream encoder and select software if initialization fails. Reinstallation or
+upgrade recomputes mappings; hotplug or changing hardware without rematerializing
+the package is unsupported. GPU access authorizes shared render-engine ioctls; it
+does not isolate GPU workloads or imply per-DSM-user file authority.

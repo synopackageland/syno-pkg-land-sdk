@@ -171,6 +171,37 @@ func TestGatewaySilentOIDCDenialUsesProtocolError(t *testing.T) {
 	}
 }
 
+func TestGatewayAppPrivilegeDenialAcrossModes(t *testing.T) {
+	for _, mode := range []Mode{ModeNone, ModeHeader, ModeToken, ModeOIDC} {
+		t.Run(string(mode), func(t *testing.T) {
+			up := newUpstream(t, nil)
+			tokens := &staticTokens{}
+			f, _ := newFront(t, mode, up, func(c *FrontConfig) { c.Tokens = tokens })
+			b := newBrowser(t, f)
+			target := "https://nas.example:18443/"
+			if mode == ModeOIDC {
+				target += "_sso/authorize?" + authQuery("paperless", "https://nas.example:18443/accounts/oidc/dsm/login/callback/", "v").Encode()
+			}
+			verifier := verifierFunc(func(*http.Request) (api.Identity, error) {
+				return api.Identity{}, fmt.Errorf("wrapped: %w", api.ErrAppPrivilegeDenied)
+			})
+			w := finishCGI(t, b, b.do("GET", target, navigate...), verifier)
+			assertDenial(t, w, 403, "dsm_app_privilege_denied", "app_privilege_denied", "Your DSM account is not allowed to use this App.", false)
+			if up.hits != 0 || tokens.calls != 0 || len(f.sessions) != 0 {
+				t.Fatal("denial created access")
+			}
+		})
+	}
+	f, _ := newFront(t, ModeOIDC, newUpstream(t, nil), nil)
+	b := newBrowser(t, f)
+	target := "https://nas.example:18443/_sso/authorize?" + authQuery("paperless", "https://nas.example:18443/accounts/oidc/dsm/login/callback/", "v", "prompt", "none").Encode()
+	w := finishCGI(t, b, b.do("GET", target, navigate...), verifierFunc(func(*http.Request) (api.Identity, error) { return api.Identity{}, api.ErrAppPrivilegeDenied }))
+	loc, _ := url.Parse(w.Header().Get("Location"))
+	if w.Code != 302 || loc.Query().Get("error") != "access_denied" || loc.Query().Get("state") == "" {
+		t.Fatalf("silent denial: %d %s", w.Code, loc)
+	}
+}
+
 func TestGatewayDenialLocalizesAndEscapesUntrustedErrors(t *testing.T) {
 	for _, tc := range []struct{ lang, want string }{{"zh-TW", "此 App 需要 DSM 管理員權限。"}, {"fr-FR", "Cette App nécessite un administrateur DSM."}, {"xx-YY", "This App requires a DSM administrator."}} {
 		f, _ := newFront(t, ModeHeader, newUpstream(t, nil), func(c *FrontConfig) { c.Access = "dsm-admins" })
@@ -235,7 +266,7 @@ func TestGatewayCatalogsCoverSDKLocales(t *testing.T) {
 		if err = json.Unmarshal(raw, &messages); err != nil {
 			t.Fatal(err)
 		}
-		for _, key := range []string{"title", "admin_required", "group_required", "sign_in_required", "verification_failed", "sign_in", "retry", "direct_title", "direct_notice", "direct_continue"} {
+		for _, key := range []string{"title", "admin_required", "group_required", "app_privilege_denied", "sign_in_required", "verification_failed", "sign_in", "retry", "direct_title", "direct_notice", "direct_continue"} {
 			if strings.TrimSpace(messages[key]) == "" {
 				t.Errorf("%s: missing %s", file.Name(), key)
 			}

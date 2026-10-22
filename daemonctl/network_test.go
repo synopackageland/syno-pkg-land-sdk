@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -93,5 +94,53 @@ func TestBridgeRequiresLifecycleReadinessContext(t *testing.T) {
 	}
 	if err = checkNetwork(t.TempDir(), os.Geteuid(), &networkPolicy{Mode: "settings"}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestDeclaredHostUDPDoesNotAdmitTCPOrOtherPorts(t *testing.T) {
+	p := &networkPolicy{Mode: "host", Ports: []int{28004}}
+	if err := json.Unmarshal([]byte(`{"mode":"host","ports":[28004],"host_udp":[{"port":5353,"purpose":"mdns"}]}`), p); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		addr, port, state string
+		udp, ok           bool
+	}{
+		{"00000000", "14E9", "07", true, true},
+		{"00000000000000000000000000000000", "14E9", "07", true, true},
+		{"EA53110A", "14E9", "07", true, true},
+		{"00000000", "14EA", "07", true, false},
+		{"00000000", "14E9", "0A", false, false},
+		{"00000000000000000000000000000000", "14E9", "0A", false, false},
+		{"0100007F", "14EA", "07", true, true},
+	} {
+		found, err := socketPorts(socketFixture(tc.addr, tc.port, tc.state, os.Geteuid()), os.Geteuid(), p, tc.udp)
+		if (err == nil) != tc.ok {
+			t.Fatalf("%+v: %v", tc, err)
+		}
+		if found[5353] {
+			t.Fatal("UDP satisfied TCP readiness")
+		}
+	}
+	if err := checkSocketTable(socketFixture("00000000", "14EA", "07", os.Geteuid()+1), os.Geteuid(), p, true); err != nil {
+		t.Fatal("foreign UID changed existing guard scope", err)
+	}
+}
+
+func TestHostUDPDaemonRejectsInvalidPolicy(t *testing.T) {
+	for _, raw := range []string{
+		`{"mode":"host","host_udp":[{"port":53,"purpose":"dns"}]}`,
+		`{"mode":"host","host_udp":[{"port":5353}]}`,
+		`{"mode":"bridge","host_udp":[{"port":5353,"purpose":"mdns"}]}`,
+		`{"mode":"settings","host_udp":[{"port":5353,"purpose":"mdns"}]}`,
+		`{"host_udp":[{"port":5353,"purpose":"mdns"}]}`,
+	} {
+		var p networkPolicy
+		if err := json.Unmarshal([]byte(raw), &p); err != nil {
+			t.Fatal(err)
+		}
+		if err := checkNetwork(t.TempDir(), os.Geteuid(), &p); err == nil || !strings.Contains(err.Error(), "HOST_UDP") {
+			t.Fatalf("%s: %v", raw, err)
+		}
 	}
 }

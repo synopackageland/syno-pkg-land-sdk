@@ -11,7 +11,7 @@ SDK for DSM packages built with [synopkgland](https://github.com/synopackageland
 | `spec/delegate/v1/` | App backend delegate DTOs: single schema generating Go and TypeScript wire types |
 | `bridge/`, `spec/bridge/v1/` | `bridge/cmd/runtime`, the package CGI that hands verified calls to a Python, Node or Rust App, one process per request; the channel and the App manifest (`bridge.json`) are frozen ([spec/bridge/v1](spec/bridge/v1/README.md), [docs/multilang/design.md](docs/multilang/design.md)). Each request starts the App: Node adds about 0.5 s on an ARM NAS, so latency-sensitive Apps should use Python or Rust |
 | `rust/app/` | Crate `syno-pkg-land-app`: thin SDK for Rust Apps behind the bridge runtime ([rust/app/README.md](rust/app/README.md)) |
-| `node/` | npm package `@synopackageland/app`: the Node App SDK for the bridge, TypeScript with ESM and `.d.ts`, Node 18 or later, no runtime dependencies ([node/README.md](node/README.md)) |
+| `node/` | npm package `@synopackageland/app`: the Node App SDK for the bridge, TypeScript with ESM and `.d.ts`, Node 22 or later, no runtime dependencies ([node/README.md](node/README.md)) |
 | `python/` | Package `synopkgland_app`: the Python App SDK for the bridge, standard library only, Python 3.8 or later ([python/README.md](python/README.md)) |
 | `testdata/golden/` | `api.Server` replies every bridge App must reproduce byte for byte (repository check, not published) |
 | `conformance/` | Runs the vectors against the executor over a Unix socket (repository check, not published) |
@@ -20,14 +20,14 @@ SDK for DSM packages built with [synopkgland](https://github.com/synopackageland
 An app depends on the SDK through `backend/go.mod`:
 
 ```
-require github.com/synopackageland/syno-pkg-land-sdk v0.17.3
+require github.com/synopackageland/syno-pkg-land-sdk v0.24.0
 ```
 
 A Rust App depends on `syno-pkg-land-app` (`rust/app/`) and runs behind the
-Go runtime; the Rust full SDK `syno-pkg-land-sdk` stopped at tag `v0.9.9`:
+Go runtime:
 
 ```
-syno-pkg-land-app = { git = "https://github.com/synopackageland/syno-pkg-land-sdk", tag = "v0.17.3" }
+syno-pkg-land-app = { git = "https://github.com/synopackageland/syno-pkg-land-sdk", tag = "v0.24.0" }
 ```
 
 The `go.mod` line is the only source of the SDK version. The CLI builds the executor
@@ -81,7 +81,7 @@ checks run on that Docker host in `synopkgland-gate-sdk:<hash>`
 (`scripts/gate.Dockerfile`), with the host's shared `synopkgland-cache-*`
 volumes, and wait for one of its two gate slots. The ts segment
 (`scripts/ts-gate.sh`: npm ci, vue-tsc, vitest, build, pack) runs there too,
-in Node.js 24.20.0's image with the shared npm cache
+in Node.js 24.22.1's image with the shared npm cache
 (`scripts/ts-docker-gate.sh`), so this machine's load cannot time out its
 tests; set `SYNOPKGLAND_DOCKER_NPM_REGISTRY` when that host cannot reach
 registry.npmjs.org. Without `SYNOPKGLAND_DOCKER_SSH` everything runs here.
@@ -101,7 +101,7 @@ The selected segments print before they run. Install the tools for those
 segments: Node.js/npm for `node`, `ts` and the root Go module's bridge tests;
 Python 3 and `uv` for Python checks; Rust/rustup with the targets in
 `scripts/rust-gate.sh` for Rust checks; and Docker for the Linux/runtime checks
-(including Rust on macOS, Node 18 and Python 3.8). A release uses
+(including Rust on macOS, Node 22 and Python 3.8). A release uses
 `scripts/gate.sh` without `--fast`. Neither gate requires a NAS or DSM login.
 The root module's Compose prepare tests read Linux kernel routes from `/proc`;
 run those checks on Linux or in a Linux container. Docker SSH redirects the
@@ -120,7 +120,7 @@ On a shared host, keep the `synopkgland-` gate images and cache volumes; remove
 only containers and temporary files created by your run.
 
 The executor digest changes only when `executor/` changes. Build it only as
-`executor-digests.sh` does (a copy of `executor/`, pinned go1.26.9); any other
+`executor-digests.sh` does (a copy of `executor/`, pinned go1.26.10); any other
 build gives other digests.
 
 License: MIT for SDK code; retained upstream Compose fixtures have separate

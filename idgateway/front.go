@@ -77,6 +77,7 @@ type FrontConfig struct {
 	Ready                 func(context.Context) bool
 	ComposeIngress        *ComposeIngress
 	Access                string
+	UpstreamAccess        string
 	Groups                []string
 	Membership            GroupMembership
 	ComposeBlocked        bool
@@ -104,10 +105,12 @@ type FrontConfig struct {
 	Redirects map[string]string
 
 	// oidc
-	Browser     *BrowserConfig
-	Provider    *Provider
-	Issuer      string
-	RewriteJSON []JSONRewrite
+	Browser         *BrowserConfig
+	BrowserRedirect *BrowserRedirectConfig
+	PublicListen    Listen
+	Provider        *Provider
+	Issuer          string
+	RewriteJSON     []JSONRewrite
 
 	// header and token
 	Headers    HeaderNames
@@ -160,6 +163,15 @@ const (
 
 // NewFront validates cfg and builds the gateway handler.
 func NewFront(cfg FrontConfig) (*Front, error) {
+	if err := cfg.BrowserRedirect.validate(); err != nil {
+		return nil, err
+	}
+	if cfg.BrowserRedirect != nil && (cfg.Mode != ModeOIDC || cfg.PublicListen.HTTP == 0 && cfg.PublicListen.HTTPS == 0 || !validPort(cfg.PublicListen.HTTP, true) || !validPort(cfg.PublicListen.HTTPS, true)) {
+		return nil, errors.New("oidc.browser_redirect requires oidc mode and declared public listen ports")
+	}
+	if err := validateUpstreamAccess(cfg.Mode, cfg.Access, cfg.UpstreamAccess, cfg.ComposeBlocked, len(cfg.OptionalPassthrough) > 0); err != nil {
+		return nil, err
+	}
 	if cfg.Browser != nil {
 		if cfg.Mode != ModeOIDC {
 			return nil, errors.New("browser bridge requires oidc mode")
@@ -285,13 +297,18 @@ func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	origin := requestOrigin(r)
-	if !validRequestAuthority(r) {
+	if !validRequestAuthority(r) || !f.browserAuthority(r) {
 		http.Error(w, "invalid authority", http.StatusBadRequest)
 		return
 	}
 	// Explicit app-authenticated passthrough also serves native clients without
 	// browser origin headers. It never receives gateway identity or cookies.
 	browserEvidence := !(optional || f.passthrough(r.URL.Path)) || r.Header.Get("Origin") != "" || r.Header.Get("Referer") != "" || isUpgrade(r)
+	// Public App routes own authentication, CSRF and native-client/WebSocket
+	// policy. Reserved issuer routes keep the gateway's existing protections.
+	if f.providerOnly() && r.URL.Path != "/_sso" && !strings.HasPrefix(r.URL.Path, "/_sso/") {
+		browserEvidence = false
+	}
 	if browserEvidence && (!safeProxyMethod(r.Method) || isUpgrade(r)) && !sameBrowserOrigin(r, origin) {
 		http.Error(w, "cross-origin request", http.StatusForbidden)
 		return
@@ -322,7 +339,7 @@ func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, target, http.StatusFound)
 		return
 	}
-	if !f.cfg.ComposeBlocked && (optional || f.cfg.Access == "public" || f.cfg.Mode == ModeOIDC && f.cfg.Access == "" || f.passthrough(r.URL.Path)) {
+	if !f.cfg.ComposeBlocked && (f.providerOnly() || optional || f.cfg.Access == "public" || f.cfg.Mode == ModeOIDC && f.cfg.Access == "" || f.passthrough(r.URL.Path)) {
 		f.serveProxy(w, r)
 		return
 	}
@@ -430,7 +447,11 @@ func (f *Front) dsmReturn(w http.ResponseWriter, r *http.Request, origin string)
 		return
 	}
 	if q.Get("error") != "" {
-		f.denied(w, r, t, q.Get("error"))
+		code := q.Get("error")
+		if code == "access_denied" && q.Get("error_reason") == "app_privilege_denied" {
+			code = "app_privilege_denied"
+		}
+		f.denied(w, r, t, code)
 		return
 	}
 	a, err := OpenAssertion(f.cfg.Key, q.Get("assertion"), f.cfg.Now())
@@ -482,11 +503,14 @@ func localTarget(p string) string {
 
 func (f *Front) denied(w http.ResponseWriter, r *http.Request, t txn, code string) {
 	switch code {
-	case "access_denied", "login_required", "temporarily_unavailable":
+	case "access_denied", "app_privilege_denied", "login_required", "temporarily_unavailable":
 	default:
 		code = "server_error"
 	}
 	if t.oidc && t.req.Prompt == "none" {
+		if code == "app_privilege_denied" {
+			code = "access_denied"
+		}
 		http.Redirect(w, r, f.cfg.Provider.Fail(t.req, code), http.StatusFound)
 		return
 	}
@@ -609,12 +633,14 @@ func (f *Front) rewrite(pr *httputil.ProxyRequest) {
 	}
 	out.Set("X-Forwarded-Port", port)
 	f.stripGatewayCookies(pr.Out)
-	if f.rewritesJSON(pr.In) || f.cfg.Browser != nil && isNavigation(pr.In) {
+	if f.rewritesJSON(pr.In) || f.rewritesHTML(pr.In) || f.cfg.Browser != nil && isNavigation(pr.In) {
 		out.Set("Accept-Encoding", "identity")
 	}
-	if f.cfg.Browser != nil && isNavigation(pr.In) {
+	if f.rewritesJSON(pr.In) || f.rewritesHTML(pr.In) || f.cfg.Browser != nil && isNavigation(pr.In) {
 		out.Del("If-None-Match")
 		out.Del("If-Modified-Since")
+		out.Del("Range")
+		out.Del("If-Range")
 	}
 	s, ok := pr.In.Context().Value(subjectKey).(Subject)
 	if !ok {
@@ -688,12 +714,18 @@ func (f *Front) modifyResponse(res *http.Response) error {
 	}
 	origin, _ := res.Request.Context().Value(originKey).(string)
 	if loc := res.Header.Get("Location"); loc != "" {
-		res.Header.Set("Location", f.publicURL(loc, origin))
+		if public := f.publicURL(loc, origin); public != loc {
+			res.Header.Set("Location", public)
+			uncacheBrowserResponse(res)
+		}
 	}
 	for _, j := range f.cfg.RewriteJSON {
 		if j.Method == res.Request.Method && j.Path == res.Request.URL.Path {
 			return f.rewriteJSONField(res, j.Field, origin)
 		}
+	}
+	if err := f.rewriteBrowserHTML(res, origin); err != nil {
+		return err
 	}
 	return f.injectBrowser(res)
 }
@@ -735,6 +767,7 @@ func (f *Front) rewriteJSONField(res *http.Response, field, origin string) error
 	var value string
 	if json.Unmarshal(raw, &doc) == nil && json.Unmarshal(doc[field], &value) == nil {
 		if public := f.publicURL(value, origin); public != value {
+			uncacheBrowserResponse(res)
 			doc[field], _ = json.Marshal(public)
 			raw, _ = json.Marshal(doc)
 		}

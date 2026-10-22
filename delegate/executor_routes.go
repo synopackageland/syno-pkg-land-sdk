@@ -22,8 +22,20 @@ func ExecutorRoutes(c ExecutorClient, dataDir string) []api.Route {
 		api.Handle("executor.control", func(_ context.Context, caller api.Caller, raw json.RawMessage) (any, error) {
 			return executorControl(caller, raw, mailbox)
 		}),
-		api.Handle("executor.status", func(ctx context.Context, _ api.Caller, _ json.RawMessage) (any, error) {
-			return executorStatus(ctx, c, mailbox)
+		api.Handle("executor.status", func(ctx context.Context, caller api.Caller, _ json.RawMessage) (any, error) {
+			result, err := executorStatus(ctx, c, mailbox)
+			if err != nil || !caller.Admin() {
+				return result, err
+			}
+			if diagnostic := protectedApproval(c); diagnostic != nil {
+				b, marshalErr := json.Marshal(result)
+				var status map[string]any
+				if marshalErr == nil && json.Unmarshal(b, &status) == nil && status != nil {
+					status["approval"] = diagnostic
+					return status, nil
+				}
+			}
+			return result, nil
 		}),
 	}
 }

@@ -1,5 +1,63 @@
 # Changelog
 
+## 0.24.0 (2026-10-22)
+
+- Rebuild Go SDK runtimes, executor and lifecycle with Go 1.26.10, fixing crypto/x509 GO-2026-6809. Pin the same toolchain in all Go modules and build environments.
+- Update build and frontend test containers to Node.js 24.22.1 LTS. Raise the Node App SDK runtime requirement to Node.js 22 and replace the EOL Node.js 18 compatibility gate with Node.js 22.23.4. New native-node templates use DSM Node.js_v22.
+- Retain optional UI peer support for `>=0.10.1 <0.15.0`, verified with UI 0.14.0. Align SDK/App and generated runtime metadata at 0.24.0; Rust crate publication remains deferred.
+- Known limitations: the rebuilt executor and lifecycle payload digests change. Apps upgraded with this release require administrator reapproval of system access. Refresh the CLI digest inventory; previous release digest records remain immutable. No NAS upgrade certification is claimed.
+
+## 0.23.2 (2026-10-22)
+
+- Accept UI 0.14.x with the optional UI peer range `>=0.10.1 <0.15.0` and validate the Vue SDK against UI 0.14.0. Existing SDK component APIs remain unchanged.
+- Align SDK/App and generated runtime identifiers at 0.23.2. Reuse executor/v0.20.0 without executor, lifecycle or canonical task changes. Rust crate publication remains deferred.
+
+## 0.23.1 (2026-10-22)
+
+- Return HTTP error statuses for refused HTTP transfers, including origin/session/permission guards, while preserving JSON error envelopes and details. JSON API calls retain their existing HTTP 200 envelopes.
+- Remove prepared attachment headers on refusal; never append JSON after a transfer has started. Node, Python and Rust transfers share the same Go runtime behavior and cross-language contract tests.
+- Align SDK/App runtime identifiers at 0.23.1. Reuse executor/v0.20.0; executor, lifecycle and canonical task definitions are unchanged. Rust crate publication remains deferred.
+
+## 0.23.0 (2026-10-21)
+
+- Resolve the OIDC browser redirect origin from each verified DSM launch request so IP and alias entry URLs can share one installed App.
+- Preserve origin validation and the fixed callback path; no installation-time public-origin override is required for the native browser bridge.
+- Align SDK/App and generated runtime identifiers at 0.23.0. Reuse executor/v0.20.0: executor, lifecycle and canonical task definitions are unchanged. Rust crate publication remains deferred.
+
+## 0.22.0 (2026-10-21)
+
+- Add provider-only OIDC with `identity_gateway.upstream_access: public`: protect the issuer through DSM while allowing direct access to the upstream application.
+- Add declared `compose.host_udp` listeners for host-network Apps, and a fixed local `identity_gateway.launch_path` for DSM menu entry.
+- Add native installation settings and bounded runtime setting environment values for Compose Apps.
+- Align SDK/App and generated runtime identifiers at 0.22.0. Reuse executor/v0.20.0: executor, lifecycle and canonical task definitions are unchanged. Approval retention still requires matching policy, root programs and protected runtime readback. Rust crate publication remains deferred.
+
+## 0.21.1 (2026-10-21)
+
+- Add typed AppShell `navigation` forwarding to AppLayout. `top` places App pages in a horizontal bar with UI 0.13.1+, while mobile keeps its drawer; omission preserves the installed UI sidebar default. Keep the optional UI peer range `>=0.10.1 <0.14.0` and test against UI 0.13.1.
+- Let the UI size the top navigation bar and page separately instead of applying the SDK's sidebar-only grid row override.
+- Align SDK/App metadata and generated runtime identifiers at 0.21.1. Reuse executor/v0.20.0: executor, lifecycle and canonical task definitions are unchanged from 0.21.0. Rust crate publication remains deferred.
+
+## 0.21.0 (2026-10-21)
+
+- Add optional Intel GPU render-node access through `compose.devices.gpu`, using the DSM native video-driver resource and videodriver supplementary GID. Retain nonroot execution, no-new-privileges and cap_drop ALL.
+- Fall back to software when no supported GPU is available; never map card nodes or broaden device access.
+- Document DSM provider NET_BIND_SERVICE bounding-set behavior and align current installation guidance at 0.21.0.
+- Align SDK/App runtime identifiers at 0.21.0. Reuse executor/v0.20.0: executor, lifecycle and canonical task definitions are unchanged. Approval retention still depends on policy, root programs and protected runtime readback. Rust crate publication remains deferred.
+
+## 0.20.0 (2026-10-21)
+
+- Explain executor upgrades using protected runtime readback: distinguish policy permissions, root program bytes and task template changes before administrator reapproval.
+- Support native Compose bind mounts selected at installation with `select: install`, including measured shared-folder access and path refresh without changing the upstream image.
+- Keep the gateway pending until host health readiness succeeds; return HTTP 403 with actionable guidance when the DSM App privilege denies access.
+- Align SDK/App and generated runtime identifiers at 0.20.0; retain compatibility with published UI versions. Rust crate publication remains deferred.
+- Known limitations: executor payload bytes change. Executor Apps rebuilt with this SDK require one administrator reapproval after upgrade; refresh the CLI executor/lifecycle digest inventory. Approval explanations are diagnostics and do not grant permission. No NAS upgrade certification is claimed.
+
+## 0.19.1 (2026-10-20)
+
+- Fix delegated `webapi.call` from any caller with a deadline. Since 0.17.5 the Go `delegate.Client` adds `deadline_ms` when its context has a deadline, which every CGI request has, but the executor's `webapi.call` envelope allowlist omitted it, so the call was refused with `INVALID_REQUEST` before admission and audit. The executor now accepts `deadline_ms` on `webapi.call` and bounds the call by it within the approved operation budget and the 10-second WebAPI limit, as for every other op. A contract test drives the production executor through the real Go client under a deadline.
+- Widen the frontend SDK's optional `@synopackageland/ui` peer to `>=0.10.1 <0.14.0` and test against UI 0.13.0. No SDK component change was needed; UI 0.13.0's visible default changes apply to Apps that upgrade UI.
+- Align SDK/App metadata and generated runtime identifiers at 0.19.1. The executor keeps its root Go SDK dependency at v0.19.0. The executor payload changes: refresh the CLI executor/lifecycle digest inventory before release, and executor Apps rebuilt with this SDK require one administrator reapproval after upgrade. Rust crate publication remains deferred.
+
 ## 0.19.0 (2026-10-20)
 
 - Add bounded nonroot OIDC runtime configuration for Compose Apps, listener host-port routing, forwarded-port validation, and reliable readiness admission.

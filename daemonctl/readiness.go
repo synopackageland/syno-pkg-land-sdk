@@ -56,11 +56,18 @@ func (c *controller) bridgePolicy() (*bridgeReadiness, error) {
 	if _, err := hex.DecodeString(p.PlanSHA256); err != nil {
 		return nil, errors.New("COMPOSE_READINESS_INVALID: invalid plan digest")
 	}
-	path, err := url.ParseRequestURI(p.Health.Path)
-	if err != nil || !strings.HasPrefix(p.Health.Path, "/") || strings.HasPrefix(p.Health.Path, "//") || strings.ContainsAny(p.Health.Path, "\r\n#\\") || path.Host != "" || path.IsAbs() || p.Health.Status < 200 || p.Health.Status > 299 || c.Network.Ports[0] < 1 || c.Network.Ports[0] > 65535 {
-		return nil, errors.New("COMPOSE_READINESS_INVALID: health must use a relative origin path and a 2xx expected status")
+	if err := c.validateHealth(p); err != nil {
+		return nil, err
 	}
 	return p, nil
+}
+
+func (c *controller) validateHealth(p *bridgeReadiness) error {
+	path, err := url.ParseRequestURI(p.Health.Path)
+	if err != nil || !strings.HasPrefix(p.Health.Path, "/") || strings.HasPrefix(p.Health.Path, "//") || strings.ContainsAny(p.Health.Path, "\r\n#\\") || path.Host != "" || path.IsAbs() || p.Health.Status < 200 || p.Health.Status > 299 || len(c.Network.Ports) != 1 || c.Network.Ports[0] < 1 || c.Network.Ports[0] > 65535 {
+		return errors.New("COMPOSE_READINESS_INVALID: health requires one TCP endpoint, a relative origin path and a 2xx expected status")
+	}
+	return nil
 }
 func (c *controller) installedVersion() (string, error) {
 	path := c.installedInfo
@@ -152,7 +159,20 @@ func (c *controller) checkReadinessUntil(until time.Time) error {
 	ctx, cancel := context.WithDeadline(context.Background(), until)
 	defer cancel()
 	if c.Network == nil || c.Network.Mode != "bridge" {
-		return checkNetwork("/proc/net", os.Geteuid(), c.Network)
+		// Preserve the host UID/binding guard. Missing listeners are retried by
+		// startup's waitReadiness, but remain fatal once admitted. HTTP health
+		// prevents a temporary startup listener from admitting the gateway.
+		if err := checkNetwork("/proc/net", os.Geteuid(), c.Network); err != nil {
+			return err
+		}
+		if c.Network == nil || c.Network.Mode == "settings" || c.Network.Readiness == nil {
+			return nil
+		}
+		p := c.Network.Readiness
+		if err := c.validateHealth(p); err != nil {
+			return err
+		}
+		return probeHTTPHealth(ctx, net.JoinHostPort("127.0.0.1", strconv.Itoa(c.Network.Ports[0])), p.Health)
 	}
 	p, err := c.bridgePolicy()
 	if err != nil {
@@ -198,10 +218,14 @@ func (c *controller) checkReadinessUntil(until time.Time) error {
 		return fmt.Errorf("COMPOSE_TCP_NOT_READY: %w", err)
 	}
 	conn.Close()
+	return probeHTTPHealth(ctx, address, p.Health)
+}
+
+func probeHTTPHealth(ctx context.Context, address string, health healthProbe) error {
 	transport := &http.Transport{Proxy: nil, DisableKeepAlives: true, DialContext: (&net.Dialer{}).DialContext}
 	defer transport.CloseIdleConnections()
 	client := &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	req, err := http.NewRequestWithContext(ctx, "GET", "http://"+address+p.Health.Path, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", "http://"+address+health.Path, nil)
 	if err != nil {
 		return err
 	}
@@ -210,8 +234,8 @@ func (c *controller) checkReadinessUntil(until time.Time) error {
 		return fmt.Errorf("COMPOSE_HEALTH_NOT_READY: %w", err)
 	}
 	response.Body.Close()
-	if response.StatusCode != p.Health.Status {
-		return fmt.Errorf("COMPOSE_HEALTH_NOT_READY: got HTTP %d, expected %d", response.StatusCode, p.Health.Status)
+	if response.StatusCode != health.Status {
+		return fmt.Errorf("COMPOSE_HEALTH_NOT_READY: got HTTP %d, expected %d", response.StatusCode, health.Status)
 	}
 	return nil
 }

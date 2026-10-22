@@ -1,3 +1,10 @@
+// Root-produced diagnostics, read through executor.status. Display only; never a grant.
+export interface ApprovalDifference {
+ package:string;old_policy_digest:string;new_policy_digest:string;new_executor_digest:string
+ permissions:'unchanged'|'expanded'|'review-required';task_template_changed:boolean
+ root_programs:Array<{name:string;old:string|null;new:string|null}>
+ policy_changes:Array<{path:string;old:unknown;new:unknown}>
+}
 export type CapabilityState='unsupported'|'needs-admin-approval'|'ready'|'blocked'|'incompatible'
 // requested: a scope change whose root task may still land; it applied once
 // status() reports that scope with a generation above this one.
@@ -7,7 +14,7 @@ export type CapabilityState='unsupported'|'needs-admin-approval'|'ready'|'blocke
 // scheduler_denied, …); reason is the English detail. outcome: what a failed
 // approval's rollback did (restored, withdrawn, restore_failed, withdraw_failed).
 // The DSM window's access of an older CLI reports reason only.
-export interface CapabilityStatus {state:CapabilityState;reason?:string;code?:string;outcome?:string;requested?:{scope:string;generation:number};retry?:boolean}
+export interface CapabilityStatus {state:CapabilityState;approval?:ApprovalDifference;reason?:string;code?:string;outcome?:string;requested?:{scope:string;generation:number};retry?:boolean}
 // The App supplies the implementation through app.provide(ExecutorSetupKey, setup).
 // Passwords belong only to this call and must never be persisted or logged.
 export interface ExecutorSetup {

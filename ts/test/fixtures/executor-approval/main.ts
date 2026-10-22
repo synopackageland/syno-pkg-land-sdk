@@ -1,5 +1,6 @@
 import {createApp,h} from 'vue'
 import {AppRoot} from '@synopackageland/ui'
+import './host-simulation.css'
 import '@synopackageland/ui/themes/dsm7-embedded.css'
 import ExecutorApproval from '../../../src/delegate/ExecutorApproval.vue'
 import ExecutorNotice from '../../../src/delegate/ExecutorNotice.vue'
@@ -12,7 +13,7 @@ import type {CapabilityStatus} from '../../../src/delegate/executor-setup'
 const query=new URLSearchParams(location.search)
 const admin=query.get('admin')!=='false',locale=query.get('locale')??'en',view=query.get('view')??'approval'
 document.documentElement.lang=locale
-let current:CapabilityStatus={state:'needs-admin-approval'}
+let current:CapabilityStatus={state:'needs-admin-approval',...(query.has('upgrade')?{code:'task_outdated',approval:{package:'Example',old_policy_digest:'a'.repeat(64),new_policy_digest:'b'.repeat(64),new_executor_digest:'c'.repeat(64),permissions:'unchanged' as const,task_template_changed:true,root_programs:[{name:'cli',old:'f740e7379688a7d2',new:'7c18ad7f813f9164'},{name:'lifecycle',old:'f740e7379688a7d2',new:'7c18ad7f813f9164'}],policy_changes:[]}}:{})}
 const files=view==='save'
 const call=async<T,>(method:string)=>(method==='delegate.status'?files?{scope_mode:'install-selected',preselection:'shared:Downloads',selection:null}:{}:{shares:[{name:'Downloads',path:'/Downloads',isdir:true},{name:'Team',path:'/Team',isdir:true}],total:2,offset:0}) as T
 const setup={

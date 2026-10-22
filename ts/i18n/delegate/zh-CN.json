@@ -75,5 +75,16 @@
   "statusUnreachable": "应用的系统服务没有响应。请从 DSM 桌面打开应用，或刷新页面。",
   "statusStarting": "应用的后台服务仍在启动中。请稍后刷新页面。",
   "retry": "重试",
-  "rawLimit": "原始响应上限（字节）"
+  "rawLimit": "原始响应上限（字节）",
+  "upgradeTitle": "查看此次更新",
+  "upgradePrograms": "系统执行程序已更新，需要管理员重新批准。",
+  "upgradeTasks": "批准任务定义已更新，需要管理员重新批准。",
+  "upgradePolicy": "批准策略已更新，需要管理员重新批准。",
+  "upgradeUnchanged": "权限未变。",
+  "upgradeExpanded": "权限已扩展，请查看差异后再批准。",
+  "upgradeReview": "权限或参数已更改，请查看差异后再批准。",
+  "upgradePolicyLabel": "批准策略",
+  "upgradeChanges": "权限与参数差异",
+  "upgradeUnknown": "先前的受保护运行环境未提供比较数据，无法判断更改内容或权限是否扩展，需要管理员重新批准。",
+  "upgradeConsentTitle": "批准此次更新"
 }

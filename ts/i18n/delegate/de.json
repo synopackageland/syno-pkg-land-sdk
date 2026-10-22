@@ -75,5 +75,16 @@
   "statusUnreachable": "Der Systemdienst der App hat nicht geantwortet. Öffnen Sie die App über den DSM-Desktop oder laden Sie die Seite neu.",
   "statusStarting": "Der Hintergrunddienst der App startet noch. Laden Sie die Seite gleich neu.",
   "retry": "Neuer Versuch",
-  "rawLimit": "Limit für rohe Antworten (Bytes)"
+  "rawLimit": "Limit für rohe Antworten (Bytes)",
+  "upgradeTitle": "Update prüfen",
+  "upgradePrograms": "Systemprogramme wurden aktualisiert. Eine erneute Administratorgenehmigung ist erforderlich.",
+  "upgradeTasks": "Die Definitionen der Genehmigungsaufgaben wurden aktualisiert. Eine erneute Administratorgenehmigung ist erforderlich.",
+  "upgradePolicy": "Die Genehmigungsrichtlinie wurde aktualisiert. Eine erneute Administratorgenehmigung ist erforderlich.",
+  "upgradeUnchanged": "Berechtigungen unverändert.",
+  "upgradeExpanded": "Berechtigungen erweitert. Prüfen Sie die Änderungen vor der Genehmigung.",
+  "upgradeReview": "Berechtigungen oder Parameter geändert. Prüfen Sie die Änderungen vor der Genehmigung.",
+  "upgradePolicyLabel": "Richtlinie",
+  "upgradeChanges": "Änderungen an Berechtigungen und Parametern",
+  "upgradeUnknown": "Die bisherige geschützte Laufzeit hat keine Vergleichsdaten bereitgestellt. Änderungen und Berechtigungserweiterungen sind unbekannt. Eine erneute Administratorgenehmigung ist erforderlich.",
+  "upgradeConsentTitle": "Dieses Update genehmigen"
 }

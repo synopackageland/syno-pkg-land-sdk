@@ -105,7 +105,7 @@ func EntryHandler(cfg Config) http.Handler {
 }
 func entryHandler(cfg Config, preflight func() error) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet || !validRequestAuthority(r) {
+		if r.Method != http.MethodGet || !validRequestAuthority(r) || validateLaunchPath(cfg.LaunchPath) != nil {
 			http.Error(w, "invalid entry", 400)
 			return
 		}
@@ -177,6 +177,11 @@ func entryHandler(cfg Config, preflight func() error) http.Handler {
 			q := url.Values{"txn": {parts[0]}, "return": {target + strings.TrimPrefix(ReturnPath, "/")}, "login_attempt": {"1"}}
 			http.Redirect(w, r, requestOrigin(r)+cfg.AuthorizeCGI+"?"+q.Encode(), http.StatusFound)
 			return
+		}
+		// A menu target comes only from package configuration. Resume always uses
+		// the issuer root above, independently of any App query or fragment.
+		if cfg.LaunchPath != "" {
+			target = strings.TrimSuffix(target, "/") + cfg.LaunchPath
 		}
 		if !cfg.NativeIngress {
 			locale, messages := denialMessages(r)

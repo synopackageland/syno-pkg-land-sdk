@@ -75,5 +75,16 @@
   "statusUnreachable": "Le service système de l'application n'a pas répondu. Ouvrez l'application depuis le bureau DSM ou actualisez la page.",
   "statusStarting": "Le service en arrière-plan de l'application démarre encore. Actualisez la page dans un instant.",
   "retry": "Réessayer",
-  "rawLimit": "Limite de réponse brute (octets)"
+  "rawLimit": "Limite de réponse brute (octets)",
+  "upgradeTitle": "Vérifier cette mise à jour",
+  "upgradePrograms": "Les programmes système ont été mis à jour. Une nouvelle approbation administrateur est requise.",
+  "upgradeTasks": "Les définitions des tâches d’approbation ont été mises à jour. Une nouvelle approbation administrateur est requise.",
+  "upgradePolicy": "La politique d’approbation a été mise à jour. Une nouvelle approbation administrateur est requise.",
+  "upgradeUnchanged": "Autorisations inchangées.",
+  "upgradeExpanded": "Autorisations étendues. Vérifiez les modifications avant d’approuver.",
+  "upgradeReview": "Autorisations ou paramètres modifiés. Vérifiez les modifications avant d’approuver.",
+  "upgradePolicyLabel": "Politique",
+  "upgradeChanges": "Modifications des autorisations et paramètres",
+  "upgradeUnknown": "L’environnement protégé précédent n’a pas fourni de données de comparaison. Les modifications et l’extension des autorisations sont inconnues. Une nouvelle approbation administrateur est requise.",
+  "upgradeConsentTitle": "Approuver cette mise à jour"
 }

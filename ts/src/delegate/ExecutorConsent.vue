@@ -10,8 +10,11 @@ import {computed} from 'vue'
 import {ChevronRight,ShieldCheck} from '@lucide/vue'
 import {delegateCopy} from './copy'
 import {uiLocale} from '../i18n'
+import ExecutorUpgrade from './ExecutorUpgrade.vue'
+import type {CapabilityStatus} from './executor-setup'
 import type {ExecutorSetup} from './executor-setup'
-const props=defineProps<{admin:boolean;locale?:string;files?:boolean;purpose?:string;layout?:'page'|'inline';webapiProfiles?:ExecutorSetup['webapiProfiles']}>()
+const props=defineProps<{admin:boolean;status?:CapabilityStatus;locale?:string;files?:boolean;purpose?:string;layout?:'page'|'inline';webapiProfiles?:ExecutorSetup['webapiProfiles']}>()
+const upgrading=computed(()=>props.status?.code==='task_outdated'||!!props.status?.approval)
 const copy=computed(()=>delegateCopy(props.locale))
 // Chinese and Japanese run sentences together; the others put a space between.
 const gap=computed(()=>['zh-TW','zh-CN','ja'].includes(uiLocale(props.locale??'en'))?'':' ')
@@ -23,7 +26,7 @@ const points=computed(()=>[copy.value.pointPassword,copy.value.pointLimited,copy
   <span class="executor-consent-icon" aria-hidden="true"><ShieldCheck :size="layout==='page'?24:18" /></span>
   <div class="executor-consent-body">
    <div class="executor-consent-head">
-    <p class="executor-consent-title" data-consent-title>{{ admin?copy.consentTitle:copy.consentTitleUser }}</p>
+    <p class="executor-consent-title" data-consent-title>{{ admin?(upgrading?copy.upgradeConsentTitle:copy.consentTitle):copy.consentTitleUser }}</p>
     <p class="executor-consent-lead" data-consent-lead>{{ lead }}</p>
     <p v-if="!admin" class="executor-consent-lead executor-consent-ask" data-consent-ask>{{ copy.consentAsk }}</p>
    </div>
@@ -32,6 +35,7 @@ const points=computed(()=>[copy.value.pointPassword,copy.value.pointLimited,copy
      <details><summary>{{ copy.details }}</summary><div v-for="(methods,api) in profile.apis" :key="api"><code>{{ api }}</code><div v-for="(versions,method) in methods" :key="method">{{ method }} ({{ versions.join(', ') }})</div></div><code v-if="profile.raw_max_bytes" data-webapi-raw>{{ copy.rawLimit }}: {{ profile.raw_max_bytes }}</code></details>
     </li>
    </ul>
+   <ExecutorUpgrade v-if="admin" :status="status" :locale="locale" />
    <slot />
    <details v-if="admin" class="executor-consent-more" data-consent-points>
     <summary><ChevronRight class="executor-consent-chevron" :size="14" aria-hidden="true" />{{ copy.consentDetails }}</summary>

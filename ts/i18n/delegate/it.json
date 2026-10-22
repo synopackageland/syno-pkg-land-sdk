@@ -75,5 +75,16 @@
   "statusUnreachable": "Il servizio di sistema dell'app non ha risposto. Aprire l'app dal desktop DSM o aggiornare la pagina.",
   "statusStarting": "Il servizio in background dell'app è ancora in avvio. Aggiornare la pagina tra poco.",
   "retry": "Riprova",
-  "rawLimit": "Limite risposta non elaborata (byte)"
+  "rawLimit": "Limite risposta non elaborata (byte)",
+  "upgradeTitle": "Verifica questo aggiornamento",
+  "upgradePrograms": "I programmi di sistema sono stati aggiornati. È richiesta una nuova approvazione dell’amministratore.",
+  "upgradeTasks": "Le definizioni delle attività di approvazione sono state aggiornate. È richiesta una nuova approvazione dell’amministratore.",
+  "upgradePolicy": "La politica di approvazione è stata aggiornata. È richiesta una nuova approvazione dell’amministratore.",
+  "upgradeUnchanged": "Autorizzazioni invariate.",
+  "upgradeExpanded": "Autorizzazioni ampliate. Verifica le modifiche prima di approvare.",
+  "upgradeReview": "Autorizzazioni o parametri modificati. Verifica le modifiche prima di approvare.",
+  "upgradePolicyLabel": "Politica",
+  "upgradeChanges": "Modifiche ad autorizzazioni e parametri",
+  "upgradeUnknown": "L’ambiente protetto precedente non ha fornito dati di confronto. Le modifiche e l’ampliamento delle autorizzazioni sono sconosciuti. È richiesta una nuova approvazione dell’amministratore.",
+  "upgradeConsentTitle": "Approvare questo aggiornamento"
 }

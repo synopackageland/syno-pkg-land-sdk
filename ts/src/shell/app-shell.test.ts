@@ -13,7 +13,7 @@ vi.mock('@synopackageland/ui',async importOriginal=>{
  const {defineComponent,h}=await import('vue')
  return {...ui,
   ensureDeviceViewport:()=>{seen.viewport++;return ()=>{seen.restored++}},
-  AppLayout:defineComponent({props:['wideLayout','sidebarStorageKey','brandName','brandIcon','minHeight'],setup(props,{slots}:{slots:Slots}){
+  AppLayout:defineComponent({props:['wideLayout','navigation','sidebarStorageKey','brandName','brandIcon','minHeight'],setup(props,{slots}:{slots:Slots}){
    return ()=>{
     seen.layout={...props};seen.footer=!!slots['sidebar-footer']
     return h('section',[slots.sidebar?.(),slots['sidebar-footer']&&h('footer',slots['sidebar-footer']()),slots.toolbar&&h('header',slots.toolbar()),slots.default?.()])
@@ -45,6 +45,27 @@ async function mount(props:Record<string,unknown>,slots:Record<string,(scope:{pa
  app.mount(root);await nextTick()
  return {root,unmount(){app.unmount();root.remove()}}
 }
+
+test('navigation reaches AppLayout unchanged and follows prop updates',async()=>{
+ const navigation=ref<'sidebar'|'top'|undefined>()
+ const root=document.createElement('div');document.body.append(root)
+ const app=createApp({render:()=>h(AppShell,{locale:'en',modelValue:'status',pages:['status'],navigation:navigation.value})})
+ app.mount(root);await nextTick()
+ try{
+  expect(seen.layout.navigation).toBeUndefined()
+  for(const value of ['top','sidebar',undefined] as const){
+   navigation.value=value;await nextTick()
+   expect(seen.layout.navigation).toBe(value)
+  }
+ }finally{app.unmount();root.remove()}
+})
+
+test('the public navigation prop accepts only the supported modes',()=>{
+ expectTypeOf<InstanceType<typeof AppShell>['$props']['navigation']>().toEqualTypeOf<'sidebar'|'top'|undefined>()
+ // @ts-expect-error Navigation is an AppLayout mode, not arbitrary text.
+ const invalid:InstanceType<typeof AppShell>['$props']['navigation']='bottom'
+ void invalid
+})
 
 // An App lives inside one DSM window; the shell's wide layout follows that window, not the viewport.
 test('a shell without a context lays out against the DSM window as before',async()=>{

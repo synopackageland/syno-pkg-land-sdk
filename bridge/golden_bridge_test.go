@@ -29,6 +29,8 @@ var bridgeGoApp = fakeApp{methods: goldenMethods, handle: func(c *fakeConn, call
 	json.Unmarshal(c.last, &in)
 	ctx := call["ctx"].(map[string]any)
 	switch call["method"] {
+	case "demo.fail":
+		return goldenGoApp.handle(c, call)
 	case "demo.upload":
 		var p struct {
 			Query  json.RawMessage
@@ -89,8 +91,8 @@ func bridgeServer(t *testing.T, d Dialer, auth string) http.Handler {
 		jobs: background.NewRequestStore(filepath.Join(data, "background")), executor: goldenExecutor{},
 		lookupUID: func(string) string { return "1001" }}
 	session := &Session{Dial: d, Methods: goldenMethods, Services: sv.table(), Spool: filepath.Join(data, SpoolDir),
-		Transfers: map[string]string{"demo.upload": "upload", "demo.fetch": "download"}}
-	policy := `{"schema":1,"default":"administrators","methods":{"demo.svc":"authenticated","demo.svc_public":"public","demo.upload":"authenticated","demo.fetch":"authenticated"}}`
+		Transfers: map[string]string{"demo.upload": "upload", "demo.fetch": "download", "demo.fail": "download"}}
+	policy := `{"schema":1,"default":"administrators","methods":{"demo.svc":"authenticated","demo.svc_public":"public","demo.upload":"authenticated","demo.fetch":"authenticated","demo.fail":"authenticated"}}`
 	srv, err := api.NewServerWithPermissions(goldenAuth{auth}, []byte(policy), Routes(session)...)
 	if err != nil {
 		t.Fatal(err)
@@ -112,6 +114,12 @@ func svcCase(name, method, op, params, want string) bridgeCase {
 }
 
 var bridgeCases = []bridgeCase{
+	{name: "download app refusal", auth: "alice", method: "GET", target: "?method=demo.fail", status: 500,
+		replyBody: `{"error":{"code":"conflict","message":"a \u003cb\u003e \u0026 c"},"success":false}` + "\n"},
+	{name: "download no session", auth: "no-session", method: "GET", target: "?method=demo.fetch", status: 401,
+		replyBody: `{"error":{"code":"session_required","message":"sign in to DSM again"},"success":false}` + "\n"},
+	{name: "download invalid query", auth: "alice", method: "GET", target: "?method=demo.fetch&a=1&a=2", status: 400,
+		replyBody: `{"error":{"code":"bad_request","message":"a query parameter is repeated"},"success":false}` + "\n"},
 	svcCase("portal.status", "demo.svc", "portal.status", ``, `{"result":{"state":"enabled","alias":"hello"}}`),
 	svcCase("root.run forwards the session", "demo.svc", "root.run", `,"params":{"name":"scan","params":{"deep":true}}`,
 		`{"result":{"request_id":"r1","exit_code":0,"output":"\u003cb\u003eé\u003c/b\u003e\u2028","stderr":""}}`),

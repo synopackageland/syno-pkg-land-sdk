@@ -2,7 +2,7 @@ module github.com/synopackageland/syno-pkg-land-sdk
 
 go 1.25.0
 
-toolchain go1.26.9
+toolchain go1.26.10
 
 // Non-Go trees: ./... and all match only the Go packages.
 ignore (

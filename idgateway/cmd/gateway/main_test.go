@@ -12,8 +12,23 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/synopackageland/syno-pkg-land-sdk/dsm"
 	"github.com/synopackageland/syno-pkg-land-sdk/idgateway"
 )
+
+func TestProviderOnlyIssuerAlwaysHasDSMAppPrivilegeGate(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "gateway.json")
+	os.WriteFile(path, []byte(`{"package":"Reader","mode":"oidc","upstream_access":"public","access":"dsm-users","upstream":"http://127.0.0.1:8000","listen":{"https":18443},"authorize_cgi":"/webman/3rdparty/Reader/sso/authorize.cgi","state_dir":"`+filepath.Join(dir, "state")+`","oidc":{"issuer_port":18444,"clients":[{"id":"reader","redirect_paths":["/cb"]}]}}`), 0600)
+	h, err := authorizeHandler(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	verifier := h.(*idgateway.AuthorizeCGI).Verifier.(idgateway.AccessVerifier)
+	if _, ok := verifier.Next.(*dsm.EntryGate); !ok {
+		t.Fatal("provider-only OIDC omitted DSM Application Privileges")
+	}
+}
 
 func TestOIDCNativeLoginDoesNotRequireBrowserInjection(t *testing.T) {
 	dir := t.TempDir()

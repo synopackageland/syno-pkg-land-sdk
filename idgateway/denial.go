@@ -47,6 +47,9 @@ func denialMessages(r *http.Request) (string, map[string]string) {
 }
 
 func admissionCode(err error) string {
+	if errors.Is(err, api.ErrAppPrivilegeDenied) {
+		return "app_privilege_denied"
+	}
 	if errors.Is(err, api.ErrAdminRequired) || errors.Is(err, ErrGroupRequired) {
 		return "access_denied"
 	}
@@ -59,6 +62,8 @@ func admissionCode(err error) string {
 func (f *Front) writeFailure(w http.ResponseWriter, r *http.Request, code, retry string, page bool) {
 	status, stable, key := http.StatusServiceUnavailable, "dsm_verification_failed", "verification_failed"
 	switch code {
+	case "app_privilege_denied":
+		status, stable, key = http.StatusForbidden, "dsm_app_privilege_denied", "app_privilege_denied"
 	case "access_denied":
 		status, stable, key = http.StatusForbidden, "dsm_admin_required", "admin_required"
 		if f.cfg.Access == "dsm-groups" {

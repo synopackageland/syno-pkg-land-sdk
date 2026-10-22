@@ -8,5 +8,6 @@
   "retry": "Try again",
   "direct_title": "Direct App connection",
   "direct_notice": "DSM-managed HTTPS is unavailable for this App. The direct connection may show a certificate warning or use unencrypted HTTP.",
-  "direct_continue": "Continue to the direct connection"
+  "direct_continue": "Continue to the direct connection",
+  "app_privilege_denied": "Your DSM account is not allowed to use this App. Contact your DSM administrator."
 }

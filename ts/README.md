@@ -183,6 +183,18 @@ tested on its own provides `PageInfoTarget` as it does `PageActionsTarget`.
 <PageInfo inline side="left" :notes="[t('notes.searchLimit')]" />
 ```
 
+`navigation="top"` forwards to `AppLayout` and places the App's pages in a
+horizontal bar in web and DSM window layouts. The `sidebar-footer` slot (or
+the account supplied by `ctx`) follows the navigation; mobile keeps its drawer.
+Omit `navigation` to keep the installed UI's default sidebar, or pass
+`navigation="sidebar"` explicitly. Top navigation requires
+**@synopackageland/ui 0.13.1 or later**; older supported UI peers keep their
+existing layout. Sidebar width and collapse preferences are unused in top mode.
+
+```vue
+<AppShell v-model="page" :locale="ctx.locale" :ctx="ctx" :pages="pages" navigation="top" />
+```
+
 `page-surface` forwards `auto`, `flat`, `card` or `none` to the shell's internal
 `PageContent`, for both normal and denied pages. Omit it to keep the installed
 UI's default (`auto`). It is independent of `page-width`, `wide-layout`, page
@@ -197,9 +209,7 @@ surface at every width (web, DSM window and mobile):
 
 `none` requires **@synopackageland/ui 0.12.5 or later**. The SDK still accepts
 older UI peers and forwards the value unchanged, but those releases do not
-provide the no-surface/no-horizontal-gutter behavior. Until UI 0.12.5 is
-published, the SDK keeps its UI 0.12.0 development dependency; upgrade the
-App's UI dependency after publication to enable `none`. Other shell spacing,
+provide the no-surface/no-horizontal-gutter behavior. Other shell spacing,
 including the body bottom padding, stays unchanged.
 
 Moving to another page starts it at the top; `keep-scroll` keeps the

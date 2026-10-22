@@ -1,7 +1,49 @@
 // @vitest-environment jsdom
 import {expect,test,vi} from 'vitest'
-import {createApp,h,nextTick} from 'vue'
+import {createApp,h,nextTick,ref} from 'vue'
 import AppShell from './AppShell.vue'
+
+test.each([
+ {width:1024,fullPage:false,navigation:undefined},
+ {width:1400,fullPage:true,navigation:undefined},
+ {width:1024,fullPage:false,navigation:'sidebar'},
+ {width:1024,fullPage:false,navigation:'top'},
+ {width:1400,fullPage:true,navigation:'top'},
+ {width:390,fullPage:true,navigation:'top'},
+] as const)('real navigation: $navigation at $width (fullPage=$fullPage)',async({width,fullPage,navigation})=>{
+ vi.spyOn(HTMLElement.prototype,'getBoundingClientRect').mockReturnValue({width} as DOMRect)
+ const root=document.createElement('div');document.body.append(root)
+ const page=ref('home')
+ const app=createApp({render:()=>h(AppShell,{
+  locale:'en',modelValue:page.value,'onUpdate:modelValue':(value:string)=>{page.value=value},
+  pages:[{id:'home',title:'Home'},{id:'logs',title:'Logs'}],navigation,
+  ctx:{fullPage,displayName:'My App',user:{name:'alice',isAdmin:false}},
+ })})
+ try{
+  app.mount(root);await nextTick();await nextTick()
+  const layout=root.querySelector('.app-shell')!
+  const mobile=width===390
+  const top=navigation==='top'&&!mobile
+  expect(layout.getAttribute('data-ui-navigation')).toBe(top?'top':null)
+  expect(layout.getAttribute('data-ui-layout-mode')).toBe(mobile?'mobile':fullPage?'web':'window')
+  expect(root.querySelector('nav')?.getAttribute('data-ui-navigation')).toBe(top?'top':null)
+  expect(root.querySelector('[data-ui-mobile-menu]')!==null).toBe(mobile)
+  if(top){
+   if(fullPage) expect(root.querySelector('[data-ui-sidebar-footer]')?.textContent).toContain('alice')
+   else expect(root.querySelector('[data-ui-sidebar-footer]')).toBeNull()
+   expect(root.querySelector('[data-ui-sidebar-collapse], [data-ui-sidebar-resize]')).toBeNull()
+  }
+  if(mobile){
+   root.querySelector<HTMLButtonElement>('[data-ui-mobile-menu]')!.click();await nextTick()
+   expect(root.querySelector('[role="dialog"]')?.getAttribute('aria-hidden')).not.toBe('true')
+  }
+  const logs=Array.from(root.querySelectorAll<HTMLElement>('nav button')).find(button=>button.textContent?.includes('Logs'))!
+  logs.click();await nextTick();await nextTick()
+  expect(page.value).toBe('logs')
+  expect(root.querySelector('[data-ui-page-header]')?.textContent).toContain('Logs')
+  if(mobile) expect(root.querySelector('[role="dialog"]')?.getAttribute('aria-hidden')).toBe('true')
+ }finally{app.unmount();root.remove();vi.restoreAllMocks()}
+})
 
 // With the real UI components: the notices share the page body, and so the
 // padding, with the page header; app-root gives the shell its own app root.

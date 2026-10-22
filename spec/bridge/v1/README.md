@@ -291,7 +291,21 @@ two hours are removed at the next transfer.
   there, and answers `{"name": "<file name>", "content_type"?: "<type>"}`.
   The runtime sends the file as an attachment with that name and type
   (`application/octet-stream` by default); an App error goes to the browser
-  as for a JSON call, and an answer of another shape is `internal`.
+  as a JSON error envelope with the HTTP status below, and an answer of
+  another shape is `internal`.
+
+HTTP transfer refusals (native Go and the shared Node/Python/Rust runtime) MUST
+use an error status before response headers/body start. `not_found`,
+`source_deleted`, `unknown_method` map to 404; `forbidden`, `permission`,
+`permission_denied`, `denied`, `admin_required`, `app_privilege_denied`,
+`cross_origin`, `origin_required` to 403; `unauthorized`, `session_required` to
+401; `bad_request` to 400; `request_too_large` to 413; `auth_unavailable`,
+`unavailable`, `service_unavailable`, `request_timeout`, `request_canceled` to
+503; other codes to 500. The body keeps `success:false` and the public error
+code/message/details. Prepared attachment headers MUST be removed. JSON calls
+retain HTTP 200 error envelopes. Once a transfer response starts, errors MUST
+NOT append JSON or replace its status. DSM nginx may replace CGI error bodies;
+clients MUST check the HTTP status before treating a response as a file.
 
 ### Profile WebAPI services (SDK 0.11.0)
 

@@ -8,5 +8,6 @@
   "retry": "Erneut versuchen",
   "direct_title": "Direkte App-Verbindung",
   "direct_notice": "Für diese App ist kein von DSM verwaltetes HTTPS verfügbar. Die direkte Verbindung kann eine Zertifikatswarnung anzeigen oder unverschlüsseltes HTTP verwenden.",
-  "direct_continue": "Mit direkter Verbindung fortfahren"
+  "direct_continue": "Mit direkter Verbindung fortfahren",
+  "app_privilege_denied": "Ihr DSM-Konto darf diese App nicht verwenden. Wenden Sie sich an Ihren DSM-Administrator."
 }

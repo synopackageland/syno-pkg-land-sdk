@@ -1,0 +1,55 @@
+name: Private CI
+on:
+  workflow_dispatch:
+    inputs:
+      cache_probe:
+        description: Run the private cache measurement workload
+        type: boolean
+        default: false
+  pull_request:
+  push:
+    branches: [main, 'ci/**']
+permissions:
+  contents: read
+concurrency:
+  group: private-ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  fast:
+    runs-on: [self-hosted, private-ci]
+    timeout-minutes: 45
+    env:
+      SYNOPKGLAND_GATE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+      CARGO_BUILD_JOBS: '2'
+      GOMAXPROCS: '2'
+      VITEST_MAX_WORKERS: '2'
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify isolated environment
+        run: |
+          test "$(hostname)" = ci-linux-01
+          test "$(id -un)" = runner
+          test ! -e /var/run/docker.sock
+          test ! -e /run/secrets/github_token
+          printf 'hostname=%s\nuser=%s\nworkspace=%s\n' "$(hostname)" "$(id -un)" "$GITHUB_WORKSPACE"
+      - name: Controller lifecycle and isolation tests
+        run: python3 -B -m unittest discover -s ops/private-ci -v
+      - name: SDK policy and version checks
+        run: |
+          node --test scripts/check-internal-content.test.mjs scripts/sdk-version.test.mjs
+          node scripts/sdk-version.mjs --check
+      - name: Fast SDK gate
+        run: bash ops/private-ci/sdk-fast.sh
+      - name: Private cache measurement
+        run: |
+          if [[ "${{ github.event_name }}" == workflow_dispatch ]]; then
+            if [[ "${{ inputs.cache_probe }}" != true ]]; then exit 0; fi
+          else
+            base="$SYNOPKGLAND_GATE_BASE"
+            if ! git cat-file -e "$base^{commit}" 2>/dev/null; then base=$(git merge-base HEAD origin/main); fi
+            if ! git diff --name-only "$base" HEAD | grep -q '^ops/private-ci/'; then exit 0; fi
+          fi
+          python3 -B ops/private-ci/cache-probe.py

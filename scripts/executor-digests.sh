@@ -6,7 +6,7 @@
 # toolchain and flags. Any other way of building gives other digests.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
-toolchain=go1.26.9
+toolchain=go1.26.10
 version=${1:-$(sed -n 's/^## \([0-9][^ ]*\).*/\1/p' "$root/CHANGELOG.md" | head -n 1)}
 test -n "$version" || { echo "no version: pass one or add a CHANGELOG heading" >&2; exit 1; }
 

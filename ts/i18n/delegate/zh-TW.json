@@ -75,5 +75,16 @@
   "statusUnreachable": "App 的系統服務沒有回應。請從 DSM 桌面開啟 App，或重新整理頁面。",
   "statusStarting": "App 的背景服務仍在啟動中。請稍後重新整理頁面。",
   "retry": "重試",
-  "rawLimit": "原始回應上限（位元組）"
+  "rawLimit": "原始回應上限（位元組）",
+  "upgradeTitle": "檢視此次更新",
+  "upgradePrograms": "系統執行程式已更新，需要管理員重新核准。",
+  "upgradeTasks": "核准任務定義已更新，需要管理員重新核准。",
+  "upgradePolicy": "核准政策已更新，需要管理員重新核准。",
+  "upgradeUnchanged": "權限未變。",
+  "upgradeExpanded": "權限已擴張，請檢視差異後再核准。",
+  "upgradeReview": "權限或參數已變更，請檢視差異後再核准。",
+  "upgradePolicyLabel": "核准政策",
+  "upgradeChanges": "權限與參數差異",
+  "upgradeUnknown": "先前的受保護執行環境未提供比較資料，無法判斷變更內容或權限是否擴張，需要管理員重新核准。",
+  "upgradeConsentTitle": "核准此次更新"
 }

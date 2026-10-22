@@ -1,0 +1,56 @@
+{
+  "version": "0.24.0",
+  "executorVersion": "0.24.0",
+  "executorRootSDK": "v0.19.0",
+  "packages": {
+    "@synopackageland/sdk": "0.24.0",
+    "@synopackageland/app": "0.24.0",
+    "syno-pkg-land-app": "0.24.0",
+    "synopkgland_app": "0.24.0"
+  },
+  "executorDigests": {
+    "x86_64": "de78684faac211c24a7cda8a4541ab1b138d37f6d580936fe354bb9bd0d78a0f",
+    "aarch64": "8ef7c736203f6c111816b76f970b7204fa6f8d871ff3222fd7c0a27d0075b847",
+    "armv7": "a38703119554b5f2a8bf4810ec2a6c8f1d793bfbb1ca96803eb1b39a26ffd96c",
+    "lifecycle": {
+      "x86_64": "c6fbb377ecd5ec7ee5b96439f22091d9fa5965dfd616d510ca9445722f436721",
+      "aarch64": "a9ca1750d4d5cff4727dc29789e6eaf0a365cb0e674f1bb796971d82f2d4fa27",
+      "armv7": "6d25fc972eba12e3ac68f8b6a95a45e9e5706ebe19ffc1ff774fc318acbeb90f"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "fullGate": true,
+    "frontendResumedAfterWallClockTimeout": true,
+    "frontendWorkers": 2,
+    "frontendTestTimeoutMs": 20000,
+    "frontendTests": 516,
+    "frontendTestFiles": 72,
+    "nodeTests": 31,
+    "node22": true,
+    "python38": true,
+    "crossArchitectures": [
+      "amd64",
+      "arm64",
+      "armv7"
+    ],
+    "rustTargets": 3,
+    "qemuScenarios": 18,
+    "coldCacheReproducible": true,
+    "govulncheck": {
+      "sdk": "no reachable vulnerabilities; two require-only findings",
+      "executor": "no vulnerabilities found"
+    },
+    "nasAcceptance": false,
+    "rustCratePublished": false
+  },
+  "ui": {
+    "tested": "0.14.0",
+    "peer": ">=0.10.1 <0.15.0"
+  },
+  "node": {
+    "build": "24.22.1",
+    "compatibility": "22.23.4",
+    "minimum": "22"
+  }
+}

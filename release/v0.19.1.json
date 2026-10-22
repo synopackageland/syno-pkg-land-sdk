@@ -1,0 +1,58 @@
+{
+  "version": "0.19.1",
+  "commit": "5381c519975770a7da6330d42d8be09c4bda7b3a",
+  "tags": [
+    "v0.19.1",
+    "executor/v0.19.1"
+  ],
+  "modules": {
+    "github.com/synopackageland/syno-pkg-land-sdk": {
+      "version": "v0.19.1",
+      "sum": "h1:KEPR2+EQNuH4AUHKniJA3KgEjNQEX+0n7EampDryOT8=",
+      "goModSum": "h1:vixf5Lo4PssQDGU5zam0Mb5sFu9wPUP4Ck36BMAVbNc="
+    },
+    "github.com/synopackageland/syno-pkg-land-sdk/executor": {
+      "version": "v0.19.1",
+      "sum": "h1:f8QB6zCczH8zmf1kg0cKKXhlq8Q+fq026eE4BupYTCE=",
+      "goModSum": "h1:BuF+S6HrD9P3YDDXtqcI5N9MatzU/oI5pKPtGFQsw3o="
+    }
+  },
+  "packages": {
+    "@synopackageland/sdk": "0.19.1",
+    "@synopackageland/app": "0.19.1",
+    "syno-pkg-land-app": "0.19.1",
+    "synopkgland_app": "0.19.1"
+  },
+  "executorDigests": {
+    "x86_64": "e27cfeb85fed221b06f9c58166f02c0f701a724308cd17c96a43a843a0b5c4aa",
+    "aarch64": "908db00cbd37d072f6ffc339e7bca24da5efb8cddd4befcbad02c7398beb7191",
+    "armv7": "a0f35d62ec80a1bf3fb49f5e2d1a5f7576eda569a6fd0695084cec6cb8e100bc",
+    "lifecycle": {
+      "x86_64": "9bb53301670b43cdcd6e21cebac99ab7abd82962d874f32423a81e6cb49d4972",
+      "aarch64": "38fe873c86eb102c850baa1f304114a83a31d1df72defd22792bc37610fec9bb",
+      "armv7": "256fb348b275da7ac5728a3cb7cb7c65660de0d5c2c59430ab4f5ade1b0a3681"
+    },
+    "goToolchain": "go1.26.9"
+  },
+  "verification": {
+    "date": "2026-10-21",
+    "source": "Full release gate split by platform; no GitHub Actions or NAS",
+    "steps": [
+      "Root, executor and conformance Go modules: gofmt, go mod tidy -diff, vet and go test -race passed on Linux (gate-cli image, uid 1000)",
+      "Root module three-architecture Linux vet/build passed",
+      "Rust fmt/clippy/tests and three DSM targets passed in the Docker gate image",
+      "Python tests, mypy and Python 3.8; Node App tests, pack contents and Node 18 passed",
+      "508 TypeScript tests against UI 0.13.0, typecheck/build/pack and packed consumer import passed",
+      "Executor three-architecture Linux vet/build and cold-cache executor/lifecycle reproducibility passed",
+      "A contract test drives the production executor through delegate.Client under a deadline: webapi.call fails with INVALID_REQUEST before the fix and passes after"
+    ],
+    "comparisonWith0.19.0": "All three executor digests changed; all three lifecycle digests are unchanged (go1.26.9).",
+    "approvalImpact": "Rebuild executor Apps to ship the fix; each requires one administrator reapproval after upgrade. No NAS upgrade certification was performed.",
+    "executorRootSDK": "v0.19.0",
+    "rustCratePublished": false
+  },
+  "npmIntegrity": {
+    "@synopackageland/sdk@0.19.1": "sha512-hE2h692VofEg8JW03NN8rLWkI/ygs2v2AgZJBqPa9pQHm2E30wm59+YxT1howVUlEUUsQcWBfZjPyzW+OrtXXA==",
+    "@synopackageland/app@0.19.1": "sha512-v6U9wPfeVVyPAhrNep0xXlwXCuWiOK5iqLgXhS4nkKQwSvZDDnKRYTJNK8Smg364R39cEF6ebIKYZsruWQe2Kw=="
+  }
+}

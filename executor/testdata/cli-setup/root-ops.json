@@ -29,5 +29,5 @@
     }
   ],
   "implementation": "executor",
-  "sdk": "0.9.1"
+  "sdk": "0.24.0"
 }

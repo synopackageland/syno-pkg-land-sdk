@@ -75,7 +75,7 @@ B 的安全邊界是行程邊界：App 拿不到 cookie／SynoToken，也碰不�
 | 機器 | 環境 | 負載（前→後） |
 |---|---|---|
 | 本機 | Apple M 系列 macOS，Python 3.14.7、Node 24.14.0 | — |
-| Linux container | x86_64 12 核，container `node:24-bookworm-slim`，Python 3.11.2、Node 24.21.0，uid `node` | 0.38 |
+| Linux container | x86_64 12 核，container `node:24.22.1-bookworm-slim`，Python 3.11.2、Node 24.21.0，uid `node` | 0.38 |
 | x86 NAS | DSM 7.4-90069，geminilake x86_64 2 核，kernel 4.4.302+，系統 Python 3.8.15、套件 Node.js_v22（22.22.3），uid `nobody` | 2.77 → 2.77（有其他工作） |
 | ARM NAS | DS416，alpine armv7l 2 核，DSM 7.1.1-42962，kernel 3.10.108，系統 Python 3.8.12、套件 Node.js_v18（18.18.2），uid `nobody` | 1.12 → 1.25 |
 
@@ -314,7 +314,7 @@ CLI 的工作：
    - Python：把整個 `synopkgland_app/` 目錄 vendoring 到 `app/vendor/synopkgland_app/`（不是單檔；不經 pip，DSM 沒有 pip 也沒網路假設），並把 App 的 `PYTHONPATH` 設成 `vendor` 目錄。
    - Node：SDK 沒有依賴；把 `package.json` 與 `dist/` 複製到 `app/node_modules/@synopackageland/app/`，或用 esbuild 把 App 與 SDK 打包成單檔。
 4. **INFO 相依**：
-   - Node：`install_dep_packages="Node.js_v20"`（套件中心套件名；量測的 x86 NAS 裝有 v20、v22，ARM NAS（DSM 7.1）裝有 v18）。runtime 以 `/var/packages/Node.js_v20/target/usr/local/bin/node` 執行，不依賴 `PATH`。建議 SDK 支援 Node 18 起，CLI 讓開發者選 `Node.js_v18|v20|v22`。
+   - Node：`install_dep_packages="Node.js_v20"`（套件中心套件名；量測的 x86 NAS 裝有 v20、v22，ARM NAS（DSM 7.1）裝有 v18）。runtime 以 `/var/packages/Node.js_v20/target/usr/local/bin/node` 執行，不依賴 `PATH`。建議 SDK 支援 Node 22 起，CLI 讓開發者選 `Node.js_v18|v20|v22`。
    - Python：DSM 7.1、7.4 都有系統 `/usr/bin/python3`（兩台實機皆 3.8.x）。Synology 未把它列為第三方可依賴的公開介面，未來可能改版；建議預設用系統 python3 並在 runtime 啟動時檢查版本 ≥ 3.8，另外提供 `python: { package: Python3.9 }` 走套件中心。
 5. **start-stop-status**：socket 模式產生啟停 App 的腳本（以套件帳號），exec 模式不產生常駐行程。
 6. **範本**：`synopkgland init -t native-python`／`native-node`，沿用 native-go 的前端、root-ops、delegate overlay（後端換成 App 程式碼＋runtime 設定），capability overlay 機制不變。
@@ -405,7 +405,7 @@ Reclaim 依賴 git tag，所以 SDK 刪除 Rust 完整 SDK 不會讓 Reclaim 立
 | P2 transfer | spool 上傳／下載、與 delegate staging 整合、golden transfer 案例 | 4–5 天 |
 | P3 svc 服務表 | files、delegate、bg、portal 的 svc 與測試 | 4–6 天 |
 | P4 Python SDK | 正式 API、型別產生（TypedDict）、文件、3.8 相容 CI（容器） | 3–4 天 |
-| P5 Node SDK | 正式 API、`.d.ts` 產生、Node 18 相容 CI | 3–4 天 |
+| P5 Node SDK | 正式 API、`.d.ts` 產生、Node 22 相容 CI | 3–4 天 |
 | P6 Rust 薄層 SDK | 正式 API、文件、三目標 clippy；移除 `rust/sdk` 與相關 gate（§13.4） | 3–4 天 |
 | P7 CLI 打包 | `runtime: python|node|rust`、多 arch runtime、Rust App 交叉編譯、INFO 相依、`--describe` 核對 | 5–7 天（CLI repo） |
 | P8 文件與範本 | `native-python`、`native-node`、`native-rust` 範本與 overlay | 3–5 天（templates repo） |

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/composeingress"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/hostudp"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -15,6 +16,7 @@ import (
 // an application's claimed environment setting, prove its listener bindings.
 // This is a configuration guard, not a network namespace or a firewall.
 type networkPolicy struct {
+	HostUDP     []hostudp.Listener     `json:"host_udp,omitempty"`
 	Ingress     *composeingress.Config `json:"ingress,omitempty"`
 	Readiness   *bridgeReadiness       `json:"readiness,omitempty"`
 	Mode        string                 `json:"mode,omitempty"`
@@ -69,6 +71,18 @@ func socketPorts(raw string, uid int, p *networkPolicy, udp bool) (map[int]bool,
 			return nil, err
 		}
 		port := int(port64)
+		if udp {
+			allowed := false
+			for _, listener := range p.HostUDP {
+				if listener.Port == port {
+					allowed = true
+					break
+				}
+			}
+			if allowed {
+				continue
+			}
+		}
 		if !udp && containsPort(p.PublicPorts, port) {
 			continue
 		}
@@ -85,6 +99,14 @@ func socketPorts(raw string, uid int, p *networkPolicy, udp bool) (map[int]bool,
 }
 
 func checkNetwork(dir string, uid int, p *networkPolicy) error {
+	if p != nil && len(p.HostUDP) > 0 {
+		if _, err := hostudp.Normalize(p.HostUDP); err != nil {
+			return fmt.Errorf("COMPOSE_HOST_UDP_INVALID: %w", err)
+		}
+		if p.Mode != "host" {
+			return errors.New("COMPOSE_HOST_UDP_INVALID: host_udp requires host mode")
+		}
+	}
 	if p == nil || p.Mode == "settings" {
 		return nil
 	}

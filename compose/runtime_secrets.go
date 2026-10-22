@@ -20,6 +20,12 @@ func prepareRuntimeSecrets(project, pkg, pkgvar string, services []Inventory) er
 	for _, s := range services {
 		if s.StorageInit != nil && s.StorageInit.Runtime != nil {
 			for _, e := range s.StorageInit.Runtime.Environment {
+				if e.Setting != "" {
+					if _, err := readRuntimeSetting(filepath.Join(project, "../install/values", e.filename())); err != nil {
+						return err
+					}
+					continue
+				}
 				entries = append(entries, e)
 			}
 		}
@@ -146,7 +152,13 @@ func readRuntimeSecret(file string) ([]byte, error) {
 
 func loadRuntimeEnvironment(values map[string]RuntimeEnvironment) error {
 	for key, e := range values {
-		b, err := readRuntimeSecret("/synopkgland/secrets/" + e.filename())
+		var b []byte
+		var err error
+		if e.Setting != "" {
+			b, err = readRuntimeSetting("/synopkgland/settings/" + e.filename())
+		} else {
+			b, err = readRuntimeSecret("/synopkgland/secrets/" + e.filename())
+		}
 		if err != nil {
 			return problem("COMPOSE_RUNTIME_CONFIG_FAILED", "runtime secret unavailable")
 		}

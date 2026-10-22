@@ -8,8 +8,9 @@ import (
 
 // Error is an API error the browser may see. Any other error a handler
 // returns is logged and reported only as "internal". Errors travel in the
-// JSON envelope with HTTP 200, as DSM's own WebAPI does: DSM's web server
-// replaces the body of a CGI's 403, 404 and 5xx replies with its own page.
+// JSON envelope with HTTP 200 for JSON calls, as DSM's own WebAPI does.
+// HTTP transfers use the status documented on HandleStream; DSM nginx may
+// replace a CGI error body, so clients must check the status before saving it.
 type Error struct {
 	Code    string
 	Message string

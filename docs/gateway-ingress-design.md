@@ -1,7 +1,7 @@
 # DSM-managed HTTPS for gateway Apps
 
 The gateway can use a separate HTTPS origin served by DSM nginx. The CLI
-selects this transport by default for gateway SDK 0.17.5 or later and a package
+selects this transport by default for gateway SDK 0.24.0 and a package
 target of DSM 7.2-64570 or later. There is no per-App ingress option, extra
 service dependency, root App process, or executor capability.
 

@@ -81,7 +81,7 @@ test('the sample save shows only when the App opts in with sampleSave',async()=>
 })
 test('the chosen folder remains a PathDisplay',async()=>{
  const p=await panel({},{picker:{provider,keys:['save']}})
- try{expect(p.root.querySelector('[data-save-row="folder"] .ui-path-display [title="/fgwmrf/t0383"]')).not.toBeNull()}finally{p.done()}
+ try{expect(p.root.querySelector('[data-save-row="folder"] .ui-path-display [data-ui-path-text][data-ui-tooltip-text="/fgwmrf/t0383"]')).not.toBeNull()}finally{p.done()}
 })
 
 test('the sample producer sends once while busy, reports refusal, and clears it on refresh',async()=>{

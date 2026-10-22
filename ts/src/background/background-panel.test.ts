@@ -89,7 +89,7 @@ test('the page header refreshes the panel, which has no Refresh button',async()=
 // the item being copied is a path, so it is a PathDisplay.
 test('the current item shows as PathDisplay',async()=>{
  const v=mountPanel([job('run','running',{progress:{done:1,total:2,bytes:0,totalBytes:0,item:'/photos/a.jpg'}})])
- try{await settle();expect(v.row('run').querySelector('.ui-path-display [data-ui-path-text][title="/photos/a.jpg"]')).not.toBeNull()}finally{v.done()}
+ try{await settle();expect(v.row('run').querySelector('.ui-path-display [data-ui-path-text][data-ui-tooltip-text="/photos/a.jpg"]')).not.toBeNull()}finally{v.done()}
 })
 // each job and schedule is a Card: its name is the title, its state a badge.
 test('each job and schedule is a Card titled by its name with its state as a badge',async()=>{

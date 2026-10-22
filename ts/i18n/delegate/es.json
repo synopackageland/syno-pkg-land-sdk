@@ -75,5 +75,16 @@
   "statusUnreachable": "El servicio del sistema de la aplicación no respondió. Abra la aplicación desde el escritorio de DSM o actualice la página.",
   "statusStarting": "El servicio en segundo plano de la aplicación aún se está iniciando. Actualice la página en un momento.",
   "retry": "Volver a intentar",
-  "rawLimit": "Límite de respuesta sin procesar (bytes)"
+  "rawLimit": "Límite de respuesta sin procesar (bytes)",
+  "upgradeTitle": "Revisar esta actualización",
+  "upgradePrograms": "Se actualizaron los programas del sistema. Se requiere una nueva aprobación del administrador.",
+  "upgradeTasks": "Se actualizaron las definiciones de las tareas de aprobación. Se requiere una nueva aprobación del administrador.",
+  "upgradePolicy": "Se actualizó la política de aprobación. Se requiere una nueva aprobación del administrador.",
+  "upgradeUnchanged": "Permisos sin cambios.",
+  "upgradeExpanded": "Se ampliaron los permisos. Revise los cambios antes de aprobar.",
+  "upgradeReview": "Se modificaron los permisos o parámetros. Revise los cambios antes de aprobar.",
+  "upgradePolicyLabel": "Política",
+  "upgradeChanges": "Cambios en permisos y parámetros",
+  "upgradeUnknown": "El entorno protegido anterior no proporcionó datos de comparación. No se pueden determinar los cambios ni la ampliación de permisos. Se requiere una nueva aprobación del administrador.",
+  "upgradeConsentTitle": "Aprobar esta actualización"
 }
