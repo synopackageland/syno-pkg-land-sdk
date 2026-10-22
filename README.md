@@ -66,6 +66,10 @@ policy. `ExecutorSocket` is for tests: the package CGI and worker
 
 ## Development
 
+Native foreground daemons can opt into bounded crash recovery in their generated
+runtime config; see [native daemon restart policy](docs/native-daemon-restart.md)
+for defaults, status diagnostics and the required CLI/templates integration.
+
 ```
 scripts/gate.sh                 # go, executor, conformance, bridge App SDKs, rust/app, ts, 3 arches, digests
 scripts/gate.sh --fast          # only what the changes since origin/main reach (scripts/gate-plan.sh)
