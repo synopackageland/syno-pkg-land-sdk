@@ -9,5 +9,14 @@
   "direct_title": "App への直接接続",
   "direct_notice": "この App では DSM が管理する HTTPS を利用できません。直接接続すると証明書の警告が表示されるか、暗号化されていない HTTP が使用される場合があります。",
   "direct_continue": "直接接続を続行",
-  "app_privilege_denied": "お使いの DSM アカウントには、この App を使用する権限がありません。DSM 管理者にお問い合わせください。"
+  "app_privilege_denied": "お使いの DSM アカウントには、この App を使用する権限がありません。DSM 管理者にお問い合わせください。",
+  "share_title": "共有フォルダの権限",
+  "share_steps": "管理者に次の場所を開いてもらってください：コントロール パネル > 共有フォルダ > {folder} > 編集 > 権限 > システム内部ユーザー > {account} > {access}",
+  "share_read": "読み取り専用",
+  "share_write": "読み取り/書き込み",
+  "share_retry": "再試行",
+  "share_dismiss": "閉じる",
+  "share_ready": "アクセス権限を確認しました。パッケージ センターでこの App を起動してください",
+  "share_next_start": "権限を付与した後、パッケージ センターでこの App を再起動してください",
+  "share_unavailable": "共有フォルダの状態を取得できません。選択したフォルダを確認し、パッケージ センターでこの App を再起動してください"
 }

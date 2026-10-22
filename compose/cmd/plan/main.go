@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/synopackageland/syno-pkg-land-sdk/compose"
-	"github.com/synopackageland/syno-pkg-land-sdk/internal/containerpreflight"
 	"syscall"
 )
 
@@ -25,7 +24,7 @@ func main() {
 		return
 	}
 	if len(os.Args) == 2 && os.Args[1] == "preflight" {
-		if err := containerpreflight.Check(); err != nil {
+		if err := preflight(); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			// DSM's installer displays this package-account hook log when available.
 			if path := os.Getenv("SYNOPKG_TEMP_LOGFILE"); path != "" {

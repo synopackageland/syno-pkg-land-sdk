@@ -9,5 +9,14 @@
   "direct_title": "Connexion directe à l’App",
   "direct_notice": "Le HTTPS géré par DSM est indisponible pour cette App. La connexion directe peut afficher un avertissement de certificat ou utiliser HTTP sans chiffrement.",
   "direct_continue": "Continuer avec la connexion directe",
-  "app_privilege_denied": "Votre compte DSM n’est pas autorisé à utiliser cette App. Contactez votre administrateur DSM."
+  "app_privilege_denied": "Votre compte DSM n’est pas autorisé à utiliser cette App. Contactez votre administrateur DSM.",
+  "share_title": "Autorisations du dossier partagé",
+  "share_steps": "Demandez à un administrateur d’ouvrir Panneau de configuration > Dossier partagé > {folder} > Modifier > Permissions > Utilisateur interne du système > {account} > {access}",
+  "share_read": "Lecture seule",
+  "share_write": "Lecture/écriture",
+  "share_retry": "Réessayer",
+  "share_dismiss": "Fermer",
+  "share_ready": "L’accès est prêt. Démarrez cette App dans le Centre de paquets",
+  "share_next_start": "Après avoir accordé l’accès, redémarrez cette App dans le Centre de paquets",
+  "share_unavailable": "L’état du dossier est indisponible. Vérifiez le dossier sélectionné et redémarrez cette App dans le Centre de paquets"
 }

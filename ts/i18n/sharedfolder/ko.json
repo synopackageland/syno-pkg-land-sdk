@@ -12,17 +12,18 @@
   "sharedfolder.account": "앱 계정",
   "sharedfolder.grant": "권한 부여",
   "sharedfolder.openControlPanel": "제어판 열기",
-  "sharedfolder.pendingNote": "앱 계정의 권한이 이 폴더에 필요한 권한보다 낮습니다. 관리자가 권한을 부여할 수 있습니다.",
+  "sharedfolder.pendingNote": "앱 계정의 권한이 이 폴더에 필요한 권한보다 낮습니다. 관리자가 권한을 부여할 수 있습니다",
   "sharedfolder.askAdmin": "관리자에게 {account}에 {folder}의 {access} 권한을 부여하도록 요청하십시오.",
-  "sharedfolder.steps": "제어판 > 공유 폴더에서 {folder}을(를) 선택한 후 편집 > 권한을 클릭합니다. 시스템 내부 사용자를 선택하고 {account}에 {access} 권한을 부여합니다.",
+  "sharedfolder.steps": "관리자에게 다음 경로를 열도록 요청하십시오: 제어판 > 공유 폴더 > {folder} > 편집 > 권한 > 시스템 내부 사용자 > {account} > {access}",
   "sharedfolder.missingHint": "{folder}이(가) 더 이상 존재하지 않습니다. 앱을 업그레이드할 때 다른 공유 폴더를 선택하십시오.",
   "sharedfolder.ambiguousHint": "이름이 {folder}인 폴더가 둘 이상의 볼륨에 있습니다. 하나의 이름을 변경하십시오.",
   "sharedfolder.allReady": "앱 계정에 필요한 권한이 있습니다.",
   "sharedfolder.done": "권한을 부여했습니다.",
-  "sharedfolder.shared_folder_unavailable": "공유 폴더 상태를 읽을 수 없습니다.",
+  "sharedfolder.shared_folder_unavailable": "공유 폴더 상태를 읽을 수 없습니다",
   "sharedfolder.admin_required": "DSM 관리자만 변경할 수 있습니다.",
   "sharedfolder.shared_folder_custom_acl": "이 폴더는 고급 권한을 사용합니다. 제어판에서 권한을 설정하십시오.",
   "sharedfolder.shared_folder_grant_failed": "DSM이 변경을 수락하지 않았습니다. 제어판에서 권한을 설정하십시오.",
   "sharedfolder.shared_folder_grant_unverified": "DSM이 변경을 수락했지만 앱 계정에 아직 권한이 없습니다. 제어판에서 이 폴더의 권한을 확인하십시오.",
-  "sharedfolder.dismiss": "닫기"
+  "sharedfolder.dismiss": "닫기",
+  "sharedfolder.retry": "재시도"
 }

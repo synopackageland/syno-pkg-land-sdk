@@ -9,5 +9,14 @@
   "direct_title": "直接連線至 App",
   "direct_notice": "此 App 無法使用 DSM 管理的 HTTPS。直接連線可能顯示憑證警告，或使用未加密的 HTTP。",
   "direct_continue": "繼續使用直接連線",
-  "app_privilege_denied": "您的 DSM 帳號沒有使用此 App 的權限。請聯絡 DSM 管理員。"
+  "app_privilege_denied": "您的 DSM 帳號沒有使用此 App 的權限。請聯絡 DSM 管理員。",
+  "share_title": "共用資料夾權限",
+  "share_steps": "請管理員開啟控制台 > 共用資料夾 > {folder} > 編輯 > 權限 > 系統內部使用者 > {account} > {access}",
+  "share_read": "唯讀",
+  "share_write": "可讀寫",
+  "share_retry": "重試",
+  "share_dismiss": "關閉",
+  "share_ready": "權限已就緒，請在套件中心啟動此 App",
+  "share_next_start": "授予權限後，請在套件中心重新啟動此 App",
+  "share_unavailable": "無法讀取共用資料夾狀態，請檢查資料夾選擇並在套件中心重新啟動此 App"
 }

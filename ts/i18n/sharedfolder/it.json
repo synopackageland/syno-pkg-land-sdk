@@ -12,17 +12,18 @@
   "sharedfolder.account": "Account dell’app",
   "sharedfolder.grant": "Concedi accesso",
   "sharedfolder.openControlPanel": "Apri Pannello di controllo",
-  "sharedfolder.pendingNote": "L’account dell’app ha meno accesso di quello richiesto da questa cartella. Un amministratore può concederlo.",
+  "sharedfolder.pendingNote": "L’account dell’app ha meno accesso di quello richiesto da questa cartella. Un amministratore può concederlo",
   "sharedfolder.askAdmin": "Chiedere a un amministratore di concedere a {account} l’accesso {access} a {folder}.",
-  "sharedfolder.steps": "In Pannello di controllo > Cartella condivisa, selezionare {folder} e poi Modifica > Autorizzazioni. Scegliere Utente interno del sistema e concedere a {account} l’accesso {access}.",
+  "sharedfolder.steps": "Chiedere a un amministratore di aprire Pannello di controllo > Cartella condivisa > {folder} > Modifica > Permessi > Utente interno di sistema > {account} > {access}",
   "sharedfolder.missingHint": "{folder} non esiste più. Selezionare un’altra cartella condivisa durante l’aggiornamento dell’app.",
   "sharedfolder.ambiguousHint": "Più di un volume contiene una cartella denominata {folder}. Rinominarne una.",
   "sharedfolder.allReady": "L’account dell’app dispone dell’accesso richiesto.",
   "sharedfolder.done": "Accesso concesso.",
-  "sharedfolder.shared_folder_unavailable": "Impossibile leggere lo stato delle cartelle condivise.",
+  "sharedfolder.shared_folder_unavailable": "Impossibile leggere lo stato delle cartelle condivise",
   "sharedfolder.admin_required": "Solo un amministratore DSM può modificare questa impostazione.",
   "sharedfolder.shared_folder_custom_acl": "Questa cartella usa autorizzazioni avanzate. Impostare l’accesso in Pannello di controllo.",
   "sharedfolder.shared_folder_grant_failed": "DSM non ha accettato la modifica. Impostare l’accesso in Pannello di controllo.",
   "sharedfolder.shared_folder_grant_unverified": "DSM ha accettato la modifica, ma l’account dell’app non ha ancora accesso. Verificare le autorizzazioni della cartella in Pannello di controllo.",
-  "sharedfolder.dismiss": "Chiudi"
+  "sharedfolder.dismiss": "Chiudi",
+  "sharedfolder.retry": "Riprova"
 }
