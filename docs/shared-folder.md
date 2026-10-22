@@ -17,6 +17,14 @@ Compose packages can reuse `mode: select` through
 The container runs as the same fixed package UID:GID. Selecting is still not a
 grant, and ACL revocation does not recall already-open file descriptors.
 
+The installed Compose control checks its selected share in prestart/start before
+the generated lifecycle proceeds. Missing access produces a native hook message
+with the exact Control Panel steps. The incoming preinst tool skips that check
+so installation can finish before an administrator grants access. The existing
+gateway CGI entry can show the same instructions while the daemon is stopped;
+its Retry only rechecks access, then asks the administrator to start the App in
+Package Center. See the [design and device acceptance boundary](shared-folder-permission-design.md#compose-start-and-stopped-package-entry).
+
 ## What the SDK decides and who decides it
 
 | Question | Answer comes from |
@@ -164,6 +172,12 @@ can open it again. No polling, timers or automatic grants are added. Unmount
 unsubscribes from notifications. Calls keep their original rejection so Apps can
 finish their own error handling. `sharedFolderPermissionMessage` exposes the same
 localized instruction text for custom UI.
+
+The dialog's **Retry** button explicitly requests fresh status after a native DSM
+permission change. Concurrent retries share one request. A denied response keeps
+the dialog open; a failed request shows a localized error; a ready response clears
+the notice unless a newer real I/O failure arrived during the check. Custom UIs
+can use `permission.retry()` for the same behavior. Retry does not start services.
 
 For an explicit settings section, the existing panel remains available:
 

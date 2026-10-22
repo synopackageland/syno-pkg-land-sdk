@@ -9,5 +9,14 @@
   "direct_title": "App에 직접 연결",
   "direct_notice": "이 App에서는 DSM이 관리하는 HTTPS를 사용할 수 없습니다. 직접 연결하면 인증서 경고가 표시되거나 암호화되지 않은 HTTP가 사용될 수 있습니다.",
   "direct_continue": "직접 연결 계속",
-  "app_privilege_denied": "DSM 계정에 이 App을 사용할 권한이 없습니다. DSM 관리자에게 문의하세요."
+  "app_privilege_denied": "DSM 계정에 이 App을 사용할 권한이 없습니다. DSM 관리자에게 문의하세요.",
+  "share_title": "공유 폴더 권한",
+  "share_steps": "관리자에게 다음 경로를 열도록 요청하십시오: 제어판 > 공유 폴더 > {folder} > 편집 > 권한 > 시스템 내부 사용자 > {account} > {access}",
+  "share_read": "읽기 전용",
+  "share_write": "읽기/쓰기",
+  "share_retry": "재시도",
+  "share_dismiss": "닫기",
+  "share_ready": "권한이 준비되었습니다. 패키지 센터에서 이 App을 시작하십시오",
+  "share_next_start": "권한을 부여한 후 패키지 센터에서 이 App을 다시 시작하십시오",
+  "share_unavailable": "공유 폴더 상태를 읽을 수 없습니다. 선택한 폴더를 확인하고 패키지 센터에서 이 App을 다시 시작하십시오"
 }

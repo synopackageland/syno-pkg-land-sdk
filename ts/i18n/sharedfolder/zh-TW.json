@@ -12,17 +12,18 @@
   "sharedfolder.account": "App 帳號",
   "sharedfolder.grant": "授予權限",
   "sharedfolder.openControlPanel": "開啟控制台",
-  "sharedfolder.pendingNote": "App 帳號的權限低於此資料夾所需，可由管理員授予。",
+  "sharedfolder.pendingNote": "App 帳號的權限低於此資料夾所需，可由管理員授予",
   "sharedfolder.askAdmin": "請管理員授予 {account} 對 {folder} 的{access}權限。",
-  "sharedfolder.steps": "在控制台 > 共用資料夾中選取 {folder}，再點選編輯 > 權限，選擇系統內部使用者，並授予 {account} {access}權限。",
+  "sharedfolder.steps": "請管理員開啟控制台 > 共用資料夾 > {folder} > 編輯 > 權限 > 系統內部使用者 > {account} > {access}",
   "sharedfolder.missingHint": "{folder} 已不存在。升級 App 時請改選其他共用資料夾。",
   "sharedfolder.ambiguousHint": "有多個磁碟區含有名為 {folder} 的資料夾，請將其中一個改名。",
   "sharedfolder.allReady": "App 帳號已具備所需權限。",
   "sharedfolder.done": "已授予權限。",
-  "sharedfolder.shared_folder_unavailable": "無法讀取共用資料夾狀態。",
+  "sharedfolder.shared_folder_unavailable": "無法讀取共用資料夾狀態",
   "sharedfolder.admin_required": "只有 DSM 管理員可以變更。",
   "sharedfolder.shared_folder_custom_acl": "此資料夾使用進階權限，請在控制台設定權限。",
   "sharedfolder.shared_folder_grant_failed": "DSM 未接受此變更，請在控制台設定權限。",
   "sharedfolder.shared_folder_grant_unverified": "DSM 已接受變更，但 App 帳號仍無權限。請在控制台檢查此資料夾的權限。",
-  "sharedfolder.dismiss": "關閉"
+  "sharedfolder.dismiss": "關閉",
+  "sharedfolder.retry": "重試"
 }

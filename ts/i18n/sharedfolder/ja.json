@@ -12,17 +12,18 @@
   "sharedfolder.account": "アプリのアカウント",
   "sharedfolder.grant": "権限を付与",
   "sharedfolder.openControlPanel": "コントロール パネルを開く",
-  "sharedfolder.pendingNote": "アプリのアカウントの権限が、このフォルダに必要な権限に足りていません。管理者が付与できます。",
+  "sharedfolder.pendingNote": "アプリのアカウントの権限が、このフォルダに必要な権限に足りていません。管理者が付与できます",
   "sharedfolder.askAdmin": "管理者に依頼して、{account} に {folder} の{access}権限を付与してください。",
-  "sharedfolder.steps": "コントロール パネル > 共有フォルダで {folder} を選択し、編集 > 権限をクリックします。システム内部ユーザーを選択し、{account} に{access}権限を付与します。",
+  "sharedfolder.steps": "管理者に次の場所を開いてもらってください：コントロール パネル > 共有フォルダ > {folder} > 編集 > 権限 > システム内部ユーザー > {account} > {access}",
   "sharedfolder.missingHint": "{folder} は存在しません。アプリのアップグレード時に別の共有フォルダを選択してください。",
   "sharedfolder.ambiguousHint": "{folder} という名前のフォルダが複数のボリュームにあります。いずれかの名前を変更してください。",
   "sharedfolder.allReady": "アプリのアカウントに必要な権限があります。",
   "sharedfolder.done": "権限を付与しました。",
-  "sharedfolder.shared_folder_unavailable": "共有フォルダの状態を読み取れませんでした。",
+  "sharedfolder.shared_folder_unavailable": "共有フォルダの状態を読み取れませんでした",
   "sharedfolder.admin_required": "この操作は DSM 管理者のみ実行できます。",
   "sharedfolder.shared_folder_custom_acl": "このフォルダは詳細な権限を使用しています。コントロール パネルで権限を設定してください。",
   "sharedfolder.shared_folder_grant_failed": "DSM が変更を受け付けませんでした。コントロール パネルで権限を設定してください。",
   "sharedfolder.shared_folder_grant_unverified": "DSM は変更を受け付けましたが、アプリのアカウントにはまだ権限がありません。コントロール パネルでこのフォルダの権限を確認してください。",
-  "sharedfolder.dismiss": "閉じる"
+  "sharedfolder.dismiss": "閉じる",
+  "sharedfolder.retry": "再試行"
 }

@@ -49,3 +49,19 @@ test('unmount while checking never opens an orphan dialog',async()=>{
  answer({account:'ExampleApp',folders:[]});permission.handle({code:'shared_folder_permission',details:issue});await settle()
  expect(document.querySelector('[role=dialog]')).toBeNull()
 })
+test('retry stays open on denial or request failure and closes after access is granted',async()=>{
+ let state='pending'
+ const call=vi.fn(async()=>{
+  if(state==='error')throw {code:'network'}
+  return {account:'ExampleApp',folders:state==='ready'?[]:[{key:'media',name:'Media',exists:true,required:'write',granted:'none',state:'pending'}]}
+ })
+ mount(createSharedFolderPermission({call:call as never,locale:'en'}));await settle()
+ const retry=()=>Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='Retry')!.click()
+ retry();await settle()
+ expect(document.querySelector('[role=dialog]')).not.toBeNull()
+ state='error';retry();await settle()
+ expect(document.querySelector('[role=alert]')?.textContent).toContain('could not be read')
+ state='ready';retry();await settle()
+ expect(document.querySelector('[role=dialog]')).toBeNull()
+ expect(call).toHaveBeenCalledTimes(4)
+})

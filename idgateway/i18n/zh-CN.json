@@ -9,5 +9,14 @@
   "direct_title": "直接连接到 App",
   "direct_notice": "此 App 无法使用 DSM 管理的 HTTPS。直接连接可能显示证书警告，或使用未加密的 HTTP。",
   "direct_continue": "继续使用直接连接",
-  "app_privilege_denied": "您的 DSM 帐户没有使用此 App 的权限。请联系 DSM 管理员。"
+  "app_privilege_denied": "您的 DSM 帐户没有使用此 App 的权限。请联系 DSM 管理员。",
+  "share_title": "共享文件夹权限",
+  "share_steps": "请管理员打开控制面板 > 共享文件夹 > {folder} > 编辑 > 权限 > 系统内部用户 > {account} > {access}",
+  "share_read": "只读",
+  "share_write": "可读写",
+  "share_retry": "重试",
+  "share_dismiss": "关闭",
+  "share_ready": "权限已就绪，请在套件中心启动此 App",
+  "share_next_start": "授予权限后，请在套件中心重新启动此 App",
+  "share_unavailable": "无法读取共享文件夹状态，请检查文件夹选择并在套件中心重新启动此 App"
 }

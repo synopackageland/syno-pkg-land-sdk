@@ -9,5 +9,14 @@
   "direct_title": "Direct App connection",
   "direct_notice": "DSM-managed HTTPS is unavailable for this App. The direct connection may show a certificate warning or use unencrypted HTTP.",
   "direct_continue": "Continue to the direct connection",
-  "app_privilege_denied": "Your DSM account is not allowed to use this App. Contact your DSM administrator."
+  "app_privilege_denied": "Your DSM account is not allowed to use this App. Contact your DSM administrator.",
+  "share_title": "Shared Folder permission",
+  "share_steps": "Ask an administrator to open Control Panel > Shared Folder > {folder} > Edit > Permissions > System internal user > {account} > {access}",
+  "share_read": "Read only",
+  "share_write": "Read/Write",
+  "share_retry": "Retry",
+  "share_dismiss": "Dismiss",
+  "share_ready": "Access is ready. Start this App in Package Center",
+  "share_next_start": "After granting access, start this App again in Package Center",
+  "share_unavailable": "Shared Folder status is unavailable. Check the folder selection and start this App again in Package Center"
 }

@@ -17,6 +17,8 @@ import (
 
 	"github.com/synopackageland/syno-pkg-land-sdk/api"
 	"github.com/synopackageland/syno-pkg-land-sdk/dsm"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/sharepreflight"
+	"path/filepath"
 )
 
 // GroupMembership must resolve fresh NSS membership; client headers and a
@@ -101,9 +103,19 @@ func (v AccessVerifier) Authenticate(r *http.Request) (api.Identity, error) {
 // gateway port, retaining the NAS hostname instead of hardcoding loopback in a
 // browser URL. It never appends DSM credentials to the URL.
 func EntryHandler(cfg Config) http.Handler {
-	return entryHandler(cfg, containerpreflight.Check)
+	gate, _ := dsm.NewEntryGate(dsm.NewAuthenticator(), cfg.IssuerEntry(), cfg.Package, cfg.StateDir)
+	var auth api.Authenticator
+	if gate != nil {
+		auth = AccessVerifier{Next: gate, Access: cfg.Access, Groups: cfg.Groups, Membership: NewDirectory()}
+	}
+	return entryHandlerWithShares(cfg, containerpreflight.Check, func() error {
+		return sharepreflight.Check(filepath.Join("/var/packages", cfg.Package, "target/compose"), filepath.Join("/var/packages", cfg.Package, "var"))
+	}, auth)
 }
 func entryHandler(cfg Config, preflight func() error) http.Handler {
+	return entryHandlerWithShares(cfg, preflight, nil, nil)
+}
+func entryHandlerWithShares(cfg Config, preflight func() error, shares func() error, auth api.Authenticator) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet || !validRequestAuthority(r) || validateLaunchPath(cfg.LaunchPath) != nil {
 			http.Error(w, "invalid entry", 400)
@@ -120,6 +132,20 @@ func entryHandler(cfg Config, preflight func() error) http.Handler {
 				} else {
 					fmt.Fprint(w, "Container Manager/Docker is unavailable. Install Container Manager from Package Center, then start this App again.")
 				}
+				return
+			}
+		}
+		if cfg.ContainerApp && shares != nil {
+			if err := shares(); err != nil || r.URL.Query().Get("sharedfolder") == "retry" {
+				if auth == nil {
+					writeShareSignIn(w, r)
+					return
+				}
+				if _, e := auth.Authenticate(r); e != nil {
+					writeShareSignIn(w, r)
+					return
+				}
+				writeSharePermission(w, r, err)
 				return
 			}
 		}

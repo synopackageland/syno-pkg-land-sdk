@@ -12,17 +12,18 @@
   "sharedfolder.account": "Cuenta de la aplicación",
   "sharedfolder.grant": "Conceder acceso",
   "sharedfolder.openControlPanel": "Abrir Panel de control",
-  "sharedfolder.pendingNote": "La cuenta de la aplicación tiene menos acceso del que necesita esta carpeta. Un administrador puede concederlo.",
+  "sharedfolder.pendingNote": "La cuenta de la aplicación tiene menos acceso del que necesita esta carpeta. Un administrador puede concederlo",
   "sharedfolder.askAdmin": "Pedir a un administrador que conceda a {account} acceso de {access} a {folder}.",
-  "sharedfolder.steps": "En Panel de control > Carpeta compartida, seleccionar {folder} y luego Editar > Permisos. Elegir Usuario interno del sistema y conceder a {account} acceso de {access}.",
+  "sharedfolder.steps": "Pida a un administrador que abra Panel de control > Carpeta compartida > {folder} > Editar > Permisos > Usuario interno del sistema > {account} > {access}",
   "sharedfolder.missingHint": "{folder} ya no existe. Seleccionar otra carpeta compartida al actualizar la aplicación.",
   "sharedfolder.ambiguousHint": "Más de un volumen contiene una carpeta llamada {folder}. Cambiar el nombre de una de ellas.",
   "sharedfolder.allReady": "La cuenta de la aplicación tiene el acceso necesario.",
   "sharedfolder.done": "Acceso concedido.",
-  "sharedfolder.shared_folder_unavailable": "No se pudo leer el estado de las carpetas compartidas.",
+  "sharedfolder.shared_folder_unavailable": "No se pudo leer el estado de las carpetas compartidas",
   "sharedfolder.admin_required": "Solo un administrador de DSM puede cambiar esto.",
   "sharedfolder.shared_folder_custom_acl": "Esta carpeta usa permisos avanzados. Definir el acceso en Panel de control.",
   "sharedfolder.shared_folder_grant_failed": "DSM no aceptó el cambio. Definir el acceso en Panel de control.",
   "sharedfolder.shared_folder_grant_unverified": "DSM aceptó el cambio, pero la cuenta de la aplicación sigue sin acceso. Revisar los permisos de la carpeta en Panel de control.",
-  "sharedfolder.dismiss": "Cerrar"
+  "sharedfolder.dismiss": "Cerrar",
+  "sharedfolder.retry": "Volver a intentar"
 }

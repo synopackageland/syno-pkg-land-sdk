@@ -156,11 +156,21 @@ func Resolve(root, name string) (string, error) {
 		return "", err
 	}
 	var found []string
+	var inaccessible error
 	for _, volume := range volumes {
 		path := filepath.Join(volume, name)
 		if info, err := os.Stat(path); err == nil && info.IsDir() {
 			found = append(found, path)
+		} else if errors.Is(err, fs.ErrPermission) {
+			inaccessible = err
+		} else if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return "", err
 		}
+	}
+	// An unsearchable volume is not evidence that the selected share vanished,
+	// nor that an accessible match on another volume is unambiguous.
+	if inaccessible != nil {
+		return "", inaccessible
 	}
 	switch len(found) {
 	case 0:
@@ -242,6 +252,8 @@ func (c Config) Status() (Status, error) {
 		folder := Folder{Key: key, Name: names[key], Required: c.required(key), Granted: None}
 		path, err := Resolve(c.root(), folder.Name)
 		switch {
+		case errors.Is(err, fs.ErrPermission):
+			folder.State = Pending
 		case errors.Is(err, ErrAmbiguous):
 			folder.State, folder.Error = Ambiguous, err.Error()
 		case err != nil:
@@ -275,7 +287,7 @@ func (e *PermissionError) Error() string {
 	if e.Need == Write {
 		access = "Read/Write"
 	}
-	return fmt.Sprintf("Package account %q needs %s access to shared folder %q. Ask an administrator to open Control Panel > Shared Folder > Edit > Permissions, choose System internal user, and grant this access.", e.Account, access, e.Name)
+	return fmt.Sprintf("Package account %q needs %s access to shared folder %q. Ask an administrator to open Control Panel > Shared Folder > %s > Edit > Permissions > System internal user > %s > %s", e.Account, access, e.Name, e.Name, e.Account, access)
 }
 
 func (e *PermissionError) Is(target error) bool { return target == ErrPermissionPending }
@@ -316,6 +328,9 @@ func (c Config) RequireAccess(key string, need Access) (string, error) {
 		return "", fmt.Errorf("%w: %q", ErrNotConfigured, key)
 	}
 	path, err := Resolve(c.root(), name)
+	if errors.Is(err, fs.ErrPermission) {
+		return "", &PermissionError{Key: key, Name: name, Account: account, Need: need, Have: None, Cause: err}
+	}
 	if err != nil {
 		return "", fmt.Errorf("%w: %q", err, name)
 	}

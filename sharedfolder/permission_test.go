@@ -88,6 +88,24 @@ func TestPermissionChecksRefuseWrongAccount(t *testing.T) {
 	}
 }
 
+func TestUnsearchableVolumeIsPermissionPendingNotMissing(t *testing.T) {
+	skipRoot(t)
+	cfg := fixture(t, 0700)
+	cfg.Account = ""
+	volume := filepath.Join(cfg.Root, "volume1")
+	os.Chmod(volume, 0000)
+	t.Cleanup(func() { os.Chmod(volume, 0700) })
+	_, err := cfg.Require("media")
+	var permission *PermissionError
+	if !errors.As(err, &permission) || permission.Name != "Media" {
+		t.Fatalf("unsearchable parent: %v", err)
+	}
+	status, err := cfg.Status()
+	if err != nil || !status.Pending() {
+		t.Fatalf("status: %+v %v", status, err)
+	}
+}
+
 func TestPermissionChecksRefuseRoot(t *testing.T) {
 	if os.Getuid() != 0 && os.Geteuid() != 0 {
 		t.Skip("root-only refusal probe")

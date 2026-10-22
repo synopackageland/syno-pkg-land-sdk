@@ -9,5 +9,14 @@
   "direct_title": "Connessione diretta all’App",
   "direct_notice": "HTTPS gestito da DSM non è disponibile per questa App. La connessione diretta potrebbe mostrare un avviso sul certificato o utilizzare HTTP non crittografato.",
   "direct_continue": "Continua con la connessione diretta",
-  "app_privilege_denied": "Il tuo account DSM non è autorizzato a usare questa App. Contatta il tuo amministratore DSM."
+  "app_privilege_denied": "Il tuo account DSM non è autorizzato a usare questa App. Contatta il tuo amministratore DSM.",
+  "share_title": "Permessi cartella condivisa",
+  "share_steps": "Chiedere a un amministratore di aprire Pannello di controllo > Cartella condivisa > {folder} > Modifica > Permessi > Utente interno di sistema > {account} > {access}",
+  "share_read": "Sola lettura",
+  "share_write": "Lettura/scrittura",
+  "share_retry": "Riprova",
+  "share_dismiss": "Chiudi",
+  "share_ready": "L’accesso è pronto. Avviare questa App nel Centro pacchetti",
+  "share_next_start": "Dopo aver concesso l’accesso, riavviare questa App nel Centro pacchetti",
+  "share_unavailable": "Lo stato della cartella non è disponibile. Verificare la cartella selezionata e riavviare questa App nel Centro pacchetti"
 }

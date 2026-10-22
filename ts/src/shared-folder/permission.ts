@@ -14,6 +14,8 @@ export interface SharedFolderPermission {
  message(issue:SharedFolderPermissionIssue):string
  /** Starts at most one background status request for this App instance. */
  check():Promise<void>
+ /** Explicitly rechecks access after an administrator changes DSM permissions. */
+ retry():Promise<void>
  /** Call in an existing catch block; true means the permission dialog handled it. */
  handle(error:unknown):boolean
  /** The App's normal call, with permission failures sent to the same dialog. Still rejects. */
@@ -46,25 +48,35 @@ export function createSharedFolderPermission(options:SharedFolderPermissionOptio
  const locale=options.locale??'en'
  const shared=createSharedFolderAccess({call:options.call,locale,isAdmin:()=>false})
  const listeners=new Set<(issues:readonly SharedFolderPermissionIssue[])=>void>()
- let issues:SharedFolderPermissionIssue[]=[],checked:Promise<void>|undefined
+ let issues:SharedFolderPermissionIssue[]=[],checked:Promise<void>|undefined,inFlight:Promise<void>|undefined,generation=0
  function publish(next:SharedFolderPermissionIssue[]) {
   const unique=new Map<string,SharedFolderPermissionIssue>()
   for(const issue of next)unique.set(JSON.stringify([issue.account,issue.share,issue.required]),issue)
   issues=[...unique.values()]
   for(const listener of listeners)listener(issues)
  }
+ function read(replace:boolean):Promise<void>{
+  if(inFlight)return inFlight
+  const started=generation
+  inFlight=shared.status().then(status=>{
+   const pending=status.folders.filter(f=>f.state==='pending'&&f.required!=='none').map(f=>({account:status.account,share:f.name,required:f.required as 'read'|'write'}))
+   // A real I/O failure arriving during a check remains more recent evidence.
+   if(replace&&started===generation)publish(pending)
+   else if(pending.length)publish([...pending,...issues])
+  }).finally(()=>{inFlight=undefined})
+  return inFlight
+ }
  const permission:SharedFolderPermission={
   messages:sharedFolderMessages(locale),
   message:issue=>sharedFolderPermissionMessage(issue,locale),
   check(){
-   return checked??=shared.status().then(status=>{
-    const pending=status.folders.filter(f=>f.state==='pending'&&f.required!=='none').map(f=>({account:status.account,share:f.name,required:f.required as 'read'|'write'}))
-    if(pending.length)publish([...pending,...issues])
-   })
+   return checked??=read(false)
   },
+  retry(){return read(true)},
   handle(error){
    const issue=issueFrom(error)
    if(!issue)return false
+   generation++
    publish([...issues,issue]);return true
   },
   async call<T=unknown>(method:string,params?:Record<string,unknown>,callOptions?:CallOptions):Promise<T>{

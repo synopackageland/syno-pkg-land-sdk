@@ -9,5 +9,14 @@
   "direct_title": "Direkte App-Verbindung",
   "direct_notice": "Für diese App ist kein von DSM verwaltetes HTTPS verfügbar. Die direkte Verbindung kann eine Zertifikatswarnung anzeigen oder unverschlüsseltes HTTP verwenden.",
   "direct_continue": "Mit direkter Verbindung fortfahren",
-  "app_privilege_denied": "Ihr DSM-Konto darf diese App nicht verwenden. Wenden Sie sich an Ihren DSM-Administrator."
+  "app_privilege_denied": "Ihr DSM-Konto darf diese App nicht verwenden. Wenden Sie sich an Ihren DSM-Administrator.",
+  "share_title": "Berechtigung für gemeinsame Ordner",
+  "share_steps": "Bitten Sie einen Administrator, Folgendes zu öffnen: Systemsteuerung > Gemeinsamer Ordner > {folder} > Bearbeiten > Berechtigungen > Interner Systembenutzer > {account} > {access}",
+  "share_read": "Nur lesen",
+  "share_write": "Lesen/Schreiben",
+  "share_retry": "Neuer Versuch",
+  "share_dismiss": "Schließen",
+  "share_ready": "Der Zugriff ist bereit. Starten Sie diese App im Paket-Zentrum",
+  "share_next_start": "Starten Sie diese App nach der Berechtigungsvergabe erneut im Paket-Zentrum",
+  "share_unavailable": "Der Ordnerstatus ist nicht verfügbar. Prüfen Sie die Ordnerauswahl und starten Sie diese App erneut im Paket-Zentrum"
 }
