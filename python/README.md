@@ -164,3 +164,13 @@ result = ctx.runtime("webapi.call", {"delegation_id": grant["delegation_id"],
 `webapi.grants` lists the caller's grants; `webapi.revoke` revokes one. The result
 is the full DSM envelope. Never retry an uncertain mutation automatically.
 The executor enforces profiles, current permissions, runner, bounds and audit.
+
+## DSM file sessions
+
+The default Go runtime no longer forwards a browser DSM session to File
+Station over HTTP. Its legacy `files.list`, `files.info` and `files.read`
+services return `unsupported`; wrappers never receive DSM credentials.
+Use the frontend SDK's same-origin file client for interactive operations.
+Backend writes or grants require independent caller-bound authorization;
+browser-only Apps do not acquire an executor. See the repository's
+`docs/dsm-session-transport.md` for the App migration checklist.

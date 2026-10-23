@@ -34,7 +34,7 @@ node --version
 npm test
 npm run build
 cd /tmp/src/bridge
-./bridge.test -test.count=1 -test.v -test.run '^(TestGoldenRepliesMatchInEveryLanguage|TestHelloExamples|TestBatchAdaptersUseOneAppAndIsolateEachResult)$/^node$'
+./bridge.test -test.count=1 -test.v -test.run '^(TestGoldenRepliesMatchInEveryLanguage|TestBridgeGoldenRepliesMatchInEveryLanguage|TestHelloExamples|TestBatchAdaptersUseOneAppAndIsolateEachResult)$/^node$'
 EOF
 # Without the macOS extended attributes, which GNU tar warns about.
 COPYFILE_DISABLE=1 tar --no-xattrs -c -C "$work" . | engine "$run"

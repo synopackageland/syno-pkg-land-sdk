@@ -475,7 +475,7 @@ func (e *Executor) Handle(ctx context.Context, r Request) Response {
 	if !contains(allOps, r.Op) {
 		return deny("UNKNOWN_OP")
 	}
-	if !contains(e.Policy.Operations, r.Op) {
+	if !contains(e.Policy.Operations, r.Op) && r.Op != "files.checkPermission" {
 		return deny("POLICY_DENIED")
 	}
 	if r.Op == "webapi.call" {
@@ -508,6 +508,15 @@ func (e *Executor) Handle(ctx context.Context, r Request) Response {
 		}
 		if disabled {
 			return deny("disabled")
+		}
+	}
+	if r.Op == "files.checkPermission" {
+		if d, err := e.Store.Get(p.ID); err == nil && d.Lifetime == "until-revoked" {
+			_, hasJob := keys["job_id"]
+			return e.checkDestination(ctx, r, p, d, hasJob)
+		}
+		if !contains(e.Policy.Operations, r.Op) {
+			return deny("POLICY_DENIED")
 		}
 	}
 	switch r.Op {

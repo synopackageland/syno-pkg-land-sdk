@@ -8,6 +8,7 @@ import type {CapabilityStatus} from './executor-setup'
 import {confirmFailure,statusUnreachable,useExecutorSetup,type ConfirmFailure} from './use-executor-setup'
 import {appLifecycle} from './lifecycle'
 import {delegateCopy} from './copy'
+import {createDsmFileStation} from '../dsm/filestation'
 export interface ScopeDetail {scope_mode?:string;preselection?:string;selection?:ScopeSelection|null;mismatch?:boolean}
 // The password field's text for each confirmation DSM refused or could not make.
 const confirmCopy={password_rejected:'passwordRejected',password_required:'passwordRequired',password_confirm_failed:'passwordConfirmFailed'} as const
@@ -26,6 +27,7 @@ export function useScopeApproval(props:{readonly admin:boolean;readonly locale?:
  const passwordError=computed(()=>missing.value?copy.value.passwordRequired:failure.value&&'confirm' in failure.value?copy.value[confirmCopy[failure.value.confirm]]:'')
  watch(password,()=>{missing.value=false})
  const scope=ref<ScopeDetail>(),chosen=ref(''),shares=ref<Array<{label:string;value:string}>>([])
+ const dsmFiles=createDsmFileStation()
  const dynamic=computed(()=>scope.value?.scope_mode==='install-selected')
  // Only an executor that reports a file scope is spoken of as file access; a
  // root-ops App's executor gets the neutral copy.
@@ -47,7 +49,7 @@ export function useScopeApproval(props:{readonly admin:boolean;readonly locale?:
   const all:Array<{label:string;value:string}>=[]
   let offset=0
   for(let count=0;count<128;count++){
-   const page=await props.ctx.call<{shares:Array<{name:string;path:string;isdir:boolean}>;total:number;offset:number}>('bg.browse',{offset})
+   const page=await dsmFiles.shares(offset,new AbortController().signal) as {shares:Array<{name:string;path:string;isdir:boolean}>;total:number;offset:number}
    if(disposed)return
    if(!Array.isArray(page.shares)||!Number.isSafeInteger(page.total)||page.total<0||!page.shares.length&&offset<page.total)throw {code:'EXECUTOR_PROTOCOL'}
    for(const entry of page.shares){if(entry.isdir&&entry.path==='/'+entry.name&&!['home','homes'].includes(entry.name.toLowerCase()))all.push({label:entry.name,value:'shared:'+entry.name})}

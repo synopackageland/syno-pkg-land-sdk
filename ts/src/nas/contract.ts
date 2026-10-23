@@ -2,7 +2,7 @@ export interface NasEntry {name:string; path:string; isDir:boolean; bytes?:numbe
 export interface NasPage {entries:NasEntry[]; total:number; offset:number; nextOffset?:number}
 export interface ListOptions {offset?:number;limit?:number;sortBy?:'name'|'size'|'type'|'mtime';sortDirection?:'ASC'|'DESC'}
 export interface NasProvider {
- download?(path:string):void
+ download?(path:string):void|Promise<void>
  upload?(parent:string,file:File,signal:AbortSignal):Promise<void>
  shares(offset:number,signal:AbortSignal):Promise<NasPage>
  list(path:string,options:ListOptions,signal:AbortSignal):Promise<NasPage>

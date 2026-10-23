@@ -3,6 +3,7 @@ import {afterEach,expect,test,vi} from 'vitest'
 import {createApp,h,nextTick,ref} from 'vue'
 import {AppRoot,ConfigProvider} from '@synopackageland/ui'
 import NasPicker from './NasPicker.vue'
+import {nasContext} from '../../test/dsm-files-fixture'
 import {createNasProvider} from './provider'
 import {nasCopy} from './locale'
 const cleanup:Array<()=>void>=[]
@@ -12,7 +13,7 @@ const grant={id:'d1',key:'save',path:'/home',username:'fixtureuser1',lifetime:'u
 function fixture(selectDestination:any,mode:'folder'|'file'='folder',extra:Record<string,unknown>={}){
  const root=document.createElement('div');document.body.append(root)
  const selected=vi.fn(),authorized=vi.fn(),refused=vi.fn(),open=ref(true)
- const provider=createNasProvider({call:vi.fn(async()=>({shares:[{name:'home',path:'/home',isdir:true}],offset:0,total:1})) as any})
+ const provider=createNasProvider(nasContext(vi.fn(async()=>({shares:[{name:'home',path:'/home',isdir:true}],offset:0,total:1}))))
  const app=createApp({render:()=>h(ConfigProvider,{locale:'en'},()=>h(AppRoot,{},()=>h(NasPicker,{provider,locale:'en',mode,open:open.value,destination:{key:'save',selectDestination},onSelected:selected,onAuthorized:authorized,onRefused:refused,'onUpdate:open':v=>open.value=v,...extra})))})
  app.config.idPrefix='destination-test';app.mount(root)
  cleanup.push(()=>{app.unmount();provider.dispose();root.remove()})

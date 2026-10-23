@@ -144,7 +144,9 @@ export interface Context {
  // Explicit long-running opt-in; bind with createBackgroundSaveFacade and an
  // owner-bound App job metadata provider. Time-limited downloads use DelegatePanel.
  delegate?: import('./delegate/long-running').BackgroundSaveFacade
- files?: {endpoint:string;token?:()=>string|undefined}
+ // endpoint is legacy App CGI metadata and ignored by File Station. Browser
+ // file I/O always goes to DSM on the current origin; token remains reactive.
+ files?: {endpoint?:string;token?:()=>string|undefined}
  // The package's display name and icon URL from the DSM window; a full-page
  // shell names the App with them where a DSM window has a title bar.
  displayName?: string

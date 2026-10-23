@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import {scopeShares} from '../../test/dsm-files-fixture'
 import {expect,test} from 'vitest'
 import {createApp,h,nextTick} from 'vue'
 import {AppRoot} from '@synopackageland/ui'
@@ -9,6 +10,7 @@ import {delegateCopy} from './copy'
 const settle=async()=>{for(let i=0;i<10;i++){await nextTick();await new Promise(r=>setTimeout(r))}}
 const selection={scope:'shared:reports',root:'/reports',generation:1}
 async function approve(answers:CapabilityStatus[],selectedAfter:number){
+ scopeShares([{name:'reports',path:'/reports',isdir:true}])
  const calls:Array<[string,string|undefined]>=[]
  let state:CapabilityStatus={state:'needs-admin-approval'}
  const setup={async status(){return state},async authorize(password:string,scope?:string){calls.push([password,scope]);state=answers[Math.min(calls.length,answers.length)-1];return state},async control(){return state}}

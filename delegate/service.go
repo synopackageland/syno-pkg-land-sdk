@@ -52,10 +52,11 @@ type Service struct {
 	Scope, StagingDir            string
 	LookupUID                    func(string) string
 	HTTP                         *http.Client
-	SessionFiles                 DestinationSession
-	Destinations, Operations     []string
-	Lifetime                     string
-	InstallDraftPath             string
+	// Deprecated: ignored. Destination admission is authorized by the executor.
+	SessionFiles             DestinationSession
+	Destinations, Operations []string
+	Lifetime                 string
+	InstallDraftPath         string
 	// Work runs the App's own sha256-v1 jobs, with pause, progress and
 	// checkpoints as under background.Runner; nil hashes the input.
 	Work background.Work

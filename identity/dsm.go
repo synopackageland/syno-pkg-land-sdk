@@ -26,9 +26,9 @@ type dsmReply struct {
 	} `json:"error"`
 }
 
-// dsmCall sends token only as X-SYNO-TOKEN: DSM web logins enable SynoToken,
-// and their cookie alone is refused with 119.
-func (s *Service) dsmCall(ctx context.Context, form url.Values, cookie, token string) (dsmReply, error) {
+// dsmCall only creates and disposes a backend-owned temporary login session.
+// Browser sessions are verified natively and can never enter this HTTP client.
+func (s *Service) dsmCall(ctx context.Context, form url.Values) (dsmReply, error) {
 	var out dsmReply
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -37,12 +37,6 @@ func (s *Service) dsmCall(ctx context.Context, form url.Values, cookie, token st
 		return out, errors.New("DSM unavailable")
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	if cookie != "" {
-		req.AddCookie(&http.Cookie{Name: "id", Value: cookie})
-	}
-	if token != "" {
-		req.Header.Set("X-SYNO-TOKEN", token)
-	}
 	res, err := s.cfg.Client.Do(req)
 	if err != nil {
 		return out, errors.New("DSM unavailable")
@@ -82,7 +76,7 @@ func (s *Service) login(ctx context.Context, account, password, otp string) (Sub
 	if otp != "" {
 		form.Set("otp_code", otp)
 	}
-	out, err := s.dsmCall(ctx, form, "", "")
+	out, err := s.dsmCall(ctx, form)
 	if err != nil {
 		return Subject{}, "auth_unavailable"
 	}
@@ -106,7 +100,7 @@ func (s *Service) login(ctx context.Context, account, password, otp string) (Sub
 	}
 	// The temporary DSM session exists only to prove identity. Dispose of it
 	// before issuing an application session, including when local lookup fails.
-	loggedOut, err := s.dsmCall(context.WithoutCancel(ctx), url.Values{"api": {"SYNO.API.Auth"}, "method": {"logout"}, "version": {"7"}, "_sid": {out.Data.SID}}, "", "")
+	loggedOut, err := s.dsmCall(context.WithoutCancel(ctx), url.Values{"api": {"SYNO.API.Auth"}, "method": {"logout"}, "version": {"7"}, "_sid": {out.Data.SID}})
 	if err != nil || !loggedOut.Success {
 		return Subject{}, "auth_unavailable"
 	}

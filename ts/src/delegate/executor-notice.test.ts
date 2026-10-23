@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import {scopeShares} from '../../test/dsm-files-fixture'
 import {expect,test,vi} from 'vitest'
 import {createApp,h,nextTick} from 'vue'
 import AppShell from '../shell/AppShell.vue'
@@ -98,6 +99,7 @@ test('the dialog reads the scope through the call of the setup the App provides'
   if(method==='delegate.status')return {scope_mode:'install-selected'} as T
   throw {code:'unknown_method'}
  }
+ scopeShares([{name:'media',path:'/media',isdir:true}])
  const provided:ExecutorSetup={...setup,call:async<T,>(method:string)=>{adapted.push(method);return (method==='bg.browse'?{shares:[{name:'media',path:'/media',isdir:true}],total:1,offset:0}:await call<T>(method)) as T}}
  const ctx={fullPage:false,locale:'en',executor:setup,user:{name:'someone',isAdmin:true},reopen:()=>()=>{},call}
  const root=document.createElement('div');document.body.append(root)
@@ -106,7 +108,7 @@ test('the dialog reads the scope through the call of the setup the App provides'
  try{
   app.mount(root);await settle()
   Array.from(document.querySelectorAll('button')).find(b=>b.textContent?.trim()===copy.noticeApprove)!.click();await settle()
-  expect(adapted).toContain('bg.browse')
+  expect(adapted).toContain('delegate.status');expect(adapted).not.toContain('bg.browse')
   expect(raw).not.toContain('bg.browse')
   expect(document.querySelector('[role=dialog] [role=alert]')).toBeNull()
   expect(document.querySelector<HTMLInputElement>('[role=dialog] #delegate-password')!.disabled).toBe(false)

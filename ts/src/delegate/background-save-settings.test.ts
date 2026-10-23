@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import {scopeShares} from '../../test/dsm-files-fixture'
 import {expect,test,vi} from 'vitest'
 import {createApp,h,nextTick} from 'vue'
 import {AppRoot} from '@synopackageland/ui'
@@ -16,6 +17,7 @@ const provider={async shares(){return {entries:[{name:'fgwmrf',path:'/fgwmrf',is
 const shares={shares:[{name:'fgwmrf',path:'/fgwmrf',isdir:true},{name:'video',path:'/video',isdir:true}],total:2,offset:0}
 interface Options {admin?:boolean;destination?:DestinationState;status?:Record<string,unknown>|(()=>Record<string,unknown>);capability?:CapabilityStatus;authorize?:(password:string,scope?:string)=>Promise<CapabilityStatus>;sdk?:Partial<BackgroundSaveFacade>;props?:Record<string,unknown>;scopeRead?:Promise<unknown>}
 async function mount(o:Options={}){
+ scopeShares(shares.shares)
  let selectedGrant:DestinationGrant|undefined
  const calls={authorize:[] as unknown[][],select:[] as unknown[],enable:0,operations:0,disable:0}
  const status=()=>typeof o.status==='function'?o.status():o.status??{state:'ready',disabled:false,scope_mode:'install-selected',selection}

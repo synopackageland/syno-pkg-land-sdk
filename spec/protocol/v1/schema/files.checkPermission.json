@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/synopackageland/syno-pkg-land-sdk/spec/protocol/v1/schema/files.checkPermission.json",
   "title": "files.checkPermission",
-  "description": "Check write permission for the delegated user.",
+  "description": "Check write permission for the delegated user. A legacy grant requires job_id. An until-revoked moveFromStaging destination omits job_id, requires the current owner session, and permits only its exact destination path; it never creates or widens a grant.",
   "since": "0.9.0",
   "auth": "optional",
   "type": "object",
@@ -24,7 +24,6 @@
   "additionalProperties": false,
   "required": [
     "delegation_id",
-    "job_id",
     "path"
   ]
 }
