@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.27.1 (2026-10-23)
+
+- Reuse immutable executor/v0.27.0 and its six verified payload digests; the SDK/App patch changes release metadata and manifest distribution without replacing the protected executor.
 
 - Carry a generated executor manifest in the Go module and frontend npm package. Release checks compare both copies with reproducible executor/lifecycle build pins; compatible SDK minors no longer need a CLI release.
 

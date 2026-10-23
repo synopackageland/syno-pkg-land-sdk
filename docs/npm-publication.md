@@ -55,6 +55,8 @@ Before packing a release:
    at NAS runtime. A compatible SDK minor needs no CLI release. An unsupported
    format requires CLI support; malformed manifests are always rejected.
 
-The initial manifest is generated from the existing 0.27.0 release record for
-verification, and ships first in the next SDK patch. SDK 0.26.0 and 0.27.0 as
+The manifest ships starting with SDK 0.27.1, which reuses executor/v0.27.0
+and its six verified payload digests. When executor sources and build inputs are
+unchanged, retain that immutable inventory and its existing reproducibility
+evidence; do not rebuild an executor matrix or create another executor tag. SDK 0.26.0 and 0.27.0 as
 already published remain compatible through the CLI's frozen legacy inventory.
