@@ -6,7 +6,7 @@ authentication while `access` still protects DSM OIDC issuance. Native clients
 need no gateway cookie or browser Origin. The issuer still requires DSM sign-in
 and App Privileges; upstream must enforce its own authentication, CSRF and
 WebSocket policy. See [the design and security boundaries](provider-only-oidc-design.md).
-Use the matching SDK and CLI 0.26.0 releases for this field.
+Use the matching SDK and CLI 0.27.0 releases for this field.
 
 ## Native OIDC browser navigation
 
@@ -91,7 +91,7 @@ same-origin authorize CGI. This applies when `oidc.native_login` is set or an
 
 `launch_path: /#/sso?identifier=fixed-organization` selects a fixed local App
 URL when the DSM menu opens the classless gateway entry. Paths, queries and SPA
-fragments are supported. The default remains `/`. Use SDK and CLI 0.26.0 for matching launcher and runtime support.
+fragments are supported. The default remains `/`. Use SDK and CLI 0.27.0 for matching launcher and runtime support.
 
 The target is trusted package configuration, never a caller-supplied return URL.
 The launcher retains the DSM hostname and declared public gateway port. It rejects

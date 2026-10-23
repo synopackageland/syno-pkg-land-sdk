@@ -54,8 +54,8 @@ permanent `passthrough`. For example, the CLI manifest can declare:
 
 ```yaml
 identity_gateway:
-  # Other gateway fields omitted. This example uses SDK 0.26.0.
-  sdk: 0.26.0
+  # Other gateway fields omitted. This example uses SDK 0.27.0.
+  sdk: 0.27.0
   optional_passthrough:
     mobile:
       prefixes: [/dav, /api/mobile]
