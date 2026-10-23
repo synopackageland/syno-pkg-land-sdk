@@ -24,6 +24,15 @@ appear live. Heartbeat observations are not grants or job execution authority.
 The delegate worker publishes once at startup and then from one five-second
 heartbeat loop, independently of its job polling loop.
 
+Scheduler readback still uses DSM's native API and checks both exact task
+definitions on every check. DSM's EventScheduler initializer writes its SQLite
+database even for read calls. Those calls run in a short-lived, private mount
+namespace over a fresh, consistent SQLite backup in root-only tmpfs. Incidental
+initialization writes stay in that snapshot; the host's scheduler database,
+mounts and daemons are unchanged. This requires the existing DSM SQLite tool and
+mount namespace support. A failed backup or isolation fails the readback; there
+is no fallback that writes the host database or accepts cached approval.
+
 The Linux runtime checks that its chosen filesystem is tmpfs and refuses to
 publish a heartbeat when no safe private memory directory is available. It does
 not use `TMPDIR` to choose a durable fallback. macOS development uses the system

@@ -30,6 +30,9 @@ func main() {
 	}
 }
 func run(args []string) error {
+	if len(args) > 0 && args[0] == "scheduler-read" {
+		return runSchedulerRead(args[1:])
+	}
 	if len(args) > 0 && args[0] == "root-exec" {
 		return runRootExec(args[1:])
 	}

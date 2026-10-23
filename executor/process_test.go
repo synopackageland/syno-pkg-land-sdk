@@ -32,3 +32,35 @@ func TestExecStopsAtThePerCallTimeout(t *testing.T) {
 		t.Fatal(err, time.Since(started))
 	}
 }
+
+func TestSchedulerReadsCannotInitializeTheLiveDatabase(t *testing.T) {
+	for _, tc := range []struct {
+		args     []string
+		isolated bool
+	}{
+		{[]string{"--exec", "api=SYNO.Core.EventScheduler", "method=get", "version=1", `task_name="TestApp executor boot"`}, true},
+		{[]string{"--exec", "api=SYNO.Core.TaskScheduler", "method=list", "version=3", "start=0", "limit=500"}, true},
+		{[]string{"--exec", "api=SYNO.Core.TaskScheduler", "method=get", "version=4", "id=7", `real_owner="root"`}, false},
+		{[]string{"--exec", "api=SYNO.Core.EventScheduler", "method=delete", "version=1", `task_name="TestApp executor boot"`}, false},
+		{[]string{"--exec", "api=SYNO.Core.Share", "method=get", "version=1", `name="reports"`}, false},
+	} {
+		got := schedulerReadCommand(tc.args)
+		if got != tc.isolated {
+			t.Fatalf("scheduler isolation %v: %v", tc.args, got)
+		}
+	}
+}
+
+func TestSchedulerSnapshotHelperRejectsAnythingExceptFixedReads(t *testing.T) {
+	for _, args := range [][]string{
+		{"--exec", "api=SYNO.Core.EventScheduler", "method=delete", "version=1", `task_name="TestApp executor boot"`},
+		{"--exec", "api=SYNO.Core.TaskScheduler", "method=list", "version=3", "start=0", "limit=500", "outfile=/etc/passwd"},
+		{"--exec-fastwebapi", "api=SYNO.Core.TaskScheduler", "method=list", "version=3", "start=0", "limit=500"},
+		{"--exec", "api=SYNO.Core.TaskScheduler", "method=list", "version=3", "start=0", "limit=500", "runner=other"},
+		{"--exec", "api=SYNO.Core.EventScheduler", "method=get", "version=1", `task_name="foreign"`},
+	} {
+		if validSchedulerRead(args) {
+			t.Fatalf("unsafe snapshot invocation accepted: %v", args)
+		}
+	}
+}

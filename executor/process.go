@@ -160,6 +160,15 @@ func commandTimeout(ctx context.Context) time.Duration {
 func (processCommand) Exec(ctx context.Context, path string, args []string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, commandTimeout(ctx))
 	defer cancel()
+	// Keep DSM's exact readback but isolate its database initialization. Never
+	// fall back to a live database write when snapshot/isolation is unavailable.
+	if path == "/usr/syno/bin/synowebapi" && schedulerReadCommand(args) {
+		exe, err := os.Executable()
+		if err != nil {
+			return nil, err
+		}
+		path, args = exe, append([]string{"scheduler-read"}, args...)
+	}
 	cmd := command(ctx, path, args)
 	var out cappedBuffer
 	cmd.Stdout = &out
