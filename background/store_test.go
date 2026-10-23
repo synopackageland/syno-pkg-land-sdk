@@ -21,6 +21,13 @@ func newStore(t *testing.T) (*Store, string) {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), "background")
 	s := NewStore(dir)
+	t.Cleanup(func() {
+		if root, err := s.heartbeatRoot(false); err == nil {
+			name := root.Name()
+			root.Close()
+			_ = os.RemoveAll(name)
+		}
+	})
 	return s, dir
 }
 
@@ -356,11 +363,11 @@ func TestStatusReportsWorkerHeartbeat(t *testing.T) {
 	if st.Worker != nil || st.Revision != WorkerRevision || st.Algorithm != WorkerSHA256V1 {
 		t.Fatalf("status: %+v", st)
 	}
-	if err := s.Heartbeat(ctx, WorkerInfo{PID: 42, UID: 255853, Username: "SynologyApp"}); err != nil {
+	if err := s.Heartbeat(ctx, WorkerInfo{PID: os.Getpid(), UID: os.Getuid(), Username: "SynologyApp"}); err != nil {
 		t.Fatal(err)
 	}
 	st, _ = s.Status(ctx)
-	if st.Worker == nil || st.Worker.UID != 255853 || st.Worker.PID != 42 || st.Worker.At.IsZero() {
+	if st.Worker == nil || st.Worker.UID != os.Getuid() || st.Worker.PID != os.Getpid() || st.Worker.At.IsZero() {
 		t.Fatalf("worker: %+v", st.Worker)
 	}
 }

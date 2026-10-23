@@ -180,6 +180,9 @@ func (s *Service) Run(ctx context.Context, info background.WorkerInfo) error {
 	if e := s.Store.Recover(ctx); e != nil {
 		return e
 	}
+	if e := s.Store.Heartbeat(ctx, info); e != nil {
+		return e
+	}
 	ctx, stop := context.WithCancel(ctx)
 	var heartbeat sync.WaitGroup
 	heartbeat.Add(1)
@@ -198,13 +201,10 @@ func (s *Service) Run(ctx context.Context, info background.WorkerInfo) error {
 			}
 		}
 	}()
-	defer func() { stop(); heartbeat.Wait() }()
+	defer func() { stop(); heartbeat.Wait(); s.Store.ClearHeartbeat(info) }()
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 	for ctx.Err() == nil {
-		if e := s.Store.Heartbeat(ctx, info); e != nil {
-			return e
-		}
 		if e := s.Sweep(ctx); e != nil {
 			log.Printf("delegation cleanup pending: %s", errorCode(e))
 		}

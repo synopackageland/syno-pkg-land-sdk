@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -352,5 +353,80 @@ func TestPurgeListsTheControlTaskAfterASnapshot(t *testing.T) {
 	purgeTasks(context.Background(), d, "TestApp", inv, func(string) {})
 	if command.lists.Load() == before {
 		t.Fatal("purge reused a cached control task id")
+	}
+}
+
+// Every pass must re-read DSM, while an unchanged verified inventory is read-only.
+func TestIdleTaskReadbackDoesNotRewriteInventory(t *testing.T) {
+	if runtime.GOOS != "linux" || os.Geteuid() != 0 {
+		t.Skip("protected inventory needs a Linux root fixture")
+	}
+	dir := realTestPath(t, t.TempDir())
+	ed, pd := strings.Repeat("a", 64), strings.Repeat("b", 64)
+	generated, err := taskscript.Generate("TestApp", pd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tasks := []map[string]string{}
+	for _, task := range generated {
+		tasks = append(tasks, map[string]string{"kind": task.Kind, "name": task.Name, "header": task.Header, "script": task.Script})
+	}
+	b, _ := json.Marshal(map[string]any{"package": "TestApp", "executorDigest": ed, "policyDigest": pd, "implementation": "executor", "tasks": tasks})
+	setup := filepath.Join(dir, "setup.json")
+	if err := os.WriteFile(setup, b, 0600); err != nil {
+		t.Fatal(err)
+	}
+	fixture := &snapshotFixture{tasks: tasks}
+	command := &countingCommand{next: fixture}
+	d := &liveDSM{Command: command}
+	check := func() error { return snapshotTasks(context.Background(), d, "TestApp", ed, pd, setup, dir) }
+	if err := check(); err != nil {
+		t.Fatal(err)
+	}
+	inventory := filepath.Join(dir, "tasks.json")
+	old := time.Unix(100, 0)
+	if err := os.Chtimes(inventory, old, old); err != nil {
+		t.Fatal(err)
+	}
+	before, _ := os.Stat(inventory)
+	parent, _ := os.Stat(dir)
+	for range 6 {
+		if err := check(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	after, _ := os.Stat(inventory)
+	parentAfter, _ := os.Stat(dir)
+	if !os.SameFile(before, after) || !before.ModTime().Equal(after.ModTime()) || !parent.ModTime().Equal(parentAfter.ModTime()) {
+		t.Fatal("idle readback rewrote inventory or touched its directory")
+	}
+	if command.lists.Load() != 7 {
+		t.Fatal("scheduler verification skipped", command.lists.Load())
+	}
+	fixture.mismatch = true
+	if err := check(); err == nil {
+		t.Fatal("retained inventory bypassed scheduler refusal")
+	}
+	retained, _ := os.Stat(inventory)
+	if !os.SameFile(after, retained) || !after.ModTime().Equal(retained.ModTime()) {
+		t.Fatal("failed verification mutated retained cleanup inventory")
+	}
+	// A genuinely changed retained inventory must still be replaced after a pass.
+	fixture.mismatch = false
+	previous, err := readTaskInventory(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	previous.PolicyDigest = strings.Repeat("c", 64)
+	changed, _ := json.Marshal(previous)
+	if err := os.WriteFile(inventory, changed, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := check(); err != nil {
+		t.Fatal(err)
+	}
+	restored, err := readTaskInventory(dir)
+	if err != nil || restored.PolicyDigest != pd {
+		t.Fatalf("changed inventory not restored: %+v %v", restored, err)
 	}
 }

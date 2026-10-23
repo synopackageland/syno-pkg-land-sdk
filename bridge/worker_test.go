@@ -19,7 +19,7 @@ func workerConfig(t *testing.T, capabilities string) Config {
 	return Config{PackageID: "hello", AppDir: dir, DataDir: t.TempDir()}
 }
 
-var worker = background.WorkerInfo{PID: 1, UID: 1000, Username: "hello"}
+var worker = background.WorkerInfo{PID: os.Getpid(), UID: os.Getuid(), Username: "hello"}
 
 // The worker runs the jobs bg.submit queued, on the same store.
 func TestWorkerRunsTheQueuedJobs(t *testing.T) {

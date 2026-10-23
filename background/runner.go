@@ -121,8 +121,9 @@ func (r *Runner) Run(ctx context.Context) error {
 	if err := r.Store.Heartbeat(ctx, r.Info); err != nil {
 		return err
 	}
+	ctx, cancel := context.WithCancel(ctx)
 	var beats sync.WaitGroup
-	defer beats.Wait()
+	defer func() { cancel(); beats.Wait(); r.Store.ClearHeartbeat(r.Info) }()
 	beats.Add(1)
 	go func() { defer beats.Done(); r.heartbeat(ctx) }()
 	for ctx.Err() == nil {
@@ -151,7 +152,7 @@ func sleep(ctx context.Context, d time.Duration) {
 
 func (r *Runner) heartbeat(ctx context.Context) {
 	for {
-		sleep(ctx, r.Beat)
+		sleep(ctx, max(r.Beat, 10*time.Millisecond))
 		if ctx.Err() != nil {
 			return
 		}

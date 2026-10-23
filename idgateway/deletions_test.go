@@ -160,3 +160,42 @@ func TestStatusReportsAnUnreadableStateDirectory(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 }
+
+// No account changes or pending actions: neither polling nor repeated verified
+// sign-ins for the same identity may rewrite durable account state.
+func TestIdleAccountReconciliationKeepsPersistentStateUnchanged(t *testing.T) {
+	f := newDeletions(t)
+	ctx := context.Background()
+	if err := f.Reconcile(ctx); err != nil {
+		t.Fatal(err)
+	}
+	snapshot := func() map[string]any {
+		out := map[string]any{}
+		err := filepath.Walk(f.StateDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			out[path] = []any{info.ModTime(), info.Size(), info.Mode()}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+	before := snapshot()
+	for range 12 {
+		if err := f.Reconcile(ctx); err != nil {
+			t.Fatal(err)
+		}
+		if err := f.SignedIn(alice); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.Status(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if after := snapshot(); !reflect.DeepEqual(before, after) {
+		t.Fatalf("idle account state mutated: %v %v", before, after)
+	}
+}

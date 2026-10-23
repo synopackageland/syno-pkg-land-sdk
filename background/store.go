@@ -811,36 +811,10 @@ func (s *Store) StatusFor(ctx context.Context, access Access) (Status, error) {
 				st.Paused++
 			}
 		}
-		st.Worker = readWorker(root)
+		st.Worker = s.readWorker()
 		return false, nil
 	})
 	return st, err
-}
-
-func readWorker(root *os.Root) *WorkerInfo {
-	f, err := root.OpenFile("worker.json", os.O_RDONLY|unix.O_NOFOLLOW, 0)
-	if err != nil {
-		return nil
-	}
-	defer f.Close()
-	b, err := io.ReadAll(io.LimitReader(f, 4096))
-	var w WorkerInfo
-	if err != nil || checkPrivate(f) != nil || json.Unmarshal(b, &w) != nil {
-		return nil
-	}
-	return &w
-}
-
-// Heartbeat publishes who the worker is and when it last ran. It is kept out
-// of the journal so an idle worker causes no journal rewrites.
-func (s *Store) Heartbeat(ctx context.Context, info WorkerInfo) error {
-	root, err := s.openRoot()
-	if err != nil {
-		return err
-	}
-	defer root.Close()
-	info.Revision, info.At = s.revision, s.now().UTC()
-	return writeAtomic(root, "worker.json", info)
 }
 
 func ownedByUs(info os.FileInfo) bool {

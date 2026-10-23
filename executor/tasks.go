@@ -10,6 +10,7 @@ import (
 	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/taskscript"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"sync"
@@ -245,6 +246,11 @@ func snapshotTasks(ctx context.Context, d *liveDSM, pkg, ed, pd, setupPath, runt
 	if err = readBackTasks(ctx, d, inv.Tasks, scripts, false); err != nil {
 		return err
 	}
+	// Compare only after the fresh exact scheduler readback. Read through the
+	// same protected-file validation used by cleanup; never trust a package hint.
+	if previous, readErr := readTaskInventory(runtime); readErr == nil && reflect.DeepEqual(previous, inv) {
+		return nil
+	}
 	b, err = json.Marshal(inv)
 	if err != nil {
 		return err
@@ -264,7 +270,15 @@ func snapshotTasks(ctx context.Context, d *liveDSM, pkg, ed, pd, setupPath, runt
 	if closeErr != nil {
 		return closeErr
 	}
-	return os.Rename(f.Name(), filepath.Join(runtime, "tasks.json"))
+	if err := os.Rename(f.Name(), filepath.Join(runtime, "tasks.json")); err != nil {
+		return err
+	}
+	dir, err := os.Open(runtime)
+	if err != nil {
+		return err
+	}
+	defer dir.Close()
+	return dir.Sync()
 }
 
 // canonicalInventory is the boot and control tasks the CLI creates for this
