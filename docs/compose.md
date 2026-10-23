@@ -317,7 +317,7 @@ declared availability readiness, LAN isolation/egress, protected grant lifecycle
 ACLs, two-user visibility and clean install/upgrade/reboot/stop/uninstall before
 calling the package supported on a NAS. No NAS is accessed by the build gate.
 
-The unified Compose contract uses SDK/templates 0.26.0 with CLI 0.26.0. Use these published, matching versions together. DSM bridge ingress uses a dedicated internal network without published container ports.
+The unified Compose contract uses SDK/templates 0.27.0 with CLI 0.27.0. Use these published, matching versions together. DSM bridge ingress uses a dedicated internal network without published container ports.
 
 Primary override files, and each included override set, must share a directory. Cross-directory override bases are rejected before loader I/O. Included implicit .env files are confined, inventoried and preserved; symlinks are rejected.
 
