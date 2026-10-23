@@ -1,6 +1,6 @@
 # Native installation settings
 
-Use SDK and CLI 0.27.0 for native installation settings and runtime setting bindings.
+Use SDK and CLI 0.27.1 for native installation settings and runtime setting bindings.
 
 Schema 2 Apps declare installation configuration without App hooks or SPK edits:
 

@@ -15,23 +15,26 @@ SDK for DSM packages built with [synopkgland](https://github.com/synopackageland
 | `python/` | Package `synopkgland_app`: the Python App SDK for the bridge, standard library only, Python 3.8 or later ([python/README.md](python/README.md)) |
 | `testdata/golden/` | `api.Server` replies every bridge App must reproduce byte for byte (repository check, not published) |
 | `conformance/` | Runs the vectors against the executor over a Unix socket (repository check, not published) |
-| `scripts/` | `gate.sh` (local gate), `executor-digests.sh` (digest table for the CLI) |
+| `scripts/` | `gate.sh` (local gate), `executor-digests.sh` (reproducible SDK payload inventory) |
 
 An app depends on the SDK through `backend/go.mod`:
 
 ```
-require github.com/synopackageland/syno-pkg-land-sdk v0.27.0
+require github.com/synopackageland/syno-pkg-land-sdk v0.27.1
 ```
 
 A Rust App depends on `syno-pkg-land-app` (`rust/app/`) and runs behind the
 Go runtime:
 
 ```
-syno-pkg-land-app = { git = "https://github.com/synopackageland/syno-pkg-land-sdk", tag = "v0.27.0" }
+syno-pkg-land-app = { git = "https://github.com/synopackageland/syno-pkg-land-sdk", tag = "v0.27.1" }
 ```
 
 The `go.mod` line is the only source of the SDK version. The CLI builds the executor
-from `github.com/synopackageland/syno-pkg-land-sdk/executor` at the same version.
+from `github.com/synopackageland/syno-pkg-land-sdk/executor` at the immutable
+release declared by the SDK executor manifest. SDK 0.27.1 reuses executor/v0.27.0
+and its six verified payload digests. The manifest ships in both the Go module
+and npm package; compatible SDK minor releases do not require a CLI release.
 
 Apps build their API server with
 `api.NewServerWithPermissions(auth, permissionsJSON, routes...)`; it refuses
