@@ -12,7 +12,7 @@ import (
 
 func fastRunner(s *Store, work Work) *Runner {
 	return &Runner{Store: s, Work: work, Timeout: 2 * time.Second, Poll: 5 * time.Millisecond, CancelPoll: 5 * time.Millisecond,
-		Beat: 10 * time.Millisecond, Info: WorkerInfo{PID: 7, UID: 1000, Username: "pkg"}}
+		Beat: 10 * time.Millisecond, Info: WorkerInfo{PID: os.Getpid(), UID: os.Getuid(), Username: "pkg"}}
 }
 
 func start(t *testing.T, r *Runner) (stop func() error) {
@@ -74,8 +74,8 @@ func TestRunnerProcessesQueuedJobEndToEnd(t *testing.T) {
 		t.Fatalf("%+v", done)
 	}
 	st, _ := s.Status(context.Background())
-	if st.Worker == nil || st.Worker.UID != 1000 {
-		t.Fatalf("the worker must publish its identity: %+v", st.Worker)
+	if st.Worker != nil {
+		t.Fatalf("a stopped worker must invalidate its observation: %+v", st.Worker)
 	}
 }
 
