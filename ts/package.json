@@ -30,15 +30,17 @@
       "types": "./dist/src/native.d.ts",
       "import": "./dist/native.js"
     },
-    "./i18n/*": "./dist/i18n/*"
+    "./i18n/*": "./dist/i18n/*",
+    "./executor-manifest.json": "./executor-manifest.json"
   },
   "files": [
     "dist",
-    "spec/protocol"
+    "spec/protocol",
+    "executor-manifest.json"
   ],
   "scripts": {
     "prepack": "test -d node_modules || { echo '@synopackageland/sdk: run npm ci before npm pack' >&2; exit 1; }; npm run build",
-    "build": "vite build && vue-tsc -p tsconfig.build.json && cp -R i18n dist/ && rm -rf spec && cp -R ../spec spec",
+    "build": "node ../scripts/executor-manifest.mjs --check && vite build && vue-tsc -p tsconfig.build.json && cp -R i18n dist/ && rm -rf spec && cp -R ../spec spec",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest run"
   },

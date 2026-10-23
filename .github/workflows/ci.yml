@@ -39,8 +39,9 @@ jobs:
         run: python3 -B -m unittest discover -s ops/private-ci -v
       - name: SDK policy and version checks
         run: |
-          node --test scripts/check-internal-content.test.mjs scripts/sdk-version.test.mjs
+          node --test scripts/check-internal-content.test.mjs scripts/sdk-version.test.mjs scripts/executor-manifest.test.mjs
           node scripts/sdk-version.mjs --check
+          node scripts/executor-manifest.mjs --check
       - name: Fast SDK gate
         run: bash ops/private-ci/sdk-fast.sh
       - name: Private cache measurement

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Carry a generated executor manifest in the Go module and frontend npm package. Release checks compare both copies with reproducible executor/lifecycle build pins; compatible SDK minors no longer need a CLI release.
+
 ## 0.27.0 (2026-10-23)
 
 - Keep background worker liveness in package-private tmpfs with process identity and freshness checks; stop clears the observation and idle polling leaves durable jobs untouched.
