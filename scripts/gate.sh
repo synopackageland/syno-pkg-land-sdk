@@ -7,8 +7,9 @@
 # for development; a release runs the full gate.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
-node --test "$root/scripts/check-internal-content.test.mjs" "$root/scripts/sdk-version.test.mjs"
+node --test "$root/scripts/check-internal-content.test.mjs" "$root/scripts/sdk-version.test.mjs" "$root/scripts/executor-manifest.test.mjs"
 node "$root/scripts/sdk-version.mjs" --check
+node "$root/scripts/executor-manifest.mjs" --check
 node "$root/scripts/check-internal-content.mjs" --repo "$root"
 "$root/scripts/scripts.test.sh"
 
@@ -140,5 +141,6 @@ if test -n "$full"; then
 		echo "executor builds are not reproducible" >&2
 		exit 1
 	fi
+	printf '%s' "$first" | node "$root/scripts/executor-manifest.mjs" --check --verify-build
 fi
 echo "$first"
