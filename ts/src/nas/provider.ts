@@ -1,5 +1,6 @@
 import {appDenial} from '../authorization/refusal'
 import {createFileTransfers} from '../files/transfers'
+import {createDsmFileStation} from '../dsm/filestation'
 import {clientTimeout,type Context} from '../context'
 import type {NasEntry,NasPage,NasProvider} from './contract'
 
@@ -26,7 +27,8 @@ function page(value:unknown,offset:number,limit:number):NasPage{
 export function createNasProvider(ctx:Pick<Context,'call'|'files'|'requestTimeout'>):NasProvider{
  let disposed=false
  const life=new AbortController()
- const transfers=ctx.files?createFileTransfers(ctx.files):undefined
+ const transfers=createFileTransfers(ctx.files)
+ const dsm=createDsmFileStation({token:ctx.files?.token,timeout:clientTimeout(ctx.requestTimeout)})
  async function request(method:string,params:Record<string,unknown>,signal:AbortSignal,mutation=false):Promise<unknown>{
   if(disposed||signal.aborted)refuse('canceled')
   let cleanup=()=>{}
@@ -36,7 +38,23 @@ export function createNasProvider(ctx:Pick<Context,'call'|'files'|'requestTimeou
    signal.addEventListener('abort',abort,{once:true});life.signal.addEventListener('abort',abort,{once:true})
    cleanup=()=>{clearTimeout(timer);signal.removeEventListener('abort',abort);life.signal.removeEventListener('abort',abort)}
   })
-  try{return await Promise.race([ctx.call(method,params),stop])}
+  const controller=new AbortController()
+  const cancel=()=>controller.abort()
+  signal.addEventListener('abort',cancel,{once:true});life.signal.addEventListener('abort',cancel,{once:true})
+  async function direct(){
+   // The App's authenticated entry gate is still authoritative. This status
+   // only checks admission and advertises the browser transport, with no relay.
+   await ctx.call('nas.session.status',{}, {signal:controller.signal})
+   if(controller.signal.aborted)refuse('canceled')
+   switch(method){
+    case 'nas.files.shares':return dsm.shares(params.offset as number,controller.signal)
+    case 'nas.files.list':return dsm.list(params.path as string,params,controller.signal)
+    case 'nas.files.info':return dsm.info(params.path as string,controller.signal)
+    case 'nas.files.create_folder':return dsm.createFolder(params.parent as string,params.name as string,controller.signal)
+   }
+   refuse('unsupported')
+  }
+  try{return await Promise.race([direct(),stop])}
   catch(e){
    const code=(e as {code?:unknown})?.code
    if(appDenial(e))refuse(appDenial(e))
@@ -46,10 +64,21 @@ export function createNasProvider(ctx:Pick<Context,'call'|'files'|'requestTimeou
    if(code==='request_timeout'||code==='request_canceled')refuse(mutation?'commit-uncertain':code==='request_timeout'?'timeout':'canceled')
    const allowed=['session_required','dsm_session_required','auth_unavailable','denied','not_found','conflict','invalid-request','unavailable','unknown_method','unsupported','commit-uncertain','canceled','timeout']
    refuse(typeof code==='string'&&allowed.includes(code)?code:mutation?'commit-uncertain':'unavailable')
-  }finally{cleanup()}
+  }finally{cleanup();controller.abort();signal.removeEventListener('abort',cancel);life.signal.removeEventListener('abort',cancel)}
  }
  return {
-  ...(transfers?{upload:transfers.upload,download:transfers.download}:{}),
+  async upload(parent,file,signal){
+   if(disposed||signal.aborted)refuse('canceled')
+   await ctx.call('nas.session.status',{}, {signal})
+   if(disposed||signal.aborted)refuse('canceled')
+   await transfers.upload(parent,file,signal)
+  },
+  async download(path){
+   if(disposed)refuse('canceled')
+   await ctx.call('nas.session.status')
+   if(disposed)refuse('canceled')
+   await transfers.download(path)
+  },
   async shares(offset,signal){return page(await request('nas.files.shares',{offset},signal),offset,100)},
   async list(path,options,signal){const offset=options.offset??0,limit=options.limit??100;return page(await request('nas.files.list',{path,...options,offset,limit},signal),offset,limit)},
   async info(path,signal){return entry(await request('nas.files.info',{path},signal))},

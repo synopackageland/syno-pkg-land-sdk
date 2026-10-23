@@ -262,7 +262,7 @@ func (cfg Config) delegate(d *DelegateCapability, store *background.Store) *dele
 	if d != nil {
 		s.ExecutorDigest, s.PolicyDigest, s.Scope, s.Destinations = d.ExecutorDigest, d.PolicyDigest, d.Scope, d.Destinations
 		s.Operations, s.Lifetime = []string{"files.moveFromStaging"}, "until-revoked"
-		s.InstallDraftPath, s.SessionFiles = filepath.Join(cfg.DataDir, "delegate-install.json"), filestation.Local(cfg.DataDir)
+		s.InstallDraftPath = filepath.Join(cfg.DataDir, "delegate-install.json")
 	}
 	return s
 }

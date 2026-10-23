@@ -19,7 +19,7 @@ let life=new AbortController()
 async function download(){
  const selected=chosen.value
  if(!selected||selected.isDir||!props.provider.download)return
- await request.run(async signal=>{await props.provider.info(selected.path,signal);props.provider.download!(selected.path);return true})
+ await request.run(async signal=>{await props.provider.info(selected.path,signal);await props.provider.download!(selected.path);return true})
 }
 async function upload(){
  const parent=trail.value.at(-1)?.path,file=uploads.value[0]

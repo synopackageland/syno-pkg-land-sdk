@@ -487,3 +487,13 @@ It MUST NOT raise frame limits. Staging MUST be App-owned 0600 under a private
 0700 package directory. The App MUST verify size/hash and unlink after reading.
 Header, execution, spool cleanup and error rules are specified in
 [the raw contract](../../../docs/webapi-raw.md).
+
+### Destination permission observations
+
+`files.checkPermission` also supports an existing until-revoked
+`files.moveFromStaging` destination: omit `job_id`, provide the exact granted
+path and the current owner's session. The approved move policy permits only
+this observation; it cannot widen the destination or grant new authority.
+The executor rechecks current identity, App Privileges, scope, ACL and grant
+fences. Legacy time-limited grants continue to require their `job_id` and
+explicit operation policy. See `docs/dsm-session-transport.md` at the root.

@@ -15,6 +15,7 @@ import (
 
 	"github.com/synopackageland/syno-pkg-land-sdk/api"
 	"github.com/synopackageland/syno-pkg-land-sdk/background"
+	"github.com/synopackageland/syno-pkg-land-sdk/filestation"
 	"github.com/synopackageland/syno-pkg-land-sdk/portal"
 )
 
@@ -87,7 +88,7 @@ func (goldenExecutor) Call(_ context.Context, op string, auth map[string]string,
 func bridgeServer(t *testing.T, d Dialer, auth string) http.Handler {
 	t.Helper()
 	data := t.TempDir()
-	sv := services{dataDir: data, portal: func() portal.Status { return portal.Status{State: "enabled", Alias: "hello"} },
+	sv := services{dataDir: data, files: filestation.Local(data), portal: func() portal.Status { return portal.Status{State: "enabled", Alias: "hello"} },
 		jobs: background.NewRequestStore(filepath.Join(data, "background")), executor: goldenExecutor{},
 		lookupUID: func(string) string { return "1001" }}
 	session := &Session{Dial: d, Methods: goldenMethods, Services: sv.table(), Spool: filepath.Join(data, SpoolDir),
@@ -114,6 +115,12 @@ func svcCase(name, method, op, params, want string) bridgeCase {
 }
 
 var bridgeCases = []bridgeCase{
+	svcCase("files.list never relays a browser session", "demo.svc", "files.list", `,"params":{"path":"/home"}`,
+		`{"error":{"code":"unsupported","message":"File Station operation refused"}}`),
+	svcCase("files.info never relays a browser session", "demo.svc", "files.info", `,"params":{"path":"/home/a"}`,
+		`{"error":{"code":"unsupported","message":"File Station operation refused"}}`),
+	svcCase("files.read never relays a browser session", "demo.svc", "files.read", `,"params":{"path":"/home/a"}`,
+		`{"error":{"code":"unsupported","message":"File Station operation refused"}}`),
 	{name: "download app refusal", auth: "alice", method: "GET", target: "?method=demo.fail", status: 500,
 		replyBody: `{"error":{"code":"conflict","message":"a \u003cb\u003e \u0026 c"},"success":false}` + "\n"},
 	{name: "download no session", auth: "no-session", method: "GET", target: "?method=demo.fetch", status: 401,

@@ -4,6 +4,7 @@ import {createApp,h,nextTick,ref} from 'vue'
 import {AppRoot} from '@synopackageland/ui'
 import FileBrowser from './FileBrowser.vue'
 import NasPicker from '../nas/NasPicker.vue'
+import {nasContext} from '../../test/dsm-files-fixture'
 import {createNasProvider} from '../nas/provider'
 import {nasCopy} from '../nas/locale'
 
@@ -16,7 +17,7 @@ const folder=(path:string)=>({path,name:path.split('/').at(-1)!,isdir:true})
 const file=(path:string)=>({path,name:path.split('/').at(-1)!,isdir:false,additional:{size:2}})
 function mount(component:any,call:any,extra:Record<string,unknown>={}){
  const root=document.createElement('div');document.body.append(root)
- const app=createApp({render:()=>h(AppRoot,{},()=>h(component,{provider:createNasProvider({call}),locale:'en',...extra}))})
+ const app=createApp({render:()=>h(AppRoot,{},()=>h(component,{provider:createNasProvider(nasContext(call)),locale:'en',...extra}))})
  app.mount(root);cleanup.push(()=>{app.unmount();root.remove()});return root
 }
 function button(root:HTMLElement,label:string){const node=Array.from(root.querySelectorAll('button')).find(n=>n.textContent?.trim()===label||n.getAttribute('aria-label')===label);expect(node,label).toBeTruthy();return node!}
@@ -170,7 +171,7 @@ test('lazy tree follows full DSM page cursors even when a page contains only fil
 })
 test('reopening picker clears the old path and reloads current DSM visibility',async()=>{
  const call=fixture(),open=ref(true),selected=vi.fn(),root=document.createElement('div');document.body.append(root)
- const provider=createNasProvider({call:call as any})
+ const provider=createNasProvider(nasContext(call))
  const app=createApp({render:()=>h(AppRoot,{},()=>h(NasPicker,{provider,locale:'en',mode:'folder',open:open.value,onSelected:selected,'onUpdate:open':v=>{open.value=v}}))})
  app.mount(root);cleanup.push(()=>{app.unmount();root.remove()})
  await settle();click(row(root,'/homes'));await settle();button(root,nasCopy('en').confirm).click();await settle()
@@ -181,14 +182,14 @@ test('reopening picker clears the old path and reloads current DSM visibility',a
 })
 
 test('upload picker states the same 16 GB limit as the size error',async()=>{
- const call=fixture(),provider=createNasProvider({call:call as any})
+ const call=fixture(),provider=createNasProvider(nasContext(call))
  const root=mount(FileBrowser,call,{transfers:true,provider:{...provider,upload:vi.fn(),download:vi.fn(),info:vi.fn()}});await settle()
  dblclick(row(root,'/homes'));await settle()
  expect(nasCopy('en').errorUploadSize).toContain('16 GB')
  expect(root.textContent).toContain('max 16 GB')
 })
 test('file browser downloads selected files and streams uploads to the current folder',async()=>{
- const call=fixture(),provider=createNasProvider({call:call as any}),upload=vi.fn(async()=>{}),download=vi.fn(),info=vi.fn(async()=>({name:'a.txt',path:'/homes/a.txt',isDir:false}))
+ const call=fixture(),provider=createNasProvider(nasContext(call)),upload=vi.fn(async()=>{}),download=vi.fn(),info=vi.fn(async()=>({name:'a.txt',path:'/homes/a.txt',isDir:false}))
  const root=mount(FileBrowser,call,{transfers:true,provider:{...provider,upload,download,info}});await settle()
  dblclick(row(root,'/homes'));await settle();click(row(root,'/homes/a.txt'));await settle()
  button(root,nasCopy('en').download).click();await settle();expect(info).toHaveBeenCalledWith('/homes/a.txt',expect.any(AbortSignal));expect(download).toHaveBeenCalledWith('/homes/a.txt')

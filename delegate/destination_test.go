@@ -50,7 +50,7 @@ func destinationRequest() *http.Request {
 	r.Header.Set("X-SYNO-TOKEN", "fake-token")
 	return r
 }
-func TestSelectDestinationChecksSessionBeforeSavingManifestBoundGrant(t *testing.T) {
+func TestSelectDestinationLeavesWritePermissionToExecutor(t *testing.T) {
 	session := &fakeSession{}
 	s := service(t, nil)
 	s.SessionFiles = session
@@ -60,8 +60,8 @@ func TestSelectDestinationChecksSessionBeforeSavingManifestBoundGrant(t *testing
 	calls := 0
 	s.Client = fakeExecutor(func(_ context.Context, op string, auth map[string]string, in, out any) error {
 		calls++
-		if session.calls != 1 || session.user != "alice" || session.path != "/home" || op != "delegate.create" || auth["dsm_cookie"] != "fake-cookie" {
-			t.Fatal("grant saved before verifying caller write permission")
+		if session.calls != 0 || op != "delegate.create" || auth["dsm_cookie"] != "fake-cookie" {
+			t.Fatal("destination did not use executor authority")
 		}
 		data, _ := json.Marshal(in)
 		if strings.Contains(string(data), "username") || strings.Contains(string(data), "uid") || strings.Contains(string(data), "job_id") || strings.Contains(string(data), "ttl_seconds") {
@@ -74,7 +74,7 @@ func TestSelectDestinationChecksSessionBeforeSavingManifestBoundGrant(t *testing
 	if err != nil || grant.ID != "grant" || calls != 1 {
 		t.Fatal(grant, err, calls)
 	}
-	session.err = &api.Error{Code: "denied"}
+	s.Client = fakeExecutor(func(context.Context, string, map[string]string, any, any) error { return fail(CodePermissionDenied) })
 	_, err = s.SelectDestination(context.Background(), caller, destinationRequest(), SelectDestinationParams{Key: "save", Path: "/home"})
 	if code(t, err, CodePermissionDenied); calls != 1 {
 		t.Fatal("failed write check saved grant")

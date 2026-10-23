@@ -1,4 +1,6 @@
-// Package filestation implements interactive NAS operations using the current
-// DSM user's session. It never opens NAS data paths or retains credentials.
-// Every typed operation uses a request-scoped session; DSM alone decides access.
+// Package filestation retains typed file contracts and custom authorized adapters.
+// The former browser-session HTTP relay is retired: Client operations return
+// unsupported without I/O. Interactive file operations use the browser SDK's
+// same-origin DSM transport. Backend work needs an independent authorization
+// mechanism; never substitute a package or administrator account for a caller.
 package filestation

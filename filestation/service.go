@@ -27,8 +27,8 @@ type Service struct{ client DSMClient }
 
 func NewService(client DSMClient) *Service { return &Service{client: client} }
 
-// Local uses the startup-owned loopback address; dataDir is never used to
-// store sessions or infer NAS permissions.
+// Local retains routes for migration. Only nas.session.status is supported;
+// file operations require the browser transport or an authorized DSMClient.
 func Local(_ string) *Service {
 	c, e := NewClient("http://127.0.0.1:5000")
 	if e != nil {
@@ -113,10 +113,13 @@ func (s *Service) handle(ctx context.Context, c api.Caller, r *http.Request, met
 		if e := strict(p, &struct{}{}); e != nil {
 			return nil, e
 		}
-		if e := s.verify(ctx, c, r); e != nil {
+		if !c.Authenticated() {
+			return nil, fail("session_required")
+		}
+		if _, e := api.DSMSession(r); e != nil {
 			return nil, e
 		}
-		return map[string]string{"mode": "filestation-session"}, nil
+		return map[string]string{"mode": "browser-session"}, nil
 	case "nas.files.shares":
 		var in struct {
 			Offset int `json:"offset"`

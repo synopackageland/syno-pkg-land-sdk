@@ -591,3 +591,17 @@ Protocol v1 includes `WebapiCallParams` for `webapi.call` and profile grants in
 bound. Node App services use Context.runtime (node/README.md); browser Apps
 expose their own app routes and never connect to the executor socket directly.
 Go workers use `delegate.CreateWebAPIGrant` and `JobContext.WebAPI().Call`.
+
+## DSM file session migration
+
+`createNasProvider`, `FilesPage`, scope selection and file transfers now call
+DSM directly on the browser's origin. The App's `nas.session.status` still
+checks admission. `ctx.files.endpoint` is ignored; the reactive token callback
+is retained, with a same-origin DSM token bootstrap outside the desktop.
+For custom UIs, use the headless `createDsmFileStation` (shares, list, info,
+createFolder, checkPermission, upload) and `createFileTransfers`. Await
+`download()` for submission failures; it does not confirm transfer completion.
+Browser permission results never authorize backend writes or grants.
+
+See [DSM session transport and App migration](../docs/dsm-session-transport.md).
+Do not add root/executor access to browser-only Apps such as OpenList.

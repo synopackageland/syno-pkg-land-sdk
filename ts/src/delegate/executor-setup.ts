@@ -25,7 +25,7 @@ export interface ExecutorSetup {
  control(action:'start'|'stop'|'purge'):Promise<CapabilityStatus>
  // Results of calls made elsewhere (the DSM window panel) on the same access.
  subscribe?(listener:(status:CapabilityStatus)=>void):void
- // The App's call for the approval's own reads (delegate.status, bg.browse),
+ // The App's call for the approval's own reads (delegate.status; share metadata is read directly from DSM),
  // when its routes differ from the SDK's; ExecutorNotice's dialog uses it in
  // place of ctx.call, as the App's settings page passes it as ctx.
  call?<T=unknown>(method:string,params?:Record<string,unknown>):Promise<T>

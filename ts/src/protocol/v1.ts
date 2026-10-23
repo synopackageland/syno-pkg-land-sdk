@@ -171,10 +171,10 @@ export interface FilesCancelOperationParams {
  delegation_id: string
  job_id: string
 }
-/** files.checkPermission: Check write permission for the delegated user. Since 0.9.0. */
+/** files.checkPermission: Check write permission for the delegated user. A legacy grant requires job_id. An until-revoked moveFromStaging destination omits job_id, requires the current owner session, and permits only its exact destination path; it never creates or widens a grant. Since 0.9.0. */
 export interface FilesCheckPermissionParams {
  delegation_id: string
- job_id: string
+ job_id?: string
  path: string
 }
 /** files.copy: Start a File Station copy task. Since 0.9.0. */
@@ -355,7 +355,7 @@ export const protocolSchemas: {readonly [Op in ProtocolOp]: {readonly auth: 'req
  "delegate.list": {auth: "required", params: [], required: []},
  "delegate.revoke": {auth: "optional", params: ["delegation_id","job_id"], required: ["delegation_id"]},
  "files.cancelOperation": {auth: "optional", params: ["delegation_id","job_id"], required: ["delegation_id","job_id"]},
- "files.checkPermission": {auth: "optional", params: ["delegation_id","job_id","path"], required: ["delegation_id","job_id","path"]},
+ "files.checkPermission": {auth: "optional", params: ["delegation_id","job_id","path"], required: ["delegation_id","path"]},
  "files.copy": {auth: "optional", params: ["delegation_id","job_id","path","dest_dir","conflict"], required: ["delegation_id","job_id","path","dest_dir"]},
  "files.createFolder": {auth: "optional", params: ["delegation_id","job_id","path","name","parents"], required: ["delegation_id","job_id","path","name"]},
  "files.delete": {auth: "optional", params: ["delegation_id","job_id","path","recursive","permanent"], required: ["delegation_id","job_id","path"]},

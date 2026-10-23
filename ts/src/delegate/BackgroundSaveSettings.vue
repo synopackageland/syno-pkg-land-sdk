@@ -21,7 +21,7 @@ const props=defineProps<{sdk:BackgroundSaveFacade;admin:boolean;locale:string
  picker?:{provider:NasProvider;keys:string[]
  // A row's label when an App has several keys; a key itself is never shown.
  labels?:Record<string,string>}
- // The approval's reads (delegate.status, bg.browse); without it, the call of the setup the App provides.
+ // The approval's reads (delegate.status; share metadata is read directly from DSM); without it, the call of the setup the App provides.
  ctx?:Pick<Context,'call'|'displayName'>
  // Replaces the section title; an empty string drops it where the page header already names it.
  title?:string

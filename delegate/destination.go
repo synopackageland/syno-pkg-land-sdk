@@ -2,7 +2,6 @@ package delegate
 
 import (
 	"context"
-	"errors"
 	"github.com/synopackageland/syno-pkg-land-sdk/api"
 	"net/http"
 	"time"
@@ -41,16 +40,9 @@ func (s *Service) selectDestination(ctx context.Context, caller api.Caller, r *h
 	if !contains(s.Destinations, in.Key) || !validPath(in.Path) || in.Path == "/" {
 		return out, fail(CodeInvalidDestination)
 	}
-	if s.SessionFiles == nil {
-		return out, fail("session_required")
-	}
-	if err = s.SessionFiles.CheckPermission(ctx, caller, r, in.Path); err != nil {
-		var refused *api.Error
-		if errors.As(err, &refused) && refused.Code == "denied" {
-			return out, fail(CodePermissionDenied)
-		}
-		return out, err
-	}
+	// The executor's delegate.create revalidates this session, current subject,
+	// App Privileges, approved scope and write permission before persisting a
+	// grant. Do not replay the browser session through a File Station preflight.
 	err = s.Client.Call(ctx, "delegate.create", auth, map[string]any{
 		"ops": []string{"files.moveFromStaging"}, "scope": s.Scope, "path": in.Path,
 		"destination": in.Key, "lifetime": "until-revoked",

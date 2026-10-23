@@ -200,9 +200,15 @@ Every service:
 | | `bg.cancel` | `{"id"}` | the job; only the caller's own, else `not_found` |
 | `root: true` | `root.run`, `root.start`, `root.jobs.list`, `root.jobs.get`, `root.jobs.stop` | the executor operation's params (`../../protocol/v1`), any JSON object | the executor's result, unchanged |
 
-`files.*` use the caller's DSM session with File Station, so DSM's share
-permissions apply; `files.read` holds at most `max_upload_bytes` (16 GiB by
-default) and refuses a larger file with `limit_exceeded`.
+The default runtime's legacy `files.*` services now return `unsupported`
+without replaying the browser's DSM session. Interactive file operations
+run directly in the frontend using DSM's same-origin browser transport.
+Unused server-only read/import scaffolds remain unsupported; do not replace
+them with package-account filesystem access. This applies equally to Python,
+Node and Rust wrappers. See [migration](../../../docs/dsm-session-transport.md).
+An independently authorized custom file adapter still applies its spool
+limit (`max_upload_bytes`, 16 GiB by default) and refuses a larger read with
+`limit_exceeded`.
 
 `root.*` forward the operation to the package's executor with this request's
 DSM session as `auth`; the App's params cannot carry `auth`. The executor

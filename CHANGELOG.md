@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Retire backend HTTP replay of browser DSM sessions. NAS file pickers and transfers use typed same-origin browser WebAPI calls; native authentication retains the original client address.
+- Keep destination grants authorized by the existing executor and add owner-bound permission rechecks for an already granted destination. Browser-only Apps do not need an executor. Rebuilt protected executors remain subject to normal approval.
+- Migration required for custom file handlers and unused server-only file services. See [DSM session transport](docs/dsm-session-transport.md); this change does not claim NAS verification or publish a release.
+
 ## 0.26.0 (2026-10-22)
 
 - Check the package account's selected shared-folder access before Compose startup and show actionable permission guidance in the App dialog. Recheck access when retrying startup.
