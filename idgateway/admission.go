@@ -116,10 +116,22 @@ func entryHandler(cfg Config, preflight func() error) http.Handler {
 	return entryHandlerWithShares(cfg, preflight, nil, nil)
 }
 func entryHandlerWithShares(cfg Config, preflight func() error, shares func() error, auth api.Authenticator) http.Handler {
-	return entryHandlerWithExternal(cfg, preflight, shares, auth, NewExternalReader(cfg).Read)
+	return entryHandlerWithMenu(cfg, preflight, shares, auth, func() MenuSources { return LoadMenuSources(cfg) }, connectInstalled)
 }
 func entryHandlerWithExternal(cfg Config, preflight func() error, shares func() error, auth api.Authenticator, external func() External) http.Handler {
+	return entryHandlerWithMenu(cfg, preflight, shares, auth, func() MenuSources { return MenuSources{External: external()} }, func() bool { return false })
+}
+func entryHandlerWithMenu(cfg Config, preflight func() error, shares func() error, auth api.Authenticator, sources func() MenuSources, connect func() bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var loaded *MenuSources
+		menu := func() MenuSources {
+			if loaded == nil {
+				src := sources()
+				loaded = &src
+			}
+			return *loaded
+		}
+		external := func() External { return menu().External }
 		if r.Method != http.MethodGet || !validRequestAuthority(r) || validateLaunchPath(cfg.LaunchPath) != nil {
 			http.Error(w, "invalid entry", 400)
 			return
@@ -220,16 +232,23 @@ func entryHandlerWithExternal(cfg Config, preflight func() error, shares func() 
 			http.Redirect(w, r, requestOrigin(r)+cfg.AuthorizeCGI+"?"+q.Encode(), http.StatusFound)
 			return
 		}
-		// A single-origin App opens on its canonical external origin, the only
-		// URL where its upstream sign-in completes. Resume above keeps the host
-		// that started the transaction.
-		if canonical := external().Canonical(cfg.External); canonical != "" {
-			target = canonical + "/"
+		// The menu opens the App where the browser can reach it: a single-origin
+		// App's canonical origin, or the App's address on the provider the user
+		// reached DSM through. The host only selects among trusted addresses;
+		// LAN and unknown hosts keep the destination above. Resume above keeps
+		// the host that started the transaction.
+		decision := MenuDestination(cfg, menu(), r.Host, r.TLS != nil)
+		if decision.Kind == MenuRedirect {
+			target = decision.Origin + "/"
 		}
 		// A menu target comes only from package configuration. Resume always uses
 		// the issuer root above, independently of any App query or fragment.
 		if cfg.LaunchPath != "" {
 			target = strings.TrimSuffix(target, "/") + cfg.LaunchPath
+		}
+		if decision.Kind != MenuBaseline && cfg.NativeIngress {
+			writeMenuPage(w, r, cfg, decision, target, auth, connect())
+			return
 		}
 		if !cfg.NativeIngress {
 			locale, messages := denialMessages(r)
