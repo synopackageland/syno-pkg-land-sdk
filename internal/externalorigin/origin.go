@@ -13,7 +13,14 @@ var label = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$`)
 
 // Canonical accepts an HTTPS DNS origin, folding case and dropping :443.
 // Paths (including /), IP literals, credentials and non-default ports are refused.
-func Canonical(raw string) (string, error) {
+func Canonical(raw string) (string, error) { return canonical(raw, false) }
+
+// CanonicalWithPort is Canonical that also accepts an explicit port 1-65535,
+// as a private network address such as https://nas.example.ts.net:5001 uses.
+// :443 is still dropped, so both forms compare equal.
+func CanonicalWithPort(raw string) (string, error) { return canonical(raw, true) }
+
+func canonical(raw string, anyPort bool) (string, error) {
 	invalid := errors.New("invalid external origin: expected https://<DNS hostname>")
 	if len(raw) > 2048 || !strings.HasPrefix(raw, "https://") || strings.ContainsAny(strings.TrimPrefix(raw, "https://"), "/?#\\ \t\r\n") {
 		return "", invalid
@@ -31,11 +38,32 @@ func Canonical(raw string) (string, error) {
 			return "", invalid
 		}
 	}
-	if u.Port() != "" && u.Port() != "443" {
+	port := u.Port()
+	if port == "443" {
+		port = ""
+	}
+	if port != "" && (!anyPort || !validPort(port)) {
 		return "", invalid
 	}
-	if !strings.EqualFold(u.Host, host) && !strings.EqualFold(u.Host, host+":443") {
+	if !strings.EqualFold(u.Host, host) && (u.Port() == "" || !strings.EqualFold(u.Host, host+":"+u.Port())) {
 		return "", invalid
+	}
+	if port != "" {
+		return "https://" + host + ":" + port, nil
 	}
 	return "https://" + host, nil
+}
+
+func validPort(port string) bool {
+	if port == "" || len(port) > 5 || port[0] == '0' {
+		return false
+	}
+	n := 0
+	for _, c := range port {
+		if c < '0' || c > '9' {
+			return false
+		}
+		n = n*10 + int(c-'0')
+	}
+	return n <= 65535
 }

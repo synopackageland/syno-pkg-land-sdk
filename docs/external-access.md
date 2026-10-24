@@ -170,6 +170,62 @@ identity proof or authorization to publish an App. Responses carry
 can check from the DSM origin that an external App address answers before
 opening it.
 
+## DSM menu destination
+
+`MenuDestination(cfg, sources, host, https)` decides where the DSM menu opens an
+App, from the host the browser used to reach DSM. `LoadMenuSources(cfg)` reads
+its trusted inputs afresh with the same file checks as the projection. The host
+only selects among trusted pairs; it never supplies a destination, and
+forwarding headers are ignored. Rules, first match wins:
+
+1. A single-origin App with an external origin opens its primary origin from
+   any host.
+2. Apps without native ingress keep the DSM hostname and App port.
+3. The host, canonicalized as `https://<host>[:<port>]` with `:443` dropped, is
+   compared exactly with each DSM address in the trusted pairs:
+   - the App's own `dsm_origin` paired with its `manual_origin` (only when both
+     are set), first;
+   - each route of Connect's launch map below, or, when Connect writes no launch
+     map, the projection's `dsm.origin` paired with this App's public origin.
+
+   An `active` entry whose port equals the App listener opens that origin. A
+   `paused` entry, or one approved for another port, is reported as paused. A
+   matched DSM address without an entry for this App is reported as not enabled.
+   A single-origin App without an external origin reports a matched DSM
+   address as unusable, because its sign-in completes only on its local
+   addresses. Only HTTPS requests match.
+4. A QuickConnect relay host (`*.quickconnect.to`, `*.quickconnect.cn`, except
+   `*.direct.*`) is reported as unable to reach Apps.
+5. Any other host, including every LAN address, keeps the DSM hostname and App
+   port exactly as before.
+
+`external.connect: none` ignores Connect's projection and launch map.
+
+Connect writes the menu-only launch map
+`/var/packages/SynoPkgConnect/var/spl/launch.json` (alternate
+`target/spl/launch.json`) with mode 0644, beside the projection:
+
+```json
+{
+  "schema": 1,
+  "routes": [
+    {"provider": "cloudflare", "dsm": "https://dsm.example.com",
+     "apps": {"ExampleApp": {"origin": "https://app.example.com", "port": 18443, "state": "active"}}},
+    {"provider": "tailscale", "dsm": "https://nas.example.ts.net:5001",
+     "apps": {"ExampleApp": {"origin": "https://nas.example.ts.net:18443", "port": 18443, "state": "paused"}}}
+  ]
+}
+```
+
+`provider` is `cloudflare`, `tailscale` or `workers`; it selects page text only.
+`tailscale` addresses may carry a port; the others follow the public-origin
+rules. `state` is `active` or `paused`; waiting states are not recorded. At most
+8 routes and 4096 Apps per route; unknown fields, a future schema or unsafe
+files make the whole map absent. Unlike the projection, the launch map lists
+private network addresses: Tailscale HTTPS names are already published in
+Certificate Transparency logs, the map holds no pins, sockets or pause reasons,
+and only the menu launcher reads it. Sign-in still uses only the projection.
+
 ## Public-proxy requirements for App authors
 
 Public tunnels have limits beyond the gateway. Use private networking for video,
