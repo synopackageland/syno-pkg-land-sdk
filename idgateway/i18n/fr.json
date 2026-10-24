@@ -20,5 +20,7 @@
   "share_next_start": "Après avoir accordé l’accès, redémarrez cette App dans le Centre de paquets",
   "share_unavailable": "L’état du dossier est indisponible. Vérifiez le dossier sélectionné et redémarrez cette App dans le Centre de paquets",
   "starting_title": "Démarrage de l’App",
-  "starting": "L’App démarre ou est temporairement occupée. Cette page s’actualise automatiquement."
+  "starting": "L’App démarre ou est temporairement occupée. Cette page s’actualise automatiquement.",
+  "external_sign_in_unavailable": "Connexion indisponible",
+  "external_dsm_missing": "Ouvrez DSM depuis votre réseau local et configurez l’adresse DSM dans les paramètres d’accès externe de cette application"
 }

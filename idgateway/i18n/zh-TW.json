@@ -20,5 +20,7 @@
   "share_next_start": "授予權限後，請在套件中心重新啟動此 App",
   "share_unavailable": "無法讀取共用資料夾狀態，請檢查資料夾選擇並在套件中心重新啟動此 App",
   "starting_title": "App 啟動中",
-  "starting": "App 啟動中或暫時忙碌，此頁面會自動重新整理。"
+  "starting": "App 啟動中或暫時忙碌，此頁面會自動重新整理。",
+  "external_sign_in_unavailable": "無法登入",
+  "external_dsm_missing": "請從內網開啟 DSM，到此套件的外網設定頁設定 DSM 位址"
 }

@@ -20,5 +20,7 @@
   "share_next_start": "권한을 부여한 후 패키지 센터에서 이 App을 다시 시작하십시오",
   "share_unavailable": "공유 폴더 상태를 읽을 수 없습니다. 선택한 폴더를 확인하고 패키지 센터에서 이 App을 다시 시작하십시오",
   "starting_title": "App 시작 중",
-  "starting": "App이 시작 중이거나 일시적으로 사용량이 많습니다. 이 페이지는 자동으로 새로 고쳐집니다."
+  "starting": "App이 시작 중이거나 일시적으로 사용량이 많습니다. 이 페이지는 자동으로 새로 고쳐집니다.",
+  "external_sign_in_unavailable": "로그인할 수 없음",
+  "external_dsm_missing": "로컬 네트워크에서 DSM을 열고 이 앱의 외부 액세스 설정에서 DSM 주소를 설정하세요"
 }

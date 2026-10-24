@@ -20,5 +20,7 @@
   "share_next_start": "Dopo aver concesso l’accesso, riavviare questa App nel Centro pacchetti",
   "share_unavailable": "Lo stato della cartella non è disponibile. Verificare la cartella selezionata e riavviare questa App nel Centro pacchetti",
   "starting_title": "Avvio dell’App",
-  "starting": "L’App è in avvio o temporaneamente occupata. Questa pagina si aggiorna automaticamente."
+  "starting": "L’App è in avvio o temporaneamente occupata. Questa pagina si aggiorna automaticamente.",
+  "external_sign_in_unavailable": "Accesso non disponibile",
+  "external_dsm_missing": "Apri DSM dalla rete locale e configura l’indirizzo DSM nelle impostazioni di accesso esterno di questa app"
 }

@@ -90,7 +90,12 @@ func authorizeHandler(path string) (http.Handler, error) {
 	if cfg.Mode == idgateway.ModeOIDC && cfg.OIDC != nil && (cfg.OIDC.NativeLogin || cfg.OIDC.Browser != nil) {
 		loginApp = cfg.Package
 	}
-	return &idgateway.AuthorizeCGI{LoginApp: loginApp, Key: key, AppPorts: ports, Verifier: access, Accounts: idgateway.NewDirectory(), Now: time.Now}, nil
+	external := idgateway.NewExternalReader(cfg)
+	httpsPort := cfg.Listen.HTTPS
+	if cfg.NativeIngress && httpsPort == 0 {
+		httpsPort = cfg.Listen.HTTP
+	}
+	return &idgateway.AuthorizeCGI{External: external.Read, AppHTTPSPort: httpsPort, LoginApp: loginApp, Key: key, AppPorts: ports, Verifier: access, Accounts: idgateway.NewDirectory(), Now: time.Now}, nil
 }
 
 const usage = "usage: gateway run [--config <path>] [-- <app> <args>...] | gateway exec -- <app> <args>... | gateway account status|purge"

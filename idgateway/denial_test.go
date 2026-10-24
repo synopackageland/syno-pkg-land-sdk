@@ -266,7 +266,7 @@ func TestGatewayCatalogsCoverSDKLocales(t *testing.T) {
 		if err = json.Unmarshal(raw, &messages); err != nil {
 			t.Fatal(err)
 		}
-		for _, key := range []string{"title", "admin_required", "group_required", "app_privilege_denied", "sign_in_required", "verification_failed", "sign_in", "retry", "direct_title", "direct_notice", "direct_continue"} {
+		for _, key := range []string{"title", "admin_required", "group_required", "app_privilege_denied", "sign_in_required", "verification_failed", "sign_in", "retry", "direct_title", "direct_notice", "direct_continue", "external_sign_in_unavailable", "external_dsm_missing"} {
 			if strings.TrimSpace(messages[key]) == "" {
 				t.Errorf("%s: missing %s", file.Name(), key)
 			}

@@ -101,7 +101,8 @@ func nativeIngressHandler(cfg Config, next http.Handler) http.Handler {
 				port = "443"
 			}
 		}
-		public := external().Index(requestOrigin(r)) >= 0
+		snapshot := requestExternal(r, external)
+		public := snapshot.Index(requestOrigin(r)) >= 0
 		if err != nil || !validRequestAuthority(r) || !public && port != strconv.Itoa(nativePublicPort(cfg)) {
 			http.Error(w, "invalid ingress authority", http.StatusBadRequest)
 			return
@@ -111,7 +112,7 @@ func nativeIngressHandler(cfg Config, next http.Handler) http.Handler {
 			http.Error(w, "invalid ingress client address", http.StatusBadRequest)
 			return
 		}
-		request := r.Clone(r.Context())
+		request := withExternal(r.Clone(r.Context()), snapshot)
 		request.RemoteAddr = net.JoinHostPort(values[0], "0")
 		request.Header.Del(nativeClientIPHeader)
 		next.ServeHTTP(w, request)
