@@ -276,6 +276,10 @@ func NewFront(cfg FrontConfig) (*Front, error) {
 }
 
 func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == PingPath {
+		servePackagePing(w, r, f.cfg.Package)
+		return
+	}
 	if !cleanPath(r.URL.Path) || f.optional != nil && !cleanOptionalPath(r) {
 		http.Error(w, "invalid path", http.StatusBadRequest)
 		return

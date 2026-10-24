@@ -85,6 +85,10 @@ func nativeIngressHandler(cfg Config, next http.Handler) http.Handler {
 			http.Error(w, "authenticated DSM ingress required", http.StatusForbidden)
 			return
 		}
+		if r.URL.Path == PingPath {
+			servePackagePing(w, r, cfg.Package)
+			return
+		}
 		authority, err := url.Parse(requestOrigin(r))
 		port := ""
 		if err == nil {
