@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/synopackageland/syno-pkg-land-sdk/compose"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/containerpreflight"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/sharepreflight"
 )
@@ -17,7 +18,17 @@ func preflight() error {
 		return err
 	}
 	project := filepath.Dir(executable)
-	return preflightShares(project, os.Getenv("SYNOPKG_PKGINST_TEMP_DIR"), os.Getenv("SYNOPKG_PKGVAR"))
+	return preflightProject(project, os.Getenv("SYNOPKG_PKGINST_TEMP_DIR"), os.Getenv("SYNOPKG_PKGVAR"))
+}
+
+func preflightProject(project, incoming, dataDir string) error {
+	if err := preflightShares(project, incoming, dataDir); err != nil {
+		return err
+	}
+	if incoming != "" && sameDirectory(project, filepath.Join(incoming, "compose")) {
+		return nil
+	}
+	return compose.RefreshExternalOrigin(project, dataDir)
 }
 
 func preflightShares(project, incoming, dataDir string) error {

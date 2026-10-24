@@ -14,7 +14,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/synopackageland/syno-pkg-land-sdk/internal/externalorigin"
+	"github.com/synopackageland/syno-pkg-land-sdk/installsettings"
 )
 
 // SettingsCGI manages external origins on the DSM origin only. GET is an
@@ -95,14 +95,14 @@ func (h *SettingsCGI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		manual, dsm := r.PostForm.Get("manual_origin"), r.PostForm.Get("dsm_origin")
 		if manual != "" {
-			manual, err = externalorigin.Canonical(manual)
+			manual, err = installsettings.CanonicalExternalOrigin(manual)
 			if err != nil {
 				fail(400, "invalid")
 				return
 			}
 		}
 		if dsm != "" {
-			dsm, err = externalorigin.Canonical(dsm)
+			dsm, err = installsettings.CanonicalExternalOrigin(dsm)
 			if err != nil {
 				fail(400, "invalid")
 				return
@@ -172,13 +172,13 @@ func (h *SettingsCGI) save(r *http.Request, previous ExternalState, projection E
 	effective := EffectiveExternal(h.Config, next, projection)
 	dsmOrigin := effective.DSM
 	if dsmOrigin == "" {
-		dsmOrigin, _ = externalorigin.Canonical(requestOrigin(r))
+		dsmOrigin, _ = installsettings.CanonicalExternalOrigin(requestOrigin(r))
 	}
-	if manual != "" && manual == dsmOrigin {
+	if manual != "" && installsettings.ValidateExternalOrigin(manual, dsmOrigin) != nil {
 		return errExternalInput
 	}
 	if app, ok := projection.Apps[h.Config.Package]; ok && projection.Schema == 1 && (h.Config.External == nil || h.Config.External.Connect != "none") && app.Port == h.Config.Listen.HTTPS {
-		connect, _ := externalorigin.Canonical(app.Public.Origin)
+		connect, _ := installsettings.CanonicalExternalOrigin(app.Public.Origin)
 		if connect != "" && connect == dsmOrigin {
 			return errExternalInput
 		}

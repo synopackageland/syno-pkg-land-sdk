@@ -67,6 +67,7 @@ environment key unset, including removal of an inherited image value. An
 origin is not a required installation setting. The empty file keeps the bind
 source valid without Docker creating a directory in its place.
 
-The snapshot is refreshed when the App is prepared for startup. Restart the
+The snapshot is refreshed in the installed host preflight before the worker
+starts containers, as well as during installation preparation. Restart the
 App after changing its address to update its container environment. Gateway
 origin acceptance uses the shared live reader separately.

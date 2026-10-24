@@ -173,6 +173,56 @@ func TestSettingsConcurrentSavesDoNotLoseRevisions(t *testing.T) {
 	}
 }
 
+func TestSettingsRefusesUnsafeFilesAndRevisionExhaustion(t *testing.T) {
+	for _, kind := range []string{"state symlink", "lock symlink", "exhausted revision", "corrupt state"} {
+		t.Run(kind, func(t *testing.T) {
+			h := settingsFixture(t)
+			os.Mkdir(h.Config.StateDir, 0700)
+			outside := filepath.Join(t.TempDir(), "outside")
+			os.WriteFile(outside, []byte("unchanged"), 0600)
+			revision := uint64(0)
+			switch kind {
+			case "state symlink":
+				os.Symlink(outside, h.Config.ExternalStatePath())
+			case "lock symlink":
+				os.Symlink(outside, filepath.Join(h.Config.StateDir, "external.lock"))
+			case "exhausted revision":
+				revision = maxExternalRevision
+				raw, _ := json.Marshal(ExternalState{Schema: 1, Revision: revision})
+				os.WriteFile(h.Config.ExternalStatePath(), raw, 0600)
+			case "corrupt state":
+				os.WriteFile(h.Config.ExternalStatePath(), []byte("{"), 0600)
+			}
+			w := settingsPost(h, settingsSave(revision, "https://app.example.com", ""), "https://nas.example:5001", "id=s1", "en")
+			if w.Code < 400 {
+				t.Fatal("unsafe save accepted", kind, w.Code)
+			}
+			if b, _ := os.ReadFile(outside); string(b) != "unchanged" {
+				t.Fatal("external file changed")
+			}
+		})
+	}
+}
+
+func TestSettingsEscapesProtectedTextAndIgnoresForwardedHeaders(t *testing.T) {
+	h := settingsFixture(t)
+	h.Config.Passthrough = []string{`/<script>alert(1)</script>`}
+	r := httptest.NewRequest("POST", "https://nas.example:5001/settings.cgi", strings.NewReader("SynoToken=tok"))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.Header.Set("Origin", "https://nas.example:5001")
+	r.Header.Set("Cookie", "id=s1")
+	r.Header.Set("X-Forwarded-Host", "attacker.example.com")
+	r.RemoteAddr = "192.0.2.7:5555"
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != 200 || strings.Contains(w.Body.String(), "<script>") || strings.Contains(w.Body.String(), "attacker.example.com") || !strings.Contains(w.Body.String(), "&lt;script&gt;") {
+		t.Fatal(w.Code, w.Body)
+	}
+	if !strings.Contains(w.Header().Get("Content-Security-Policy"), "default-src 'none'") || !strings.Contains(w.Header().Get("Content-Security-Policy"), "form-action 'self'") {
+		t.Fatal(w.Header())
+	}
+}
+
 func TestSettingsLocaleCatalogsCompleteAndWithoutTrailingPeriods(t *testing.T) {
 	for _, locale := range denialLocales {
 		raw, _ := denialCatalogs.ReadFile("i18n/" + locale + ".json")

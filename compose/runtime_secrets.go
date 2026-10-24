@@ -197,6 +197,9 @@ func loadRuntimeEnvironmentAt(values map[string]RuntimeEnvironment, root string)
 // The empty snapshot is deliberate: Docker still needs a regular bind source,
 // but an App without a configured origin must start without this environment key.
 func prepareExternalOrigin(project, pkg, pkgvar string) error {
+	if !filepath.IsAbs(pkgvar) || strings.ContainsAny(pkgvar, "\r\n\x00") {
+		return problem("COMPOSE_RUNTIME_CONFIG_FAILED", "invalid external origin state directory")
+	}
 	cfg, err := idgateway.LoadConfig(filepath.Join(project, "../sso/gateway.json"))
 	if err != nil || cfg.Package != pkg {
 		return problem("COMPOSE_RUNTIME_CONFIG_FAILED", "external origin requires the package gateway configuration")
@@ -241,6 +244,52 @@ func prepareExternalOrigin(project, pkg, pkgvar string) error {
 	}
 	defer d.Close()
 	return d.Sync()
+}
+
+// RefreshExternalOrigin runs in the installed host preflight before the DSM
+// worker acquires containers. Preinst preparation alone cannot apply later edits.
+func RefreshExternalOrigin(project, pkgvar string) error {
+	if os.Getuid() == 0 || os.Getuid() != os.Geteuid() {
+		return problem("COMPOSE_ROOT_FORBIDDEN", "external origin preparation must run as the package account")
+	}
+	dir, err := os.Lstat(project)
+	if err != nil || !dir.IsDir() || dir.Mode()&os.ModeSymlink != 0 {
+		return problem("COMPOSE_SOURCE_UNSAFE", "project must be a package-owned directory")
+	}
+	if owner, ok := dir.Sys().(*syscall.Stat_t); !ok || owner.Uid != uint32(os.Geteuid()) {
+		return problem("COMPOSE_SOURCE_UNSAFE", "project must be a package-owned directory")
+	}
+	f, err := os.OpenFile(filepath.Join(project, "compose.lock.json"), os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	st, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	owner, ok := st.Sys().(*syscall.Stat_t)
+	if !st.Mode().IsRegular() || st.Size() > 4<<20 || !ok || owner.Uid != uint32(os.Geteuid()) || owner.Nlink != 1 {
+		return problem("COMPOSE_LOCK_INVALID", "invalid external origin inventory")
+	}
+	var lock struct {
+		Package  string      `json:"package"`
+		Services []Inventory `json:"services"`
+	}
+	decoder := json.NewDecoder(io.LimitReader(f, 4<<20))
+	if decoder.Decode(&lock) != nil || !packageName.MatchString(lock.Package) || decoder.Decode(new(any)) != io.EOF {
+		return problem("COMPOSE_LOCK_INVALID", "invalid external origin inventory")
+	}
+	for _, service := range lock.Services {
+		if service.StorageInit != nil && service.StorageInit.Runtime != nil {
+			for _, environment := range service.StorageInit.Runtime.Environment {
+				if environment.ExternalOrigin {
+					return prepareExternalOrigin(project, lock.Package, packageStateDirectory(lock.Package, pkgvar))
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func readExternalOriginSnapshot(file string) ([]byte, error) {
