@@ -20,12 +20,14 @@ var runtimeSecretName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
 
 func prepareRuntimeSecrets(project, pkg, pkgvar string, services []Inventory) error {
 	var entries []RuntimeEnvironment
-	external := false
+	external, fallback, err := externalOriginFallback(services)
+	if err != nil {
+		return err
+	}
 	for _, s := range services {
 		if s.StorageInit != nil && s.StorageInit.Runtime != nil {
 			for _, e := range s.StorageInit.Runtime.Environment {
 				if e.ExternalOrigin {
-					external = true
 					continue
 				}
 				if e.Setting != "" {
@@ -39,7 +41,7 @@ func prepareRuntimeSecrets(project, pkg, pkgvar string, services []Inventory) er
 		}
 	}
 	if external {
-		if err := prepareExternalOrigin(project, pkg, pkgvar); err != nil {
+		if err := prepareExternalOrigin(project, pkg, pkgvar, fallback); err != nil {
 			return err
 		}
 	}
@@ -196,7 +198,27 @@ func loadRuntimeEnvironmentAt(values map[string]RuntimeEnvironment, root string)
 
 // The empty snapshot is deliberate: Docker still needs a regular bind source,
 // but an App without a configured origin must start without this environment key.
-func prepareExternalOrigin(project, pkg, pkgvar string) error {
+// externalOriginFallback reports whether any key uses the shared external
+// origin snapshot and the one installation setting it falls back to.
+func externalOriginFallback(services []Inventory) (bool, string, error) {
+	external, fallback := false, ""
+	for _, s := range services {
+		if s.StorageInit != nil && s.StorageInit.Runtime != nil {
+			for _, e := range s.StorageInit.Runtime.Environment {
+				if !e.ExternalOrigin {
+					continue
+				}
+				if external && e.Setting != fallback {
+					return false, "", problem("COMPOSE_STORAGE_INIT_INVALID", "external origin keys must share one fallback setting")
+				}
+				external, fallback = true, e.Setting
+			}
+		}
+	}
+	return external, fallback, nil
+}
+
+func prepareExternalOrigin(project, pkg, pkgvar, fallback string) error {
 	if !filepath.IsAbs(pkgvar) || strings.ContainsAny(pkgvar, "\r\n\x00") {
 		return problem("COMPOSE_RUNTIME_CONFIG_FAILED", "invalid external origin state directory")
 	}
@@ -210,6 +232,13 @@ func prepareExternalOrigin(project, pkg, pkgvar string) error {
 	}
 	cfg.StateDir = filepath.Join(pkgvar, "sso")
 	value := idgateway.NewExternalReader(cfg).Read().Primary
+	if value == "" && fallback != "" {
+		b, err := readRuntimeSetting(filepath.Join(project, "../install/values", fallback+".value"))
+		if err != nil || installsettings.ValidateOrigin(string(b), 0) != nil {
+			return problem("COMPOSE_RUNTIME_CONFIG_FAILED", "external origin fallback setting unavailable")
+		}
+		value = string(b)
+	}
 	dir := filepath.Join(project, "settings")
 	if err := os.Mkdir(dir, 0700); err != nil && !os.IsExist(err) {
 		return err
@@ -280,16 +309,11 @@ func RefreshExternalOrigin(project, pkgvar string) error {
 	if decoder.Decode(&lock) != nil || !packageName.MatchString(lock.Package) || decoder.Decode(new(any)) != io.EOF {
 		return problem("COMPOSE_LOCK_INVALID", "invalid external origin inventory")
 	}
-	for _, service := range lock.Services {
-		if service.StorageInit != nil && service.StorageInit.Runtime != nil {
-			for _, environment := range service.StorageInit.Runtime.Environment {
-				if environment.ExternalOrigin {
-					return prepareExternalOrigin(project, lock.Package, packageStateDirectory(lock.Package, pkgvar))
-				}
-			}
-		}
+	external, fallback, err := externalOriginFallback(lock.Services)
+	if err != nil || !external {
+		return err
 	}
-	return nil
+	return prepareExternalOrigin(project, lock.Package, packageStateDirectory(lock.Package, pkgvar), fallback)
 }
 
 func readExternalOriginSnapshot(file string) ([]byte, error) {

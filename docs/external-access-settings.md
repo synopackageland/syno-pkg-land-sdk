@@ -51,8 +51,19 @@ storage_init:
         external_origin: true
 ```
 
-`external_origin` is mutually exclusive with `setting`, `secret` and
-`oidc_client`. It does not require an `install.settings` entry. The service
+`external_origin` is mutually exclusive with `secret` and `oidc_client`. It
+does not require an `install.settings` entry. Adding `setting` names an
+`install.settings` value used while no external origin is set, so an App
+that needs a URL keeps its installation-time URL until an external origin is
+configured:
+
+```yaml
+DOMAIN:
+  external_origin: true
+  setting: public_origin
+```
+
+All `external_origin` keys must name the same fallback setting, or none. The service
 still needs the normal nonroot storage initialization and explicit argv.
 
 At package preparation, the host uses the shared `EffectiveExternal` resolver:
@@ -62,7 +73,7 @@ The planner mounts only that file, read-only, at
 `/synopkgland/settings/external-origin.value`. Containers receive neither gateway
 state nor the Connect projection. Multiple environment keys share one mount.
 
-With no effective value, the snapshot is empty and the runtime leaves the
+With no effective value and no fallback setting, the snapshot is empty and the runtime leaves the
 environment key unset, including removal of an inherited image value. An
 origin is not a required installation setting. The empty file keeps the bind
 source valid without Docker creating a directory in its place.

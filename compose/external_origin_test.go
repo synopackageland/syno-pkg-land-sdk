@@ -9,13 +9,14 @@ import (
 	"testing"
 
 	"github.com/synopackageland/syno-pkg-land-sdk/idgateway"
+	"github.com/synopackageland/syno-pkg-land-sdk/installsettings"
 )
 
 func TestExternalOriginEnvironmentDeclaration(t *testing.T) {
-	for _, e := range []RuntimeEnvironment{{ExternalOrigin: true}, {ExternalOrigin: true, Secret: "session"}, {ExternalOrigin: true, Setting: "origin"}, {ExternalOrigin: true, OIDCClient: "reader"}} {
+	for _, e := range []RuntimeEnvironment{{ExternalOrigin: true}, {ExternalOrigin: true, Secret: "session"}, {ExternalOrigin: true, Setting: "origin"}, {ExternalOrigin: true, OIDCClient: "reader"}, {ExternalOrigin: true, Setting: "origin", Secret: "session"}, {ExternalOrigin: true, Setting: "../origin"}} {
 		i := StorageInitialization{Directories: []WritableDirectory{{Base: "/tmp", Path: "app"}}, Runtime: &RuntimeConfiguration{Environment: map[string]RuntimeEnvironment{"DOMAIN": e}}}
 		err := validateRuntime(i)
-		if (e.Secret == "" && e.Setting == "" && e.OIDCClient == "") != (err == nil) {
+		if (e.Secret == "" && e.OIDCClient == "" && e.Setting != "../origin") != (err == nil) {
 			t.Fatalf("%+v: %v", e, err)
 		}
 	}
@@ -149,5 +150,64 @@ func TestExternalOriginSnapshotRefusesUnsafeDirectoriesAndFiles(t *testing.T) {
 		if _, err := readExternalOriginSnapshot(file + ".link"); err == nil {
 			t.Fatal("symlink snapshot accepted")
 		}
+	}
+}
+
+func TestExternalOriginFallsBackToInstallSettingUntilAnOriginIsSet(t *testing.T) {
+	project, pkgvar, _, cfg := externalOriginFixture(t)
+	cfg.PublicOrigin = ""
+	b, _ := json.Marshal(cfg)
+	os.WriteFile(filepath.Join(project, "../sso/gateway.json"), b, 0600)
+	values := filepath.Join(project, "../install/values")
+	os.MkdirAll(values, 0700)
+	os.WriteFile(filepath.Join(values, "public_origin.value"), []byte("https://nas.example.com:18443"), 0600)
+	services := []Inventory{{StorageInit: &StorageInitialization{Runtime: &RuntimeConfiguration{Environment: map[string]RuntimeEnvironment{"DOMAIN": {ExternalOrigin: true, Setting: "public_origin"}}}}}}
+	snapshot := filepath.Join(project, "settings/external-origin.value")
+	if err := prepareRuntimeSecrets(project, "Fixture", pkgvar, services); err != nil {
+		t.Fatal(err)
+	}
+	if b, err := readExternalOriginSnapshot(snapshot); err != nil || string(b) != "https://nas.example.com:18443" {
+		t.Fatal(string(b), err)
+	}
+	state, _ := json.Marshal(idgateway.ExternalState{Schema: 1, Revision: 1, ManualOrigin: "https://vault.example.com"})
+	os.WriteFile(cfg.ExternalStatePath(), state, 0600)
+	if err := prepareRuntimeSecrets(project, "Fixture", pkgvar, services); err != nil {
+		t.Fatal(err)
+	}
+	if b, err := readExternalOriginSnapshot(snapshot); err != nil || string(b) != "https://vault.example.com" {
+		t.Fatal(string(b), err)
+	}
+	os.Remove(cfg.ExternalStatePath())
+	os.WriteFile(filepath.Join(values, "public_origin.value"), []byte("not an origin"), 0600)
+	if err := prepareRuntimeSecrets(project, "Fixture", pkgvar, services); err == nil {
+		t.Fatal("invalid fallback accepted")
+	}
+	mixed := []Inventory{{StorageInit: &StorageInitialization{Runtime: &RuntimeConfiguration{Environment: map[string]RuntimeEnvironment{"DOMAIN": {ExternalOrigin: true, Setting: "public_origin"}, "PUBLIC_URL": {ExternalOrigin: true}}}}}}
+	if err := prepareRuntimeSecrets(project, "Fixture", pkgvar, mixed); err == nil {
+		t.Fatal("conflicting fallbacks accepted")
+	}
+}
+
+func TestExternalOriginFallbackMountsOnlyTheSnapshot(t *testing.T) {
+	r := upstreamProject(t, "openlist")
+	r.Data = nil
+	os.WriteFile(filepath.Join(r.Root, "compose.yaml"), []byte("services:\n  openlist:\n    image: alpine\n    entrypoint: ['/app/server']\n    volumes: ['state:/tmp']\nvolumes:\n  state: {}\n"), 0600)
+	r.Services["openlist"] = ServicePolicy{StorageInit: &StorageInitialization{Directories: []WritableDirectory{{Base: "/tmp", Path: "app"}}, Runtime: &RuntimeConfiguration{Environment: map[string]RuntimeEnvironment{"DOMAIN": {ExternalOrigin: true, Setting: "public_origin"}}}}}
+	if _, err := Build(context.Background(), r); err == nil {
+		t.Fatal("fallback without install setting accepted")
+	}
+	r.InstallSettings = map[string]installsettings.Setting{"public_origin": {Type: "https-origin", Label: "Origin", Required: true}}
+	p, err := Build(context.Background(), r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sources []string
+	for _, m := range p.Effective.Services["openlist"].Volumes {
+		if strings.HasPrefix(m.Target, "/synopkgland/settings") || strings.HasPrefix(m.Source, "/var/packages/Fixture/target/install") {
+			sources = append(sources, m.Target+"="+m.Source)
+		}
+	}
+	if len(sources) != 1 || sources[0] != "/synopkgland/settings/external-origin.value=/var/packages/Fixture/target/compose/settings/external-origin.value" {
+		t.Fatal(sources)
 	}
 }
