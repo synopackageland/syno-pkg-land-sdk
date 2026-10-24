@@ -51,8 +51,8 @@ leave `browser` unset. `oidc.native_login: true` opts into #37's native DSM cold
 sign-in/resume independently of HTML/SPA script injection. The matching CLI
 retains bounded launch parameters; the SDK classless Compose entry also accepts
 only a typed JSON `launchParam` containing `ssoResume` (with the former query
-form accepted for compatibility). The value is a transaction and declared
-public port. DSM URL launchers may serialize a string as contiguous character indexes;
+form accepted for compatibility). The value is a transaction and declared public port, or an external-origin
+index with two persistent revisions (see [external access](external-access.md)). DSM URL launchers may serialize a string as contiguous character indexes;
 the entry normalizes exactly one bounded ASCII layer before reconstructing the fixed
 same-origin authorize CGI and gateway return path, never a caller-supplied URL.
 A second absent DSM session still fails visibly rather than redirecting again.
@@ -75,16 +75,19 @@ explicitly. Tab sessionStorage is required for automatic navigation; otherwise
 the native login remains available. Pending state expires after two minutes.
 
 With the corresponding CLI wrapper, `AuthorizeCGI.LoginApp` resumes a cold DSM
-login through a fixed App launch. The launch parameter carries only the bounded
-transaction ID and a declared gateway port. The generated window constructs the
+login through a fixed App launch. The launch parameter carries only the bounded transaction ID and a declared
+gateway port, or a revision-bound external-origin index. The generated window constructs the
 same-origin authorize CGI URL; caller-provided URLs are never navigated. A second
 missing-session response fails visibly instead of repeating the login redirect.
 Gateway transactions expire in five minutes and remain browser/origin-bound.
 
 A classless url launcher resumes the same way without a window class: DSM
 forwards the launch parameter to `sso/open.cgi`, which accepts only one
-`ssoResume=<transaction>:<declared port>` value and redirects to the
-same-origin authorize CGI. This applies when `oidc.native_login` is set or an
+`ssoResume=<transaction>:<declared port>` or
+`ssoResume=<transaction>:x<n>:<r1>.<r2>` value and redirects to the
+same-origin authorize CGI. External tokens are passed unchanged and checked
+against the current accepted origins and both durable revisions; stale tokens
+fall back to local sign-in. This applies when `oidc.native_login` is set or an
 `oidc.browser` bridge is configured; any other resume request is refused.
 
 ## Fixed menu destination
@@ -105,3 +108,9 @@ patch upstream UI, create an App session or unlock encrypted data. App-specific
 query/fragment behavior and any App open-redirect parameters remain the App's
 contract and must be tested. Ingress without native TLS still shows the existing
 direct-access notice with the fixed destination as its continue link.
+
+## Public origins
+
+See [external access](external-access.md) for SDK 0.29.0 policy, file contracts,
+public sign-in continuation and the heartbeat, streaming, upload and WebSocket
+requirements for App authors.
