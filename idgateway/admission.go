@@ -132,8 +132,15 @@ func entryHandlerWithMenu(cfg Config, preflight func() error, shares func() erro
 			return *loaded
 		}
 		external := func() External { return menu().External }
-		if r.Method != http.MethodGet || !validRequestAuthority(r) || validateLaunchPath(cfg.LaunchPath) != nil {
+		post := r.Method == http.MethodPost
+		if r.Method != http.MethodGet && !post || !validRequestAuthority(r) || validateLaunchPath(cfg.LaunchPath) != nil {
 			http.Error(w, "invalid entry", 400)
+			return
+		}
+		if post && (!cfg.NativeIngress || !prepareMenuPost(w, r)) {
+			if !cfg.NativeIngress {
+				http.Error(w, "invalid entry", 400)
+			}
 			return
 		}
 		if cfg.ContainerApp {
@@ -238,6 +245,10 @@ func entryHandlerWithMenu(cfg Config, preflight func() error, shares func() erro
 		// LAN and unknown hosts keep the destination above. Resume above keeps
 		// the host that started the transaction.
 		decision := MenuDestination(cfg, menu(), r.Host, r.TLS != nil)
+		if post && decision.Kind == MenuBaseline {
+			http.Error(w, "invalid entry", 400)
+			return
+		}
 		if decision.Kind == MenuRedirect {
 			target = decision.Origin + "/"
 		}
