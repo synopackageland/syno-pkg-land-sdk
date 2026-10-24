@@ -7,7 +7,7 @@ DSM or Container Manager permits that much time.
 
 | Work | Author setting | Behavior |
 | --- | --- | --- |
-| Compose start | `compose.startup_timeout_seconds` (120, 2–900) | One monotonic deadline includes lock, status, spawn, readiness, stability and handoff. The 900-second cap remains until native outer limits are verified. |
+| Compose start | `compose.startup_timeout_seconds` (900, 2–900) | One monotonic deadline includes lock, status, spawn, readiness, stability and handoff. The default lets a loaded HDD NAS with 2 GB RAM start an App; declare a shorter value only with device evidence. The 900-second cap remains until native outer limits are verified. |
 | Native lifecycle | `daemon.timeouts` | Start/stop/uninstall accept 2–3600 seconds; status accepts 1–3600. Defaults remain 30/30/60/5. A declaration containing only `timeouts` starts no daemon and works with Compose and background workers. |
 | Request/operation | `backend.timeout_seconds` (60, 1–3600) | Reaches supervisor health window, gateway token adapter and approved executor policy. Each nested operation is clipped to remaining caller time and leaves reply reserve. Binary/Compose Apps without a CGI request setting can enlarge the shared operation allowance through `daemon.timeouts.status` (at least the 60-second default). |
 | Bridge cold start | `backend.timeout_seconds` | Interpreter detection and hello share half the request allowance, leaving time for the call and cancellation. An explicit Go `Config.StartTimeout` overrides the boot share. |
@@ -15,10 +15,14 @@ DSM or Container Manager permits that much time.
 | CLI transport/wait | `ctl --timeout` (1–3600 seconds) | Applies to discovery, JSON calls, polling and transfer inactivity. Default transport allowance is 62 seconds. An operation shares its remaining allowance across calls; jobs retain their descriptor wait default when no override is supplied. |
 | Jobs | Existing background and root program limits | Execution bounds remain separate from requests; shutdown grace is clipped to the lifecycle stop allowance. |
 
-After startup, one failed or delayed availability probe closes new ingress and
-reports unknown without stopping the running App. Successful recovery reopens
-admission. Persistent availability failure exhausts the operation window and stops
-the supervised child. Policy, network ownership, installed version and lifecycle
+Each readiness probe may take up to 30 seconds (clipped to the operation budget),
+independently of the DSM status command budget. After startup, a failed or delayed
+availability probe closes new ingress without stopping the running App: the gateway
+shows a localized, self-refreshing "starting" page (HTTP 503, `Retry-After`) and
+API clients receive `app_starting`. DSM status keeps reporting the package as
+running. Successful recovery reopens admission. Availability failure that lasts
+longer than the startup budget (at least the operation budget) stops the supervised
+child and records the phase and duration in `daemon/daemon.log`. Policy, network ownership, installed version and lifecycle
 generation failures remain immediately fatal. The window never extends on retries.
 Public and passthrough upstream routes use the same readiness gate.
 

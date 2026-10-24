@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/composeimages"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/startupbudget"
 )
 
@@ -81,4 +83,35 @@ func (w *healthWindow) observe(now time.Time, err error, budget time.Duration) b
 		w.failedAt = now
 	}
 	return !now.Before(w.failedAt.Add(budget))
+}
+
+// recoveryBudget is how long an admitted App may stay unavailable before the
+// supervisor stops its gateway: as long as it was allowed to start.
+func (c *controller) recoveryBudget() time.Duration {
+	return max(c.operationBudget(), time.Duration(c.Timeouts.Start)*time.Second)
+}
+
+func recoveryFailure(err error, budget time.Duration) error {
+	return fmt.Errorf("%s: App stayed unavailable for %ds after startup; its gateway was stopped", readinessPhase(err), int(budget.Seconds()))
+}
+
+// While an admitted App recovers, the package is running and its gateway shows
+// a starting page; only "ok" admits traffic.
+func statusLine(healthy bool) string {
+	if healthy {
+		return "ok\n"
+	}
+	return "starting\n"
+}
+
+func statusRunning(line string) bool { return line == "ok\n" || line == "starting\n" }
+
+// rememberImages records, once readiness passed, that Container Manager runs
+// every locked image. Registry checks use it to stay quiet on an offline NAS.
+// It is informational: a failed write never affects startup.
+func (c *controller) rememberImages() {
+	lock := filepath.Join(c.dest, "compose", "compose.lock.json")
+	if _, err := os.Lstat(lock); err == nil {
+		_ = composeimages.Remember(lock, c.dir, c.Package)
+	}
 }

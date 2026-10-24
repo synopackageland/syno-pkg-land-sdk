@@ -437,6 +437,7 @@ func Build(ctx context.Context, r Request) (*Plan, error) {
 		// The bootstrap adapter and the supervisor share one declared budget.
 		// Set this after upstream and manifest env so neither can desynchronize it.
 		setEnv(&s, StartupBudgetEnv, strconv.Itoa(startup))
+		applyHealthFloor(&s, startup)
 		for key, value := range s.Environment {
 			if value == nil {
 				return nil, problem("COMPOSE_ENV_INVALID", "%s environment %s is unset; declare its value in a local env file or service policy", name, key)

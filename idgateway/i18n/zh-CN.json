@@ -18,5 +18,7 @@
   "share_dismiss": "关闭",
   "share_ready": "权限已就绪，请在套件中心启动此 App",
   "share_next_start": "授予权限后，请在套件中心重新启动此 App",
-  "share_unavailable": "无法读取共享文件夹状态，请检查文件夹选择并在套件中心重新启动此 App"
+  "share_unavailable": "无法读取共享文件夹状态，请检查文件夹选择并在套件中心重新启动此 App",
+  "starting_title": "App 启动中",
+  "starting": "App 正在启动或暂时繁忙，此页面会自动刷新。"
 }

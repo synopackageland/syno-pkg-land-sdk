@@ -18,5 +18,7 @@
   "share_dismiss": "Schließen",
   "share_ready": "Der Zugriff ist bereit. Starten Sie diese App im Paket-Zentrum",
   "share_next_start": "Starten Sie diese App nach der Berechtigungsvergabe erneut im Paket-Zentrum",
-  "share_unavailable": "Der Ordnerstatus ist nicht verfügbar. Prüfen Sie die Ordnerauswahl und starten Sie diese App erneut im Paket-Zentrum"
+  "share_unavailable": "Der Ordnerstatus ist nicht verfügbar. Prüfen Sie die Ordnerauswahl und starten Sie diese App erneut im Paket-Zentrum",
+  "starting_title": "App wird gestartet",
+  "starting": "Die App wird gestartet oder ist vorübergehend ausgelastet. Diese Seite wird automatisch aktualisiert."
 }

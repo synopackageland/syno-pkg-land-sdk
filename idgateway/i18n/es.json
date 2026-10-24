@@ -18,5 +18,7 @@
   "share_dismiss": "Cerrar",
   "share_ready": "El acceso está listo. Inicie esta App en el Centro de paquetes",
   "share_next_start": "Tras conceder acceso, vuelva a iniciar esta App en el Centro de paquetes",
-  "share_unavailable": "El estado de la carpeta no está disponible. Compruebe la carpeta seleccionada y vuelva a iniciar esta App en el Centro de paquetes"
+  "share_unavailable": "El estado de la carpeta no está disponible. Compruebe la carpeta seleccionada y vuelva a iniciar esta App en el Centro de paquetes",
+  "starting_title": "Iniciando la App",
+  "starting": "La App se está iniciando o está ocupada temporalmente. Esta página se actualiza automáticamente."
 }

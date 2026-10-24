@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Let slow NAS devices start Apps. The default `compose.startup_timeout_seconds` is now 900 (was 120), and one readiness probe may take 30 seconds instead of the 5-second DSM status budget.
+- Do not stop an admitted App after one minute of failed health checks. The supervisor waits as long as the startup budget; meanwhile the gateway shows a localized, self-refreshing starting page (`app_starting` for API clients) and DSM status stays running. A failure after that budget names the phase and duration in `daemon/daemon.log`.
+- Raise stricter Compose healthcheck timing, including inherited image healthchecks, to a slow-NAS floor: timeout 30s, retries 3, start_period equal to the startup budget. Health commands and more tolerant values are kept.
+- Skip registry checks for images this package already ran, recorded after readiness in `pkgvar/daemon/compose-images.json`. Offline NAS devices no longer show `COMPOSE_IMAGE_UNREACHABLE` on Start or same-image upgrades.
+
 ## 0.27.1 (2026-10-23)
 
 - Reuse immutable executor/v0.27.0 and its six verified payload digests; the SDK/App patch changes release metadata and manifest distribution without replacing the protected executor.
