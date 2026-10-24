@@ -16,6 +16,7 @@ import (
 	"syscall"
 
 	"github.com/synopackageland/syno-pkg-land-sdk/installsettings"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/externalorigin"
 )
 
 // SettingsCGI manages external origins on the DSM origin only. GET is an
@@ -96,8 +97,8 @@ func (h *SettingsCGI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		manual, dsm := r.PostForm.Get("manual_origin"), r.PostForm.Get("dsm_origin")
 		if manual != "" {
-			manual, err = installsettings.CanonicalExternalOrigin(manual)
-			if err != nil {
+			var ok bool
+			if manual, ok = manualOrigin(h.Config, manual); !ok {
 				fail(400, "invalid")
 				return
 			}
@@ -175,7 +176,10 @@ func (h *SettingsCGI) save(r *http.Request, previous ExternalState, projection E
 	if dsmOrigin == "" {
 		dsmOrigin, _ = installsettings.CanonicalExternalOrigin(requestOrigin(r))
 	}
-	if manual != "" && installsettings.ValidateExternalOrigin(manual, dsmOrigin) != nil {
+	// The App address never shares the DSM origin, including the DSM address
+	// this page is served on with its port.
+	here, _ := externalorigin.CanonicalWithPort(requestOrigin(r))
+	if manual != "" && (manual == dsmOrigin || manual == here) {
 		return errExternalInput
 	}
 	if app, ok := projection.Apps[h.Config.Package]; ok && projection.Schema == 1 && (h.Config.External == nil || h.Config.External.Connect != "none") && app.Port == nativePublicPort(h.Config) {
@@ -216,7 +220,7 @@ func (h *SettingsCGI) save(r *http.Request, previous ExternalState, projection E
 	return dir.Sync()
 }
 
-var externalSettingsPage = template.Must(template.New("external").Parse(`<!doctype html><html lang="{{.Locale}}"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{index .M "external_title"}}</title><h1>{{index .M "external_title"}}</h1><p>{{.Summary}}</p>{{if .Passthrough}}<p>{{index .M "external_passthrough"}} {{.Passthrough}}</p>{{end}}{{if .Optional}}<p>{{index .M "external_optional"}} {{.Optional}}</p>{{end}}<p>{{index .M "external_warning"}}</p><dl><dt>{{index .M "external_lan"}}</dt><dd>{{.LAN}}</dd><dt>{{index .M "external_manual"}}</dt><dd>{{.Effective.Manual}}</dd><dt>{{index .M "external_connect"}}</dt><dd>{{.Effective.Connect}}</dd><dt>{{index .M "external_private"}}</dt><dd>{{index .M "external_private_hint"}}</dd><dt>{{index .M "external_dsm"}}</dt><dd>{{.Effective.DSM}}</dd></dl><form method="post" action="?"><input type="hidden" name="SynoToken" value="{{.Token}}"><input type="hidden" name="action" value="save"><input type="hidden" name="revision" value="{{.Revision}}"><p><label>{{index .M "external_manual"}} <input type="url" name="manual_origin" maxlength="2048" value="{{.State.ManualOrigin}}"></label></p><p><label>{{index .M "external_dsm"}} <input type="url" name="dsm_origin" maxlength="2048" value="{{.State.DSMOrigin}}"></label></p><p>{{index .M "external_format"}}</p>{{if .Confirm}}<p><label><input type="checkbox" name="confirm" value="yes" required>{{if .Single}}{{index .M "external_confirm_single"}}{{else}}{{index .M "external_confirm"}}{{end}}</label></p>{{end}}{{if .Single}}<p id="tailnet"{{if not .Tailnet}} hidden{{end}}>{{index .M "external_tailnet"}}</p><script nonce="{{.Nonce}}">var i=document.querySelector('input[name=manual_origin]'),p=document.getElementById('tailnet');i.addEventListener('input',function(){var h='';try{h=new URL(i.value).hostname}catch(e){}p.hidden=!/\.ts\.net\.?$/i.test(h)})</script>{{end}}{{if .Container}}<p>{{index .M "external_restart"}}</p>{{end}}<button type="submit">{{index .M "external_save"}}</button></form></html>`))
+var externalSettingsPage = template.Must(template.New("external").Parse(`<!doctype html><html lang="{{.Locale}}"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{index .M "external_title"}}</title><h1>{{index .M "external_title"}}</h1><p>{{.Summary}}</p>{{if .Passthrough}}<p>{{index .M "external_passthrough"}} {{.Passthrough}}</p>{{end}}{{if .Optional}}<p>{{index .M "external_optional"}} {{.Optional}}</p>{{end}}<p>{{index .M "external_warning"}}</p><dl><dt>{{index .M "external_lan"}}</dt><dd>{{.LAN}}</dd><dt>{{index .M "external_manual"}}</dt><dd>{{.Effective.Manual}}</dd><dt>{{index .M "external_connect"}}</dt><dd>{{.Effective.Connect}}</dd><dt>{{index .M "external_private"}}</dt><dd>{{index .M "external_private_hint"}}</dd><dt>{{index .M "external_dsm"}}</dt><dd>{{.Effective.DSM}}</dd></dl><form method="post" action="?"><input type="hidden" name="SynoToken" value="{{.Token}}"><input type="hidden" name="action" value="save"><input type="hidden" name="revision" value="{{.Revision}}"><p><label>{{index .M "external_manual"}} <input type="url" name="manual_origin" maxlength="2048" value="{{.State.ManualOrigin}}"></label></p><p><label>{{index .M "external_dsm"}} <input type="url" name="dsm_origin" maxlength="2048" value="{{.State.DSMOrigin}}"></label></p><p>{{if .Single}}{{index .M "external_format_single"}}{{else}}{{index .M "external_format"}}{{end}}</p>{{if .Confirm}}<p><label><input type="checkbox" name="confirm" value="yes" required>{{if .Single}}{{index .M "external_confirm_single"}}{{else}}{{index .M "external_confirm"}}{{end}}</label></p>{{end}}{{if .Single}}<p id="tailnet"{{if not .Tailnet}} hidden{{end}}>{{index .M "external_tailnet"}}</p><script nonce="{{.Nonce}}">var i=document.querySelector('input[name=manual_origin]'),p=document.getElementById('tailnet');i.addEventListener('input',function(){var h='';try{h=new URL(i.value).hostname}catch(e){}p.hidden=!/\.ts\.net\.?$/i.test(h)})</script>{{end}}{{if .Container}}<p>{{index .M "external_restart"}}</p>{{end}}<button type="submit">{{index .M "external_save"}}</button></form></html>`))
 
 func (h *SettingsCGI) page(w http.ResponseWriter, r *http.Request, locale string, m map[string]string, state ExternalState, projection ExternalProjection) {
 	summary := m["external_protected"]

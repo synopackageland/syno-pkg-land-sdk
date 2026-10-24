@@ -25,7 +25,11 @@ passthrough exceptions and the two-step verification recommendation.
 Only `manual_origin` and `dsm_origin` can be edited. An empty field clears the
 override. Enter literal HTTPS DNS origins without a path, query, fragment,
 credentials or a non-default port. `:443` and hostname case are normalized.
-An App public origin cannot equal the effective DSM origin.
+A [single-origin App](external-access.md#single-origin-apps) also accepts an
+explicit port in `manual_origin`, such as its tailnet address on the App port
+(`https://<name>.ts.net:<App port>`, the private URL NAS Remote Connect shows).
+The App origin cannot equal the effective DSM origin or the DSM address the
+page is open on, port included.
 
 Settings are stored at `<StateDir>/external.json`, owned by the package account
 with mode 0600. Each successful save, including an unchanged value or a clear,
@@ -83,7 +87,10 @@ belongs to the host that started authorization. Vaultwarden rejects the
 missing cookie with `SSO session binding mismatch`.
 
 Use the same canonical URL for internal and external SSO, with reachability
-from both networks arranged by the deployment. Declare
+from both networks arranged by the deployment. A tailnet address on the App
+port, `https://<name>.ts.net:<App port>`, works from every device on the
+tailnet, including LAN devices that join it; set the same value, port included,
+as `DOMAIN`, which accepts a port. Declare
 [`single_origin: true`](external-access.md#single-origin-apps) so the DSM
 launcher and other hosts lead browsers to that URL. A working `external_origin`
 snapshot and an acknowledged origin-change warning do not establish alternate

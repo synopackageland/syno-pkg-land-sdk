@@ -81,8 +81,10 @@ type External struct {
 	R1, R2  uint64
 }
 
+// Index accepts an explicit port, which only a SingleOrigin App's manual
+// origin can carry; any other ported origin matches nothing.
 func (e External) Index(origin string) int {
-	canonical, err := externalorigin.Canonical(origin)
+	canonical, err := externalorigin.CanonicalWithPort(origin)
 	if err != nil {
 		return -1
 	}
@@ -99,8 +101,27 @@ func optionalExternalOrigin(raw string) (string, bool) {
 	canonical, err := externalorigin.Canonical(raw)
 	return canonical, err == nil
 }
+
+// manualOrigin canonicalizes manual_origin. A SingleOrigin App may name an
+// explicit https port, such as its tailnet address on the App port
+// (https://<name>.ts.net:<port>); every other App, and every DSM origin, is
+// https://<DNS hostname> on 443.
+func manualOrigin(cfg Config, raw string) (string, bool) {
+	if cfg.External == nil || !cfg.External.SingleOrigin {
+		return optionalExternalOrigin(raw)
+	}
+	if raw == "" {
+		return "", true
+	}
+	canonical, err := externalorigin.CanonicalWithPort(raw)
+	return canonical, err == nil
+}
+
+// valid accepts a ported manual origin whatever the App declares, so a state
+// saved while the App was SingleOrigin stays readable and editable; only
+// EffectiveExternal decides whether the App may use it.
 func (s ExternalState) valid() bool {
-	_, a := optionalExternalOrigin(s.ManualOrigin)
+	_, a := manualOrigin(Config{External: &ExternalConfig{SingleOrigin: true}}, s.ManualOrigin)
 	_, b := optionalExternalOrigin(s.DSMOrigin)
 	return s.Schema == 1 && s.Revision <= maxExternalRevision && a && b
 }
@@ -131,7 +152,7 @@ func EffectiveExternal(cfg Config, state ExternalState, projection ExternalProje
 	}
 	if state.valid() {
 		out.R1 = state.Revision
-		out.Manual, _ = optionalExternalOrigin(state.ManualOrigin)
+		out.Manual, _ = manualOrigin(cfg, state.ManualOrigin)
 		out.DSM, _ = optionalExternalOrigin(state.DSMOrigin)
 	}
 	if (cfg.External == nil || cfg.External.Connect != "none") && projection.valid() {

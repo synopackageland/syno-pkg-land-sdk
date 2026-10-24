@@ -130,6 +130,12 @@ func TestMenuDestinationSingleOrigin(t *testing.T) {
 			t.Fatal(host, got)
 		}
 	}
+	// A tailnet address on the App port keeps its port.
+	src.State.ManualOrigin = "https://vault.example.ts.net:18443"
+	src.External = EffectiveExternal(cfg, src.State, src.Projection)
+	if got := MenuDestination(cfg, src, "192.0.2.10:5001", true); got.Origin != "https://vault.example.ts.net:18443" || got.Kind != MenuRedirect {
+		t.Fatal("ported", got)
+	}
 }
 
 func TestMenuDestinationWithoutNativeIngress(t *testing.T) {

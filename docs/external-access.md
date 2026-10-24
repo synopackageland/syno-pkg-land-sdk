@@ -49,22 +49,25 @@ App's only browser origin:
   another; with both a manual and a Connect origin, sign-in works only on the
   manual one. API, native-client, subresource, frame, WebSocket, `/_sso/` and
   `/_spl/ping` requests are not redirected.
-- The settings page states that only the saved public address can sign in
-  afterwards, and that a Tailscale `*.ts.net` address is reachable only from the
+- `manual_origin` may carry an explicit HTTPS port, such as the App's tailnet
+  address on its own port, `https://<name>.ts.net:<App port>`. The settings
+  page states that only the saved address can sign in afterwards, and that a Tailscale `*.ts.net` address is reachable only from the
   tailnet unless it is shared with Funnel.
 
 Reachability of the primary origin from each network remains a deployment
 responsibility: a private tailnet URL is unreachable from devices outside the
-tailnet.
+tailnet, LAN devices included. NAS Remote Connect never sets this address; its
+App URLs page explains the choice and links to the settings page.
 
 A public origin is `https://<DNS hostname>`: hostname case and an explicit `:443`
-are normalized. IP literals, other ports, credentials, paths (including `/`),
-query strings and fragments are refused. The App origin must differ from DSM's
+are normalized. IP literals, other ports (except a single-origin App's
+`manual_origin`), credentials, paths (including `/`), query strings and
+fragments are refused. The App origin must differ from DSM's
 complete origin. Private-network URLs with the App listener's port continue to
 use the existing local sign-in flow.
 
 An `external-origin` installation setting uses these public-origin rules,
-independently of the App's listener port. Existing `https-origin` settings retain
+port 443 only, independently of the App's listener port. Existing `https-origin` settings retain
 their explicit listener-port contract. `installsettings.CanonicalExternalOrigin`
 returns the canonical value; `ValidateExternalOrigin(value, dsmOrigin)` also
 checks separation from DSM. Installation values remain private package data.
@@ -126,8 +129,8 @@ gateway, settings and Compose:
 
 `NewExternalReader(cfg).Read()` polls stat at most every five seconds and
 reloads when file identity, mtime or security metadata changes. Requests on
-port 443, the only port an external origin may use, call `Fresh()`, which
-rechecks at once. A sign-in started right after a settings save therefore
+port 443, the port of every public origin, call `Fresh()`, which rechecks at
+once. A sign-in started right after a settings save therefore
 carries the saved revision. Missing,
 malformed, future-schema or unsafe files count as absent. Symlinked files,
 hardlinks, unexpected ownership, incorrect modes and writable parent directories

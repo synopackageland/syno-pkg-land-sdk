@@ -111,3 +111,15 @@ func TestSingleOriginConfigRoundTrip(t *testing.T) {
 		t.Fatal("canonical")
 	}
 }
+
+func TestSingleOriginTailnetAddressOnTheAppPort(t *testing.T) {
+	e := External{Accept: []string{"https://nas.tailnet-name.ts.net:18443"}, Primary: "https://nas.tailnet-name.ts.net:18443"}
+	b := singleOriginIngress(t, true, func() External { return e })
+	w := b.do("GET", "https://192.0.2.10:18443/admin?a=1", document...)
+	if w.Code != 302 || w.Header().Get("Location") != "https://nas.tailnet-name.ts.net:18443/admin?a=1" {
+		t.Fatal(w.Code, w.Header())
+	}
+	if w := b.do("GET", "https://nas.tailnet-name.ts.net:18443/", document...); w.Code == 302 && strings.HasPrefix(w.Header().Get("Location"), "https://nas.tailnet-name.ts.net") {
+		t.Fatal("canonical redirected to itself", w.Header())
+	}
+}

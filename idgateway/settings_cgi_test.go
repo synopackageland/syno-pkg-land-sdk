@@ -277,7 +277,7 @@ func TestSettingsSingleOriginConfirmationNamesTheOnlySignInAddress(t *testing.T)
 	body := w.Body.String()
 	_, nonce, _ := strings.Cut(w.Header().Get("Content-Security-Policy"), "'nonce-")
 	nonce, _, _ = strings.Cut(nonce, "'")
-	if w.Code != 200 || !strings.Contains(body, "only the public address above can be used to sign in") || strings.Contains(body, "may affect passkeys") ||
+	if w.Code != 200 || !strings.Contains(body, "only the address above can be used to sign in") || strings.Contains(body, "may affect passkeys") ||
 		!strings.Contains(body, `<p id="tailnet" hidden>`) || !strings.Contains(body, `nonce="`+nonce+`"`) {
 		t.Fatal(w.Code, w.Header(), body)
 	}
@@ -301,5 +301,43 @@ func TestTailnetOrigin(t *testing.T) {
 		if tailnetOrigin(origin) != want {
 			t.Fatal(origin)
 		}
+	}
+}
+
+func TestSettingsSingleOriginAcceptsAnExplicitPort(t *testing.T) {
+	h := settingsFixture(t)
+	h.Config.External = &ExternalConfig{OriginChange: "confirm", SingleOrigin: true}
+	v := settingsSave(0, "https://NAS.tailnet-name.ts.net:18443", "https://dsm.example.com")
+	v.Set("confirm", "yes")
+	w := settingsPost(h, v, "https://nas.example:5001", "id=s1", "en")
+	if w.Code != 200 || !strings.Contains(w.Body.String(), "a port is allowed") {
+		t.Fatal(w.Code, w.Body)
+	}
+	state, err := LoadExternalState(h.Config)
+	if err != nil || state.ManualOrigin != "https://nas.tailnet-name.ts.net:18443" {
+		t.Fatal(state, err)
+	}
+	e := EffectiveExternal(h.Config, state, ExternalProjection{})
+	if e.Primary != "https://nas.tailnet-name.ts.net:18443" || e.Canonical(h.Config.External) != e.Primary || e.Index("https://nas.tailnet-name.ts.net:18443") != 0 || e.Index("https://nas.tailnet-name.ts.net") != -1 {
+		t.Fatalf("%+v", e)
+	}
+	// Never the DSM address this page is served on, port included.
+	for _, manual := range []string{"https://nas.example:5001", "https://dsm.example.com:443", "https://nas.tailnet-name.ts.net:0", "https://nas.tailnet-name.ts.net:18443/"} {
+		v = settingsSave(1, manual, "https://dsm.example.com")
+		v.Set("confirm", "yes")
+		if w := settingsPost(h, v, "https://nas.example:5001", "id=s1", "en"); w.Code != 400 {
+			t.Fatal(manual, w.Code)
+		}
+	}
+	// Other Apps keep https://<DNS hostname> on 443, and ignore a ported
+	// address saved while the App was single-origin, without losing the rest.
+	h.Config.External = &ExternalConfig{OriginChange: "confirm"}
+	v = settingsSave(1, "https://nas.tailnet-name.ts.net:18443", "https://dsm.example.com")
+	v.Set("confirm", "yes")
+	if w := settingsPost(h, v, "https://nas.example:5001", "id=s1", "en"); w.Code != 400 || !strings.Contains(settingsPost(h, url.Values{"SynoToken": {"tok"}}, "https://nas.example:5001", "id=s1", "en").Body.String(), "with no path or port other than 443") {
+		t.Fatal(w.Code)
+	}
+	if e := EffectiveExternal(h.Config, state, ExternalProjection{}); e.Manual != "" || len(e.Accept) != 0 || e.DSM != "https://dsm.example.com" || e.R1 != state.Revision {
+		t.Fatalf("%+v", e)
 	}
 }
