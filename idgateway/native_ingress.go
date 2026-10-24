@@ -80,6 +80,10 @@ func nativeListener(cfg Config) (net.Listener, error) {
 }
 
 func nativeIngressHandler(cfg Config, next http.Handler) http.Handler {
+	external := NewExternalReader(cfg).Read
+	if front, ok := next.(*Front); ok && front.cfg.External != nil {
+		external = front.cfg.External
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.TLS == nil || len(r.TLS.VerifiedChains) == 0 {
 			http.Error(w, "authenticated DSM ingress required", http.StatusForbidden)
@@ -97,7 +101,8 @@ func nativeIngressHandler(cfg Config, next http.Handler) http.Handler {
 				port = "443"
 			}
 		}
-		if err != nil || port != strconv.Itoa(nativePublicPort(cfg)) || !validRequestAuthority(r) {
+		public := external().Index(requestOrigin(r)) >= 0
+		if err != nil || !validRequestAuthority(r) || !public && port != strconv.Itoa(nativePublicPort(cfg)) {
 			http.Error(w, "invalid ingress authority", http.StatusBadRequest)
 			return
 		}

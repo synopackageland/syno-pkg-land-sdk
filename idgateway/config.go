@@ -329,8 +329,10 @@ func Build(cfg Config, ports DSMPorts) (*Gateway, error) {
 		return nil, err
 	}
 	gw := &Gateway{Secrets: map[string]string{}, Deletions: cfg.Deletions()}
+	external := NewExternalReader(cfg)
 	front := FrontConfig{
-		Ready: cfg.Ready, ComposeIngress: cfg.ComposeIngress, Mode: cfg.Mode, Access: cfg.Access, UpstreamAccess: cfg.UpstreamAccess, Groups: cfg.Groups, Membership: NewDirectory(), ComposeBlocked: cfg.ComposeBlocked, MaxUploadBytes: cfg.MaxUploadBytes, ResponseHeaderTimeout: time.Duration(cfg.ResponseHeaderTimeoutSeconds) * time.Second, Upstream: cfg.Upstream, Key: key, AuthorizeCGI: cfg.AuthorizeCGI, DSMPorts: ports,
+		External: external.Read,
+		Ready:    cfg.Ready, ComposeIngress: cfg.ComposeIngress, Mode: cfg.Mode, Access: cfg.Access, UpstreamAccess: cfg.UpstreamAccess, Groups: cfg.Groups, Membership: NewDirectory(), ComposeBlocked: cfg.ComposeBlocked, MaxUploadBytes: cfg.MaxUploadBytes, ResponseHeaderTimeout: time.Duration(cfg.ResponseHeaderTimeoutSeconds) * time.Second, Upstream: cfg.Upstream, Key: key, AuthorizeCGI: cfg.AuthorizeCGI, DSMPorts: ports,
 		Package: cfg.Package, EmailDomain: cfg.EmailDomain, Passthrough: cfg.Passthrough, Redirects: cfg.Redirects, OptionalPassthrough: cfg.OptionalPassthrough, StateDir: cfg.StateDir,
 		Headers: cfg.Headers, Roles: cfg.Roles, Accounts: NewDirectory(), SessionTTL: cfg.SessionTTL(),
 	}

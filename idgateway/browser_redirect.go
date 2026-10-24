@@ -64,6 +64,9 @@ func (b *BrowserRedirectConfig) validate() error {
 }
 
 func (f *Front) browserAuthority(r *http.Request) bool {
+	if f.external().Index(requestOrigin(r)) >= 0 {
+		return true
+	}
 	b := f.cfg.BrowserRedirect
 	if b == nil {
 		return true
