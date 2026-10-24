@@ -72,7 +72,7 @@ func applyStorageInit(pkg string, s *types.ServiceConfig, init *StorageInitializ
 		for _, key := range keys {
 			e := init.Runtime.Environment[key]
 			directory := "secrets"
-			if e.Setting != "" {
+			if e.Setting != "" || e.ExternalOrigin {
 				directory = "settings"
 			}
 			target := "/synopkgland/" + directory + "/" + e.filename()

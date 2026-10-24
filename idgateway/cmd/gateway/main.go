@@ -71,6 +71,9 @@ func authorizeHandler(path string) (http.Handler, error) {
 	if strings.HasSuffix(os.Getenv("SCRIPT_NAME"), "/open.cgi") {
 		return idgateway.EntryHandler(cfg), nil
 	}
+	if strings.HasSuffix(os.Getenv("SCRIPT_NAME"), "/settings.cgi") {
+		return &idgateway.SettingsCGI{Config: cfg, Verifier: dsm.NewAuthenticator(), Membership: idgateway.NewDirectory()}, nil
+	}
 	key, err := idgateway.GatewayKey(cfg.StateDir)
 	if err != nil {
 		return nil, err
