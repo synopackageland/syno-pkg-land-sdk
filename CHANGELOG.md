@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.29.1 (2026-10-24)
+
+- Accept UI 0.15.x with the optional UI peer range `>=0.10.1 <0.16.0` and validate the Vue SDK against UI 0.15.0. Apps can install this combination without `--legacy-peer-deps`.
+- Align SDK/App and generated runtime identifiers at 0.29.1. Reuse immutable executor/v0.27.0 and its existing payload digests; executor, lifecycle and canonical task definitions are unchanged. Rust crate publication remains deferred.
+
 ## 0.29.0 (2026-10-24)
 
 - Reuse immutable executor/v0.27.0 and its six verified payload digests; executor sources are unchanged since 0.27.0.
