@@ -20,5 +20,7 @@
   "share_next_start": "Starten Sie diese App nach der Berechtigungsvergabe erneut im Paket-Zentrum",
   "share_unavailable": "Der Ordnerstatus ist nicht verfügbar. Prüfen Sie die Ordnerauswahl und starten Sie diese App erneut im Paket-Zentrum",
   "starting_title": "App wird gestartet",
-  "starting": "Die App wird gestartet oder ist vorübergehend ausgelastet. Diese Seite wird automatisch aktualisiert."
+  "starting": "Die App wird gestartet oder ist vorübergehend ausgelastet. Diese Seite wird automatisch aktualisiert.",
+  "external_sign_in_unavailable": "Anmeldung nicht verfügbar",
+  "external_dsm_missing": "Öffnen Sie DSM im lokalen Netzwerk und konfigurieren Sie die DSM-Adresse in den externen Zugriffseinstellungen dieser App"
 }

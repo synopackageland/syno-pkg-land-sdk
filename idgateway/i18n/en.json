@@ -20,5 +20,7 @@
   "share_next_start": "After granting access, start this App again in Package Center",
   "share_unavailable": "Shared Folder status is unavailable. Check the folder selection and start this App again in Package Center",
   "starting_title": "App is starting",
-  "starting": "The App is starting or temporarily busy. This page refreshes automatically."
+  "starting": "The App is starting or temporarily busy. This page refreshes automatically.",
+  "external_sign_in_unavailable": "Sign-in unavailable",
+  "external_dsm_missing": "Open DSM from your local network and configure the DSM address in this App’s external access settings"
 }

@@ -42,6 +42,8 @@ type Accounts interface {
 // resolves the account's uid and returns the browser to the gateway with a
 // sealed Assertion or an OAuth-style error.
 type AuthorizeCGI struct {
+	External     func() External
+	AppHTTPSPort int
 	// LoginApp is the CLI-generated DSM App instance used to resume a cold login.
 	LoginApp string
 	Key      []byte
@@ -56,8 +58,14 @@ var txnPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,128}$`)
 func (h *AuthorizeCGI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Referrer-Policy", "same-origin")
+	external := h.external()
+	var prepared bool
+	r, prepared = h.prepareResume(w, r, external)
+	if !prepared {
+		return
+	}
 	txn := r.URL.Query().Get("txn")
-	ret, ok := h.returnURL(r)
+	ret, ok := h.returnURLWithExternal(r, external)
 	if !ok || !txnPattern.MatchString(txn) {
 		http.Error(w, "invalid sign-in request", http.StatusBadRequest)
 		return
@@ -70,7 +78,7 @@ func (h *AuthorizeCGI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "cross-origin sign-in request", http.StatusForbidden)
 			return
 		}
-		h.verify(w, r, ret, txn)
+		h.verify(w, r, ret, txn, external)
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -79,9 +87,16 @@ func (h *AuthorizeCGI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // returnURL accepts only the gateway's return path on one of its ports, on the
 // hostname the browser used for DSM: DSM's cookie never reaches another host.
 func (h *AuthorizeCGI) returnURL(r *http.Request) (*url.URL, bool) {
+	return h.returnURLWithExternal(r, h.external())
+}
+
+func (h *AuthorizeCGI) returnURLWithExternal(r *http.Request, e External) (*url.URL, bool) {
 	ret, err := url.Parse(r.URL.Query().Get("return"))
-	if err != nil || (ret.Scheme != "http" && ret.Scheme != "https") || ret.User != nil || ret.Path != ReturnPath || ret.RawQuery != "" || ret.Fragment != "" || ret.Opaque != "" {
+	if err != nil || (ret.Scheme != "http" && ret.Scheme != "https") || !validReturnPath(ret) {
 		return nil, false
+	}
+	if e.Index(ret.Scheme+"://"+ret.Host) >= 0 {
+		return ret, true
 	}
 	port, err := strconv.Atoi(ret.Port())
 	if err != nil || !slices.Contains(h.AppPorts, port) || !strings.EqualFold(ret.Hostname(), hostname(r.Host)) {
@@ -100,7 +115,7 @@ func (h *AuthorizeCGI) bootstrap(w http.ResponseWriter, r *http.Request, ret *ur
 		html.EscapeString(r.URL.RawQuery), nonce)
 }
 
-func (h *AuthorizeCGI) verify(w http.ResponseWriter, r *http.Request, ret *url.URL, txn string) {
+func (h *AuthorizeCGI) verify(w http.ResponseWriter, r *http.Request, ret *url.URL, txn string, external External) {
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<10)
 	token := ""
 	if r.ParseForm() == nil {
@@ -122,7 +137,15 @@ func (h *AuthorizeCGI) verify(w http.ResponseWriter, r *http.Request, ret *url.U
 		q.Set("error", "access_denied")
 	case errors.Is(err, api.ErrNoSession) || errors.Is(err, ErrNoAccount):
 		if namePattern.MatchString(h.LoginApp) && r.URL.Query().Get("login_attempt") != "1" {
-			param, _ := json.Marshal(map[string]string{"ssoResume": txn + ":" + ret.Port()})
+			resume := r.URL.Query().Get("resume")
+			if resume == "" {
+				if index := external.Index(ret.Scheme + "://" + ret.Host); index >= 0 {
+					resume = externalResume(txn, index, external)
+				} else {
+					resume = txn + ":" + ret.Port()
+				}
+			}
+			param, _ := json.Marshal(map[string]string{"ssoResume": resume})
 			launch := url.Values{"launchApp": {"SYNO.SDS." + h.LoginApp + ".Instance"}, "launchParam": {string(param)}}
 			http.Redirect(w, r, "/?"+launch.Encode(), http.StatusFound)
 			return

@@ -116,6 +116,9 @@ func entryHandler(cfg Config, preflight func() error) http.Handler {
 	return entryHandlerWithShares(cfg, preflight, nil, nil)
 }
 func entryHandlerWithShares(cfg Config, preflight func() error, shares func() error, auth api.Authenticator) http.Handler {
+	return entryHandlerWithExternal(cfg, preflight, shares, auth, NewExternalReader(cfg).Read)
+}
+func entryHandlerWithExternal(cfg Config, preflight func() error, shares func() error, auth api.Authenticator, external func() External) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet || !validRequestAuthority(r) || validateLaunchPath(cfg.LaunchPath) != nil {
 			http.Error(w, "invalid entry", 400)
@@ -195,12 +198,25 @@ func entryHandlerWithShares(cfg Config, preflight func() error, shares func() er
 				http.Error(w, "invalid sign-in resume", 400)
 				return
 			}
-			parts := strings.Split(values[0], ":")
-			if len(parts) != 2 || !txnPattern.MatchString(parts[0]) || parts[1] != strconv.Itoa(port) {
-				http.Error(w, "invalid sign-in resume", 400)
+			token, valid := parseResume(values[0])
+			if !valid || !token.Public && token.Port != port {
+				if strings.Contains(values[0], ":x") {
+					http.Redirect(w, r, target, http.StatusFound)
+				} else {
+					http.Error(w, "invalid sign-in resume", 400)
+				}
 				return
 			}
-			q := url.Values{"txn": {parts[0]}, "return": {target + strings.TrimPrefix(ReturnPath, "/")}, "login_attempt": {"1"}}
+			q := url.Values{"txn": {token.Txn}, "return": {target + strings.TrimPrefix(ReturnPath, "/")}, "login_attempt": {"1"}}
+			if token.Public {
+				origin := token.origin(external())
+				if origin == "" {
+					http.Redirect(w, r, target, http.StatusFound)
+					return
+				}
+				q.Set("return", origin+ReturnPath)
+				q.Set("resume", values[0])
+			}
 			http.Redirect(w, r, requestOrigin(r)+cfg.AuthorizeCGI+"?"+q.Encode(), http.StatusFound)
 			return
 		}

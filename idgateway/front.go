@@ -286,6 +286,7 @@ func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid path", http.StatusBadRequest)
 		return
 	}
+	r = withExternal(r, f.external(r))
 	optional := false
 	if f.optional != nil {
 		id, scope, enabled := f.optional.admit(r.URL.Path)
@@ -310,6 +311,9 @@ func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	origin := requestOrigin(r)
+	if external := f.external(r); external.Index(origin) >= 0 {
+		origin = external.Accept[external.Index(origin)]
+	}
 	if !validRequestAuthority(r) || !f.browserAuthority(r) {
 		http.Error(w, "invalid authority", http.StatusBadRequest)
 		return
@@ -423,6 +427,16 @@ func (f *Front) authorize(w http.ResponseWriter, r *http.Request, origin string)
 // bounce records the transaction and sends the browser to the authorize CGI
 // on the DSM origin of the same hostname and scheme.
 func (f *Front) bounce(w http.ResponseWriter, r *http.Request, t txn, origin string) {
+	external := f.external(r)
+	index := external.Index(origin)
+	dsmOrigin := f.dsmOrigin(r)
+	if index >= 0 {
+		if external.DSM == "" {
+			writeNoDSMOrigin(w, r)
+			return
+		}
+		dsmOrigin = external.DSM
+	}
 	id := randomID(24)
 	t.origin, t.browser, t.expires = origin, f.browserID(w, r), f.cfg.Now().Add(TxnTTL)
 	f.mu.Lock()
@@ -430,7 +444,10 @@ func (f *Front) bounce(w http.ResponseWriter, r *http.Request, t txn, origin str
 	f.txns[id] = t
 	f.mu.Unlock()
 	q := url.Values{"txn": {id}, "return": {origin + ReturnPath}}
-	http.Redirect(w, r, f.dsmOrigin(r)+f.cfg.AuthorizeCGI+"?"+q.Encode(), http.StatusFound)
+	if index >= 0 {
+		q.Set("resume", externalResume(id, index, external))
+	}
+	http.Redirect(w, r, dsmOrigin+f.cfg.AuthorizeCGI+"?"+q.Encode(), http.StatusFound)
 }
 
 func (f *Front) dsmOrigin(r *http.Request) string {
