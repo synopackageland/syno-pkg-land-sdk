@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/synopackageland/syno-pkg-land-sdk/api"
 )
 
 var document = append([]string{"Sec-Fetch-Dest", "document"}, navigate...)
@@ -77,8 +79,12 @@ func TestSingleOriginLauncherOpensCanonicalOrigin(t *testing.T) {
 		}
 		return w.Header().Get("Location")
 	}
-	if got := open(cfg, e, ""); got != "https://vault.example.com/#/sso?identifier=x" {
-		t.Fatal(got)
+	// The canonical origin opens after the launcher page checks it answers.
+	w := httptest.NewRecorder()
+	signedIn := verifierFunc(func(*http.Request) (api.Identity, error) { return api.Identity{User: "alice"}, nil })
+	entryHandlerWithMenu(cfg, nil, nil, signedIn, func() MenuSources { return MenuSources{External: e} }, func() bool { return false }).ServeHTTP(w, httptest.NewRequest("GET", "https://nas.example.com:5001/open.cgi", nil))
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `data-target="https://vault.example.com/#/sso?identifier=x"`) || !strings.Contains(w.Header().Get("Content-Security-Policy"), "connect-src https://vault.example.com;") {
+		t.Fatal(w.Code, w.Header(), w.Body)
 	}
 	if got := open(cfg, External{}, ""); got != "https://nas.example.com:18443/#/sso?identifier=x" {
 		t.Fatal("no external origin", got)

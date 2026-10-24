@@ -97,7 +97,11 @@ URL when the DSM menu opens the classless gateway entry. Paths, queries and SPA
 fragments are supported. The default remains `/`. Use SDK and CLI 0.27.0 for matching launcher and runtime support.
 
 The target is trusted package configuration, never a caller-supplied return URL.
-The launcher retains the DSM hostname and declared public gateway port. It rejects
+On the LAN and any DSM address not known to the App or NAS Remote Connect, the
+launcher retains the DSM hostname and declared public gateway port. From a
+Connect or manual DSM address it opens the App's matching external address
+instead, or explains why it cannot; see
+[DSM menu destination](external-access.md#dsm-menu-destination). It rejects
 absolute/network URLs, backslashes, control characters, dot segments and reserved
 `/_sso` paths. Existing sign-in transaction resume continues to use the issuer
 root and the exact callback, independently of this destination. OIDC client,

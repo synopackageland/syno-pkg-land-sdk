@@ -39,8 +39,9 @@ the resolution has an accepted external origin, the primary origin is the
 App's only browser origin:
 
 - The DSM launcher (`open.cgi`) opens the primary origin plus `launch_path`
-  instead of the DSM hostname and App port. Sign-in resume keeps the host that
-  started the transaction.
+  from every DSM address, after the reachability check of the
+  [launcher page](#launcher-page), instead of the DSM hostname and App port.
+  Sign-in resume keeps the host that started the transaction.
 - The App listener answers a top-level browser navigation on a local host or
   IP (`GET`/`HEAD`, `Sec-Fetch-Mode: navigate`, `Sec-Fetch-Dest: document`)
   with `302` to the same path and query on the primary origin. Accepted public
@@ -225,6 +226,35 @@ files make the whole map absent. Unlike the projection, the launch map lists
 private network addresses: Tailscale HTTPS names are already published in
 Certificate Transparency logs, the map holds no pins, sockets or pause reasons,
 and only the menu launcher reads it. Sign-in still uses only the projection.
+
+### Launcher page
+
+When `MenuDestination` keeps the existing destination, `open.cgi` answers `302`
+exactly as before, without a DSM session check. Every other result needs a DSM
+session with access to the App and is answered with a small page (`no-store`,
+`no-referrer`, no frames):
+
+- To open a trusted address, the page fetches `<origin>/_spl/ping` without
+  credentials and replaces itself with the address once the answer names this
+  package. It waits up to 8 seconds, because slow NASes and provider restarts
+  take seconds. The script is constant and pinned by hash in the CSP, which
+  allows connections only to that origin. If the check fails, the page explains
+  that the App cannot be reached and offers **Open anyway** and **Try again**;
+  without JavaScript it shows a continue link.
+- When the App is not enabled or is paused for this provider, or DSM was reached
+  through a QuickConnect relay, or a single-origin App has no external origin,
+  administrators see the reason, the provider name and a **Set up this App in
+  Connect** button. The button opens Connect's App URLs page with the App and
+  the provider's scope preselected
+  (`/?launchApp=SYNO.SDS.SynoPkgConnect.Instance&launchParam=route%3D%252Fapps%252F<App>%252F<scope>`);
+  Connect only preselects and changes nothing. Without Connect installed the
+  page says to install it. Single-origin cases link to `settings.cgi` instead.
+- Other users see only that the App cannot be opened from this address and that
+  an administrator can help. They see no provider, address or approval state.
+- Without a DSM session the page asks to sign in to DSM again.
+
+Text follows `Accept-Language` in the gateway's nine languages. The page does
+not name the App, because gateway configuration has no display name.
 
 ## Public-proxy requirements for App authors
 
