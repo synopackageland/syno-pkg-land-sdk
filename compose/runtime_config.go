@@ -20,6 +20,8 @@ type RuntimeConfiguration struct {
 // RuntimeEnvironment reads one SDK-generated secret after entering the
 // container. Values never occur in the plan, argv, lock or public SPK.
 type RuntimeEnvironment struct {
+	// ExternalOrigin resolves the effective App origin on the host at startup.
+	ExternalOrigin bool `json:"external_origin,omitempty"`
 	// Setting reads a package-owned value supplied by the App installation flow.
 	Setting    string `json:"setting,omitempty"`
 	OIDCClient string `json:"oidc_client,omitempty"`
@@ -27,6 +29,9 @@ type RuntimeEnvironment struct {
 }
 
 func (e RuntimeEnvironment) filename() string {
+	if e.ExternalOrigin {
+		return "external-origin.value"
+	}
 	if e.Setting != "" {
 		return e.Setting + ".value"
 	}
@@ -114,6 +119,10 @@ func validateRuntime(i StorageInitialization) error {
 	for key, e := range r.Environment {
 		id := e.Secret
 		count := 0
+		if e.ExternalOrigin {
+			count++
+			id = "external-origin"
+		}
 		for _, v := range []string{e.Secret, e.OIDCClient, e.Setting} {
 			if v != "" {
 				count++

@@ -18,6 +18,29 @@ import (
 	"github.com/synopackageland/syno-pkg-land-sdk/idgateway"
 )
 
+func TestSettingsCGIRoleBootstrapsWithoutCreatingGatewayKey(t *testing.T) {
+	dir := t.TempDir()
+	state := filepath.Join(dir, "state")
+	path := filepath.Join(dir, "gateway.json")
+	os.WriteFile(path, []byte(`{"package":"Fixture","mode":"none","upstream":"http://127.0.0.1:8000","listen":{"https":18443},"authorize_cgi":"/webman/3rdparty/Fixture/sso/authorize.cgi","state_dir":"`+state+`"}`), 0600)
+	t.Setenv("SCRIPT_NAME", "/webman/3rdparty/Fixture/sso/settings.cgi")
+	h, err := authorizeHandler(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := h.(*idgateway.SettingsCGI); !ok {
+		t.Fatalf("wrong CGI role: %T", h)
+	}
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", "https://nas.example:5001/settings.cgi", nil))
+	if w.Code != 200 || !strings.Contains(w.Body.String(), "enable_syno_token=yes") {
+		t.Fatal(w.Code, w.Body)
+	}
+	if _, err := os.Stat(state); !os.IsNotExist(err) {
+		t.Fatal("GET created private state")
+	}
+}
+
 func TestProviderOnlyIssuerAlwaysHasDSMAppPrivilegeGate(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "gateway.json")
