@@ -166,7 +166,10 @@ responsibility.
 `GET /_spl/ping` answers only `{"package":"<package>"}` before HTTP authority
 and sign-in checks. `HEAD` has the same headers and no body; other methods return
 405. This is public routing metadata for detecting a wrong destination, not
-identity proof or authorization to publish an App.
+identity proof or authorization to publish an App. Responses carry
+`Access-Control-Allow-Origin: *` without credentials, so the DSM menu launcher
+can check from the DSM origin that an external App address answers before
+opening it.
 
 ## DSM menu destination
 
