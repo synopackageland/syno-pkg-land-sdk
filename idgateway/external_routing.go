@@ -4,19 +4,31 @@ import (
 	"context"
 	"fmt"
 	"html"
+	"net"
 	"net/http"
 )
 
 type externalSnapshotKey struct{}
 
-func requestExternal(r *http.Request, read func() External) External {
+func requestExternal(r *http.Request, read, fresh func() External) External {
 	if e, ok := r.Context().Value(externalSnapshotKey{}).(External); ok {
 		return e
+	}
+	if fresh != nil && publicAuthority(r) {
+		return fresh()
 	}
 	if read == nil {
 		return External{}
 	}
 	return read()
+}
+
+// publicAuthority reports whether r is addressed to port 443, explicitly or by
+// omitting the port, the only port an external origin may use. App listeners
+// never use it, so LAN requests keep the polled policy.
+func publicAuthority(r *http.Request) bool {
+	_, port, err := net.SplitHostPort(r.Host)
+	return err != nil || port == "443"
 }
 func withExternal(r *http.Request, e External) *http.Request {
 	if len(e.Accept) == 0 {
@@ -24,7 +36,9 @@ func withExternal(r *http.Request, e External) *http.Request {
 	}
 	return r.WithContext(context.WithValue(r.Context(), externalSnapshotKey{}, e))
 }
-func (f *Front) external(r *http.Request) External { return requestExternal(r, f.cfg.External) }
+func (f *Front) external(r *http.Request) External {
+	return requestExternal(r, f.cfg.External, f.cfg.ExternalFresh)
+}
 
 // The public explanation must reveal no hostnames or settings values.
 func writeNoDSMOrigin(w http.ResponseWriter, r *http.Request) {

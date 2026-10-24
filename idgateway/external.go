@@ -272,11 +272,21 @@ func (r *ExternalReader) changed(path string) bool {
 	file := r.changedFile(path)
 	return parent || file
 }
-func (r *ExternalReader) Read() External {
+
+// Read returns the inputs as last checked, rechecking them at most every five
+// seconds.
+func (r *ExternalReader) Read() External { return r.read(false) }
+
+// Fresh rechecks the inputs now. Public requests use it, so a sign-in started
+// right after a settings save carries the saved revision, which the DSM-side
+// CGIs read directly.
+func (r *ExternalReader) Fresh() External { return r.read(true) }
+
+func (r *ExternalReader) read(fresh bool) External {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	now := r.now()
-	if r.checked.IsZero() || now.Sub(r.checked) >= 5*time.Second {
+	if fresh || r.checked.IsZero() || now.Sub(r.checked) >= 5*time.Second {
 		r.checked = now
 		path := r.cfg.ExternalStatePath()
 		if r.changed(path) {

@@ -80,9 +80,10 @@ func nativeListener(cfg Config) (net.Listener, error) {
 }
 
 func nativeIngressHandler(cfg Config, next http.Handler) http.Handler {
-	external := NewExternalReader(cfg).Read
+	reader := NewExternalReader(cfg)
+	external, fresh := reader.Read, reader.Fresh
 	if front, ok := next.(*Front); ok && front.cfg.External != nil {
-		external = front.cfg.External
+		external, fresh = front.cfg.External, front.cfg.ExternalFresh
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.TLS == nil || len(r.TLS.VerifiedChains) == 0 {
@@ -101,7 +102,7 @@ func nativeIngressHandler(cfg Config, next http.Handler) http.Handler {
 				port = "443"
 			}
 		}
-		snapshot := requestExternal(r, external)
+		snapshot := requestExternal(r, external, fresh)
 		public := snapshot.Index(requestOrigin(r)) >= 0
 		if err != nil || !validRequestAuthority(r) || !public && port != strconv.Itoa(nativePublicPort(cfg)) {
 			http.Error(w, "invalid ingress authority", http.StatusBadRequest)

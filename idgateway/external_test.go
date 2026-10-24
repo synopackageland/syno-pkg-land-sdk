@@ -147,6 +147,26 @@ func TestExternalReaderPollingAndAtomicReplacement(t *testing.T) {
 		t.Fatal("removed Connect affected manual", got)
 	}
 }
+func TestExternalReaderFreshRechecksWithinThePollInterval(t *testing.T) {
+	r, _, _ := externalReaderFixture(t)
+	r.Read()
+	_, state, _ := externalInputs()
+	state.Revision = 10
+	tmp := r.cfg.ExternalStatePath() + ".tmp"
+	writeExternalJSON(t, tmp, state, 0600)
+	if err := os.Rename(tmp, r.cfg.ExternalStatePath()); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.Read(); got.R1 != 9 {
+		t.Fatal("read before polling", got)
+	}
+	if got := r.Fresh(); got.R1 != 10 {
+		t.Fatal("fresh read", got)
+	}
+	if got := r.Read(); got.R1 != 10 {
+		t.Fatal("polled read after fresh", got)
+	}
+}
 func TestExternalReaderRejectsUnsafeFilesAndThrottles(t *testing.T) {
 	for _, kind := range []string{"mode", "symlink", "hardlink", "parent-mode", "parent-link", "corrupt", "unknown", "trailing", "future", "large"} {
 		t.Run(kind, func(t *testing.T) {

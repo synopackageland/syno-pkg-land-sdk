@@ -258,3 +258,14 @@ func TestSettingsLocaleCatalogsCompleteAndWithoutTrailingPeriods(t *testing.T) {
 		}
 	}
 }
+
+func TestSettingsMentionsContainerRestartOnlyForContainerApps(t *testing.T) {
+	for _, container := range []bool{false, true} {
+		h := settingsFixture(t)
+		h.Config.ContainerApp = container
+		w := settingsPost(h, url.Values{"SynoToken": {"tok"}}, "https://nas.example:5001", "id=s1", "en")
+		if w.Code != 200 || strings.Contains(w.Body.String(), "container environment") != container {
+			t.Fatal(container, w.Code, w.Body)
+		}
+	}
+}
