@@ -71,3 +71,21 @@ The snapshot is refreshed in the installed host preflight before the worker
 starts containers, as well as during installation preparation. Restart the
 App after changing its address to update its container environment. Gateway
 origin acceptance uses the shared live reader separately.
+
+## Vaultwarden and alternate LAN addresses
+
+Vaultwarden 1.37.4 with `SSO_ONLY=true` needs a canonical URL for browser SSO.
+When `DOMAIN` names the public host, starting SSO on a different LAN hostname
+or IP does not preserve that sign-in flow. The gateway rejects the callback's
+different origin. Allowing that callback alone still leaves an upstream
+constraint: the callback uses `DOMAIN`, while the browser-binding cookie
+belongs to the host that started authorization. Vaultwarden rejects the
+missing cookie with `SSO session binding mismatch`.
+
+Use the same canonical URL for internal and external SSO, with reachability
+from both networks arranged by the deployment. A working `external_origin`
+snapshot and an acknowledged origin-change warning do not establish alternate
+LAN-host SSO support.
+
+See the upstream [DOMAIN configuration](https://github.com/dani-garcia/vaultwarden/blob/7c188967e7a467b19b2757bc3326f9cf3ccae327/.env.template#L180-L190)
+and [callback cookie check](https://github.com/dani-garcia/vaultwarden/blob/7c188967e7a467b19b2757bc3326f9cf3ccae327/src/api/identity.rs#L1134-L1141).
