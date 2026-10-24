@@ -24,7 +24,28 @@
     "canonicalTaskDefinitionsUnchanged": true,
     "nasAcceptance": false,
     "rustCratePublished": false,
-    "fullGate": false
+    "fullGate": true,
+    "frontendTestFiles": 73,
+    "frontendTests": 532,
+    "nodeTests": 31,
+    "node22": true,
+    "python38": true,
+    "rustTargets": 3,
+    "crossArchitectures": [
+      "amd64",
+      "arm64",
+      "armv7"
+    ],
+    "coldCacheReproducible": true,
+    "genericAndPrivateTarballScans": true,
+    "independentPublicationAudit": true,
+    "packedConsumerImport": true,
+    "menuBootstrapQemuArchitectures": [
+      "arm64",
+      "armv7"
+    ],
+    "menuBootstrapQemuTestsPerArchitecture": 15,
+    "menuBootstrapCSRFRegression": true
   },
   "ui": {
     "tested": "0.15.0",
