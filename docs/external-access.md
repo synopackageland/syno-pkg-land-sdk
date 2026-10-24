@@ -1,6 +1,6 @@
 # External access
 
-Use SDK 0.29.0 and a matching CLI for public origins and sign-in continuation.
+Use SDK 0.30.0 and a matching CLI for public origins and sign-in continuation.
 Apps keep their dedicated native HTTPS listener and their existing DSM admission
 policy. Connect is optional: local access and a manually configured public origin
 work without it. The gateway does not create tunnels or change DSM settings.
@@ -9,7 +9,7 @@ work without it. The gateway does not create tunnels or change DSM settings.
 
 ```yaml
 identity_gateway:
-  sdk: 0.29.0
+  sdk: 0.30.0
   external_access:
     connect: optional
     origin_change: none
@@ -19,7 +19,7 @@ identity_gateway:
 Apps whose upstream configuration depends on a fixed URL should declare `confirm`
 so changing the URL requires confirmation. Omitting the block means
 `{connect: optional, origin_change: none}`. The CLI writes the policy as
-`external` in `target/sso/gateway.json`. Pin `identity_gateway.sdk` to 0.29.0
+`external` in `target/sso/gateway.json`. Pin `identity_gateway.sdk` to 0.30.0
 or a compatible later version when declaring external access.
 
 ### Single-origin Apps
@@ -129,9 +129,10 @@ gateway, settings and Compose:
 
 `NewExternalReader(cfg).Read()` polls stat at most every five seconds and
 reloads when file identity, mtime or security metadata changes. Requests on
-port 443, the port of every public origin, call `Fresh()`, which rechecks at
-once. A sign-in started right after a settings save therefore
-carries the saved revision. Missing,
+port 443 call `Fresh()`, which rechecks at once. Other ports, including a
+single-origin App's tailnet address on its App port, keep the five-second
+polled policy. A sign-in started on port 443 right after a settings save
+therefore carries the saved revision. Missing,
 malformed, future-schema or unsafe files count as absent. Symlinked files,
 hardlinks, unexpected ownership, incorrect modes and writable parent directories
 are refused. Missing inputs cause no outbound connection, warning or DSM
