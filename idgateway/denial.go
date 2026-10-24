@@ -87,7 +87,17 @@ func (f *Front) writeFailure(w http.ResponseWriter, r *http.Request, code, retry
 	w.WriteHeader(status)
 	fmt.Fprintf(w, `<!doctype html><html lang="%s"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>%s</title><p data-error-code="%s" data-i18n="gateway.%s">%s</p>`, locale, html.EscapeString(messages["title"]), stable, key, html.EscapeString(messages[key]))
 	if status != http.StatusForbidden {
-		fmt.Fprintf(w, `<p><a data-i18n="gateway.sign_in" href="%s/">%s</a> · <a data-i18n="gateway.retry" href="%s">%s</a></p>`, html.EscapeString(f.dsmOrigin(r)), html.EscapeString(messages["sign_in"]), html.EscapeString(localTarget(retry)), html.EscapeString(messages["retry"]))
+		// A public origin signs in at the configured DSM origin, as bounce
+		// does; the DSM port on the public hostname is not reachable there.
+		signIn := f.dsmOrigin(r)
+		if external := f.external(r); external.Index(requestOrigin(r)) >= 0 {
+			signIn = external.DSM
+		}
+		fmt.Fprint(w, `<p>`)
+		if signIn != "" {
+			fmt.Fprintf(w, `<a data-i18n="gateway.sign_in" href="%s/">%s</a> · `, html.EscapeString(signIn), html.EscapeString(messages["sign_in"]))
+		}
+		fmt.Fprintf(w, `<a data-i18n="gateway.retry" href="%s">%s</a></p>`, html.EscapeString(localTarget(retry)), html.EscapeString(messages["retry"]))
 	}
 	fmt.Fprint(w, "</html>")
 }
