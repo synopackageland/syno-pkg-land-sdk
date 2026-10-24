@@ -167,3 +167,36 @@ func TestImageFailureClassificationDoesNotInferFromWrapperCodes(t *testing.T) {
 		t.Fatal("unproven TLS trust failure")
 	}
 }
+
+// An offline NAS that already runs the locked images must not show a registry
+// error on every start or same-image upgrade.
+func TestRegistryCheckSkipsImagesThisPackageAlreadyRan(t *testing.T) {
+	var requests atomic.Int32
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+	host := strings.TrimPrefix(server.URL, "https://")
+	ran := host + "/app" + diagnosisDigest
+	pkgvar := t.TempDir()
+	os.Mkdir(filepath.Join(pkgvar, "daemon"), 0700)
+	t.Setenv("SYNOPKG_PKGVAR", pkgvar)
+	record, _ := json.Marshal(map[string]any{"schema": 1, "package": "Fixture", "images": []string{ran}})
+	if err := os.WriteFile(filepath.Join(pkgvar, "daemon", "compose-images.json"), record, 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, phase := range []string{"postinst", "postupgrade", "prestart"} {
+		if results := checkRegistries(context.Background(), diagnosisProject(t, ran), phase, server.Client().Transport); len(results) != 0 {
+			t.Fatalf("%s: %+v", phase, results)
+		}
+	}
+	if requests.Load() != 0 {
+		t.Fatalf("registry contacted for images already present: %d", requests.Load())
+	}
+	// A new digest still needs the registry, so it is still checked.
+	other := host + "/app@sha256:" + strings.Repeat("b", 64)
+	if results := checkRegistries(context.Background(), diagnosisProject(t, ran, other), "postupgrade", server.Client().Transport); len(results) != 1 || requests.Load() != 1 {
+		t.Fatalf("new image not checked: %+v requests=%d", results, requests.Load())
+	}
+}

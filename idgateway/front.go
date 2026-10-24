@@ -263,6 +263,13 @@ func NewFront(cfg FrontConfig) (*Front, error) {
 			http.Error(w, "upload exceeds max_upload_bytes", http.StatusRequestEntityTooLarge)
 			return
 		}
+		// A refused or timed-out connection is how a restarting or stalled App
+		// looks from here; anything else is still a gateway error.
+		var op *net.OpError
+		if errors.As(err, &op) {
+			writeStarting(w, r)
+			return
+		}
 		http.Error(w, "upstream unavailable", http.StatusBadGateway)
 	}}
 	return f, nil

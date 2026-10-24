@@ -303,7 +303,7 @@ func (f *Front) boundedBody(w http.ResponseWriter, r *http.Request) *http.Reques
 
 func (f *Front) serveProxy(w http.ResponseWriter, r *http.Request) {
 	if f.cfg.Ready != nil && !f.cfg.Ready(r.Context()) {
-		http.Error(w, "upstream readiness unknown", http.StatusServiceUnavailable)
+		writeStarting(w, r)
 		return
 	}
 	max := f.cfg.MaxUploadBytes

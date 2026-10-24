@@ -18,5 +18,7 @@
   "share_dismiss": "Chiudi",
   "share_ready": "L’accesso è pronto. Avviare questa App nel Centro pacchetti",
   "share_next_start": "Dopo aver concesso l’accesso, riavviare questa App nel Centro pacchetti",
-  "share_unavailable": "Lo stato della cartella non è disponibile. Verificare la cartella selezionata e riavviare questa App nel Centro pacchetti"
+  "share_unavailable": "Lo stato della cartella non è disponibile. Verificare la cartella selezionata e riavviare questa App nel Centro pacchetti",
+  "starting_title": "Avvio dell’App",
+  "starting": "L’App è in avvio o temporaneamente occupata. Questa pagina si aggiorna automaticamente."
 }

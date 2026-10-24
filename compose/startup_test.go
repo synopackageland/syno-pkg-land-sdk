@@ -10,7 +10,7 @@ import (
 func TestStartupBudgetReachesBootstrapWithoutChangingUpstream(t *testing.T) {
 	for _, seconds := range []int{120, 600, 900} {
 		r := upstreamProject(t, "openlist")
-		if seconds != 120 {
+		if seconds != DefaultStartupTimeoutSeconds {
 			r.StartupTimeoutSeconds = &seconds
 		}
 		// A service override cannot quietly give the hook a different deadline.

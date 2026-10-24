@@ -153,7 +153,7 @@ a build operator trust decision. `check`/`inspect` remain offline.
 
 | Feature | Current behavior |
 | --- | --- |
-| Files in one directory, profiles, anchors, depends_on, healthcheck | Reference-loader semantics retained; DSM worker compatibility needs device acceptance |
+| Files in one directory, profiles, anchors, depends_on, healthcheck | Reference-loader semantics retained; healthcheck timing receives the slow-NAS floor below; DSM worker compatibility needs device acceptance |
 | Named local volumes | App data by default; kept on all uninstall choices; exact undeleted names reported when delete-data is selected |
 | Private bind data | DSM build rejects COMPOSE_PRIVATE_BIND_TIMING_UNSUPPORTED: clean-install preinst precedes pkgvar creation, while worker acquire precedes postinst; no root initialization or automatic volume conversion |
 | Image VOLUME | Build inventories verified image config and assigns a stable named volume |
@@ -362,7 +362,8 @@ bounds the wait; extending it cannot make an unready response count as ready.
 
 After admission, the supervisor continues probing health and listener ownership.
 A missing listener or invalid binding remains fatal; temporary HTTP failures
-close ingress and receive the existing bounded health recovery window. Host
+close ingress and receive the bounded health recovery window, which equals the
+startup budget. Host
 profiles without a health declaration retain listener-only readiness. Rebuild
 with matching CLI and SDK changes so the health declaration reaches the daemon.
 Host mode does not require the bridge lifecycle-generation file. These checks
@@ -378,7 +379,9 @@ compose:
   # Keep the actual files, services, network and web.health declarations.
 ```
 
-The default is 120; valid values are integers from 2 through 900. Use a CLI and
+The default is 900; valid values are integers from 2 through 900. Keep the
+default unless device evidence supports a shorter value: on a loaded HDD NAS
+with 2 GB RAM a cold start can take more than ten minutes. Use a CLI and
 SDK that both support this field, then rebuild the SPK. The SDK plan supplies
 the same value to the generated daemon start timeout and to every upstream
 service as `SYNOPKGLAND_STARTUP_BUDGET_SECONDS`. This SDK-owned environment value
@@ -442,6 +445,20 @@ Docker socket access, borrow an admin session or use root for readiness.
 bridge-unverified admission blocker is replaced by `COMPOSE_READINESS_INVALID`,
 `COMPOSE_ACQUIRE_GENERATION_INVALID`, `COMPOSE_TCP_NOT_READY` and
 `COMPOSE_HEALTH_NOT_READY`, according to the actual failing condition.
+
+### Healthcheck timing
+
+Docker health is what Container Manager displays and what `depends_on:
+condition: service_healthy` waits for. The plan keeps each App or image health
+command and raises stricter timing to a slow-NAS floor: `timeout` 30s,
+`retries` 3 and `start_period` equal to the startup budget. More tolerant values
+are kept. `interval` is unchanged because Container Manager's Docker 24 has no
+`start_interval`; a longer interval would only delay `service_healthy`. A service without a declared healthcheck gets the
+same timing; Docker applies it to the image `HEALTHCHECK`, and an image without
+one still has no healthcheck. `disable: true` and `test: [NONE]` are unchanged.
+Do not declare healthcheck timing in an App; keep the command only. A command
+with its own short limit (for example `curl --max-time 2`) is still stricter
+than the floor, so remove such limits from the command.
 
 Compose SPKs intentionally omit `install_dep_packages=ContainerManager`: DSM can
 report that dependency not ready even while its systemd unit and Docker daemon
@@ -615,7 +632,13 @@ root or delete DSM configuration to claim compatibility.
 Rebuilt container packages run `compose/control diagnose --project <packaged-compose-dir>
 --phase <preinst|postinst|postupgrade|prestart>` from their existing package-account
 hooks. Checks are informational, including preinst; a registry outage does not
-block a cached image from starting. Existing Container Manager availability and
+block a cached image from starting. After an App first passes readiness, its
+supervisor records the locked image references in the private
+`pkgvar/daemon/compose-images.json`. A registry whose locked images are all
+recorded is not contacted, so an offline NAS shows no registry message on Start
+or on an upgrade that keeps the same image digests. A new digest is still checked.
+The record is lifecycle evidence, not Docker image-store readback: if an
+administrator deletes an image, Start fails as before and Repair downloads it. Existing Container Manager availability and
 Compose preparation failures keep their native exit status.
 
 The command reads only immutable references from `compose.lock.json`: at most

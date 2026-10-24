@@ -93,12 +93,13 @@ func TestCompiledSupervisorWaitsForActiveHealthProbe(t *testing.T) {
 			conn.SetReadDeadline(time.Now().Add(time.Second))
 			once.Do(func() { close(release) })
 			line, err := reader.ReadString('\n')
+			// An admitted App whose probe fails is recovering, not stopped.
 			want := "ok\n"
 			if finalStatus != 204 {
-				want = "unknown\n"
+				want = "starting\n"
 			}
 			if err != nil || line != want {
-				t.Fatalf("completed healthy probe: %q %v", line, err)
+				t.Fatalf("completed probe: %q %v", line, err)
 			}
 		})
 	}

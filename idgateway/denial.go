@@ -91,3 +91,24 @@ func (f *Front) writeFailure(w http.ResponseWriter, r *http.Request, code, retry
 	}
 	fmt.Fprint(w, "</html>")
 }
+
+// writeStarting answers while the App is not ready yet, for example during a
+// slow start or a temporary stall on a busy NAS. The lifecycle supervisor, not
+// the gateway, decides when that becomes a failure.
+func writeStarting(w http.ResponseWriter, r *http.Request) {
+	locale, messages := denialMessages(r)
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Language", locale)
+	w.Header().Add("Vary", "Accept-Language")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Retry-After", "10")
+	if !isNavigation(r) {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "app_starting", "message_key": "gateway.starting", "message": messages["starting"]})
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'self'")
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	w.WriteHeader(http.StatusServiceUnavailable)
+	fmt.Fprintf(w, `<!doctype html><html lang="%s"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="10"><title>%s</title><p data-error-code="app_starting" data-i18n="gateway.starting">%s</p></html>`, locale, html.EscapeString(messages["starting_title"]), html.EscapeString(messages["starting"]))
+}

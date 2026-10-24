@@ -308,7 +308,7 @@ func (c *controller) request(action string, until time.Time) error {
 	if err != nil {
 		return err
 	}
-	if raw != "ok\n" {
+	if raw != "ok\n" && !(action == "status" && statusRunning(raw)) {
 		if action == "snapshot" {
 			var snapshot record
 			if json.Unmarshal([]byte(raw), &snapshot) == nil && snapshot.Digest == c.digest && snapshot.Supervisor == r.Supervisor {
@@ -576,6 +576,7 @@ func (c *controller) supervise() error {
 			fmt.Fprintln(ready, err)
 			return err
 		}
+		c.rememberImages()
 	}
 	cmd := c.child(c.Args)
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
@@ -675,7 +676,7 @@ func (c *controller) supervise() error {
 	probing := false
 	var probeStarted time.Time
 	// Status must wait for the active probe instead of turning every routine
-	// poll into a brief false outage. Do not reuse a stale positive result.
+	// poll into a brief false outage.
 	type statusWaiter struct {
 		conn  *net.UnixConn
 		timer *time.Timer
@@ -687,15 +688,14 @@ func (c *controller) supervise() error {
 			w.conn.Close()
 		}
 	}()
+	// A probe can outlast DSM's status budget. Answer just before that budget
+	// with the last completed result rather than turning a slow probe into an outage.
+	answered := make(chan *net.UnixConn, 64)
 	queueStatus := func(conn *net.UnixConn) {
-		timer := time.AfterFunc(time.Duration(c.Timeouts.Status)*time.Second, func() { conn.Close() })
+		timer := time.AfterFunc(time.Duration(c.Timeouts.Status)*time.Second*3/4, func() { answered <- conn })
 		statusWaiters = append(statusWaiters, statusWaiter{conn, timer})
 	}
-	flushStatus := func() {
-		line := []byte("unknown\n")
-		if healthy {
-			line = []byte("ok\n")
-		}
+	flushStatus := func(line []byte) {
 		for _, w := range statusWaiters {
 			w.timer.Stop()
 			w.conn.Write(line)
@@ -717,7 +717,8 @@ func (c *controller) supervise() error {
 	childExited := func(exitErr error) (bool, error) {
 		done = nil // The child has been reaped; stop must not wait on it again.
 		healthy = false
-		flushStatus()
+		// A dead child is not starting; let DSM fall back to the saved reason.
+		flushStatus([]byte("unknown\n"))
 		stableC = nil
 		if stableTimer != nil {
 			stableTimer.Stop()
@@ -818,12 +819,11 @@ func (c *controller) supervise() error {
 			fmt.Fprintf(os.Stderr, "DAEMON_RESTART_RECOVERED attempts=%d\n", r.Restarts)
 		case <-tick.C:
 			if done != nil && stableC == nil && !probing {
-				healthy = false
 				probing = true
 				probeStarted = time.Now()
 				probeUntil := probeStarted.Add(c.probeBudget())
 				if !health.failedAt.IsZero() {
-					probeUntil = minDeadline(probeUntil, health.failedAt.Add(c.operationBudget()))
+					probeUntil = minDeadline(probeUntil, health.failedAt.Add(c.recoveryBudget()))
 				}
 				go func() { results <- c.checkReadinessUntil(probeUntil) }()
 			}
@@ -832,12 +832,24 @@ func (c *controller) supervise() error {
 			if err != nil && health.failedAt.IsZero() {
 				health.failedAt = probeStarted
 			}
-			if health.observe(time.Now(), err, c.operationBudget()) {
+			if health.observe(time.Now(), err, c.recoveryBudget()) {
 				clean = stop() == nil
-				return errors.New(readinessPhase(err))
+				if !transientReadiness(err) {
+					return errors.New(readinessPhase(err))
+				}
+				return recoveryFailure(err, c.recoveryBudget())
 			}
 			healthy = err == nil
-			flushStatus()
+			flushStatus([]byte(statusLine(healthy)))
+		case conn := <-answered:
+			for i, w := range statusWaiters {
+				if w.conn == conn {
+					statusWaiters = append(statusWaiters[:i], statusWaiters[i+1:]...)
+					conn.Write([]byte(statusLine(healthy)))
+					conn.Close()
+					break
+				}
+			}
 		case err := <-done:
 			if again, err := childExited(err); !again {
 				return err
@@ -885,11 +897,7 @@ func (c *controller) supervise() error {
 						queueStatus(conn)
 						continue
 					}
-					if healthy {
-						conn.Write([]byte("ok\n"))
-					} else {
-						conn.Write([]byte("unknown\n"))
-					}
+					conn.Write([]byte(statusLine(healthy)))
 					conn.Close()
 				}
 			} else if strings.HasPrefix(raw, "stop "+c.digest+" ") {

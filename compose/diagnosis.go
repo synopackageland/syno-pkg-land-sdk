@@ -7,17 +7,19 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/distribution/reference"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/composeimages"
 )
 
 // ImageCause is shared by native operation diagnostics and read-only checks.
@@ -97,6 +99,8 @@ const registryRequestBudget = 2 * time.Second
 
 // CheckRegistries is informational. It only contacts HTTPS /v2/ on at most
 // four distinct registries from immutable image references in compose.lock.json.
+// A registry is skipped when this package has already run every locked image
+// from it: Start and a same-image upgrade then never need to download.
 // It does not read Docker configuration, credentials, sockets or worker logs.
 func CheckRegistries(ctx context.Context, project, phase string) []ImageDiagnosis {
 	return checkRegistries(ctx, project, phase, nil)
@@ -106,6 +110,10 @@ func checkRegistries(ctx context.Context, project, phase string, transport http.
 	hosts, err := lockedRegistryHosts(project)
 	if err != nil {
 		return []ImageDiagnosis{imageDiagnosis(ImageUnknown, "registry_check", phase, "", "lock_unavailable_or_invalid")}
+	}
+	hosts = slices.DeleteFunc(hosts, func(h lockedHost) bool { return h.cached })
+	if len(hosts) == 0 {
+		return []ImageDiagnosis{}
 	}
 	ctx, cancel := context.WithTimeout(ctx, registryCheckBudget)
 	defer cancel()
@@ -127,7 +135,8 @@ func checkRegistries(ctx context.Context, project, phase string, transport http.
 		// follow a token realm or a redirect to an unapproved host/scheme.
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	results := []ImageDiagnosis{}
-	for _, host := range hosts {
+	for _, locked := range hosts {
+		host := locked.name
 		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "https://"+host+"/v2/", nil)
 		resp, err := client.Do(req)
 		if err != nil {
@@ -197,7 +206,12 @@ func readDiagnosisFile(path string, limit int64) ([]byte, error) {
 	return data, nil
 }
 
-func lockedRegistryHosts(project string) ([]string, error) {
+type lockedHost struct {
+	name   string
+	cached bool
+}
+
+func lockedRegistryHosts(project string) ([]lockedHost, error) {
 	st, err := os.Lstat(project)
 	if err != nil || !st.IsDir() || st.Mode()&os.ModeSymlink != 0 {
 		return nil, errors.New("invalid project")
@@ -215,6 +229,7 @@ func lockedRegistryHosts(project string) ([]string, error) {
 		return nil, errors.New("invalid image lock")
 	}
 	hosts := map[string]bool{}
+	ran := composeimages.Remembered(filepath.Join(packageStateDirectory(lock.Package, ""), "daemon"), lock.Package)
 	for _, image := range lock.Images {
 		named, err := reference.ParseNormalizedNamed(image.Reference)
 		if err != nil || !image.Pinned {
@@ -231,15 +246,15 @@ func lockedRegistryHosts(project string) ([]string, error) {
 		if err != nil || u.Host == "" || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" {
 			return nil, errors.New("invalid registry")
 		}
-		hosts[host] = true
+		cached, seen := hosts[host]
+		hosts[host] = (cached || !seen) && ran[image.Reference]
 		if len(hosts) > 4 {
 			return nil, errors.New("too many registries")
 		}
 	}
-	result := make([]string, 0, len(hosts))
-	for host := range hosts {
-		result = append(result, host)
+	result := make([]lockedHost, 0, len(hosts))
+	for _, host := range slices.Sorted(maps.Keys(hosts)) {
+		result = append(result, lockedHost{host, hosts[host]})
 	}
-	sort.Strings(result)
 	return result, nil
 }

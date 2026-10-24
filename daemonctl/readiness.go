@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/composeingress"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/startupbudget"
 	"io"
 	"net"
 	"net/http"
@@ -148,11 +149,10 @@ func (c *controller) checkReadiness() error {
 	return c.checkReadinessUntil(time.Now().Add(c.probeBudget()))
 }
 
+// probeBudget bounds one readiness request. It is independent of DSM's short
+// status command budget: a loaded NAS can take tens of seconds to answer.
 func (c *controller) probeBudget() time.Duration {
-	if c.Timeouts.Status > 0 {
-		return min(time.Duration(c.Timeouts.Status)*time.Second, c.operationBudget())
-	}
-	return 5 * time.Second
+	return min(startupbudget.ProbeSeconds*time.Second, c.operationBudget())
 }
 
 func (c *controller) checkReadinessUntil(until time.Time) error {
