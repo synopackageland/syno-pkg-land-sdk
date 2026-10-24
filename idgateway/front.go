@@ -74,8 +74,11 @@ type Names interface {
 
 // FrontConfig configures the gateway on the app's ports.
 type FrontConfig struct {
-	// External resolves the current public-origin policy; nil preserves local behavior.
+	// External resolves the current public-origin policy; nil preserves local
+	// behavior. ExternalFresh, when set, rechecks it for requests on a public
+	// origin; see ExternalReader.Fresh.
 	External              func() External
+	ExternalFresh         func() External
 	Ready                 func(context.Context) bool
 	ComposeIngress        *ComposeIngress
 	Access                string

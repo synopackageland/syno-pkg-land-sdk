@@ -90,7 +90,10 @@ gateway, settings and Compose:
   are integer generations, not content hashes.
 
 `NewExternalReader(cfg).Read()` polls stat at most every five seconds and
-reloads when file identity, mtime or security metadata changes. Missing,
+reloads when file identity, mtime or security metadata changes. Requests on
+port 443, the only port an external origin may use, call `Fresh()`, which
+rechecks at once. A sign-in started right after a settings save therefore
+carries the saved revision. Missing,
 malformed, future-schema or unsafe files count as absent. Symlinked files,
 hardlinks, unexpected ownership, incorrect modes and writable parent directories
 are refused. Missing inputs cause no outbound connection, warning or DSM

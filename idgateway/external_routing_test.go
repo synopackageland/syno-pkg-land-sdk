@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -91,5 +93,54 @@ func TestExternalFailurePageSignsInAtDSMOrigin(t *testing.T) {
 				t.Fatal(mode, tc, body)
 			}
 		}
+	}
+}
+
+// A sign-in started on the public origin right after a settings save must
+// carry the saved revision, which authorize.cgi and open.cgi read directly; a
+// polled one sends the browser to the LAN fallback. LAN requests stay polled.
+func TestExternalPublicSignInUsesTheSavedRevision(t *testing.T) {
+	cfg := Config{Package: "App", StateDir: t.TempDir(), Listen: Listen{HTTPS: 18443}}
+	state := ExternalState{Schema: 1, Revision: 5, ManualOrigin: "https://app.example.com", DSMOrigin: "https://dsm.example.com"}
+	writeExternalJSON(t, cfg.ExternalStatePath(), state, 0600)
+	reader := NewExternalReader(cfg)
+	reader.paths = []string{filepath.Join(t.TempDir(), "absent.json")}
+	f, _ := newFront(t, ModeHeader, newUpstream(t, nil), func(c *FrontConfig) { c.External, c.ExternalFresh = reader.Read, reader.Fresh })
+	ingress := nativeIngressHandler(Config{Package: "App", Listen: Listen{HTTPS: 18443}}, f)
+	do := func(origin string) string {
+		r := httptest.NewRequest("GET", origin+"/", nil)
+		r.TLS = &tls.ConnectionState{VerifiedChains: [][]*x509.Certificate{{{}}}}
+		r.Header.Set(nativeClientIPHeader, "192.0.2.7")
+		for i := 0; i < len(navigate); i += 2 {
+			r.Header.Set(navigate[i], navigate[i+1])
+		}
+		w := httptest.NewRecorder()
+		ingress.ServeHTTP(w, r)
+		loc, _ := url.Parse(w.Header().Get("Location"))
+		return loc.Query().Get("resume")
+	}
+	if got := do("https://app.example.com"); !strings.HasSuffix(got, ":x0:5.0") {
+		t.Fatal("first", got)
+	}
+	state.Revision = 6
+	tmp := cfg.ExternalStatePath() + ".tmp"
+	writeExternalJSON(t, tmp, state, 0600)
+	if err := os.Rename(tmp, cfg.ExternalStatePath()); err != nil {
+		t.Fatal(err)
+	}
+	if got := do("https://app.example.com"); !strings.HasSuffix(got, ":x0:6.0") {
+		t.Fatal("after save", got)
+	}
+	state.ManualOrigin = "https://other.example.com"
+	state.Revision = 7
+	writeExternalJSON(t, tmp, state, 0600)
+	if err := os.Rename(tmp, cfg.ExternalStatePath()); err != nil {
+		t.Fatal(err)
+	}
+	if got := do("https://other.example.com"); !strings.HasSuffix(got, ":x0:7.0") {
+		t.Fatal("new origin not admitted at once", got)
+	}
+	if got := do("https://nas.example.com:18443"); got != "" {
+		t.Fatal("LAN request got a resume token", got)
 	}
 }
