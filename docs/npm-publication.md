@@ -59,5 +59,5 @@ The manifest ships starting with SDK 0.27.1, which reuses executor/v0.27.0
 and its six verified payload digests. When executor sources and build inputs are
 unchanged, retain that immutable inventory and its existing reproducibility
 evidence; do not rebuild an executor matrix or create another executor tag.
-SDK 0.28.0 also reuses executor/v0.27.0: executor sources are unchanged since 0.27.0. SDK 0.26.0 and 0.27.0 as
+SDK 0.28.0 and 0.29.0 also reuse executor/v0.27.0: executor sources are unchanged since 0.27.0. SDK 0.26.0 and 0.27.0 as
 already published remain compatible through the CLI's frozen legacy inventory.

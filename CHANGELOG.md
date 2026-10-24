@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.29.0 (2026-10-24)
+
+- Reuse immutable executor/v0.27.0 and its six verified payload digests; executor sources are unchanged since 0.27.0.
+
+- Add external access to the identity gateway. An optional `identity_gateway.external_access` policy (`connect: optional|none`, `origin_change: none|confirm`) lets an App serve a public `https://<DNS hostname>` origin from a manually configured value or a read-only Connect projection. The App keeps its dedicated HTTPS listener and DSM admission policy; the gateway creates no tunnels and changes no DSM settings. See [external access](docs/external-access.md).
+- Admit configured external authorities and resume public sign-in with durable revision tokens, so a sign-in started on the public origin returns there after DSM authentication.
+- Add a DSM-origin settings page (`sso/settings.cgi`) for `manual_origin` and `dsm_origin`, checked against the DSM session, SynoToken and administrator role on every request, and stored privately in `<StateDir>/external.json`. Add the `external-origin` installation setting type and Compose origin snapshots. See [external access settings](docs/external-access-settings.md).
+- With no manual origin and no Connect projection, the gateway behaves as in 0.28.0; this absent-input baseline is covered by tests.
+
 ## 0.28.0 (2026-10-24)
 
 - Reuse immutable executor/v0.27.0 and its six verified payload digests; executor sources are unchanged since 0.27.0. Compose Apps should rebuild to pick up the startup and readiness changes below.

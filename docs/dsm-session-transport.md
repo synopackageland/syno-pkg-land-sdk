@@ -1,6 +1,6 @@
 # DSM session transport and file migration
 
-This guide targets SDK/App 0.28.0 with UI 0.14.8. Upgrade the Go runtime and
+This guide targets SDK/App 0.29.0 with UI 0.14.8. Upgrade the Go runtime and
 frontend together; packages with a protected executor also need executor/v0.27.0.
 
 Browser DSM sessions must not be replayed by a backend HTTP client. DSM can

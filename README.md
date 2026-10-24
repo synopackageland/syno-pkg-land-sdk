@@ -20,19 +20,19 @@ SDK for DSM packages built with [synopkgland](https://github.com/synopackageland
 An app depends on the SDK through `backend/go.mod`:
 
 ```
-require github.com/synopackageland/syno-pkg-land-sdk v0.28.0
+require github.com/synopackageland/syno-pkg-land-sdk v0.29.0
 ```
 
 A Rust App depends on `syno-pkg-land-app` (`rust/app/`) and runs behind the
 Go runtime:
 
 ```
-syno-pkg-land-app = { git = "https://github.com/synopackageland/syno-pkg-land-sdk", tag = "v0.28.0" }
+syno-pkg-land-app = { git = "https://github.com/synopackageland/syno-pkg-land-sdk", tag = "v0.29.0" }
 ```
 
 The `go.mod` line is the only source of the SDK version. The CLI builds the executor
 from `github.com/synopackageland/syno-pkg-land-sdk/executor` at the immutable
-release declared by the SDK executor manifest. SDK 0.28.0 reuses executor/v0.27.0
+release declared by the SDK executor manifest. SDK 0.29.0 reuses executor/v0.27.0
 and its six verified payload digests. The manifest ships in both the Go module
 and npm package; compatible SDK minor releases do not require a CLI release.
 
