@@ -43,5 +43,7 @@
   "external_upstream": "This App uses its own sign-in; some pages may be public",
   "external_passthrough": "Paths that bypass DSM sign-in:",
   "external_optional": "An administrator may have opened these paths:",
-  "external_warning": "The DSM sign-in page is also public when using a public address; enable two-step verification because tunnel connections come from 127.0.0.1 and DSM auto-block may not work"
+  "external_warning": "The DSM sign-in page is also public when using a public address; enable two-step verification because tunnel connections come from 127.0.0.1 and DSM auto-block may not work",
+  "external_confirm_single": "I confirm that afterwards only the public address above can be used to sign in",
+  "external_tailnet": "This is a Tailscale address: only devices on your tailnet can reach it, unless it is shared with Funnel"
 }

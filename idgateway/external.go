@@ -23,9 +23,12 @@ const maxExternalRevision uint64 = 9999999999999999999
 
 // ExternalConfig is the optional gateway.json external policy.
 // Omission defaults to optional Connect support and no origin-change prompt.
+// SingleOrigin declares an App whose upstream works on one URL only: with an
+// external origin set, the primary origin is the App's only browser origin.
 type ExternalConfig struct {
 	Connect      string `json:"connect,omitempty"`
 	OriginChange string `json:"origin_change,omitempty"`
+	SingleOrigin bool   `json:"single_origin,omitempty"`
 }
 
 func (e *ExternalConfig) validate() error {
@@ -326,6 +329,15 @@ func (r *ExternalReader) read(fresh bool) External {
 		}
 	}
 	return EffectiveExternal(r.cfg, r.state, r.projection)
+}
+
+// Canonical is the single browser origin of a SingleOrigin App, or "" while no
+// external origin is set and the App keeps its local addresses.
+func (e External) Canonical(cfg *ExternalConfig) string {
+	if cfg == nil || !cfg.SingleOrigin || len(e.Accept) == 0 {
+		return ""
+	}
+	return e.Primary
 }
 
 func (e External) Revision() string { return fmt.Sprintf("%d.%d", e.R1, e.R2) }

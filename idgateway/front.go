@@ -77,8 +77,11 @@ type FrontConfig struct {
 	// External resolves the current public-origin policy; nil preserves local
 	// behavior. ExternalFresh, when set, rechecks it for requests on a public
 	// origin; see ExternalReader.Fresh.
-	External              func() External
-	ExternalFresh         func() External
+	External      func() External
+	ExternalFresh func() External
+	// SingleOrigin redirects browser navigations on other hosts to the primary
+	// external origin while one is set; see ExternalConfig.SingleOrigin.
+	SingleOrigin          bool
 	Ready                 func(context.Context) bool
 	ComposeIngress        *ComposeIngress
 	Access                string
@@ -321,6 +324,12 @@ func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if !validRequestAuthority(r) || !f.browserAuthority(r) {
 		http.Error(w, "invalid authority", http.StatusBadRequest)
+		return
+	}
+	if target := f.canonicalNavigation(r, origin); target != "" {
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		http.Redirect(w, r, target, http.StatusFound)
 		return
 	}
 	// Explicit app-authenticated passthrough also serves native clients without

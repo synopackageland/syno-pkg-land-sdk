@@ -6,6 +6,7 @@ import (
 	"html"
 	"net"
 	"net/http"
+	"strings"
 )
 
 type externalSnapshotKey struct{}
@@ -38,6 +39,24 @@ func withExternal(r *http.Request, e External) *http.Request {
 }
 func (f *Front) external(r *http.Request) External {
 	return requestExternal(r, f.cfg.External, f.cfg.ExternalFresh)
+}
+
+// canonicalNavigation returns the canonical URL for a top-level browser
+// navigation that a SingleOrigin App would otherwise serve on a local host,
+// where its upstream sign-in cannot complete. Public origins never redirect,
+// so one public address does not disclose another. API, native-client,
+// subresource, WebSocket and gateway requests keep their existing handling.
+func (f *Front) canonicalNavigation(r *http.Request, origin string) string {
+	if !f.cfg.SingleOrigin || f.cfg.External == nil {
+		return ""
+	}
+	external := f.external(r)
+	if len(external.Accept) == 0 || external.Index(origin) >= 0 || r.Method != http.MethodGet && r.Method != http.MethodHead || isUpgrade(r) ||
+		r.Header.Get("Sec-Fetch-Mode") != "navigate" || r.Header.Get("Sec-Fetch-Dest") != "document" ||
+		r.URL.Path == "/_sso" || strings.HasPrefix(r.URL.Path, "/_sso/") || r.URL.Path == PingPath {
+		return ""
+	}
+	return external.Primary + r.URL.RequestURI()
 }
 
 // The public explanation must reveal no hostnames or settings values.

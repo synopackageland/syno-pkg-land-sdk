@@ -43,5 +43,7 @@
   "external_upstream": "Questa App usa il proprio accesso; alcune pagine possono essere pubbliche",
   "external_passthrough": "Percorsi che non richiedono l’accesso a DSM:",
   "external_optional": "Un amministratore potrebbe aver aperto questi percorsi:",
-  "external_warning": "Con un indirizzo pubblico è esposto anche l’accesso a DSM; abilita la verifica in due passaggi poiché le connessioni del tunnel provengono da 127.0.0.1 e il blocco automatico DSM potrebbe non funzionare"
+  "external_warning": "Con un indirizzo pubblico è esposto anche l’accesso a DSM; abilita la verifica in due passaggi poiché le connessioni del tunnel provengono da 127.0.0.1 e il blocco automatico DSM potrebbe non funzionare",
+  "external_confirm_single": "Confermo che in seguito sarà possibile accedere solo con l’indirizzo pubblico indicato sopra",
+  "external_tailnet": "Questo è un indirizzo Tailscale: solo i dispositivi della tua tailnet possono raggiungerlo, a meno che non sia condiviso con Funnel"
 }

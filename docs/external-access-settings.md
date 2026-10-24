@@ -83,7 +83,9 @@ belongs to the host that started authorization. Vaultwarden rejects the
 missing cookie with `SSO session binding mismatch`.
 
 Use the same canonical URL for internal and external SSO, with reachability
-from both networks arranged by the deployment. A working `external_origin`
+from both networks arranged by the deployment. Declare
+[`single_origin: true`](external-access.md#single-origin-apps) so the DSM
+launcher and other hosts lead browsers to that URL. A working `external_origin`
 snapshot and an acknowledged origin-change warning do not establish alternate
 LAN-host SSO support.
 

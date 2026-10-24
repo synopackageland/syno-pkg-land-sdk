@@ -43,5 +43,7 @@
   "external_upstream": "此 App 使用自己的登录，部分页面可能公开",
   "external_passthrough": "这些路径不经过 DSM 登录：",
   "external_optional": "管理员可能已开放这些路径：",
-  "external_warning": "使用公开地址时 DSM 登录页也会对外，强烈建议启用两步验证：tunnel 连接来自 127.0.0.1，DSM 自动封锁可能无效"
+  "external_warning": "使用公开地址时 DSM 登录页也会对外，强烈建议启用两步验证：tunnel 连接来自 127.0.0.1，DSM 自动封锁可能无效",
+  "external_confirm_single": "我确认之后只能使用上方的公开网址登录",
+  "external_tailnet": "这是 Tailscale 网址：除非已用 Funnel 公开，只有您 tailnet 中的设备能连接"
 }

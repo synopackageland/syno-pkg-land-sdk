@@ -244,7 +244,7 @@ func TestSettingsLocaleCatalogsCompleteAndWithoutTrailingPeriods(t *testing.T) {
 		if err := json.Unmarshal(raw, &messages); err != nil {
 			t.Fatal(err)
 		}
-		for _, suffix := range strings.Fields("title signin invalid denied unavailable conflict lan manual connect private private_hint dsm format confirm restart save protected upstream passthrough optional warning") {
+		for _, suffix := range strings.Fields("title signin invalid denied unavailable conflict lan manual connect private private_hint dsm format confirm confirm_single tailnet restart save protected upstream passthrough optional warning") {
 			key := "external_" + suffix
 			value := messages[key]
 			if value == "" || strings.HasSuffix(value, ".") || strings.HasSuffix(value, "。") {
@@ -266,6 +266,40 @@ func TestSettingsMentionsContainerRestartOnlyForContainerApps(t *testing.T) {
 		w := settingsPost(h, url.Values{"SynoToken": {"tok"}}, "https://nas.example:5001", "id=s1", "en")
 		if w.Code != 200 || strings.Contains(w.Body.String(), "container environment") != container {
 			t.Fatal(container, w.Code, w.Body)
+		}
+	}
+}
+
+func TestSettingsSingleOriginConfirmationNamesTheOnlySignInAddress(t *testing.T) {
+	h := settingsFixture(t)
+	h.Config.External = &ExternalConfig{OriginChange: "confirm", SingleOrigin: true}
+	w := settingsPost(h, url.Values{"SynoToken": {"tok"}}, "https://nas.example:5001", "id=s1", "en")
+	body := w.Body.String()
+	_, nonce, _ := strings.Cut(w.Header().Get("Content-Security-Policy"), "'nonce-")
+	nonce, _, _ = strings.Cut(nonce, "'")
+	if w.Code != 200 || !strings.Contains(body, "only the public address above can be used to sign in") || strings.Contains(body, "may affect passkeys") ||
+		!strings.Contains(body, `<p id="tailnet" hidden>`) || !strings.Contains(body, `nonce="`+nonce+`"`) {
+		t.Fatal(w.Code, w.Header(), body)
+	}
+	v := settingsSave(0, "https://nas.tailnet-name.ts.net", "https://dsm.example.com")
+	v.Set("confirm", "yes")
+	w = settingsPost(h, v, "https://nas.example:5001", "id=s1", "zh-TW")
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `<p id="tailnet">這是 Tailscale 網址`) {
+		t.Fatal(w.Code, w.Body)
+	}
+	// Other Apps keep the generic warning and a script-free page.
+	h = settingsFixture(t)
+	h.Config.External = &ExternalConfig{OriginChange: "confirm"}
+	w = settingsPost(h, url.Values{"SynoToken": {"tok"}}, "https://nas.example:5001", "id=s1", "en")
+	if !strings.Contains(w.Body.String(), "may affect passkeys") || strings.Contains(w.Body.String(), "<script") || strings.Contains(w.Header().Get("Content-Security-Policy"), "script-src") {
+		t.Fatal(w.Header(), w.Body)
+	}
+}
+
+func TestTailnetOrigin(t *testing.T) {
+	for origin, want := range map[string]bool{"https://nas.tail1234.ts.net": true, "https://NAS.Tail1234.TS.NET": true, "https://vault.example.com": false, "https://ts.net.example.com": false, "": false} {
+		if tailnetOrigin(origin) != want {
+			t.Fatal(origin)
 		}
 	}
 }

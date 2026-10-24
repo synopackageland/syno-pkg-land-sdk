@@ -22,6 +22,40 @@ so changing the URL requires confirmation. Omitting the block means
 `external` in `target/sso/gateway.json`. Pin `identity_gateway.sdk` to 0.29.0
 or a compatible later version when declaring external access.
 
+### Single-origin Apps
+
+An App whose upstream sign-in works on one fixed URL only declares
+`single_origin: true` (default `false`):
+
+```yaml
+identity_gateway:
+  external_access:
+    origin_change: confirm
+    single_origin: true
+```
+
+Without an external origin the App keeps its local addresses unchanged. While
+the resolution has an accepted external origin, the primary origin is the
+App's only browser origin:
+
+- The DSM launcher (`open.cgi`) opens the primary origin plus `launch_path`
+  instead of the DSM hostname and App port. Sign-in resume keeps the host that
+  started the transaction.
+- The App listener answers a top-level browser navigation on a local host or
+  IP (`GET`/`HEAD`, `Sec-Fetch-Mode: navigate`, `Sec-Fetch-Dest: document`)
+  with `302` to the same path and query on the primary origin. Accepted public
+  origins are never redirected, so one public address does not disclose
+  another; with both a manual and a Connect origin, sign-in works only on the
+  manual one. API, native-client, subresource, frame, WebSocket, `/_sso/` and
+  `/_spl/ping` requests are not redirected.
+- The settings page states that only the saved public address can sign in
+  afterwards, and that a Tailscale `*.ts.net` address is reachable only from the
+  tailnet unless it is shared with Funnel.
+
+Reachability of the primary origin from each network remains a deployment
+responsibility: a private tailnet URL is unreachable from devices outside the
+tailnet.
+
 A public origin is `https://<DNS hostname>`: hostname case and an explicit `:443`
 are normalized. IP literals, other ports, credentials, paths (including `/`),
 query strings and fragments are refused. The App origin must differ from DSM's
