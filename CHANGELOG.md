@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add `identity_gateway.external_access.single_origin` for Apps whose upstream sign-in works on one fixed URL. While an external origin is set, the DSM launcher opens the primary origin, top-level browser navigations on other hosts are redirected to it, and the settings page states that only that address can sign in, with a tailnet reachability note for `*.ts.net` addresses. Without an external origin, behavior is unchanged. See [single-origin Apps](docs/external-access.md#single-origin-apps).
+
 ## 0.29.1 (2026-10-24)
 
 - Accept UI 0.15.x with the optional UI peer range `>=0.10.1 <0.16.0` and validate the Vue SDK against UI 0.15.0. Apps can install this combination without `--legacy-peer-deps`.

@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -215,7 +216,7 @@ func (h *SettingsCGI) save(r *http.Request, previous ExternalState, projection E
 	return dir.Sync()
 }
 
-var externalSettingsPage = template.Must(template.New("external").Parse(`<!doctype html><html lang="{{.Locale}}"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{index .M "external_title"}}</title><h1>{{index .M "external_title"}}</h1><p>{{.Summary}}</p>{{if .Passthrough}}<p>{{index .M "external_passthrough"}} {{.Passthrough}}</p>{{end}}{{if .Optional}}<p>{{index .M "external_optional"}} {{.Optional}}</p>{{end}}<p>{{index .M "external_warning"}}</p><dl><dt>{{index .M "external_lan"}}</dt><dd>{{.LAN}}</dd><dt>{{index .M "external_manual"}}</dt><dd>{{.Effective.Manual}}</dd><dt>{{index .M "external_connect"}}</dt><dd>{{.Effective.Connect}}</dd><dt>{{index .M "external_private"}}</dt><dd>{{index .M "external_private_hint"}}</dd><dt>{{index .M "external_dsm"}}</dt><dd>{{.Effective.DSM}}</dd></dl><form method="post" action="?"><input type="hidden" name="SynoToken" value="{{.Token}}"><input type="hidden" name="action" value="save"><input type="hidden" name="revision" value="{{.Revision}}"><p><label>{{index .M "external_manual"}} <input type="url" name="manual_origin" maxlength="2048" value="{{.State.ManualOrigin}}"></label></p><p><label>{{index .M "external_dsm"}} <input type="url" name="dsm_origin" maxlength="2048" value="{{.State.DSMOrigin}}"></label></p><p>{{index .M "external_format"}}</p>{{if .Confirm}}<p><label><input type="checkbox" name="confirm" value="yes" required>{{index .M "external_confirm"}}</label></p>{{end}}{{if .Container}}<p>{{index .M "external_restart"}}</p>{{end}}<button type="submit">{{index .M "external_save"}}</button></form></html>`))
+var externalSettingsPage = template.Must(template.New("external").Parse(`<!doctype html><html lang="{{.Locale}}"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{index .M "external_title"}}</title><h1>{{index .M "external_title"}}</h1><p>{{.Summary}}</p>{{if .Passthrough}}<p>{{index .M "external_passthrough"}} {{.Passthrough}}</p>{{end}}{{if .Optional}}<p>{{index .M "external_optional"}} {{.Optional}}</p>{{end}}<p>{{index .M "external_warning"}}</p><dl><dt>{{index .M "external_lan"}}</dt><dd>{{.LAN}}</dd><dt>{{index .M "external_manual"}}</dt><dd>{{.Effective.Manual}}</dd><dt>{{index .M "external_connect"}}</dt><dd>{{.Effective.Connect}}</dd><dt>{{index .M "external_private"}}</dt><dd>{{index .M "external_private_hint"}}</dd><dt>{{index .M "external_dsm"}}</dt><dd>{{.Effective.DSM}}</dd></dl><form method="post" action="?"><input type="hidden" name="SynoToken" value="{{.Token}}"><input type="hidden" name="action" value="save"><input type="hidden" name="revision" value="{{.Revision}}"><p><label>{{index .M "external_manual"}} <input type="url" name="manual_origin" maxlength="2048" value="{{.State.ManualOrigin}}"></label></p><p><label>{{index .M "external_dsm"}} <input type="url" name="dsm_origin" maxlength="2048" value="{{.State.DSMOrigin}}"></label></p><p>{{index .M "external_format"}}</p>{{if .Confirm}}<p><label><input type="checkbox" name="confirm" value="yes" required>{{if .Single}}{{index .M "external_confirm_single"}}{{else}}{{index .M "external_confirm"}}{{end}}</label></p>{{end}}{{if .Single}}<p id="tailnet"{{if not .Tailnet}} hidden{{end}}>{{index .M "external_tailnet"}}</p><script nonce="{{.Nonce}}">var i=document.querySelector('input[name=manual_origin]'),p=document.getElementById('tailnet');i.addEventListener('input',function(){var h='';try{h=new URL(i.value).hostname}catch(e){}p.hidden=!/\.ts\.net\.?$/i.test(h)})</script>{{end}}{{if .Container}}<p>{{index .M "external_restart"}}</p>{{end}}<button type="submit">{{index .M "external_save"}}</button></form></html>`))
 
 func (h *SettingsCGI) page(w http.ResponseWriter, r *http.Request, locale string, m map[string]string, state ExternalState, projection ExternalProjection) {
 	summary := m["external_protected"]
@@ -233,13 +234,27 @@ func (h *SettingsCGI) page(w http.ResponseWriter, r *http.Request, locale string
 		scheme = "http://"
 	}
 	lan := scheme + net.JoinHostPort(hostname(r.Host), strconv.Itoa(nativePublicPort(h.Config)))
+	single := h.Config.External != nil && h.Config.External.SingleOrigin
+	nonce := ""
+	if single {
+		// The only script toggles the tailnet note while the address is edited.
+		nonce = randomID(16)
+		w.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src 'none'; script-src 'nonce-%s'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'", nonce))
+	}
 	_ = externalSettingsPage.Execute(w, struct {
-		Locale, Token, Revision, LAN, Summary, Passthrough, Optional string
-		M                                                            map[string]string
-		State                                                        ExternalState
-		Effective                                                    External
-		Confirm, Container                                           bool
-	}{locale, r.PostForm.Get("SynoToken"), strconv.FormatUint(state.Revision, 10), lan, summary, strings.Join(h.Config.Passthrough, ", "), strings.Join(optional, ", "), m, state, EffectiveExternal(h.Config, state, projection), h.Config.External != nil && h.Config.External.OriginChange == "confirm", h.Config.ContainerApp})
+		Locale, Token, Revision, LAN, Summary, Passthrough, Optional, Nonce string
+		M                                                                   map[string]string
+		State                                                               ExternalState
+		Effective                                                           External
+		Confirm, Container, Single, Tailnet                                 bool
+	}{locale, r.PostForm.Get("SynoToken"), strconv.FormatUint(state.Revision, 10), lan, summary, strings.Join(h.Config.Passthrough, ", "), strings.Join(optional, ", "), nonce, m, state, EffectiveExternal(h.Config, state, projection), h.Config.External != nil && h.Config.External.OriginChange == "confirm", h.Config.ContainerApp, single, tailnetOrigin(state.ManualOrigin)})
+}
+
+// tailnetOrigin reports a Tailscale MagicDNS HTTPS name, reachable only from
+// the tailnet unless the administrator shares it with Funnel.
+func tailnetOrigin(origin string) bool {
+	u, err := url.Parse(origin)
+	return err == nil && strings.HasSuffix(strings.TrimSuffix(strings.ToLower(u.Hostname()), "."), ".ts.net")
 }
 
 // Read only the shared projection contract; never inspect Connect private state.

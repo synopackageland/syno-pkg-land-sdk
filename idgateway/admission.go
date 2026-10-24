@@ -220,6 +220,12 @@ func entryHandlerWithExternal(cfg Config, preflight func() error, shares func() 
 			http.Redirect(w, r, requestOrigin(r)+cfg.AuthorizeCGI+"?"+q.Encode(), http.StatusFound)
 			return
 		}
+		// A single-origin App opens on its canonical external origin, the only
+		// URL where its upstream sign-in completes. Resume above keeps the host
+		// that started the transaction.
+		if canonical := external().Canonical(cfg.External); canonical != "" {
+			target = canonical + "/"
+		}
 		// A menu target comes only from package configuration. Resume always uses
 		// the issuer root above, independently of any App query or fragment.
 		if cfg.LaunchPath != "" {

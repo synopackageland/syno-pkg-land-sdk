@@ -43,5 +43,7 @@
   "external_upstream": "Cette App utilise sa propre connexion ; certaines pages peuvent être publiques",
   "external_passthrough": "Chemins sans connexion DSM :",
   "external_optional": "Un administrateur peut avoir ouvert ces chemins :",
-  "external_warning": "Avec une adresse publique, la connexion DSM est aussi exposée ; activez la vérification en deux étapes, car les connexions du tunnel viennent de 127.0.0.1 et le blocage automatique DSM peut être inefficace"
+  "external_warning": "Avec une adresse publique, la connexion DSM est aussi exposée ; activez la vérification en deux étapes, car les connexions du tunnel viennent de 127.0.0.1 et le blocage automatique DSM peut être inefficace",
+  "external_confirm_single": "Je confirme qu’ensuite seule l’adresse publique ci-dessus permettra de se connecter",
+  "external_tailnet": "Il s’agit d’une adresse Tailscale : seuls les appareils de votre tailnet peuvent y accéder, sauf si elle est partagée avec Funnel"
 }

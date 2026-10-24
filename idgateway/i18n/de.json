@@ -43,5 +43,7 @@
   "external_upstream": "Diese App nutzt eine eigene Anmeldung; einige Seiten können öffentlich sein",
   "external_passthrough": "Pfade ohne DSM-Anmeldung:",
   "external_optional": "Ein Administrator hat möglicherweise diese Pfade geöffnet:",
-  "external_warning": "Bei einer öffentlichen Adresse ist auch die DSM-Anmeldeseite öffentlich; Zwei-Faktor-Authentifizierung aktivieren, da Tunnelverbindungen von 127.0.0.1 kommen und die automatische DSM-Sperre möglicherweise nicht greift"
+  "external_warning": "Bei einer öffentlichen Adresse ist auch die DSM-Anmeldeseite öffentlich; Zwei-Faktor-Authentifizierung aktivieren, da Tunnelverbindungen von 127.0.0.1 kommen und die automatische DSM-Sperre möglicherweise nicht greift",
+  "external_confirm_single": "Ich bestätige, dass danach nur noch die obige öffentliche Adresse zur Anmeldung verwendet werden kann",
+  "external_tailnet": "Dies ist eine Tailscale-Adresse: Nur Geräte in Ihrem Tailnet können sie erreichen, sofern sie nicht mit Funnel freigegeben ist"
 }

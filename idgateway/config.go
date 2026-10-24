@@ -331,7 +331,7 @@ func Build(cfg Config, ports DSMPorts) (*Gateway, error) {
 	gw := &Gateway{Secrets: map[string]string{}, Deletions: cfg.Deletions()}
 	external := NewExternalReader(cfg)
 	front := FrontConfig{
-		External: external.Read, ExternalFresh: external.Fresh,
+		External: external.Read, ExternalFresh: external.Fresh, SingleOrigin: cfg.External != nil && cfg.External.SingleOrigin,
 		Ready: cfg.Ready, ComposeIngress: cfg.ComposeIngress, Mode: cfg.Mode, Access: cfg.Access, UpstreamAccess: cfg.UpstreamAccess, Groups: cfg.Groups, Membership: NewDirectory(), ComposeBlocked: cfg.ComposeBlocked, MaxUploadBytes: cfg.MaxUploadBytes, ResponseHeaderTimeout: time.Duration(cfg.ResponseHeaderTimeoutSeconds) * time.Second, Upstream: cfg.Upstream, Key: key, AuthorizeCGI: cfg.AuthorizeCGI, DSMPorts: ports,
 		Package: cfg.Package, EmailDomain: cfg.EmailDomain, Passthrough: cfg.Passthrough, Redirects: cfg.Redirects, OptionalPassthrough: cfg.OptionalPassthrough, StateDir: cfg.StateDir,
 		Headers: cfg.Headers, Roles: cfg.Roles, Accounts: NewDirectory(), SessionTTL: cfg.SessionTTL(),
