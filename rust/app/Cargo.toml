@@ -1,6 +1,6 @@
 [package]
 name = "syno-pkg-land-app"
-version = "0.28.0"
+version = "0.29.0"
 description = "Rust App SDK for Synology DSM packages behind the synopkgland Go runtime"
 readme = "README.md"
 homepage = "https://synopkgland.com"
