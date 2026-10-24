@@ -4,8 +4,10 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -115,5 +117,56 @@ func TestAccountStatusPrintsJSON(t *testing.T) {
 	out.Reset()
 	if err := account([]string{"status", "--config", path}, &out); err != nil || !strings.Contains(out.String(), "no pending deletions") {
 		t.Fatalf("%v %q", err, out.String())
+	}
+}
+
+// Exercise CGI parsing and dispatch in an actual linked binary. No DSM session
+// or network service is needed for entry, bootstrap and stale-token fallback.
+func TestCompiledCGIExternalResume(t *testing.T) {
+	dir := t.TempDir()
+	state := filepath.Join(dir, "state")
+	if err := os.Mkdir(state, 0700); err != nil {
+		t.Fatal(err)
+	}
+	config := filepath.Join(dir, "gateway.json")
+	body := fmt.Sprintf(`{"package":"ExampleApp","native_ingress":true,"mode":"oidc","upstream":"http://127.0.0.1:8000","listen":{"https":18443},"authorize_cgi":"/webman/3rdparty/ExampleApp/sso/authorize.cgi","state_dir":%q,"oidc":{"issuer_port":18444,"native_login":true,"clients":[{"id":"app","redirect_paths":["/cb"]}]}}`, state)
+	if err := os.WriteFile(config, []byte(body), 0600); err != nil {
+		t.Fatal(err)
+	}
+	save := func(revision string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(state, "external.json"), []byte(`{"schema":1,"revision":`+revision+`,"manual_origin":"https://app.example.com","dsm_origin":"https://dsm.example.com"}`), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	save("9007199254740993")
+	binary := filepath.Join(dir, "gateway")
+	build := exec.Command("go", "build", "-ldflags", "-X main.configPath="+config, "-o", binary, ".")
+	if out, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build: %v %s", err, out)
+	}
+	invoke := func(script, query string) string {
+		t.Helper()
+		cmd := exec.Command(binary)
+		cmd.Env = append(os.Environ(), "GATEWAY_INTERFACE=CGI/1.1", "REQUEST_METHOD=GET", "SERVER_PROTOCOL=HTTP/1.1", "HTTP_HOST=dsm.example.com:5001", "SERVER_NAME=dsm.example.com", "SERVER_PORT=5001", "REMOTE_ADDR=192.0.2.7", "HTTPS=on", "SCRIPT_NAME=/webman/3rdparty/ExampleApp/sso/"+script, "QUERY_STRING="+query)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("CGI: %v %s", err, out)
+		}
+		return string(out)
+	}
+	token := "opaque_txn:x0:9007199254740993.0"
+	output := invoke("open.cgi", "ssoResume="+url.QueryEscape(token))
+	if !strings.Contains(output, "Status: 302") || !strings.Contains(output, "resume="+url.QueryEscape(token)) || !strings.Contains(output, "return=https%3A%2F%2Fapp.example.com%2F_sso%2Fdsm-return") {
+		t.Fatal(output)
+	}
+	output = invoke("authorize.cgi", "resume="+url.QueryEscape(token))
+	if !strings.Contains(output, "method=\"post\"") || !strings.Contains(output, "resume="+url.QueryEscape(token)) || !strings.Contains(output, "txn=opaque_txn") {
+		t.Fatal(output)
+	}
+	save("9007199254740994")
+	output = invoke("authorize.cgi", "resume="+url.QueryEscape(token))
+	if !strings.Contains(output, "Location: https://dsm.example.com:18443/") || strings.Contains(output, "<form") {
+		t.Fatal("stale token", output)
 	}
 }

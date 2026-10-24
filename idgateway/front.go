@@ -286,7 +286,9 @@ func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid path", http.StatusBadRequest)
 		return
 	}
-	r = withExternal(r, f.external(r))
+	if f.cfg.External != nil {
+		r = withExternal(r, f.external(r))
+	}
 	optional := false
 	if f.optional != nil {
 		id, scope, enabled := f.optional.admit(r.URL.Path)

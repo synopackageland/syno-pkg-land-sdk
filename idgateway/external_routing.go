@@ -19,6 +19,9 @@ func requestExternal(r *http.Request, read func() External) External {
 	return read()
 }
 func withExternal(r *http.Request, e External) *http.Request {
+	if len(e.Accept) == 0 {
+		return r
+	}
 	return r.WithContext(context.WithValue(r.Context(), externalSnapshotKey{}, e))
 }
 func (f *Front) external(r *http.Request) External { return requestExternal(r, f.cfg.External) }
