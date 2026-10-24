@@ -12,10 +12,10 @@ import (
 )
 
 func TestExternalOriginEnvironmentDeclaration(t *testing.T) {
-	for _, e := range []RuntimeEnvironment{{ExternalOrigin: true}, {ExternalOrigin: true, Secret: "session"}, {ExternalOrigin: true, Setting: "origin"}, {ExternalOrigin: true, OIDCClient: "reader"}} {
+	for _, e := range []RuntimeEnvironment{{ExternalOrigin: true}, {ExternalOrigin: true, Secret: "session"}, {ExternalOrigin: true, Setting: "origin"}, {ExternalOrigin: true, OIDCClient: "reader"}, {ExternalOrigin: true, Setting: "origin", Secret: "session"}, {ExternalOrigin: true, Setting: "origin", OIDCClient: "reader"}, {ExternalOrigin: true, Setting: "../origin"}} {
 		i := StorageInitialization{Directories: []WritableDirectory{{Base: "/tmp", Path: "app"}}, Runtime: &RuntimeConfiguration{Environment: map[string]RuntimeEnvironment{"DOMAIN": e}}}
 		err := validateRuntime(i)
-		if (e.Secret == "" && e.Setting == "" && e.OIDCClient == "") != (err == nil) {
+		if (e.Secret == "" && e.OIDCClient == "" && e.Setting != "../origin") != (err == nil) {
 			t.Fatalf("%+v: %v", e, err)
 		}
 	}

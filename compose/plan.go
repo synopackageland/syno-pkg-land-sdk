@@ -602,6 +602,9 @@ func Build(ctx context.Context, r Request) (*Plan, error) {
 			return "bridge"
 		}(), Mounts: s.Volumes})
 	}
+	if _, _, err := externalOriginFallback(p.Services); err != nil {
+		return nil, err
+	}
 	if len(project.Volumes) > 256 {
 		return nil, problem("COMPOSE_VOLUME_DRIVER_UNSUPPORTED", "at most 256 App data volumes are supported")
 	}

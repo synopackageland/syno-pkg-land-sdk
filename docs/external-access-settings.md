@@ -55,25 +55,47 @@ storage_init:
         external_origin: true
 ```
 
-`external_origin` is mutually exclusive with `setting`, `secret` and
-`oidc_client`. It does not require an `install.settings` entry. The service
-still needs the normal nonroot storage initialization and explicit argv.
+With SDK 0.30.1, an entry may also name exactly one installation setting as a
+fallback:
+
+```yaml
+DOMAIN: {external_origin: true, setting: canonical_origin}
+```
+
+Declare `canonical_origin` in `install.settings` with an origin type such as
+`https-origin`. The host uses that value only when the effective App origin is
+empty. Without `setting`, no installation setting is required. `secret` and
+`oidc_client` cannot be combined with `external_origin`, with or without a
+fallback. The service still needs normal nonroot storage initialization and
+explicit argv.
 
 At package preparation, the host uses the shared `EffectiveExternal` resolver:
-manual, then Connect, then the App's configured `public_origin`. It atomically
-writes a mode-0600 snapshot at `target/compose/settings/external-origin.value`.
+manual, then Connect, then the App's configured `public_origin`. If that result
+is empty and a fallback is declared, it reads the installation value on the
+host. A nonempty fallback must pass the same bounded, private, package-owned,
+single-link file and HTTPS-origin checks as the snapshot; unsafe files and
+invalid URLs fail preparation. An absent optional value or an empty private
+value contributes no origin. An external origin takes precedence without
+reading an unused fallback. The host atomically writes a mode-0600 snapshot
+at `target/compose/settings/external-origin.value`.
 The planner mounts only that file, read-only, at
 `/synopkgland/settings/external-origin.value`. Containers receive neither gateway
-state nor the Connect projection. Multiple environment keys share one mount.
+state, the installation value file, nor the Connect projection. Multiple
+environment keys share one mount. All external-origin entries across services
+must name the same fallback, or all omit it; conflicting policies are rejected
+by both the planner and installed preflight. The inventory retains only the
+setting reference, never its private value.
 
-With no effective value, the snapshot is empty and the runtime leaves the
-environment key unset, including removal of an inherited image value. An
+With neither an effective origin nor a fallback value, the snapshot is empty
+and the runtime leaves the environment key unset, including removal of an inherited image value. An
 origin is not a required installation setting. The empty file keeps the bind
 source valid without Docker creating a directory in its place.
 
 The snapshot is refreshed in the installed host preflight before the worker
 starts containers, as well as during installation preparation. Restart the
-App after changing its address to update its container environment. Gateway
+App after changing its address to update its container environment. Clearing
+the external origin restores the installation value on the next start; changes
+to that value are also rechecked. Gateway
 origin acceptance uses the shared live reader separately.
 
 ## Vaultwarden and alternate LAN addresses

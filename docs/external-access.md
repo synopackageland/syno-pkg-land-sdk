@@ -5,6 +5,9 @@ Apps keep their dedicated native HTTPS listener and their existing DSM admission
 policy. Connect is optional: local access and a manually configured public origin
 work without it. The gateway does not create tunnels or change DSM settings.
 
+Compose Apps that keep an installation-time origin while no external origin is
+set use SDK 0.30.1 and the [host-side setting fallback](external-access-settings.md#compose-environment).
+
 ## Package policy
 
 ```yaml
