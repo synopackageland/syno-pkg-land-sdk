@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `/_spl/ping` answers any origin (`Access-Control-Allow-Origin: *`, no credentials), so the DSM menu launcher can check that an external App address is reachable before opening it. The response is unchanged: only the package name.
 - Add `identity_gateway.external_access.single_origin` for Apps whose upstream sign-in works on one fixed URL. While an external origin is set, the DSM launcher opens the primary origin, top-level browser navigations on other hosts are redirected to it, and the settings page states that only that address can sign in, with a tailnet reachability note for `*.ts.net` addresses. Without an external origin, behavior is unchanged. See [single-origin Apps](docs/external-access.md#single-origin-apps).
 
 ## 0.29.1 (2026-10-24)

@@ -28,7 +28,7 @@ func TestPingBeforeAuthorityAndAdmission(t *testing.T) {
 				r.TLS = &tls.ConnectionState{VerifiedChains: [][]*x509.Certificate{{{}}}}
 				w := httptest.NewRecorder()
 				h.ServeHTTP(w, r)
-				if w.Code != 200 || w.Body.String() != `{"package":"App"}` || w.Header().Get("Set-Cookie") != "" || w.Header().Get("Location") != "" || w.Header().Get("Cache-Control") != "no-store" {
+				if w.Code != 200 || w.Body.String() != `{"package":"App"}` || w.Header().Get("Set-Cookie") != "" || w.Header().Get("Location") != "" || w.Header().Get("Cache-Control") != "no-store" || w.Header().Get("Access-Control-Allow-Origin") != "*" || w.Header().Get("Access-Control-Allow-Credentials") != "" {
 					t.Fatalf("mode=%s native=%v host=%q: %d %s %v", mode, native, host, w.Code, w.Body, w.Header())
 				}
 			}
