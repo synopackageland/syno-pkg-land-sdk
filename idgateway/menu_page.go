@@ -130,11 +130,46 @@ func (p menuPage) html(id string, hidden bool, code string, m map[string]string)
 	return b.String()
 }
 
+// DSM's URL launcher sends cookies, not the SynoToken authenticate.cgi needs.
+// Keep that carrier out of URLs: an unprivileged GET obtains it from DSM and
+// posts it back to this same entry before the existing session check runs.
+func writeMenuBootstrap(w http.ResponseWriter, r *http.Request) {
+	locale, m := denialMessages(r)
+	nonce := randomID(16)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Content-Language", locale)
+	w.Header().Add("Vary", "Accept-Language")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Referrer-Policy", "same-origin")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'nonce-"+nonce+"'; connect-src 'self'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
+	// No config, target, provider or projection is interpolated in this page.
+	fmt.Fprintf(w, `<!doctype html><html lang="%s"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>%s</title><style>%s</style><main><section class="box"><p id="status" role="status">%s</p><form id="session" method="post" action="?" hidden><input type="hidden" name="SynoToken" id="token"></form><form id="retry" method="get" hidden><button type="submit">%s</button></form><noscript><p>%s</p></noscript></section></main><script nonce="%s">fetch('/webman/login.cgi?enable_syno_token=yes',{credentials:'same-origin',cache:'no-store'}).then(function(r){if(!r.ok)throw new Error();return r.json()}).then(function(j){if(typeof j.SynoToken!=='string'||!j.SynoToken)throw new Error();document.getElementById('token').value=j.SynoToken;document.getElementById('session').submit()}).catch(function(){document.getElementById('status').textContent=%q;document.getElementById('retry').hidden=false})</script></html>`, locale, html.EscapeString(m["menu_title"]), menuStyle, html.EscapeString(m["menu_opening"]), html.EscapeString(m["menu_retry"]), html.EscapeString(strings.TrimRight(m["sign_in_required"], ".。")), nonce, strings.TrimRight(m["sign_in_required"], ".。"))
+}
+
+func prepareMenuPost(w http.ResponseWriter, r *http.Request) bool {
+	if r.URL.RawQuery != "" || r.Header.Get("Origin") != requestOrigin(r) {
+		http.Error(w, "invalid entry", http.StatusForbidden)
+		return false
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 8<<10)
+	if r.ParseForm() != nil || len(r.PostForm) != 1 || len(r.PostForm["SynoToken"]) != 1 || r.PostForm.Get("SynoToken") == "" {
+		http.Error(w, "invalid entry", http.StatusForbidden)
+		return false
+	}
+	r.Header.Set("X-SYNO-TOKEN", r.PostForm.Get("SynoToken"))
+	return true
+}
+
 // writeMenuPage serves every launcher result other than the existing direct
 // destination. It needs a DSM session with access to this App: a redirect
 // opens a trusted address only after the probe, and explanations name the
 // provider and offer Connect only to administrators.
 func writeMenuPage(w http.ResponseWriter, r *http.Request, cfg Config, d MenuDecision, target string, auth api.Authenticator, connect bool) {
+	if r.Method == http.MethodGet && r.Header.Get("Cookie") != "" && r.Header.Get("X-SYNO-TOKEN") == "" {
+		writeMenuBootstrap(w, r)
+		return
+	}
 	locale, m := denialMessages(r)
 	h := w.Header()
 	h.Set("Content-Type", "text/html; charset=utf-8")
