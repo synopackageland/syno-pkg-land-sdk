@@ -25,8 +25,9 @@ func requestExternal(r *http.Request, read, fresh func() External) External {
 }
 
 // publicAuthority reports whether r is addressed to port 443, explicitly or by
-// omitting the port, the only port an external origin may use. App listeners
-// never use it, so LAN requests keep the polled policy.
+// omitting the port, the port of every public external origin. App listeners
+// never use it, so LAN requests, and a single-origin App's tailnet address on
+// the App port, keep the polled policy.
 func publicAuthority(r *http.Request) bool {
 	_, port, err := net.SplitHostPort(r.Host)
 	return err != nil || port == "443"
