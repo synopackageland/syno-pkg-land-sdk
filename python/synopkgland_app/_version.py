@@ -1,2 +1,2 @@
 # Generated from release metadata by scripts/sdk-version.mjs. DO NOT EDIT.
-SDK_VERSION = "0.29.1"
+SDK_VERSION = "0.30.0"

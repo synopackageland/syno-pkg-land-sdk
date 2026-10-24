@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.30.0 (2026-10-24)
 
 - `/_spl/ping` answers any origin (`Access-Control-Allow-Origin: *`, no credentials), so the DSM menu launcher can check that an external App address is reachable before opening it. The response is unchanged: only the package name.
 - The DSM launcher (`open.cgi`) opens an App at the address that matches the provider the browser used to reach DSM. A small page checks `/_spl/ping` for up to 8 seconds before opening it and otherwise explains the failure with **Open anyway**. When the App is not enabled, paused, behind a QuickConnect relay or single-origin without an external origin, administrators get the reason and a link to the App in NAS Remote Connect; other users are told to ask an administrator. LAN behavior is unchanged. Single-origin Apps now open through the same page instead of a direct `302`. See [launcher page](docs/external-access.md#launcher-page).
