@@ -177,7 +177,7 @@ func (h *SettingsCGI) save(r *http.Request, previous ExternalState, projection E
 	if manual != "" && installsettings.ValidateExternalOrigin(manual, dsmOrigin) != nil {
 		return errExternalInput
 	}
-	if app, ok := projection.Apps[h.Config.Package]; ok && projection.Schema == 1 && (h.Config.External == nil || h.Config.External.Connect != "none") && app.Port == h.Config.Listen.HTTPS {
+	if app, ok := projection.Apps[h.Config.Package]; ok && projection.Schema == 1 && (h.Config.External == nil || h.Config.External.Connect != "none") && app.Port == nativePublicPort(h.Config) {
 		connect, _ := installsettings.CanonicalExternalOrigin(app.Public.Origin)
 		if connect != "" && connect == dsmOrigin {
 			return errExternalInput
@@ -228,7 +228,11 @@ func (h *SettingsCGI) page(w http.ResponseWriter, r *http.Request, locale string
 	}
 	slices.Sort(optional)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	lan := "https://" + net.JoinHostPort(hostname(r.Host), strconv.Itoa(h.Config.Listen.HTTPS))
+	scheme := "https://"
+	if !h.Config.NativeIngress && h.Config.Listen.HTTPS == 0 {
+		scheme = "http://"
+	}
+	lan := scheme + net.JoinHostPort(hostname(r.Host), strconv.Itoa(nativePublicPort(h.Config)))
 	_ = externalSettingsPage.Execute(w, struct {
 		Locale, Token, Revision, LAN, Summary, Passthrough, Optional string
 		M                                                            map[string]string

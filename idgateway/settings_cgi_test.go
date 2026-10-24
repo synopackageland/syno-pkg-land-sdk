@@ -223,6 +223,20 @@ func TestSettingsEscapesProtectedTextAndIgnoresForwardedHeaders(t *testing.T) {
 	}
 }
 
+func TestSettingsUsesTheSharedNativePublicPort(t *testing.T) {
+	h := settingsFixture(t)
+	h.Config.Listen = Listen{HTTP: 18443}
+	h.Config.NativeIngress = true
+	w := settingsPost(h, url.Values{"SynoToken": {"tok"}}, "https://nas.example:5001", "id=s1", "en")
+	if w.Code != 200 || !strings.Contains(w.Body.String(), "https://nas.example:18443") {
+		t.Fatal(w.Code, w.Body)
+	}
+	w = settingsPost(h, settingsSave(0, "", "https://connect.example.com"), "https://nas.example:5001", "id=s1", "en")
+	if w.Code != 400 {
+		t.Fatal("allowed App and DSM to share an origin", w.Code)
+	}
+}
+
 func TestSettingsLocaleCatalogsCompleteAndWithoutTrailingPeriods(t *testing.T) {
 	for _, locale := range denialLocales {
 		raw, _ := denialCatalogs.ReadFile("i18n/" + locale + ".json")
