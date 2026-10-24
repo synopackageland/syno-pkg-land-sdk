@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.30.2 (2026-10-25)
+
+- Fix DSM main-menu launches reached through an external provider when the top-level navigation carries the DSM session cookie without a SynoToken. The launcher obtains a token from the same-origin DSM endpoint and submits a bounded, origin-checked form before the existing session and App-access checks. Expired sessions remain refused; LAN GET behavior is unchanged.
+- Keep CLI/templates 0.30.0 and immutable executor/v0.27.0. Apps must rebuild with SDK/gateway 0.30.2 to ship the fix. No Rust crate publication is included.
+
 ## 0.30.1 (2026-10-24)
 
 - Restore the intended Compose `external_origin` + `setting` fallback. The host selects an external origin first, otherwise a validated installation value; with neither, the container environment key stays unset. All services share one snapshot and one fallback policy. Installed preflight revalidates that policy and refreshes the snapshot on restart.
