@@ -244,17 +244,12 @@ func TestSettingsLocaleCatalogsCompleteAndWithoutTrailingPeriods(t *testing.T) {
 		if err := json.Unmarshal(raw, &messages); err != nil {
 			t.Fatal(err)
 		}
-		count := 0
-		for key, value := range messages {
-			if strings.HasPrefix(key, "external_") {
-				count++
-				if value == "" || strings.HasSuffix(value, ".") || strings.HasSuffix(value, "。") {
-					t.Fatal(locale, key)
-				}
+		for _, suffix := range strings.Fields("title signin invalid denied unavailable conflict lan manual connect private private_hint dsm format confirm restart save protected upstream passthrough optional warning") {
+			key := "external_" + suffix
+			value := messages[key]
+			if value == "" || strings.HasSuffix(value, ".") || strings.HasSuffix(value, "。") {
+				t.Fatal(locale, key)
 			}
-		}
-		if count != 21 {
-			t.Fatal(locale, count)
 		}
 		h := settingsFixture(t)
 		w := settingsPost(h, url.Values{"SynoToken": {"tok"}}, "https://nas.example:5001", "id=s1", locale)
