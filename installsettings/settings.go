@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/externalorigin"
 )
 
 const Version = 1
@@ -41,7 +43,7 @@ func (c Config) Validate() error {
 		return invalid
 	}
 	for key, s := range c.Settings {
-		if !keyPattern.MatchString(key) || s.Type != "https-origin" || strings.TrimSpace(s.Label) == "" || len(s.Label) > 160 || strings.ContainsAny(s.Label, "\r\n\x00") {
+		if !keyPattern.MatchString(key) || (s.Type != "https-origin" && s.Type != "external-origin") || strings.TrimSpace(s.Label) == "" || len(s.Label) > 160 || strings.ContainsAny(s.Label, "\r\n\x00") {
 			return invalid
 		}
 	}
@@ -85,6 +87,39 @@ func ValidateOrigin(value string, port int) error {
 		return invalid
 	}
 	return nil
+}
+
+// CanonicalExternalOrigin validates an external-origin installation setting.
+// Unlike https-origin it requires DNS and port 443, independently of App ports.
+func CanonicalExternalOrigin(value string) (string, error) {
+	origin, err := externalorigin.Canonical(value)
+	if err != nil {
+		return "", invalid
+	}
+	return origin, nil
+}
+
+// ValidateExternalOrigin also rejects sharing the DSM origin. Empty settings
+// are handled by the caller's Required policy, never accepted as an origin.
+func ValidateExternalOrigin(value, dsmOrigin string) error {
+	origin, err := CanonicalExternalOrigin(value)
+	if err != nil {
+		return err
+	}
+	dsm, err := CanonicalExternalOrigin(dsmOrigin)
+	if err == nil && origin == dsm {
+		return invalid
+	}
+	return nil
+}
+func settingValue(value string, setting Setting, port int) (string, error) {
+	if setting.Type == "external-origin" {
+		return CanonicalExternalOrigin(value)
+	}
+	if err := ValidateOrigin(value, port); err != nil {
+		return "", err
+	}
+	return value, nil
 }
 
 func statePath(pkg, explicit string) string {
@@ -242,10 +277,11 @@ func Prepare(payload, pkg, pkgvar string) error {
 		if value == "" && !s.Required {
 			continue
 		}
-		if ValidateOrigin(value, c.HTTPSPort) != nil {
+		canonical, err := settingValue(value, s, c.HTTPSPort)
+		if err != nil {
 			return invalid
 		}
-		values[key] = []byte(value)
+		values[key] = []byte(canonical)
 	}
 	if err := privateDir(root, "install/values"); err != nil {
 		return err
@@ -283,10 +319,11 @@ func Remember(payload, pkg, pkgvar string) error {
 		if os.IsNotExist(e) && !s.Required {
 			continue
 		}
-		if e != nil || ValidateOrigin(string(b), c.HTTPSPort) != nil {
+		canonical, err := settingValue(string(b), s, c.HTTPSPort)
+		if e != nil || err != nil {
 			return invalid
 		}
-		if err := writePrivate(state, "install-settings/"+key+".value", b); err != nil {
+		if err := writePrivate(state, "install-settings/"+key+".value", []byte(canonical)); err != nil {
 			return err
 		}
 	}
