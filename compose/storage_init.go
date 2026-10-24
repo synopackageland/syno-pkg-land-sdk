@@ -90,7 +90,7 @@ func applyStorageInit(pkg string, s *types.ServiceConfig, init *StorageInitializ
 			}
 			if !found {
 				source := "/var/packages/" + pkg + "/target/compose/" + directory + "/" + e.filename()
-				if e.Setting != "" {
+				if e.Setting != "" && !e.ExternalOrigin {
 					source = "/var/packages/" + pkg + "/target/install/values/" + e.filename()
 				}
 				s.Volumes = append(s.Volumes, types.ServiceVolumeConfig{Type: "bind", Source: source, Target: target, ReadOnly: true, Bind: &types.ServiceVolumeBind{CreateHostPath: false}})

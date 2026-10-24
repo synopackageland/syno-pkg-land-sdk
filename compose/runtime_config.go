@@ -21,6 +21,7 @@ type RuntimeConfiguration struct {
 // container. Values never occur in the plan, argv, lock or public SPK.
 type RuntimeEnvironment struct {
 	// ExternalOrigin resolves the effective App origin on the host at startup.
+	// Setting may name an installation value to use when that origin is empty.
 	ExternalOrigin bool `json:"external_origin,omitempty"`
 	// Setting reads a package-owned value supplied by the App installation flow.
 	Setting    string `json:"setting,omitempty"`
@@ -128,7 +129,13 @@ func validateRuntime(i StorageInitialization) error {
 				count++
 			}
 		}
-		if e.Setting != "" {
+		if e.ExternalOrigin && e.Setting != "" {
+			// The setting is a fallback for the snapshot, not a second source.
+			count--
+			if !runtimeSecretName.MatchString(e.Setting) {
+				return bad()
+			}
+		} else if e.Setting != "" {
 			id = e.Setting
 		}
 		if e.OIDCClient != "" {
