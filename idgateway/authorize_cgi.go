@@ -109,9 +109,12 @@ func (h *AuthorizeCGI) bootstrap(w http.ResponseWriter, r *http.Request, ret *ur
 	nonce := randomID(16)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src 'none'; script-src 'nonce-%s'; connect-src 'self'; form-action 'self' %s://%s; frame-ancestors 'none'", nonce, ret.Scheme, ret.Host))
+	// Keep the normalized resume query, and carry the inherited App fragment
+	// in the form's navigation URL only. It must never become a form field or
+	// query parameter: the browser retains it across the return redirects.
 	fmt.Fprintf(w, `<!doctype html><meta charset="utf-8"><title>Signing in</title>
 <form id="f" method="post" action="?%s"><input type="hidden" name="SynoToken" id="t"></form>
-<script nonce="%s">fetch('/webman/login.cgi?enable_syno_token=yes',{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){document.getElementById('t').value=j.SynoToken||''}).catch(function(){}).then(function(){document.getElementById('f').submit()})</script>`,
+<script nonce="%s">var f=document.getElementById('f');f.action+=location.hash;fetch('/webman/login.cgi?enable_syno_token=yes',{credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){document.getElementById('t').value=j.SynoToken||''}).catch(function(){}).then(function(){f.submit()})</script>`,
 		html.EscapeString(r.URL.RawQuery), nonce)
 }
 

@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"html"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -84,6 +85,50 @@ func TestMenuLauncherProbesTrustedAddress(t *testing.T) {
 	w = openMenu(t, cfg, src, admin, true, "https://nas.example.ts.net:5001/webman/3rdparty/App/sso/open.cgi")
 	if !strings.Contains(w.Body.String(), `data-target="https://nas.example.ts.net:18443/#/home"`) || !strings.Contains(w.Body.String(), `href="/?launchApp=SYNO.SDS.SynoPkgConnect.Instance&amp;launchParam=route%3D%252Fapps%252FApp%252Fprivate"`) {
 		t.Fatal(w.Body)
+	}
+}
+
+func TestMenuDeepLinksAcrossProvidersAndFallbackLinks(t *testing.T) {
+	for _, provider := range []string{ProviderCloudflare, ProviderTailscale, ProviderWorkers, ProviderManual, ProviderCanonical} {
+		t.Run(provider, func(t *testing.T) {
+			cfg, src := menuInputs()
+			cfg.LaunchPath = "/menu?view=files&sort=name#opened"
+			host, origin := "dsm.example.com", "https://app.example.com"
+			switch provider {
+			case ProviderTailscale:
+				host, origin = "nas.example.ts.net:5001", "https://nas.example.ts.net:18443"
+			case ProviderWorkers:
+				host, origin = "spl-dsm-1a2b.example.workers.dev", "https://app.example.workers.dev"
+				src.Launch.Routes[2].Apps["App"] = LaunchApp{Origin: origin, Port: 18443, State: "active"}
+			case ProviderManual, ProviderCanonical:
+				src.State = ExternalState{Schema: 1, Revision: 1, DSMOrigin: "https://" + host, ManualOrigin: origin}
+				cfg.External = &ExternalConfig{SingleOrigin: provider == ProviderCanonical}
+				src.External = EffectiveExternal(cfg, src.State, src.Projection)
+			}
+			decision := MenuDestination(cfg, src, host, true)
+			if decision.Kind != MenuRedirect || decision.Provider != provider {
+				t.Fatal(decision)
+			}
+			for _, method := range []string{http.MethodGet, http.MethodPost} {
+				r := httptest.NewRequest(method, "https://"+host+"/open.cgi", strings.NewReader("SynoToken=valid-token"))
+				r.Header.Set("X-SYNO-TOKEN", "valid-token")
+				if method == http.MethodPost {
+					r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+					r.Header.Set("Origin", "https://"+host)
+				}
+				w := httptest.NewRecorder()
+				entryHandlerWithMenu(cfg, nil, nil, &menuTokenAuth{}, func() MenuSources { return src }, func() bool { return true }).ServeHTTP(w, r)
+				target := html.EscapeString(origin + cfg.LaunchPath)
+				for _, want := range []string{`data-target="` + target + `"`, `<noscript><p><a href="` + target + `">`, `<a class="button" href="` + target + `">`} {
+					if w.Code != 200 || !strings.Contains(w.Body.String(), want) {
+						t.Fatalf("%s missing %s: %d %s", method, want, w.Code, w.Body)
+					}
+				}
+				if !strings.Contains(w.Body.String(), `data-ping="`+origin+PingPath+`"`) {
+					t.Fatal("deep link must not be sent to ping", w.Body)
+				}
+			}
+		})
 	}
 }
 
