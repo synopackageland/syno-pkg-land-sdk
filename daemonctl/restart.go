@@ -20,7 +20,7 @@ type restartPolicy struct {
 
 func normalizeRestart(p *restartPolicy) (*restartPolicy, error) {
 	if p == nil {
-		return nil, nil
+		p = &restartPolicy{Mode: "on-failure"}
 	}
 	v := *p
 	if v.Mode != "off" && v.Mode != "on-failure" {

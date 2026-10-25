@@ -107,9 +107,13 @@ func load(dest, data string) (*controller, error) {
 	if err := validateDeadlines(cfg); err != nil {
 		return nil, err
 	}
-	cfg.Restart, err = normalizeRestart(cfg.Restart)
-	if err != nil {
-		return nil, err
+	// Native foreground children recover by default. Compose keeps its own
+	// restart policy and must not acquire a second restart loop.
+	if cfg.Restart != nil || cfg.Network == nil {
+		cfg.Restart, err = normalizeRestart(cfg.Restart)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if cfg.Restart != nil && cfg.Restart.Mode != "off" && cfg.Network != nil {
 		return nil, errors.New("daemon restart policy requires a native daemon without Compose network supervision")

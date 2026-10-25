@@ -101,12 +101,17 @@ const registryRequestBudget = 2 * time.Second
 // four distinct registries from immutable image references in compose.lock.json.
 // A registry is skipped when this package has already run every locked image
 // from it: Start and a same-image upgrade then never need to download.
-// It does not read Docker configuration, credentials, sockets or worker logs.
+// For Docker Hub it also checks configured DSM/Docker registry mirrors.
+// It never reads credentials, sockets or worker logs, and never pulls an image.
 func CheckRegistries(ctx context.Context, project, phase string) []ImageDiagnosis {
 	return checkRegistries(ctx, project, phase, nil)
 }
 
 func checkRegistries(ctx context.Context, project, phase string, transport http.RoundTripper) []ImageDiagnosis {
+	return checkRegistriesWithMirrors(ctx, project, phase, transport, nil)
+}
+
+func checkRegistriesWithMirrors(ctx context.Context, project, phase string, transport http.RoundTripper, mirrors []string) []ImageDiagnosis {
 	hosts, err := lockedRegistryHosts(project)
 	if err != nil {
 		return []ImageDiagnosis{imageDiagnosis(ImageUnknown, "registry_check", phase, "", "lock_unavailable_or_invalid")}
@@ -137,34 +142,114 @@ func checkRegistries(ctx context.Context, project, phase string, transport http.
 	results := []ImageDiagnosis{}
 	for _, locked := range hosts {
 		host := locked.name
-		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "https://"+host+"/v2/", nil)
-		resp, err := client.Do(req)
-		if err != nil {
-			cause := classifyRegistryError(err)
-			results = append(results, imageDiagnosis(cause, "registry_check", phase, host, "registry_request_failed"))
-			continue
+		paths := []string{"https://" + host}
+		// Docker's registry-mirrors setting applies only to Docker Hub.
+		if host == "registry-1.docker.io" {
+			if mirrors == nil {
+				mirrors = configuredRegistryMirrors([]string{
+					"/var/packages/ContainerManager/etc/dockerd.json",
+					"/var/packages/Docker/etc/dockerd.json",
+					"/etc/docker/daemon.json",
+				})
+			}
+			paths = append(paths, mirrors...)
 		}
-		// No response body (which may contain tokens or proxy login pages) is read,
-		// saved or printed. 401 is a normal anonymous registry challenge.
-		resp.Body.Close()
-		if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusUnauthorized {
-			continue
+		if d := checkRegistryPaths(ctx, client, paths, phase, host); d != nil {
+			results = append(results, *d)
 		}
-		cause := ImageUnknown
-		switch {
-		case resp.StatusCode == http.StatusTooManyRequests:
-			cause = ImageRateLimit
-		case resp.StatusCode == http.StatusForbidden:
-			cause = ImageDenied
-		case resp.StatusCode >= 500:
-			cause = ImageUnreachable
-		}
-		// A 404 on /v2/ does not prove any particular image is missing.
-		d := imageDiagnosis(cause, "registry_check", phase, host, fmt.Sprintf("registry_http_%d", resp.StatusCode))
-		d.HTTPStatus = resp.StatusCode
-		results = append(results, d)
 	}
 	return results
+}
+
+// Probe alternate paths concurrently so a blocked upstream or dead first mirror
+// cannot spend the entire budget before a working mirror is tried. A reachable
+// base endpoint is enough for this informational check, never proof of a pull.
+func checkRegistryPaths(ctx context.Context, client *http.Client, paths []string, phase, host string) *ImageDiagnosis {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	type result struct {
+		index     int
+		diagnosis *ImageDiagnosis
+	}
+	results := make(chan result, len(paths))
+	for i, base := range paths {
+		go func() {
+			req, _ := http.NewRequestWithContext(ctx, http.MethodGet, base+"/v2/", nil)
+			resp, err := client.Do(req)
+			if err != nil {
+				d := imageDiagnosis(classifyRegistryError(err), "registry_check", phase, host, "registry_request_failed")
+				results <- result{i, &d}
+				return
+			}
+			// Never read response bodies or follow authentication token realms.
+			resp.Body.Close()
+			if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusUnauthorized {
+				results <- result{i, nil}
+				return
+			}
+			cause := ImageUnknown
+			switch {
+			case resp.StatusCode == http.StatusTooManyRequests:
+				cause = ImageRateLimit
+			case resp.StatusCode >= 500:
+				cause = ImageUnreachable
+			}
+			// A 403/404 on /v2/ proves neither image denial nor a missing image.
+			d := imageDiagnosis(cause, "registry_check", phase, host, fmt.Sprintf("registry_http_%d", resp.StatusCode))
+			d.HTTPStatus = resp.StatusCode
+			results <- result{i, &d}
+		}()
+	}
+	var upstream *ImageDiagnosis
+	for range paths {
+		r := <-results
+		if r.diagnosis == nil {
+			return nil
+		}
+		if r.index == 0 {
+			upstream = r.diagnosis
+		}
+	}
+	return upstream
+}
+
+// Read the first available daemon configuration, not inactive configurations
+// from other installations. Input and endpoint counts are bounded; configured
+// HTTP mirrors are allowed, but userinfo, paths, queries and fragments are not.
+func configuredRegistryMirrors(paths []string) []string {
+	for _, path := range paths {
+		raw, err := readDiagnosisFile(path, 256<<10)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return nil
+		}
+		var config struct {
+			Mirrors []string `json:"registry-mirrors"`
+		}
+		if json.Unmarshal(raw, &config) != nil {
+			return nil
+		}
+		mirrors := []string{}
+		seen := map[string]bool{}
+		for _, base := range config.Mirrors {
+			u, err := url.Parse(base)
+			if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Hostname() == "" || u.User != nil || (u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || u.Opaque != "" {
+				continue
+			}
+			base = u.Scheme + "://" + u.Host
+			if !seen[base] {
+				mirrors = append(mirrors, base)
+				seen[base] = true
+			}
+			if len(mirrors) == 4 {
+				break
+			}
+		}
+		return mirrors
+	}
+	return nil
 }
 
 func classifyRegistryError(err error) ImageCause {

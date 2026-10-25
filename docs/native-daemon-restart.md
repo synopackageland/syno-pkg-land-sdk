@@ -1,10 +1,11 @@
 # Native daemon restart policy
 
 `daemonctl` can restart its directly owned native foreground child after a
-nonzero exit or signal termination. The default is **off**, preserving existing
-package behaviour: recovery may repeat upstream work and must be an App author's
-explicit choice. It never changes UID, invokes a root service, or signals a PID
-from saved inventory.
+nonzero exit or signal termination. Native daemons default to **on-failure**
+with bounded exponential backoff, without any App configuration. Compose/network
+supervision keeps its own restart policy. Recovery can repeat upstream work, so
+foreground daemons must tolerate being started again. The supervisor never changes
+UID, invokes a root service, or signals a PID from saved inventory.
 
 ## Configuration and defaults
 
@@ -22,8 +23,8 @@ The SDK accepts this optional object in the generated `daemon/config.json`:
 }
 ```
 
-Omit `restart`, or set `mode: off`, to disable automatic restarts. `mode` is
-required when the object is present. Omitted or zero numeric fields use the
+Omit `restart` to use these defaults for native daemons. Set `mode: off` to
+disable automatic restarts. `mode` is required when the object is present. Omitted or zero numeric fields use the
 defaults above. Unknown fields, fractional numbers, unsupported modes and
 out-of-range limits are rejected before starting a child. Delays accept 1–3600
 seconds, maximum delay must be at least the initial delay, attempts accept
@@ -117,34 +118,11 @@ A future migration of native daemons to such units must first preserve package
 stop/release ordering, original startup deadlines, readiness, diagnostics and
 the finite retry budget; simply adding `Restart=` is insufficient.
 
-## CLI and templates follow-up contract
+## CLI and templates
 
-This commit changes the SDK runtime only. The current CLI rejects
-`daemon.restart`; **the following YAML requires a CLI update before use**:
-
-```yaml
-daemon:
-  # Existing exec, targets, args and environment stay as declared.
-  restart:
-    mode: on-failure
-    initial_seconds: 1
-    max_seconds: 30
-    max_attempts: 5
-    window_seconds: 300
-```
-
-In the CLI's `src/standalone/daemon.ts`, extend `Daemon`, its field allowlist,
-`readDaemon` and `daemonConfig` with the exact SDK bounds/defaults above.
-Validate the same shape in the manifest schema and reject enabled policy on
-generated Compose/gateway orchestration configs with network supervision.
-Include it in build/inspect config equality checks; require an SDK version
-containing this feature rather than silently dropping the object for old SDKs.
-Add manifest rejection, generated JSON, unpacked-SPK inspection and old-SDK
-compatibility tests. Carry the same change into any separate published schema.
-
-Templates should keep the policy omitted by default, document explicit opt-in
-for native daemons, and preserve stop-before-upgrade/uninstall hooks. An App
-status adapter should map the fixed state/reason values to its existing UI.
-Neither the templates nor an individual App should implement their own retry
-loop. CLI/templates changes can ship independently after this runtime is
-available; no released SDK version is claimed by this document.
+Existing native-daemon configurations need no manifest, CLI or template changes:
+rebuilding with this SDK enables the default policy in `daemonctl`. Existing
+stop-before-upgrade/uninstall hooks retain their ordering. The CLI remains a thin
+generator and does not implement its own retry loop. Custom policies in the
+runtime JSON above require a generator that supports those fields; the default
+policy does not depend on custom policy support in the CLI manifest.

@@ -11,8 +11,8 @@ import (
 )
 
 func TestRestartPolicyDefaultsAndValidation(t *testing.T) {
-	if p, err := normalizeRestart(nil); err != nil || p != nil {
-		t.Fatalf("default must remain off: %+v %v", p, err)
+	if p, err := normalizeRestart(nil); err != nil || p == nil || p.Mode != "on-failure" {
+		t.Fatalf("native default must restart: %+v %v", p, err)
 	}
 	p, err := normalizeRestart(&restartPolicy{Mode: "on-failure"})
 	if err != nil || p.InitialSeconds != 1 || p.MaxSeconds != 30 || p.MaxAttempts != 5 || p.WindowSeconds != 300 {
@@ -283,5 +283,53 @@ func TestRecordUpdateFailurePreservesInventory(t *testing.T) {
 	var after record
 	if err := json.Unmarshal(raw, &after); err != nil || after != before {
 		t.Fatalf("inventory lost: %+v %v", after, err)
+	}
+}
+
+func TestCompiledNativeRestartNeedsNoConfig(t *testing.T) {
+	control, dest, data := fixture(t, "normal")
+	if rc, out := runControl(control, "start", dest, data); rc != 0 {
+		t.Fatalf("start: %d %s", rc, out)
+	}
+	r := awaitRestartState(t, data, "running", 0)
+	if err := syscall.Kill(r.Child, syscall.SIGKILL); err != nil {
+		t.Fatal(err)
+	}
+	awaitRestartState(t, data, "restarting", 0)
+	recovered := awaitRestartState(t, data, "running", r.Child)
+	if recovered.Restarts != 1 {
+		t.Fatalf("no default recovery: %+v", recovered)
+	}
+}
+
+func TestCompiledComposeDoesNotEnableNativeRecovery(t *testing.T) {
+	control, dest, data := fixture(t, "normal")
+	path := filepath.Join(dest, "daemon/config.json")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg config
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		t.Fatal(err)
+	}
+	cfg.Network = &networkPolicy{}
+	for _, mode := range []string{"omitted", "off", "on-failure"} {
+		cfg.Restart = nil
+		if mode != "omitted" {
+			cfg.Restart = &restartPolicy{Mode: mode}
+		}
+		raw, _ = json.Marshal(cfg)
+		if err := os.WriteFile(path, raw, 0644); err != nil {
+			t.Fatal(err)
+		}
+		rc, out := runControl(control, "status", dest, data)
+		if mode == "on-failure" {
+			if rc != 1 || !strings.Contains(out, "without Compose network supervision") {
+				t.Fatalf("enabled policy: %d %s", rc, out)
+			}
+		} else if rc != 3 {
+			t.Fatalf("%s: %d %s", mode, rc, out)
+		}
 	}
 }

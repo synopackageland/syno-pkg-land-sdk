@@ -641,13 +641,29 @@ The record is lifecycle evidence, not Docker image-store readback: if an
 administrator deletes an image, Start fails as before and Repair downloads it. Existing Container Manager availability and
 Compose preparation failures keep their native exit status.
 
-The command reads only immutable references from `compose.lock.json`: at most
+The command reads immutable references from `compose.lock.json`: at most
 64 images and four distinct HTTPS registry hosts, two seconds per request and
 five seconds total. Docker Hub maps to `registry-1.docker.io`. It requests only
 `/v2/`, follows no redirects or authentication token realms, reads no response
 bodies and inherits neither Docker credentials nor environment proxy settings.
-200 and the normal anonymous 401 challenge count as reachable. A 404 on `/v2/`
-does not establish that an image is missing. A successful check does not prove
+For Docker Hub, it also reads `registry-mirrors` from the first available daemon
+configuration: `/var/packages/ContainerManager/etc/dockerd.json`, legacy
+`/var/packages/Docker/etc/dockerd.json`, then `/etc/docker/daemon.json`. The read is
+limited to 256 KiB and rejects symlink/nonregular files. Up to four distinct mirror
+origins are checked alongside the upstream within the same total budget; blocked
+paths cannot delay a successful mirror result. Configured HTTP mirrors are
+supported; URL credentials, paths, queries and fragments are rejected. Other
+registries do not use Docker Hub mirrors, as specified by
+[Docker's mirror configuration](https://docs.docker.com/docker-hub/image-library/mirror/).
+Unreadable/invalid configuration contributes no mirror endpoints; no Docker socket
+access or elevated permissions are added.
+
+200 and the normal anonymous 401 challenge count as reachable. If any applicable
+path is reachable, the registry produces no warning. If all paths fail, the
+upstream probe result is reported without mirror URLs or response text. A 403 on
+`/v2/` reports an unknown cause, never `COMPOSE_IMAGE_DENIED`: a firewall can deny
+this probe while Docker can still obtain the image. A 404 does not establish that
+an image is missing. A successful check does not prove
 that the daemon can authenticate, download layers, or use the same CA/proxy path.
 
 JSON diagnostics have schema 1, `code`, `cause`, `message_key`, `source`, `phase`,
