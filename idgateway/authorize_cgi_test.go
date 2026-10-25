@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -73,6 +76,28 @@ func TestCGIBootstrapPageFetchesTheSynoTokenSameOrigin(t *testing.T) {
 	csp := w.Header().Get("Content-Security-Policy")
 	if !strings.Contains(csp, "frame-ancestors 'none'") || !strings.Contains(csp, "connect-src 'self'") || w.Header().Get("Cache-Control") != "no-store" {
 		t.Fatalf("headers %v", w.Header())
+	}
+}
+
+func TestCGIBootstrapFragmentNavigation(t *testing.T) {
+	node, err := exec.LookPath("node")
+	if err != nil {
+		t.Skip("bootstrap script tests require Node, provided by the SDK gate")
+	}
+	h := newCGI(&fakeDSM{})
+	h.External = func() External {
+		return External{Accept: []string{"https://app.example.com"}, R1: 1, R2: 2}
+	}
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", cgiURL+"?resume=opaque:x0:1.2", nil))
+	page := filepath.Join(t.TempDir(), "bootstrap.html")
+	if err := os.WriteFile(page, w.Body.Bytes(), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(node, "--test", "authorize_bootstrap.test.mjs")
+	cmd.Env = append(os.Environ(), "SPL_AUTHORIZE_BOOTSTRAP="+page)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("bootstrap navigation: %v\n%s", err, out)
 	}
 }
 

@@ -96,6 +96,10 @@ fall back to local sign-in. This applies when `oidc.native_login` is set or an
 URL when the DSM menu opens the classless gateway entry. Paths, queries and SPA
 fragments are supported. The default remains `/`. Use SDK and CLI 0.27.0 for matching launcher and runtime support.
 
+The menu probe, continuation links and DSM sign-in bootstrap retain the fixed
+query and fragment. The fragment stays in the browser's navigation URL; it is
+never added to the token POST body, a server query parameter or the ping request.
+
 The target is trusted package configuration, never a caller-supplied return URL.
 On the LAN and any DSM address not known to the App or NAS Remote Connect, the
 launcher retains the DSM hostname and declared public gateway port. From a
