@@ -672,8 +672,11 @@ func setEnv(s *types.ServiceConfig, key, value string) {
 	}
 	s.Environment[key] = &value
 }
+
+// safeRelative is a plain path below a base. "$" is refused because the
+// worker interpolates mount sources again, which could rebuild a ".." part.
 func safeRelative(s string) bool {
-	return s != "" && !filepath.IsAbs(s) && !strings.ContainsAny(s, "\\\x00") && filepath.Clean(s) == s && s != "." && !slices.Contains(strings.Split(s, "/"), "..")
+	return s != "" && !filepath.IsAbs(s) && !strings.ContainsAny(s, "\\\x00$") && filepath.Clean(s) == s && s != "." && !slices.Contains(strings.Split(s, "/"), "..")
 }
 func containerPath(s string) bool {
 	return strings.HasPrefix(s, "/") && s != "/" && !strings.ContainsAny(s, "\\\x00") && filepath.Clean(s) == s

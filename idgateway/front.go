@@ -657,8 +657,17 @@ func (f *Front) rewrite(pr *httputil.ProxyRequest) {
 	pr.SetURL(f.upstream)
 	pr.Out.Host = pr.In.Host
 	out := pr.Out.Header
+	stripped := map[string]bool{}
 	for _, name := range append(f.cfg.Headers.all(), nativeClientIPHeader, "X-Syno-User", "X-Syno-Admin", "Remote-User", "Remote-Groups", "Remote-Email", "Remote-Name", "X-SYNO-TOKEN", "X-Real-Ip", "X-Forwarded-Port", "X-Forwarded-Prefix", "X-Original-Url", "X-Rewrite-Url") {
 		out.Del(name)
+		stripped[http.CanonicalHeaderKey(name)] = true
+	}
+	// CGI-style servers read Remote_User as Remote-User, so an underscore
+	// spelling of a stripped header goes too.
+	for name := range out {
+		if strings.Contains(name, "_") && stripped[http.CanonicalHeaderKey(strings.ReplaceAll(name, "_", "-"))] {
+			delete(out, name)
+		}
 	}
 	ip, proto := remoteIP(pr.In), "http"
 	if pr.In.TLS != nil {

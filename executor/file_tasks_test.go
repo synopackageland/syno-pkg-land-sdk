@@ -222,6 +222,18 @@ func TestRevokeStopsRunningTasks(t *testing.T) {
 	}
 }
 
+func TestDisableStopsRunningTasks(t *testing.T) {
+	e, f, ft, id := taskSetup(t, "files.copy")
+	taskID(t, request(e, "files.copy", map[string]any{"delegation_id": id, "job_id": "job1", "path": "/home/a.txt", "dest_dir": "/home/dst"}))
+	f.user.Admin = true
+	if r := request(e, "delegate.disable", map[string]any{}); !r.OK {
+		t.Fatal(r)
+	}
+	if len(ft.stopped) != 1 {
+		t.Fatal("disable left the task running", ft.stopped)
+	}
+}
+
 func TestTaskOperationsAreNotGrantedDirectly(t *testing.T) {
 	e, _, _ := setup(t)
 	for _, op := range []string{"files.taskStatus", "files.taskCancel"} {

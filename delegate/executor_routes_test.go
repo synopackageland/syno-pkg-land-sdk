@@ -65,6 +65,23 @@ func TestExecutorStatusAnswersTheExecutorsOwnPins(t *testing.T) {
 	}
 }
 
+func TestExecutorStatusKeepsStartStepOutputForAdministrators(t *testing.T) {
+	c := fakeExecutor(func(_ context.Context, _ string, _ map[string]string, _, out any) error {
+		return json.Unmarshal([]byte(`{"ready":true,"state":"ready","start_step":{"state":"failed","exit":"1","output":"root step output"}}`), out)
+	})
+	for _, who := range []api.Identity{executorAdmin, executorAlice} {
+		out := executorCall(t, c, t.TempDir(), who, "executor.status", `{}`)
+		data, _ := out["data"].(map[string]any)
+		step, _ := data["start_step"].(map[string]any)
+		if out["success"] != true || step["state"] != "failed" || step["exit"] != "1" {
+			t.Fatalf("status %v", out)
+		}
+		if _, found := step["output"]; found != who.Admin {
+			t.Fatalf("start step output audience for %s: %v", who.User, out)
+		}
+	}
+}
+
 // The executor closes its socket while paused: an upgrade changed the pins and
 // awaits approval, or a start found no executor. A start that ran longer ago
 // than StartGrace tells it from a package that never asked to start.

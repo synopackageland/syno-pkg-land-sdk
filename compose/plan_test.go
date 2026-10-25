@@ -89,6 +89,15 @@ func TestMultipleFilesUseReferenceMergeAndThenReplaceEveryPublicPort(t *testing.
 	}
 }
 
+func TestSafeRelativeRefusesInterpolation(t *testing.T) {
+	for _, s := range []string{"data", "data/db", "a$b", "${DATA}/db", "$HOME", "../x", "/abs", "a/../b", "."} {
+		want := s == "data" || s == "data/db"
+		if got := safeRelative(s); got != want {
+			t.Errorf("safeRelative(%q) = %v", s, got)
+		}
+	}
+}
+
 func TestUnsafeInputsAreRejectedBeforeLoadingOrDeploying(t *testing.T) {
 	for _, tc := range []struct{ name, yaml, code string }{
 		{"socket", "services:\n  bad:\n    image: alpine\n    volumes: ['/var/run/docker.sock:/run/docker.sock']\n", "COMPOSE_STORAGE_UNMAPPED"},

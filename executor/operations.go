@@ -440,6 +440,7 @@ func (e *Executor) administration(ctx context.Context, r Request) Response {
 	if err != nil {
 		return deny("STORAGE_ERROR")
 	}
+	var revoked []string
 	for _, d := range ds {
 		if d.Package != e.Policy.Package {
 			continue
@@ -449,6 +450,7 @@ func (e *Executor) administration(ctx context.Context, r Request) Response {
 			return deny("STORAGE_ERROR")
 		}
 		e.cancelGrantLocked(d.ID, "integration-disabled")
+		revoked = append(revoked, d.ID)
 	}
 	if e.auditLocked(s, r.Op, "", "", r.Op) != nil {
 		return deny("STORAGE_ERROR")
@@ -463,6 +465,10 @@ func (e *Executor) administration(ctx context.Context, r Request) Response {
 	locked = false
 	if waitLegacy(ctx, pending) != nil {
 		return deny("EXECUTOR_PAUSED")
+	}
+	// As delegate.revoke does, stop File Station tasks the revoked grants started.
+	for _, id := range revoked {
+		e.stopTasks(id)
 	}
 	return success(map[string]any{"disabled": r.Op == "delegate.disable"})
 }

@@ -157,13 +157,16 @@ func TestHeaderModeSignsInAndInjectsTrustedHeaders(t *testing.T) {
 	if w.Code != http.StatusFound || w.Header().Get("Location") != "/library?x=1" {
 		t.Fatalf("return: %d %s %s", w.Code, w.Header().Get("Location"), w.Body)
 	}
-	w = b.do("GET", "https://nas.example:18443/library", "Remote-User", "mallory", "X-Forwarded-For", "203.0.113.9", "X-Forwarded-Host", "evil.example", "X-Forwarded-Port", "65535", "Cookie", "app=1")
+	w = b.do("GET", "https://nas.example:18443/library", "Remote-User", "mallory", "Remote_User", "mallory", "X_Syno_User", "mallory", "X-Forwarded-For", "203.0.113.9", "X-Forwarded-Host", "evil.example", "X-Forwarded-Port", "65535", "Cookie", "app=1")
 	if w.Code != 200 || w.Body.String() != "app" {
 		t.Fatalf("proxied: %d %s", w.Code, w.Body)
 	}
 	got := up.last
 	if got.Header.Values("Remote-User")[0] != "alice" || len(got.Header.Values("Remote-User")) != 1 || got.Header.Get("Remote-Groups") != "admin" || got.Header.Get("Remote-Email") != "alice@nas.invalid" {
 		t.Fatalf("identity headers %v", got.Header)
+	}
+	if got.Header.Get("Remote_User") != "" || got.Header.Get("X_Syno_User") != "" {
+		t.Fatalf("underscore identity headers %v", got.Header)
 	}
 	if got.Header.Get("X-Forwarded-For") != "192.0.2.7" || got.Header.Get("X-Forwarded-Host") != "nas.example:18443" || got.Header.Get("X-Forwarded-Proto") != "https" || got.Header.Get("X-Forwarded-Port") != "18443" || got.Host != "nas.example:18443" {
 		t.Fatalf("forwarded %v host %s", got.Header, got.Host)

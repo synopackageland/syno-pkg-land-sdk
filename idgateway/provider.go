@@ -116,6 +116,12 @@ func loopbackURL(raw string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
+// The longest state, nonce and prompt an authorization request may carry.
+const (
+	maxStateBytes  = 2048
+	maxPromptBytes = 256
+)
+
 // Begin validates an authorization request that reached the gateway on
 // origin, the scheme and host the browser used for the app.
 func (p *Provider) Begin(origin string, q url.Values) (AuthRequest, error) {
@@ -131,6 +137,9 @@ func (p *Provider) Begin(origin string, q url.Values) (AuthRequest, error) {
 	case !slices.Contains(strings.Fields(q.Get("scope")), "openid"):
 		return req, &AuthorizeError{"invalid_scope"}
 	case req.Challenge != "" && method != "S256", req.Challenge == "" && c.RequirePKCE, len(req.Challenge) > 128:
+		return req, &AuthorizeError{"invalid_request"}
+	case len(req.State) > maxStateBytes, len(req.Nonce) > maxStateBytes, len(req.Prompt) > maxPromptBytes:
+		// A pending sign-in keeps these until it completes or expires.
 		return req, &AuthorizeError{"invalid_request"}
 	}
 	return req, nil

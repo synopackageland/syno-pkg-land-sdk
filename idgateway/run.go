@@ -152,6 +152,9 @@ func Run(ctx context.Context, cfg Config, ports DSMPorts, app []string) error {
 			}
 		}()
 	}
+	// Keep-alive connections that send nothing are closed; request bodies and
+	// responses stream, so there is no read or write deadline.
+	const idleTimeout = 2 * time.Minute
 	var servers []*http.Server
 	errc := make(chan error, 4)
 	serve := func(addr string, h http.Handler, cert *tls.Certificate) error {
@@ -159,7 +162,7 @@ func Run(ctx context.Context, cfg Config, ports DSMPorts, app []string) error {
 		if err != nil {
 			return err
 		}
-		srv := &http.Server{Handler: h, ReadHeaderTimeout: 30 * time.Second}
+		srv := &http.Server{Handler: h, ReadHeaderTimeout: 30 * time.Second, IdleTimeout: idleTimeout}
 		if cert != nil {
 			l = tls.NewListener(l, &tls.Config{Certificates: []tls.Certificate{*cert}, MinVersion: tls.VersionTLS12})
 		}
@@ -182,7 +185,7 @@ func Run(ctx context.Context, cfg Config, ports DSMPorts, app []string) error {
 		if err != nil {
 			return err
 		}
-		srv := &http.Server{Handler: nativeIngressHandler(cfg, gw.Front), ReadHeaderTimeout: 30 * time.Second}
+		srv := &http.Server{Handler: nativeIngressHandler(cfg, gw.Front), ReadHeaderTimeout: 30 * time.Second, IdleTimeout: idleTimeout}
 		servers = append(servers, srv)
 		go func() { errc <- srv.Serve(listener) }()
 	}
