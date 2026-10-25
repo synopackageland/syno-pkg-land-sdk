@@ -115,7 +115,8 @@ func (c Config) Routes(targets func(context.Context) ([]Target, error)) []api.Ro
 			case errors.As(err, &perm):
 				folder.State, folder.Exists, folder.Granted = Pending, true, perm.Have
 			case errors.Is(err, os.ErrNotExist):
-				folder.State, folder.Error = Missing, err.Error()
+				// The stat error names the configured target path; keep it server-side.
+				folder.State, folder.Error = Missing, ErrNotFound.Error()
 			case err != nil:
 				return nil, APIError(err)
 			default:

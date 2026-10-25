@@ -320,10 +320,17 @@ func readRequest(w http.ResponseWriter, r *http.Request, limit int64) (request, 
 	if err := dec.Decode(&req); err != nil || dec.More() {
 		return req, BadRequest(`body must be {"method": "...", "params": {...}}`)
 	}
+	if _, err := dec.Token(); err != io.EOF {
+		return req, BadRequest(`body must be {"method": "...", "params": {...}}`)
+	}
+	// The decoder matches field names case-insensitively, so what it decoded
+	// counts as present whatever the spelling.
 	var keys map[string]json.RawMessage
 	json.Unmarshal(body, &keys)
 	_, hasCalls := keys["calls"]
 	_, hasVersion := keys["v"]
+	hasCalls = hasCalls || req.Calls != nil
+	hasVersion = hasVersion || req.Version != 0
 	if hasCalls {
 		if req.Calls == nil || req.Version != 1 || req.Method != "" || req.Params != nil || len(req.Calls) < 1 || len(req.Calls) > MaxBatchMethods {
 			return req, BadRequest("invalid batch envelope")

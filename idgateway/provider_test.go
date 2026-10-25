@@ -220,6 +220,8 @@ func TestRedirectableRequestErrors(t *testing.T) {
 		"plain PKCE":   authQuery("paperless", redirect, "", "code_challenge", "abc", "code_challenge_method", "plain"),
 		"not openid":   authQuery("paperless", redirect, "v", "scope", "profile"),
 		"implicit":     authQuery("paperless", redirect, "v", "response_type", "token"),
+		"long nonce":   authQuery("paperless", redirect, "v", "nonce", strings.Repeat("n", maxStateBytes+1)),
+		"long prompt":  authQuery("paperless", redirect, "v", "prompt", strings.Repeat("p", maxPromptBytes+1)),
 	} {
 		req, err := p.Begin(origin, q)
 		var ae *AuthorizeError
@@ -231,6 +233,18 @@ func TestRedirectableRequestErrors(t *testing.T) {
 		if u.Query().Get("error") == "" || u.Query().Get("state") != "st" || u.Query().Get("code") != "" {
 			t.Errorf("%s: %s", name, u)
 		}
+	}
+}
+
+func TestOversizedStateIsRefused(t *testing.T) {
+	p, _ := newProvider(t)
+	redirect := origin + "/accounts/oidc/dsm/login/callback/"
+	if _, err := p.Begin(origin, authQuery("paperless", redirect, "v", "state", strings.Repeat("s", maxStateBytes))); err != nil {
+		t.Fatalf("state at the limit: %v", err)
+	}
+	var ae *AuthorizeError
+	if _, err := p.Begin(origin, authQuery("paperless", redirect, "v", "state", strings.Repeat("s", maxStateBytes+1))); !errors.As(err, &ae) || ae.Code != "invalid_request" {
+		t.Fatalf("oversized state: %v", err)
 	}
 }
 

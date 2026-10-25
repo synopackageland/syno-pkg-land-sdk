@@ -73,6 +73,25 @@ func TestStatusHandlerChecksOnlyRegisteredPaths(t *testing.T) {
 	}
 }
 
+func TestStatusHandlerMissingTargetDoesNotEchoPath(t *testing.T) {
+	skipRoot(t)
+	cfg := fixture(t, 0o755)
+	cfg.Account = ""
+	path := filepath.Join(cfg.Root, "volume1", "Media", "private-target")
+	routes := cfg.Routes(func(context.Context) ([]Target, error) {
+		return []Target{{Key: "library", Name: "Media", Path: path, Required: Read}}, nil
+	})
+	data, err := routes[0].Invoke(context.Background(), api.Caller{}, nil, json.RawMessage(`{}`))
+	status, ok := data.(Status)
+	if err != nil || !ok || len(status.Folders) != 1 || status.Folders[0].State != Missing {
+		t.Fatalf("%+v %v", data, err)
+	}
+	raw, _ := json.Marshal(status)
+	if strings.Contains(string(raw), "private-target") || strings.Contains(string(raw), cfg.Root) {
+		t.Fatalf("status leaks the target path: %s", raw)
+	}
+}
+
 func TestPermissionChecksRefuseWrongAccount(t *testing.T) {
 	skipRoot(t)
 	cfg := fixture(t, 0o755)

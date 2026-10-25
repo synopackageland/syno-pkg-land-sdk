@@ -43,7 +43,7 @@ func TestBatchRejectsInvalidEnvelopes(t *testing.T) {
 		t.Fatal("invalid envelope dispatched")
 		return nil, nil
 	}))
-	for _, body := range []string{`{"v":2,"calls":[{"method":"demo.read"}]}`, `{"v":1,"calls":[]}`, `{"v":1,"method":"demo.read","calls":[{"method":"demo.read"}]}`, `{"v":1,"calls":[{"method":"demo.read","auth":{}}]}`} {
+	for _, body := range []string{`{"v":2,"calls":[{"method":"demo.read"}]}`, `{"v":1,"calls":[]}`, `{"v":1,"method":"demo.read","calls":[{"method":"demo.read"}]}`, `{"v":1,"calls":[{"method":"demo.read","auth":{}}]}`, `{"method":"demo.read","Calls":[` + strings.Repeat(`{"method":"demo.read"},`, MaxBatchMethods) + `{"method":"demo.read"}]}`, `{"method":"demo.read","calls":[` + strings.Repeat(`{"method":"demo.read"},`, MaxBatchMethods) + `{"method":"demo.read"}]}}`, `{"method":"demo.read","V":2}`} {
 		_, env := post(t, srv, body)
 		if env.Success {
 			t.Fatal(body)

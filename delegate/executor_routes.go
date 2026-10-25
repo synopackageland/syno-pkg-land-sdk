@@ -24,8 +24,11 @@ func ExecutorRoutes(c ExecutorClient, dataDir string) []api.Route {
 		}),
 		api.Handle("executor.status", func(ctx context.Context, caller api.Caller, _ json.RawMessage) (any, error) {
 			result, err := executorStatus(ctx, c, mailbox)
-			if err != nil || !caller.Admin() {
+			if err != nil {
 				return result, err
+			}
+			if !caller.Admin() {
+				return withoutStepOutput(result), nil
 			}
 			if diagnostic := protectedApproval(c); diagnostic != nil {
 				b, marshalErr := json.Marshal(result)
@@ -38,6 +41,22 @@ func ExecutorRoutes(c ExecutorClient, dataDir string) []api.Route {
 			return result, nil
 		}),
 	}
+}
+
+// withoutStepOutput drops the root start step's captured output, which only
+// an administrator sees; its state, reason and exit stay.
+func withoutStepOutput(result any) any {
+	b, err := json.Marshal(result)
+	var status map[string]any
+	if err != nil || json.Unmarshal(b, &status) != nil || status == nil {
+		return result
+	}
+	step, ok := status["start_step"].(map[string]any)
+	if !ok {
+		return result
+	}
+	delete(step, "output")
+	return status
 }
 
 // Control changes a fixed package-owned file that the package's lifecycle
