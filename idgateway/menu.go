@@ -3,7 +3,10 @@ package idgateway
 import (
 	"errors"
 	"log"
+	"net/netip"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/externalorigin"
@@ -27,6 +30,9 @@ const (
 	ProviderCanonical = "canonical"
 	// ProviderQuickConnect is Synology's relay, which cannot reach App ports.
 	ProviderQuickConnect = "quickconnect"
+	// ProviderDirect is the DSM hostname reached from outside the local
+	// network, where a router may forward DSM's port but not the App's.
+	ProviderDirect = "direct"
 )
 
 // LaunchMap (schema 1) maps each DSM address Connect serves to the addresses of
@@ -225,10 +231,82 @@ func quickConnectRelay(host string) bool {
 	return false
 }
 
+var dnsLabel = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$`)
+
+// Name suffixes of private networks, and reserved names that never resolve on
+// the Internet. A tailnet reaches every port of the NAS.
+var lanSuffixes = []string{".local", ".lan", ".home", ".home.arpa", ".internal", ".intranet", ".localdomain", ".corp", ".private", ".ts.net", ".example", ".test", ".invalid", ".localhost"}
+
+// Special-purpose IPv4 ranges that are not globally reachable, beyond the
+// private, loopback and link-local ones netip reports.
+var nonGlobalIPv4 = func() []netip.Prefix {
+	var out []netip.Prefix
+	for _, s := range []string{"0.0.0.0/8", "100.64.0.0/10", "192.0.0.0/24", "192.0.2.0/24", "198.18.0.0/15", "198.51.100.0/24", "203.0.113.0/24", "240.0.0.0/4"} {
+		out = append(out, netip.MustParsePrefix(s))
+	}
+	return out
+}()
+
+func globalIPv4(a netip.Addr) bool {
+	if !a.Is4() || !a.IsGlobalUnicast() || a.IsPrivate() {
+		return false
+	}
+	for _, p := range nonGlobalIPv4 {
+		if p.Contains(a) {
+			return false
+		}
+	}
+	return true
+}
+
+// outsideOrigin is the DSM hostname with the App port when the browser reached
+// DSM from outside the local network: a DNS name that is not a single label or
+// a private suffix, a global IPv4 address, or a direct QuickConnect hostname
+// that encodes one. Everything else, including IPv6 literals and malformed
+// names a CSP source cannot express, keeps the existing plain redirect.
+func outsideOrigin(host string, port int) (string, bool) {
+	host = strings.ToLower(hostname(host))
+	if port <= 0 || port > 65535 || host == "" || len(host) > 253 {
+		return "", false
+	}
+	if a, err := netip.ParseAddr(host); err == nil {
+		if !globalIPv4(a) {
+			return "", false
+		}
+	} else {
+		labels := strings.Split(host, ".")
+		if len(labels) < 2 || strings.Trim(labels[len(labels)-1], "0123456789") == "" {
+			return "", false
+		}
+		for _, label := range labels {
+			if !dnsLabel.MatchString(label) {
+				return "", false
+			}
+		}
+		if host == "localhost" {
+			return "", false
+		}
+		for _, suffix := range lanSuffixes {
+			if strings.HasSuffix(host, suffix) {
+				return "", false
+			}
+		}
+		for _, zone := range []string{".direct.quickconnect.to", ".direct.quickconnect.cn"} {
+			if strings.HasSuffix(host, zone) {
+				a, err := netip.ParseAddr(strings.ReplaceAll(labels[0], "-", "."))
+				if err != nil || !globalIPv4(a) {
+					return "", false
+				}
+			}
+		}
+	}
+	return "https://" + host + ":" + strconv.Itoa(port), true
+}
+
 // MenuDestination decides where the DSM menu opens this App. The request host
-// only selects among trusted pairs; it never supplies a destination. Any host
-// that matches no DSM address known to the App or Connect keeps the existing
-// DSM hostname and App port, so LAN behavior is unchanged.
+// only selects among trusted pairs; the only address it supplies is its own
+// hostname with the App port, as before. LAN hosts keep that destination with
+// a plain redirect; hosts outside the local network first check it.
 func MenuDestination(cfg Config, src MenuSources, host string, https bool) MenuDecision {
 	// A single-origin App opens its canonical origin from anywhere.
 	if canonical := src.External.Canonical(cfg.External); canonical != "" {
@@ -273,6 +351,9 @@ func MenuDestination(cfg Config, src MenuSources, host string, https bool) MenuD
 	}
 	if quickConnectRelay(host) {
 		return MenuDecision{Kind: MenuFallback, Provider: ProviderQuickConnect, Reason: MenuQuickConnect}
+	}
+	if origin, ok := outsideOrigin(host, nativePublicPort(cfg)); ok {
+		return MenuDecision{Kind: MenuRedirect, Origin: origin, Provider: ProviderDirect}
 	}
 	return MenuDecision{Kind: MenuBaseline}
 }

@@ -70,12 +70,13 @@ func TestMenuLauncherProbesTrustedAddress(t *testing.T) {
 	w := openMenu(t, cfg, src, user, true, "https://dsm.example.com/webman/3rdparty/App/sso/open.cgi")
 	body, csp := w.Body.String(), w.Header().Get("Content-Security-Policy")
 	sum := sha256.Sum256([]byte(menuProbeScript))
-	for _, want := range []string{`data-ping="https://app.example.com/_spl/ping"`, `data-package="App"`, `data-target="https://app.example.com/#/home"`, `<noscript><p><a href="https://app.example.com/#/home">`, `<section class="box" id="unreachable" role="alert" aria-labelledby="unreachable-title" hidden>`, `<script>` + menuProbeScript + `</script>`} {
+	for _, want := range []string{`data-ping="https://app.example.com/_spl/ping"`, `data-package="App"`, `data-target="https://app.example.com/#/home"`, `<noscript><footer><a class="btn primary" href="https://app.example.com/#/home">`, `<section id="unreachable" role="alert" aria-labelledby="unreachable-title" hidden>`, `data-state="start" data-mark="x"`, menuArt, `<script>` + menuProbeScript + `</script>`} {
 		if !strings.Contains(body, want) {
 			t.Fatal("missing", want, body)
 		}
 	}
-	if w.Code != 200 || w.Header().Get("Location") != "" || w.Header().Get("Cache-Control") != "no-store" || !strings.Contains(csp, "script-src 'sha256-"+base64.StdEncoding.EncodeToString(sum[:])+"'") || !strings.Contains(csp, "connect-src https://app.example.com;") || !strings.Contains(csp, "frame-ancestors 'none'") {
+	style := sha256.Sum256([]byte(menuStyle))
+	if w.Code != 200 || w.Header().Get("Location") != "" || w.Header().Get("Cache-Control") != "no-store" || !strings.Contains(csp, "script-src 'sha256-"+base64.StdEncoding.EncodeToString(sum[:])+"'") || !strings.Contains(csp, "connect-src https://app.example.com;") || !strings.Contains(csp, "frame-ancestors 'none'") || !strings.Contains(csp, "style-src 'sha256-"+base64.StdEncoding.EncodeToString(style[:])+"';") || strings.Contains(csp, "unsafe") {
 		t.Fatal(w.Code, w.Header())
 	}
 	if strings.Contains(body, "launchApp=") || strings.Contains(body, "Cloudflare") {
@@ -119,7 +120,7 @@ func TestMenuDeepLinksAcrossProvidersAndFallbackLinks(t *testing.T) {
 				w := httptest.NewRecorder()
 				entryHandlerWithMenu(cfg, nil, nil, &menuTokenAuth{}, func() MenuSources { return src }, func() bool { return true }).ServeHTTP(w, r)
 				target := html.EscapeString(origin + cfg.LaunchPath)
-				for _, want := range []string{`data-target="` + target + `"`, `<noscript><p><a href="` + target + `">`, `<a class="button" href="` + target + `">`} {
+				for _, want := range []string{`data-target="` + target + `"`, `<noscript><footer><a class="btn primary" href="` + target + `">`, `<a class="btn ghost" href="` + target + `">`} {
 					if w.Code != 200 || !strings.Contains(w.Body.String(), want) {
 						t.Fatalf("%s missing %s: %d %s", method, want, w.Code, w.Body)
 					}
@@ -183,8 +184,83 @@ func TestMenuLauncherNeedsADSMSession(t *testing.T) {
 		}
 	}
 	w := openMenu(t, cfg, src, &menuAuth{err: api.ErrNoSession}, true, "https://dsm.example.com/open.cgi")
-	if !strings.Contains(w.Body.String(), `data-error-code="sign_in_required"`) {
+	if !strings.Contains(w.Body.String(), `data-error-code="sign_in_required"`) || !strings.Contains(w.Body.String(), `data-state="fail" data-mark="lock"`) {
 		t.Fatal(w.Body)
+	}
+}
+
+// The page's only inline style is the constant pinned by hash. Inline SVG
+// carries no style attributes and loads nothing, so it fits the CSP.
+func TestMenuPageAssetsFitTheCSP(t *testing.T) {
+	for _, s := range []string{menuStyle, menuArt} {
+		for _, bad := range []string{"url(", "@import", "http:", "https:", "style=", "<text", "<script", " on", "href", "javascript:"} {
+			if strings.Contains(s, bad) {
+				t.Errorf("asset contains %q", bad)
+			}
+		}
+	}
+	if len(menuStyle)+len(menuArt)+len(menuProbeScript) > 12<<10 {
+		t.Fatal("launcher page assets grew past 12 KiB", len(menuStyle), len(menuArt), len(menuProbeScript))
+	}
+	cfg, src := menuInputs()
+	admin := &menuAuth{id: api.Identity{User: "admin", Admin: true}}
+	for _, host := range []string{"dsm.example.com", "spl-dsm-1a2b.example.workers.dev", "nas.example.net:5001"} {
+		w := openMenu(t, cfg, src, admin, true, "https://"+host+"/open.cgi")
+		body := w.Body.String()
+		if strings.Count(body, "<style>") != 1 || !strings.Contains(body, "<style>"+menuStyle+"</style>") || strings.Contains(body, " style=") || strings.Count(body, "<svg") != 1 || w.Header().Get("Referrer-Policy") != "no-referrer" {
+			t.Fatal(host, body)
+		}
+	}
+}
+
+func TestMenuLauncherOutsideTheLocalNetwork(t *testing.T) {
+	cfg, src := menuInputs()
+	cfg.LaunchPath = "/#/home"
+	admin := &menuAuth{id: api.Identity{User: "admin", Admin: true}}
+	user := &menuAuth{id: api.Identity{User: "alice"}}
+	open := func(cfg Config, auth *menuAuth, connect bool) (*httptest.ResponseRecorder, string) {
+		w := openMenu(t, cfg, src, auth, connect, "https://nas.example.net:5001/webman/3rdparty/App/sso/open.cgi", "Accept-Language", "en")
+		return w, w.Body.String()
+	}
+	w, body := open(cfg, admin, true)
+	for _, want := range []string{`data-hop="router"`, `data-ping="https://nas.example.net:18443/_spl/ping"`, `data-target="https://nas.example.net:18443/#/home"`, `data-error-code="menu_outside"`, "cannot be reached from outside your network", "forwards only DSM&#39;s port", `<a class="btn ghost" href="https://nas.example.net:18443/#/home">`, `<a class="btn primary" href="/?launchApp=SYNO.SDS.SynoPkgConnect.Instance&amp;launchParam=route%3D%252Fapps%252FApp">`, `<button class="btn" type="submit">Try again</button>`} {
+		if !strings.Contains(body, want) {
+			t.Fatal("missing", want, body)
+		}
+	}
+	if w.Code != 200 || !strings.Contains(w.Header().Get("Content-Security-Policy"), "connect-src https://nas.example.net:18443;") || w.Header().Get("Cache-Control") != "no-store" {
+		t.Fatal(w.Code, w.Header())
+	}
+	if _, body := open(cfg, admin, false); strings.Contains(body, "launchApp=") || !strings.Contains(body, "Install NAS Remote Connect from Package Center") {
+		t.Fatal("Connect missing", body)
+	}
+	none := cfg
+	none.External = &ExternalConfig{Connect: "none"}
+	if _, body := open(none, admin, true); strings.Contains(body, "launchApp=") || strings.Contains(body, "NAS Remote Connect") || !strings.Contains(body, "forwards only DSM") {
+		t.Fatal("Connect none", body)
+	}
+	// Ordinary users are told to ask an administrator: no router, Connect or
+	// approval details, and Try again is the primary action.
+	_, body = open(cfg, user, true)
+	if !strings.Contains(body, "Ask your administrator") || strings.Contains(body, "forwards") || strings.Contains(body, "launchApp=") || strings.Contains(body, "Connect") || !strings.Contains(body, `<button class="btn primary" type="submit">Try again</button>`) {
+		t.Fatal("ordinary user", body)
+	}
+	// The same session rules: no session asks to sign in and probes nothing.
+	for _, auth := range []*menuAuth{nil, {err: api.ErrNoSession}} {
+		w, body := open(cfg, auth, true)
+		if w.Code != 200 || strings.Contains(body, "<script") || strings.Contains(body, "data-ping") || strings.Contains(w.Header().Get("Content-Security-Policy"), "connect-src") {
+			t.Fatal(auth, body)
+		}
+	}
+	// A DSM cookie without a token bootstraps first, revealing nothing.
+	w = openMenu(t, cfg, src, admin, true, "https://nas.example.net:5001/open.cgi", "Cookie", "id=dsm-session")
+	if !strings.Contains(w.Body.String(), "enable_syno_token=yes") || strings.Contains(w.Body.String(), "18443") || strings.Contains(w.Body.String(), `data-hop="`) {
+		t.Fatal("bootstrap", w.Body)
+	}
+	// The LAN keeps its plain redirect without a session check.
+	auth := &menuAuth{}
+	if w := openMenu(t, cfg, src, auth, true, "https://192.168.1.20:5001/open.cgi"); w.Code != 302 || w.Header().Get("Location") != "https://192.168.1.20:18443/#/home" || auth.calls != 0 {
+		t.Fatal("LAN", w.Code, w.Header())
 	}
 }
 

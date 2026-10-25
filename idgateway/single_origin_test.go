@@ -73,7 +73,7 @@ func TestSingleOriginLauncherOpensCanonicalOrigin(t *testing.T) {
 	e := External{Accept: []string{"https://vault.example.com"}, Primary: "https://vault.example.com"}
 	open := func(cfg Config, e External, query string) string {
 		w := httptest.NewRecorder()
-		entryHandlerWithExternal(cfg, nil, nil, nil, func() External { return e }).ServeHTTP(w, httptest.NewRequest("GET", "https://nas.example.com:5001/open.cgi"+query, nil))
+		entryHandlerWithExternal(cfg, nil, nil, nil, func() External { return e }).ServeHTTP(w, httptest.NewRequest("GET", "https://nas.lan:5001/open.cgi"+query, nil))
 		if w.Code != 302 {
 			t.Fatal(w.Code, w.Body)
 		}
@@ -86,17 +86,17 @@ func TestSingleOriginLauncherOpensCanonicalOrigin(t *testing.T) {
 	if w.Code != 200 || !strings.Contains(w.Body.String(), `data-target="https://vault.example.com/#/sso?identifier=x"`) || !strings.Contains(w.Header().Get("Content-Security-Policy"), "connect-src https://vault.example.com;") {
 		t.Fatal(w.Code, w.Header(), w.Body)
 	}
-	if got := open(cfg, External{}, ""); got != "https://nas.example.com:18443/#/sso?identifier=x" {
+	if got := open(cfg, External{}, ""); got != "https://nas.lan:18443/#/sso?identifier=x" {
 		t.Fatal("no external origin", got)
 	}
 	plain := cfg
 	plain.External = &ExternalConfig{}
-	if got := open(plain, e, ""); got != "https://nas.example.com:18443/#/sso?identifier=x" {
+	if got := open(plain, e, ""); got != "https://nas.lan:18443/#/sso?identifier=x" {
 		t.Fatal("multi-origin App", got)
 	}
 	// A local resume returns to the host whose transaction cookie started it.
 	got, _ := url.Parse(open(cfg, e, "?ssoResume="+url.QueryEscape("txn:18443")))
-	if got.Query().Get("return") != "https://nas.example.com:18443"+ReturnPath {
+	if got.Query().Get("return") != "https://nas.lan:18443"+ReturnPath {
 		t.Fatal("resume", got)
 	}
 }

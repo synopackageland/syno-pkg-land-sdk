@@ -39,14 +39,16 @@ func TestMenuDestinationProviders(t *testing.T) {
 		{"nas.local:5001", true, MenuDecision{}},
 		{"nas.example.ts.net:5002", true, MenuDecision{}},
 		{"nas.example.ts.net", true, MenuDecision{}},
-		{"dsm.example.com", false, MenuDecision{}},
 		{"dsm.example.com.", true, MenuDecision{}},
-		{"sub.dsm.example.com", true, MenuDecision{}},
 		{"", true, MenuDecision{}},
 		{"example-id.relay.quickconnect.to", true, MenuDecision{Kind: MenuFallback, Provider: ProviderQuickConnect, Reason: MenuQuickConnect}},
 		{"example-id.relay.QuickConnect.cn:443", true, MenuDecision{Kind: MenuFallback, Provider: ProviderQuickConnect, Reason: MenuQuickConnect}},
 		{"192-0-2-10.example-id.direct.quickconnect.to:5001", true, MenuDecision{}},
-		{"quickconnect.to.example.com", true, MenuDecision{}},
+		// Other hosts outside the local network check the DSM hostname and
+		// App port before opening it, over HTTP too.
+		{"dsm.example.com", false, MenuDecision{Kind: MenuRedirect, Origin: "https://dsm.example.com:18443", Provider: ProviderDirect}},
+		{"sub.dsm.example.com", true, MenuDecision{Kind: MenuRedirect, Origin: "https://sub.dsm.example.com:18443", Provider: ProviderDirect}},
+		{"quickconnect.to.example.com", true, MenuDecision{Kind: MenuRedirect, Origin: "https://quickconnect.to.example.com:18443", Provider: ProviderDirect}},
 	} {
 		if got := MenuDestination(cfg, src, c.host, c.https); got != c.want {
 			t.Errorf("%q https=%v: %+v, want %+v", c.host, c.https, got, c.want)
@@ -82,7 +84,7 @@ func TestMenuDestinationManualPairFirst(t *testing.T) {
 	// A DSM origin without a manual App origin is no pair.
 	src.State.ManualOrigin = ""
 	src.External = EffectiveExternal(cfg, src.State, src.Projection)
-	if got := MenuDestination(cfg, src, "proxy-dsm.example.com", true); got != (MenuDecision{}) {
+	if got := MenuDestination(cfg, src, "proxy-dsm.example.com", true); got.Provider != ProviderDirect {
 		t.Fatal(got)
 	}
 }
@@ -90,7 +92,7 @@ func TestMenuDestinationManualPairFirst(t *testing.T) {
 func TestMenuDestinationConnectNoneAndLegacyProjection(t *testing.T) {
 	cfg, src := menuInputs()
 	cfg.External = &ExternalConfig{Connect: "none"}
-	if got := MenuDestination(cfg, src, "dsm.example.com", true); got != (MenuDecision{}) {
+	if got := MenuDestination(cfg, src, "dsm.example.com", true); got != (MenuDecision{Kind: MenuRedirect, Origin: "https://dsm.example.com:18443", Provider: ProviderDirect}) {
 		t.Fatal("connect none", got)
 	}
 	cfg.External = nil
@@ -108,7 +110,7 @@ func TestMenuDestinationConnectNoneAndLegacyProjection(t *testing.T) {
 	// A launch map, even an empty one, replaces the projection pair.
 	src.Launch = &LaunchMap{Schema: 1}
 	src.Projection.Apps = map[string]ExternalProjectionApp{"App": {Port: 18443, Public: ExternalProjectionPublic{Origin: "https://app.example.com"}}}
-	if got := MenuDestination(cfg, src, "dsm.example.com", true); got != (MenuDecision{}) {
+	if got := MenuDestination(cfg, src, "dsm.example.com", true); got.Provider != ProviderDirect {
 		t.Fatal("launch map replaces projection", got)
 	}
 }
@@ -135,6 +137,44 @@ func TestMenuDestinationSingleOrigin(t *testing.T) {
 	src.External = EffectiveExternal(cfg, src.State, src.Projection)
 	if got := MenuDestination(cfg, src, "192.0.2.10:5001", true); got.Origin != "https://vault.example.ts.net:18443" || got.Kind != MenuRedirect {
 		t.Fatal("ported", got)
+	}
+}
+
+func TestMenuDestinationOutsideTheLocalNetwork(t *testing.T) {
+	cfg, src := menuInputs()
+	direct := func(origin string) MenuDecision {
+		return MenuDecision{Kind: MenuRedirect, Origin: origin, Provider: ProviderDirect}
+	}
+	for host, want := range map[string]MenuDecision{
+		// Private, loopback, link-local, shared and documentation addresses.
+		"192.168.1.20:5001": {}, "10.0.0.2:5001": {}, "172.16.4.1": {}, "169.254.1.1:5001": {},
+		"127.0.0.1:5001": {}, "100.101.102.103:5001": {}, "203.0.113.7:5001": {}, "0.0.0.0": {},
+		// IPv6 literals cannot be a CSP source; every one keeps the redirect.
+		"[fd00::1]:5001": {}, "[2606:4700::1]:5001": {},
+		// Single labels, local and reserved names, tailnets.
+		"nas:5001": {}, "localhost:5001": {}, "nas.local": {}, "nas.lan:5001": {}, "nas.home.arpa": {},
+		"router.internal": {}, "nas.corp": {}, "nas.example": {}, "nas.test": {}, "nas.tailnet-name.ts.net:5001": {},
+		"127.1": {}, "1.2.3": {}, "nas_1.example.com": {}, "nas.example.com.": {},
+		"192-168-1-20.example-id.direct.quickconnect.to:5001": {}, "fd00--1.example-id.direct.quickconnect.to": {},
+		// A domain, DDNS name or public address outside the local network.
+		"nas.example.net:5001":    direct("https://nas.example.net:18443"),
+		"NAS.Example.ORG":         direct("https://nas.example.org:18443"),
+		"example-nas.synology.me": direct("https://example-nas.synology.me:18443"),
+		"8.8.4.4:5001":            direct("https://8.8.4.4:18443"),
+		"8-8-4-4.example-id.direct.quickconnect.to:5001": direct("https://8-8-4-4.example-id.direct.quickconnect.to:18443"),
+	} {
+		if got := MenuDestination(cfg, src, host, true); got != want {
+			t.Errorf("%q: %+v, want %+v", host, got, want)
+		}
+	}
+	// A trusted pair still wins over the direct address.
+	if got := MenuDestination(cfg, src, "dsm.example.com", true); got.Provider != ProviderCloudflare {
+		t.Fatal(got)
+	}
+	// The App port is the one the browser would open.
+	cfg.Listen = Listen{HTTPS: 443}
+	if got := MenuDestination(cfg, src, "nas.example.net:5001", true); got.Origin != "https://nas.example.net:443" {
+		t.Fatal(got)
 	}
 }
 

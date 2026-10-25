@@ -183,8 +183,9 @@ opening it.
 `MenuDestination(cfg, sources, host, https)` decides where the DSM menu opens an
 App, from the host the browser used to reach DSM. `LoadMenuSources(cfg)` reads
 its trusted inputs afresh with the same file checks as the projection. The host
-only selects among trusted pairs; it never supplies a destination, and
-forwarding headers are ignored. Rules, first match wins:
+only selects among trusted pairs; the only address it supplies is its own
+hostname with the App port, as before. Forwarding headers are ignored. Rules,
+first match wins:
 
 1. A single-origin App with an external origin opens its primary origin from
    any host.
@@ -204,8 +205,17 @@ forwarding headers are ignored. Rules, first match wins:
    addresses. Only HTTPS requests match.
 4. A QuickConnect relay host (`*.quickconnect.to`, `*.quickconnect.cn`, except
    `*.direct.*`) is reported as unable to reach Apps.
-5. Any other host, including every LAN address, keeps the DSM hostname and App
-   port exactly as before.
+5. A host outside the local network keeps the DSM hostname and App port but is
+   checked first (`direct`): a DNS name, a global IPv4 address, or a direct
+   QuickConnect hostname (`*.direct.quickconnect.*`) that encodes one. A router
+   often forwards only DSM's port, and the browser would otherwise just fail to
+   connect.
+6. Any other host keeps the DSM hostname and App port with a plain redirect,
+   exactly as before: private, loopback, link-local, shared (`100.64.0.0/10`)
+   and documentation IPv4 addresses, every IPv6 literal, single-label names,
+   names under `.local`, `.lan`, `.home`, `.home.arpa`, `.internal`,
+   `.intranet`, `.localdomain`, `.corp`, `.private` and `.ts.net`, the reserved
+   `.example`, `.test`, `.invalid` and `.localhost`, and malformed names.
 
 `external.connect: none` ignores Connect's projection and launch map.
 
@@ -241,13 +251,20 @@ exactly as before, without a DSM session check. Every other result needs a DSM
 session with access to the App and is answered with a small page (`no-store`,
 `no-referrer`, no frames):
 
-- To open a trusted address, the page fetches `<origin>/_spl/ping` without
-  credentials and replaces itself with the address once the answer names this
-  package. It waits up to 8 seconds, because slow NASes and provider restarts
-  take seconds. The script is constant and pinned by hash in the CSP, which
-  allows connections only to that origin. If the check fails, the page explains
-  that the App cannot be reached and offers **Open anyway** and **Try again**;
-  without JavaScript it shows a continue link.
+- To open a trusted or `direct` address, the page fetches `<origin>/_spl/ping`
+  without credentials, shows success briefly and replaces itself with the
+  address once the answer names this package (at once with reduced motion). It
+  waits up to 8 seconds, because slow NASes and provider restarts take seconds.
+  The script is constant and pinned by hash in the CSP, which allows
+  connections only to that origin. If the check fails, the page explains that
+  the App cannot be reached and offers **Try again** and **Open anyway**, which
+  also helps when the App port's certificate is not trusted; without
+  JavaScript it shows a continue button.
+- When a `direct` check fails, administrators read that the router forwards
+  only DSM's port and get **Set up this App in Connect** (Connect's App URLs
+  page with the App preselected), or the hint to install Connect when it is
+  absent, or neither with `external.connect: none`. Other users are asked to
+  contact their administrator.
 - When the App is not enabled or is paused for this provider, or DSM was reached
   through a QuickConnect relay, or a single-origin App has no external origin,
   administrators see the reason, the provider name and a **Set up this App in
@@ -262,6 +279,18 @@ session with access to the App and is answered with a small page (`no-store`,
 
 Text follows `Accept-Language` in the gateway's nine languages. The page does
 not name the App, because gateway configuration has no display name.
+
+The page is one card in the DSM look of `@synopackageland/ui` (its tokens
+copied as static CSS), with light and dark themes, reduced motion and narrow
+screens. A small inline SVG shows the browser, the hop that reached DSM (a
+router for `direct`, else a cloud) and the NAS, whose DSM answers while the App
+path is being checked, open, broken, paused or waiting for sign-in. It holds no
+text and no style attributes, loads nothing, and names no provider. The style
+is constant and pinned by hash (`style-src 'sha256-…'`, no `unsafe-inline`);
+the root's `data-state`, `data-hop` and `data-mark` attributes select the
+illustration. The short headline, one line and a single primary action
+(Connect, the settings page or **Try again**) follow; **Open anyway** is a
+quieter link.
 
 ## Public-proxy requirements for App authors
 
