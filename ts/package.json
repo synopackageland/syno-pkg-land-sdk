@@ -1,6 +1,6 @@
 {
   "name": "@synopackageland/sdk",
-  "version": "0.31.0",
+  "version": "0.31.1",
   "description": "Frontend SDK for DSM packages built with synopkgland: headless client and Vue components",
   "license": "MIT",
   "homepage": "https://github.com/synopackageland/syno-pkg-land-sdk/tree/main/ts#readme",
@@ -46,7 +46,7 @@
   },
   "peerDependencies": {
     "@lucide/vue": "^1.48.0",
-    "@synopackageland/ui": ">=0.10.1 <0.16.0",
+    "@synopackageland/ui": ">=0.10.1 <0.17.0",
     "vue": "^3.5.0"
   },
   "peerDependenciesMeta": {
@@ -59,7 +59,7 @@
   },
   "devDependencies": {
     "@lucide/vue": "1.48.0",
-    "@synopackageland/ui": "0.15.0",
+    "@synopackageland/ui": "0.16.0",
     "@types/node": "24.19.2",
     "@vitejs/plugin-vue": "6.0.9",
     "jsdom": "29.1.1",

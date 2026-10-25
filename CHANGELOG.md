@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.31.1 (2026-10-25)
+
+- Accept UI 0.16.x with the optional UI peer range `>=0.10.1 <0.17.0`; build the Vue SDK against UI 0.16.0. Apps no longer need a UI peer override for this combination.
+- Align SDK/App and runtime identifiers at 0.31.1. Reuse immutable executor/v0.31.0 and its existing payload digests; CLI/templates remain at 0.31.0. No Go module tag or Rust crate publication is included.
+
 ## 0.31.0 (2026-10-25)
 
 - Restart native daemons after an unexpected exit by default, with bounded backoff; `restart.mode: never` opts out. Registry checks honor configured Docker mirrors and retain actionable pull errors.

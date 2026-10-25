@@ -6,8 +6,8 @@ const pkg=JSON.parse(readFileSync(resolve(__dirname,'../package.json'),'utf8'))
 const installed=JSON.parse(readFileSync(resolve(__dirname,'../node_modules/@synopackageland/ui/package.json'),'utf8'))
 
 // Button kinds, content-sized Dialogs and the PageContent section gap come from UI 0.10.1.
-test('the Vue entry targets UI 0.10.x through 0.15.x and is tested against 0.15.0',()=>{
- expect(pkg.peerDependencies['@synopackageland/ui']).toBe('>=0.10.1 <0.16.0')
- expect(pkg.devDependencies['@synopackageland/ui']).toBe('0.15.0')
- expect(installed.version).toBe('0.15.0')
+test('the Vue entry targets UI 0.10.x through 0.16.x and is tested against 0.16.0',()=>{
+ expect(pkg.peerDependencies['@synopackageland/ui']).toBe('>=0.10.1 <0.17.0')
+ expect(pkg.devDependencies['@synopackageland/ui']).toBe('0.16.0')
+ expect(installed.version).toBe('0.16.0')
 })
