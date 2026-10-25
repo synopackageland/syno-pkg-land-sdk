@@ -1,0 +1,37 @@
+{
+  "version": "0.31.0",
+  "executorVersion": "0.31.0",
+  "executorRootSDK": "v0.19.0",
+  "packages": {
+    "@synopackageland/sdk": "0.31.0",
+    "@synopackageland/app": "0.31.0",
+    "syno-pkg-land-app": "0.31.0",
+    "synopkgland_app": "0.31.0"
+  },
+  "executorDigests": {
+    "x86_64": "6ca1cb1c9441fafe7c4cf6e5ccea15d2fd1b99eeaeb9ecf28ebb866a2903a366",
+    "aarch64": "1df50df4434de081c32aae37126fc8852b8a6f4c97bca1722e996edf678c0743",
+    "armv7": "cb2af26402247d0de31c73326006404e928f269b1ad9f797a0e9382cb040e039",
+    "lifecycle": {
+      "x86_64": "c6fbb377ecd5ec7ee5b96439f22091d9fa5965dfd616d510ca9445722f436721",
+      "aarch64": "a9ca1750d4d5cff4727dc29789e6eaf0a365cb0e674f1bb796971d82f2d4fa27",
+      "armv7": "6d25fc972eba12e3ac68f8b6a95a45e9e5706ebe19ffc1ff774fc318acbeb90f"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": false,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false
+  },
+  "ui": {
+    "tested": "0.15.0",
+    "peer": ">=0.10.1 <0.16.0"
+  },
+  "node": {
+    "build": "24.22.1",
+    "compatibility": "22.23.4",
+    "minimum": "22"
+  }
+}

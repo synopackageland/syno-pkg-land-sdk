@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.31.0 (2026-10-25)
+
+- Restart native daemons after an unexpected exit by default, with bounded backoff; `restart.mode: never` opts out. Registry checks honor configured Docker mirrors and retain actionable pull errors.
+- Preserve SPA route fragments through DSM authorization, so menu launches return to the requested App screen after sign-in.
+- Reject ambiguous Compose paths containing `$`, excessive include fan-out and image volume inventories before package admission. Strip identity header aliases, bound OIDC parameters, enforce proxy idle timeouts and validate batch request envelopes. Refused DSM status output no longer discloses response details.
+- Disabling a delegated grant stops its scheduled tasks before returning. System-access approval explanations now describe the changed protection consistently.
+- Align SDK/App and runtime identifiers with CLI/templates 0.31.0. Ship executor/v0.31.0 with refreshed reproducible payload digests; rebuilt Apps require administrator reapproval for changed protected payloads. Rust crate publication remains deferred. No NAS acceptance is claimed.
+
 ## 0.30.2 (2026-10-25)
 
 - Fix DSM main-menu launches reached through an external provider when the top-level navigation carries the DSM session cookie without a SynoToken. The launcher obtains a token from the same-origin DSM endpoint and submits a bounded, origin-checked form before the existing session and App-access checks. Expired sessions remain refused; LAN GET behavior is unchanged.
