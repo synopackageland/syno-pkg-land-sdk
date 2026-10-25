@@ -68,5 +68,6 @@
   "menu_open_anyway": "그래도 열기",
   "menu_connect": "Connect에서 이 App 설정",
   "menu_connect_missing": "이 연결 방식의 주소를 App에 만들려면 패키지 센터에서 NAS Remote Connect를 설치하세요",
+  "menu_package_center": "패키지 센터 열기",
   "menu_settings": "App의 외부 접근 설정 열기"
 }

@@ -68,5 +68,6 @@
   "menu_open_anyway": "仍要開啟",
   "menu_connect": "在 Connect 設定這個 App",
   "menu_connect_missing": "從套件中心安裝 NAS Remote Connect，才能為這個 App 建立這個連線方式的網址",
+  "menu_package_center": "開啟套件中心",
   "menu_settings": "開啟 App 的外網設定"
 }

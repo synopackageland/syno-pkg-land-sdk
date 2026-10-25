@@ -68,5 +68,6 @@
   "menu_open_anyway": "それでも開く",
   "menu_connect": "Connect でこの App を設定",
   "menu_connect_missing": "この接続方法のアドレスを App に設定するには、パッケージセンターから NAS Remote Connect をインストールしてください",
+  "menu_package_center": "パッケージセンターを開く",
   "menu_settings": "App の外部アクセス設定を開く"
 }

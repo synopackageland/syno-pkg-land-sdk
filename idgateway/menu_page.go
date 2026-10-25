@@ -91,6 +91,10 @@ var menuProviderNames = map[string]string{ProviderCloudflare: "Cloudflare", Prov
 // menuConnectScopes map a provider to the scope Connect's App URLs page selects.
 var menuConnectScopes = map[string]string{ProviderCloudflare: "public", ProviderTailscale: "private", ProviderWorkers: "workers"}
 
+// packageCenterLink opens Package Center on this DSM origin, where an
+// administrator installs Connect.
+const packageCenterLink = "/?launchApp=SYNO.SDS.PkgManApp.Instance"
+
 func connectInstalled() bool {
 	_, err := os.Stat("/var/packages/" + ConnectPackage + "/INFO")
 	return err == nil
@@ -135,6 +139,7 @@ func menuExplanation(cfg Config, d MenuDecision, m map[string]string, admin, con
 			page.buttons = append(page.buttons, menuButton{href: connectLink(cfg.Package, d.Provider), key: "menu_connect"})
 		} else {
 			page.hint = m["menu_connect_missing"]
+			page.buttons = append(page.buttons, menuButton{href: packageCenterLink, key: "menu_package_center"})
 		}
 	}
 	switch d.Reason {
@@ -170,6 +175,7 @@ func menuUnreachable(cfg Config, d MenuDecision, target string, m map[string]str
 				page.buttons = append(page.buttons, menuButton{href: connectLink(cfg.Package, d.Provider), key: "menu_connect"})
 			} else {
 				page.hint = m["menu_connect_missing"]
+				page.buttons = append(page.buttons, menuButton{href: packageCenterLink, key: "menu_package_center"})
 			}
 		}
 		return page

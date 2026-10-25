@@ -68,5 +68,6 @@
   "menu_open_anyway": "Apri comunque",
   "menu_connect": "Configura questa App in Connect",
   "menu_connect_missing": "Installa NAS Remote Connect dal Centro pacchetti per assegnare a questa App un indirizzo per questa connessione",
+  "menu_package_center": "Apri Centro pacchetti",
   "menu_settings": "Apri le impostazioni di accesso esterno dell’App"
 }

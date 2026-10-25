@@ -262,8 +262,8 @@ session with access to the App and is answered with a small page (`no-store`,
   JavaScript it shows a continue button.
 - When a `direct` check fails, administrators read that the router forwards
   only DSM's port and get **Set up this App in Connect** (Connect's App URLs
-  page with the App preselected), or the hint to install Connect when it is
-  absent, or neither with `external.connect: none`. Other users are asked to
+  page with the App preselected), or the hint to install Connect with **Open
+  Package Center** when it is absent, or neither with `external.connect: none`. Other users are asked to
   contact their administrator.
 - When the App is not enabled or is paused for this provider, or DSM was reached
   through a QuickConnect relay, or a single-origin App has no external origin,
@@ -272,7 +272,8 @@ session with access to the App and is answered with a small page (`no-store`,
   the provider's scope preselected
   (`/?launchApp=SYNO.SDS.SynoPkgConnect.Instance&launchParam=route%3D%252Fapps%252F<App>%252F<scope>`);
   Connect only preselects and changes nothing. Without Connect installed the
-  page says to install it. Single-origin cases link to `settings.cgi` instead.
+  page says to install it, with an **Open Package Center** button
+  (`/?launchApp=SYNO.SDS.PkgManApp.Instance`). Single-origin cases link to `settings.cgi` instead.
 - Other users see only that the App cannot be opened from this address and that
   an administrator can help. They see no provider, address or approval state.
 - Without a DSM session the page asks to sign in to DSM again.
@@ -289,7 +290,7 @@ text and no style attributes, loads nothing, and names no provider. The style
 is constant and pinned by hash (`style-src 'sha256-…'`, no `unsafe-inline`);
 the root's `data-state`, `data-hop` and `data-mark` attributes select the
 illustration. The short headline, one line and a single primary action
-(Connect, the settings page or **Try again**) follow; **Open anyway** is a
+(Connect, Package Center, the settings page or **Try again**) follow; **Open anyway** is a
 quieter link.
 
 ## Public-proxy requirements for App authors

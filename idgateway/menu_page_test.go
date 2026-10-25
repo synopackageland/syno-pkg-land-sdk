@@ -148,7 +148,7 @@ func TestMenuLauncherExplains(t *testing.T) {
 	if !strings.Contains(got, `data-error-code="menu_not_enabled"`) || !strings.Contains(got, "through workers.dev, but this App has no workers.dev address yet") || !strings.Contains(got, "launchParam=route%3D%252Fapps%252FApp%252Fworkers") {
 		t.Fatal(got)
 	}
-	if got := page(admin, false, "spl-dsm-1a2b.example.workers.dev"); strings.Contains(got, "launchApp=") || !strings.Contains(got, "Install NAS Remote Connect from Package Center") {
+	if got := page(admin, false, "spl-dsm-1a2b.example.workers.dev"); strings.Contains(got, "SynoPkgConnect") || !strings.Contains(got, "Install NAS Remote Connect from Package Center") || !strings.Contains(got, `<a class="btn primary" href="/?launchApp=SYNO.SDS.PkgManApp.Instance">Open Package Center</a>`) {
 		t.Fatal("Connect missing", got)
 	}
 	if got := page(admin, true, "example-id.relay.quickconnect.to"); !strings.Contains(got, `data-error-code="menu_quickconnect"`) || !strings.Contains(got, "launchParam=route%3D%252Fapps%252FApp\"") {
@@ -231,7 +231,7 @@ func TestMenuLauncherOutsideTheLocalNetwork(t *testing.T) {
 	if w.Code != 200 || !strings.Contains(w.Header().Get("Content-Security-Policy"), "connect-src https://nas.example.net:18443;") || w.Header().Get("Cache-Control") != "no-store" {
 		t.Fatal(w.Code, w.Header())
 	}
-	if _, body := open(cfg, admin, false); strings.Contains(body, "launchApp=") || !strings.Contains(body, "Install NAS Remote Connect from Package Center") {
+	if _, body := open(cfg, admin, false); strings.Contains(body, "SynoPkgConnect") || !strings.Contains(body, "Install NAS Remote Connect from Package Center") || !strings.Contains(body, `<button class="btn" type="submit">Try again</button></form><a class="btn primary" href="/?launchApp=SYNO.SDS.PkgManApp.Instance">Open Package Center</a>`) || !strings.Contains(body, `<a class="btn ghost" href="https://nas.example.net:18443/#/home">`) {
 		t.Fatal("Connect missing", body)
 	}
 	none := cfg
