@@ -36,13 +36,35 @@ type approvalDifference struct {
 	PolicyChanges       []policyDifference `json:"policy_changes"`
 }
 
+// foldMemberNames renames members that encoding/json binds to a struct field
+// by case folding ("Operations") to the field's canonical name, so the
+// explanation reads the members the policy parser used. Other names are kept;
+// strictJSON already refuses two members that fold to one name.
+func foldMemberNames(m map[string]any, v any) {
+	canonical := map[string]string{}
+	t := reflect.TypeOf(v)
+	for i := 0; i < t.NumField(); i++ {
+		if name, _, _ := strings.Cut(t.Field(i).Tag.Get("json"), ","); name != "" && name != "-" {
+			canonical[foldJSONKey(name)] = name
+		}
+	}
+	for k, value := range m {
+		if name, ok := canonical[foldJSONKey(k)]; ok && name != k {
+			delete(m, k)
+			m[name] = value
+		}
+	}
+}
+
 func policyView(b []byte) (map[string]any, map[string]any) {
 	var p map[string]any
 	json.Unmarshal(b, &p)
+	foldMemberNames(p, Policy{})
 	digests := map[string]any{}
 	root, _ := p["root"].(map[string]any)
 	for name, value := range root {
 		if entry, ok := value.(map[string]any); ok {
+			foldMemberNames(entry, RootEntry{})
 			digests[name] = entry["digest"]
 			delete(entry, "digest")
 		} else {
