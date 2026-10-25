@@ -537,6 +537,9 @@ func Build(ctx context.Context, r Request) (*Plan, error) {
 			}
 			p.ImageProofs[original] = proof
 			s.Image = proof.Reference
+			if len(meta.Volumes) > 256 {
+				return nil, problem("COMPOSE_IMAGE_LOCK_INVALID", "image declares too many VOLUME targets")
+			}
 			slices.Sort(meta.Volumes)
 			for _, target := range meta.Volumes {
 				target = filepath.Clean(target)

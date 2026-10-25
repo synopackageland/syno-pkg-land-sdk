@@ -102,3 +102,20 @@ func TestApprovalReadbackValidatesCandidateAndRetainsProtectedBaseline(t *testin
 		t.Fatal("unanchored candidate accepted")
 	}
 }
+
+func TestApprovalComparisonFoldsCaseVariantMembers(t *testing.T) {
+	old := []byte(`{"v":1,"package":"Example","app":"SYNO.SDS.Example.Instance","operations":["status"]}`)
+	next := []byte(`{"v":1,"package":"Example","app":"SYNO.SDS.Example.Instance","Operations":["status","root.run"],"ROOT":{"cli":{"Digest":"` + digestA + `","kind":"binary"}}}`)
+	diff := compareApproval(old, next, digestA, strings.Repeat("b", 64), false)
+	if diff.Permissions != "expanded" {
+		t.Fatalf("case-variant members hid an expansion: %+v", diff)
+	}
+	for _, c := range diff.PolicyChanges {
+		if strings.Contains(c.Path, "Operations") || strings.Contains(c.Path, "ROOT") {
+			t.Fatalf("variant member left unfolded: %+v", diff.PolicyChanges)
+		}
+	}
+	if len(diff.RootPrograms) != 1 || diff.RootPrograms[0].New == nil {
+		t.Fatalf("%+v", diff.RootPrograms)
+	}
+}

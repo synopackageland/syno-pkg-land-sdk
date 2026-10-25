@@ -21,6 +21,12 @@ type sourceSet struct {
 	root   string
 	inputs map[string]Input
 	total  int
+	done   map[string]walked
+}
+
+type walked struct {
+	path string
+	b    []byte
 }
 
 // Resolve and check every component before reading. realpath followed by an
@@ -66,6 +72,13 @@ func (s *sourceSet) read(name string) (string, []byte, error) {
 func (s *sourceSet) compose(name string, depth int) (string, []byte, error) {
 	if depth > 16 {
 		return "", nil, problem("COMPOSE_SOURCE_UNSAFE", "include/extends recursion exceeds 16")
+	}
+	// A file reached again through another include/extends edge has the same
+	// closure; walking it again only multiplies work (diamond fan-out). A file
+	// still being walked is not in done, so cycles keep hitting the depth cap.
+	key := filepath.Clean(name)
+	if d, ok := s.done[key]; ok {
+		return d.path, d.b, nil
 	}
 	path, b, err := s.read(name)
 	if err != nil {
@@ -170,6 +183,10 @@ func (s *sourceSet) compose(name string, depth int) (string, []byte, error) {
 			}
 		}
 	}
+	if s.done == nil {
+		s.done = map[string]walked{}
+	}
+	s.done[key] = walked{path, b}
 	return path, b, nil
 }
 func entries(v any) []any {
