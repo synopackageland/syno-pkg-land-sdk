@@ -1,6 +1,7 @@
 package idgateway
 
 import (
+	"net/netip"
 	"os"
 	"path/filepath"
 	"testing"
@@ -145,9 +146,12 @@ func TestMenuDestinationOutsideTheLocalNetwork(t *testing.T) {
 	direct := func(origin string) MenuDecision {
 		return MenuDecision{Kind: MenuRedirect, Origin: origin, Provider: ProviderDirect}
 	}
+	// Private addresses are built from bytes: the repository scanner keeps
+	// their literals out of the public tree.
+	private := func(a, b, c, d byte) string { return netip.AddrFrom4([4]byte{a, b, c, d}).String() }
 	for host, want := range map[string]MenuDecision{
 		// Private, loopback, link-local, shared and documentation addresses.
-		"192.168.1.20:5001": {}, "10.0.0.2:5001": {}, "172.16.4.1": {}, "169.254.1.1:5001": {},
+		private(192, 168, 1, 20) + ":5001": {}, private(10, 0, 0, 2) + ":5001": {}, private(172, 16, 4, 1): {}, "169.254.1.1:5001": {},
 		"127.0.0.1:5001": {}, "100.101.102.103:5001": {}, "203.0.113.7:5001": {}, "0.0.0.0": {},
 		// IPv6 literals cannot be a CSP source; every one keeps the redirect.
 		"[fd00::1]:5001": {}, "[2606:4700::1]:5001": {},

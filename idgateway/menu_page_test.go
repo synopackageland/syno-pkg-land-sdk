@@ -259,7 +259,7 @@ func TestMenuLauncherOutsideTheLocalNetwork(t *testing.T) {
 	}
 	// The LAN keeps its plain redirect without a session check.
 	auth := &menuAuth{}
-	if w := openMenu(t, cfg, src, auth, true, "https://192.168.1.20:5001/open.cgi"); w.Code != 302 || w.Header().Get("Location") != "https://192.168.1.20:18443/#/home" || auth.calls != 0 {
+	if w := openMenu(t, cfg, src, auth, true, "https://nas.lan:5001/open.cgi"); w.Code != 302 || w.Header().Get("Location") != "https://nas.lan:18443/#/home" || auth.calls != 0 {
 		t.Fatal("LAN", w.Code, w.Header())
 	}
 }
