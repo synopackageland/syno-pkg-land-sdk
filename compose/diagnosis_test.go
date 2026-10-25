@@ -60,7 +60,7 @@ func TestRegistryCheckChallengeIsReachableButFailureStatusesAreLabelled(t *testi
 	for _, tc := range []struct {
 		status int
 		cause  ImageCause
-	}{{200, ""}, {401, ""}, {403, ImageDenied}, {404, ImageUnknown}, {429, ImageRateLimit}, {503, ImageUnreachable}} {
+	}{{200, ""}, {401, ""}, {403, ImageUnknown}, {404, ImageUnknown}, {429, ImageRateLimit}, {503, ImageUnreachable}} {
 		t.Run(fmt.Sprint(tc.status), func(t *testing.T) {
 			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("WWW-Authenticate", `Bearer realm="https://other.example/token"`)
@@ -198,5 +198,112 @@ func TestRegistryCheckSkipsImagesThisPackageAlreadyRan(t *testing.T) {
 	other := host + "/app@sha256:" + strings.Repeat("b", 64)
 	if results := checkRegistries(context.Background(), diagnosisProject(t, ran, other), "postupgrade", server.Client().Transport); len(results) != 1 || requests.Load() != 1 {
 		t.Fatalf("new image not checked: %+v requests=%d", results, requests.Load())
+	}
+}
+
+// Docker mirrors apply to Docker Hub only, and any reachable path is sufficient
+// for this informational check. No failed base probe proves image denial.
+func TestRegistryCheckMirrorFallback(t *testing.T) {
+	for _, tc := range []struct {
+		name, image                  string
+		mirrorStatus, upstreamStatus int
+		wantFailure                  bool
+	}{
+		{"blocked-upstream", "docker.io/library/app", 200, 403, false},
+		{"challenge", "docker.io/library/app", 401, 403, false},
+		{"upstream-fallback", "docker.io/library/app", 503, 200, false},
+		{"both-fail", "docker.io/library/app", 403, 403, true},
+		{"unrelated-registry", "other.example/app", 200, 403, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var mirrorCalls atomic.Int32
+			transport := registryRoundTripper(func(r *http.Request) (*http.Response, error) {
+				status := tc.upstreamStatus
+				if r.URL.Host == "mirror.example" {
+					mirrorCalls.Add(1)
+					status = tc.mirrorStatus
+				}
+				return &http.Response{StatusCode: status, Body: http.NoBody, Header: http.Header{}}, nil
+			})
+			project := diagnosisProject(t, tc.image+diagnosisDigest)
+			got := checkRegistriesWithMirrors(context.Background(), project, "prestart", transport, []string{"https://mirror.example"})
+			if (len(got) != 0) != tc.wantFailure {
+				t.Fatalf("%+v", got)
+			}
+			for _, d := range got {
+				if d.Cause == ImageDenied || d.Code == "COMPOSE_IMAGE_DENIED" {
+					t.Fatalf("probe claimed image denial: %+v", d)
+				}
+			}
+			if tc.name == "unrelated-registry" && mirrorCalls.Load() != 0 {
+				t.Fatal("Hub mirror used for another registry")
+			}
+		})
+	}
+}
+
+type registryRoundTripper func(*http.Request) (*http.Response, error)
+
+func (f registryRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func TestRegistryMirrorConfigIsBoundedAndSanitized(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "daemon.json")
+	raw := `{"registry-mirrors":["https://mirror.example/","http://cache.example:5000","https://user:secret@bad.example","https://bad.example/path","https://bad.example?token=secret","file:///tmp/no","https://mirror.example"]}`
+	if err := os.WriteFile(path, []byte(raw), 0600); err != nil {
+		t.Fatal(err)
+	}
+	got := configuredRegistryMirrors([]string{path})
+	want := []string{"https://mirror.example", "http://cache.example:5000"}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("%v", got)
+	}
+	link := filepath.Join(t.TempDir(), "link")
+	os.Symlink(path, link)
+	if got := configuredRegistryMirrors([]string{link}); len(got) != 0 {
+		t.Fatalf("followed config symlink: %v", got)
+	}
+	if err := os.WriteFile(path, []byte(`{"registry-mirrors":["https://one.example","https://two.example","https://three.example","https://four.example","https://five.example"]}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if got := configuredRegistryMirrors([]string{path}); len(got) != 4 {
+		t.Fatalf("unbounded mirrors: %v", got)
+	}
+	if err := os.WriteFile(path, []byte(`not json`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if got := configuredRegistryMirrors([]string{path}); len(got) != 0 {
+		t.Fatalf("invalid config: %v", got)
+	}
+}
+
+func TestReachableMirrorCancelsBlockedUpstream(t *testing.T) {
+	var calls atomic.Int32
+	mirror := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		if r.URL.String() != "/v2/" || r.Header.Get("Authorization") != "" {
+			t.Errorf("unexpected mirror request: %s", r.URL)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer mirror.Close()
+	canceled := make(chan struct{})
+	transport := registryRoundTripper(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Host == "registry-1.docker.io" {
+			<-r.Context().Done()
+			close(canceled)
+			return nil, r.Context().Err()
+		}
+		return mirror.Client().Transport.RoundTrip(r)
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	got := checkRegistriesWithMirrors(ctx, diagnosisProject(t, "app"+diagnosisDigest), "preinst", transport, []string{mirror.URL})
+	if len(got) != 0 || ctx.Err() != nil || calls.Load() != 1 {
+		t.Fatalf("mirror did not bypass blocked upstream: %+v %v", got, ctx.Err())
+	}
+	select {
+	case <-canceled:
+	case <-time.After(time.Second):
+		t.Fatal("upstream probe leaked")
 	}
 }
