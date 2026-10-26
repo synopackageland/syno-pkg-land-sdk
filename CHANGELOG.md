@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.31.3 (2026-10-26)
+
+- Accept UI 0.17.x with the optional UI peer range `>=0.10.1 <0.18.0`; build the Vue SDK against UI 0.17.0 (the redesigned `Wizard` and `WizardDialog`). Apps no longer need a UI peer override for this combination.
+- Include the launcher's **Open Package Center** offer and its test cleanup, committed after the v0.31.2 tag.
+- Align SDK/App and runtime identifiers at 0.31.3. Reuse immutable executor/v0.31.0 and its existing payload digests; CLI/templates remain at 0.31.0. No Rust crate publication is included.
+
 ## 0.31.2 (2026-10-25)
 
 - Redesign the DSM menu launcher page (`open.cgi`) as one DSM-style card: a text-free inline illustration of the browser, the hop that reached DSM and the NAS marks the broken, paused or sign-in hop, animates while `/_spl/ping` is checked and shows success briefly before opening. Light and dark themes, reduced motion and narrow screens are supported. The style is now pinned by hash instead of `unsafe-inline`; no-store, no-referrer, no frames, the hashed probe script and the single `connect-src` origin are unchanged. See [launcher page](docs/external-access.md#launcher-page).
