@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.31.4
+
+- Add public Go `dsmservices` discovery and strict port-declaration parsing,
+  moved from Connect with its fixtures. Preserve single TCP ports for web
+  suggestions and retain UDP and inclusive ranges for other Apps.
+- Export headless `readDsmPorts` for localized DSM PortInfo in the signed-in
+  administrator session; missing sessions and failed reads return an empty list.
+- Reuse the unchanged executor inventory. No Rust crate publication.
+
 ## 0.31.3 (2026-10-26)
 
 - Accept UI 0.17.x with the optional UI peer range `>=0.10.1 <0.18.0`; build the Vue SDK against UI 0.17.0 (the redesigned `Wizard` and `WizardDialog`). Apps no longer need a UI peer override for this combination.

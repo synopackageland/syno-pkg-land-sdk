@@ -67,6 +67,8 @@ The fake speaks protocol v1's framing only: it checks no session and no
 policy. `ExecutorSocket` is for tests: the package CGI and worker
 (`bridge/cmd/runtime`) never set it, so no request can choose the socket.
 
+Read DSM service and port definitions without root with [dsmservices](docs/dsm-service-ports.md).
+
 ## Development
 
 Native foreground daemons can opt into bounded crash recovery in their generated

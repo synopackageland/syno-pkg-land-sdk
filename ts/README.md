@@ -605,3 +605,10 @@ Browser permission results never authorize backend writes or grants.
 
 See [DSM session transport and App migration](../docs/dsm-session-transport.md).
 Do not add root/executor access to browser-only Apps such as OpenList.
+
+### DSM service ports
+
+`readDsmPorts(ctx)` returns localized PortInfo definitions on demand in the
+current administrator's DSM session. Start it after rendering the App. Refusal,
+missing session and timeout return `[]`; use package-account `dsmservices`
+reading on the backend independently. See [service ports](../docs/dsm-service-ports.md).
