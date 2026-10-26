@@ -40,3 +40,5 @@ export {encodeRequest, decodeResponse, type ProtocolAuth, type ProtocolResponse}
 export {appDenial,appRefusal,type AppDenial} from './authorization/refusal'
 
 export {createClient, type Batch, type BatchCall, type BatchResult, type ClientOptions} from './client'
+
+export {readDsmPorts, type DsmPort, type DsmPortRange} from './dsm/service-ports'
