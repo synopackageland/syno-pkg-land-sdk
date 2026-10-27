@@ -9,6 +9,7 @@ import {delegateCopy,errorCopy} from './copy'
 import {appLifecycle,lifecycleCopy,lifecycleRefusal,type AppLifecycle} from './lifecycle'
 import {useLifecycleRetry} from './use-lifecycle-retry'
 import {labelSeparator} from '../i18n'
+import {requestKey} from '../background/request-key'
 interface Grant{delegation_id:string;job_id:string;path:string;expires_at:string;revoked?:boolean}
 interface Job{id:string;name:string;state:'waiting_executor'|'queued'|'running'|'succeeded'|'failed'|'canceled'|'interrupted'}
 const props=defineProps<{ctx:Pick<Context,'call'|'locale'|'displayName'>}>()
@@ -44,7 +45,7 @@ useLifecycleRetry(()=>lifecycle.value,reload)
 const revoke=(id:string)=>action(async()=>{await props.ctx.call('delegate.revoke',{delegation_id:id});await refresh()})
 const cancel=(id:string)=>action(async()=>{const out=await props.ctx.call<{revocation_pending:boolean}>('delegate.jobs.cancel',{id});if(!disposed)notice.value=out.revocation_pending?copy.value.pending:'';await refresh()})
 const canSubmit=computed(()=>status.value?.state==='ready'&&!!dest.value&&!!url.value&&!!name.value)
-const submit=()=>action(async()=>{if(!canSubmit.value)return;await props.ctx.call('delegate.jobs.submit',{key:submissionKey??(submissionKey=crypto.randomUUID()),url:url.value,dest:dest.value,name:name.value});if(!disposed){url.value='';name.value='';dest.value=''};await refresh()})
+const submit=()=>action(async()=>{if(!canSubmit.value)return;await props.ctx.call('delegate.jobs.submit',{key:submissionKey??(submissionKey=requestKey()),url:url.value,dest:dest.value,name:name.value});if(!disposed){url.value='';name.value='';dest.value=''};await refresh()})
 const time=(date:string)=>{const d=new Date(date);return Number.isNaN(d.getTime())?'—':d.toLocaleString(props.ctx.locale)}
 defineExpose({refresh:reload})
 onMounted(()=>{void reload();timer=setInterval(()=>{if(jobs.value.some(pending))void reload()},3000)})
