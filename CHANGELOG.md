@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Keep the legacy delegate form usable over HTTP DSM by reusing the shared
+  `requestKey()` helper based on `crypto.getRandomValues`. Preserve the same
+  submission key after a lost reply. No executor or protocol change.
+
 ## 0.31.4
 
 - Add public Go `dsmservices` discovery and strict port-declaration parsing,
