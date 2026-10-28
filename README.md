@@ -72,6 +72,9 @@ Read DSM service and port definitions without root with [dsmservices](docs/dsm-s
 
 ## Development
 
+For ES module frontends and lazy routes in DSM windows, see
+[frontend bundles](docs/frontend-bundles.md).
+
 Native foreground daemons can opt into bounded crash recovery in their generated
 runtime config; see [native daemon restart policy](docs/native-daemon-restart.md)
 for defaults, status diagnostics and the required CLI/templates integration.
