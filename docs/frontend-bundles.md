@@ -8,9 +8,8 @@ The CLI's DSM window supports two entries in `ui.dir`:
 | `app.module.js` | ES module exporting `mount(root, ctx)` |
 
 Both entries require `app.css`. When both JavaScript entries exist, the module
-entry takes precedence. Use a CLI containing the module UI loader before
-switching an existing App. The frontend SDK API and backend language do not
-change.
+entry takes precedence. Use CLI 0.34.0 and templates 0.32.0 with SDK 0.32.0.
+The frontend SDK API and backend language do not change.
 
 The Vue template builds ES modules. Keep `base: './'`, emit `app.module.js`
 and `app.css`, and allow additional chunks. For example:

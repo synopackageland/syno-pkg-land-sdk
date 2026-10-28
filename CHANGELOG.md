@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.32.0 (2026-10-28)
+## 0.32.0 (2026-10-29)
 
 - Enforce the App entry gate before App handlers across JSON, batches, HTTP
   transfers, streamed responses, bridge dispatch and gateway requests. Bind
@@ -14,6 +14,10 @@
 - Add background frontend entry checks through `EntryGuard` and
   `createEntryCheck`, and define notification delivery results without delaying
   page rendering.
+- Document `app.module.js` ES module bundles and relative lazy chunks with
+  templates 0.32.0 and CLI 0.34.0. The CLI snapshots the complete UI tree and
+  `inspect` verifies it. Reload an open page after an upgrade if an old lazy
+  chunk is no longer available.
 - Keep `webapi.call` request parameters JSON-only, with JSON or raw responses.
   Use streaming `files.write` for file uploads.
 - Add `delegate.MaxWriteBytes` (100 MiB) as the limit for `JobFiles.Write` and the
