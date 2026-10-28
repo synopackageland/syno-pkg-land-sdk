@@ -261,7 +261,7 @@ operations and policy-excluded operations are rejected. Replies follow §2.4.
 | delegate.revoke | delegation_id; job_id required without cookie | revoked |
 | files.list, files.info, files.checkPermission | delegation_id, job_id, path | DSM data object |
 | files.createFolder | delegation_id, job_id, path (parent), name, optional parents | DSM data object |
-| files.write | delegation_id, job_id, staging (relative), dest_dir, name, optional conflict | path |
+| files.write | delegation_id, job_id, staging (relative), dest_dir, name, optional conflict; staged file at most 100 MiB (`limit-exceeded` above) | path |
 | files.read | delegation_id, job_id, path, optional max_bytes (at most 64 MiB) | staging, size |
 | files.rename | delegation_id, job_id, path, name | DSM data object |
 | files.copy, files.move | delegation_id, job_id, path, dest_dir, optional conflict (fail, overwrite) | task_id, state |
@@ -536,7 +536,7 @@ Neither state is replayed. Changed input for the same job is `operation-conflict
 Committed status alone includes `receipt:{path,size}`. Cleanup failures retain
 committed and add `CLEANUP_PENDING`. No same-name/hash guessing establishes receipt.
 
-Limits: 16 GiB per file, actual size+1 read, 16 queued, one active copy per package,
+Limits: 16 GiB per file for the durable operations (legacy `files.write` is held to 100 MiB, checked on the opened staging file before any child starts), actual size+1 read, 16 queued, one active copy per package,
 24-hour attempt, 10 MiB operation metadata. Full journals reject new admissions;
 terminal records are retained to prevent replay. Bulk input bypasses job spools
 and the old 64 MiB wrapper limit. Long copies revalidate account/AppPriv/ACL/path

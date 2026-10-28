@@ -143,6 +143,10 @@ func (w subprocessWriter) Write(ctx context.Context, s Subject, staging, dest, n
 	if err != nil {
 		return MoveReceipt{}, err
 	}
+	// Checked on the opened file, before the destination or any child exists.
+	if err := checkWriteSize(info.Size()); err != nil {
+		return MoveReceipt{}, err
+	}
 	di, err := bindDirectory(dest)
 	if err != nil {
 		return MoveReceipt{}, err

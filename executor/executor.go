@@ -900,6 +900,9 @@ func (e *Executor) Handle(ctx context.Context, r Request) Response {
 			return publish()
 		})
 		out, err := e.Writer.Write(writerCtx, s, p.Staging, real, p.Name, d.Root)
+		if errors.Is(err, errWriteTooLarge) {
+			return deny("limit-exceeded")
+		}
 		if err != nil {
 			return deny("WRITE_FAILED")
 		}

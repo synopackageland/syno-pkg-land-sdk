@@ -94,7 +94,7 @@ export const protocolCodes = {
  "too-many-tasks": {kind: "refusal", retryable: true, httpStatus: 429},
  /** The executor operation queue is full. */
  "queue-full": {kind: "refusal", retryable: true, httpStatus: 429},
- /** The file is larger than max_bytes, or root output is larger than its policy max_output. */
+ /** The file is larger than max_bytes (files.read) or 100 MiB (files.write), or root output is larger than its policy max_output. */
  "limit-exceeded": {kind: "refusal", retryable: false, httpStatus: 413},
  /** The operation was canceled; reason says why. */
  "OPERATION_CANCELED": {kind: "outcome", retryable: false, httpStatus: 409},
@@ -261,7 +261,7 @@ export interface FilesTaskStatusParams {
  job_id: string
  task_id: string
 }
-/** files.write: Publish a staged file synchronously. Since 0.9.0. */
+/** files.write: Publish a staged file synchronously. The staged file may be at most 104857600 bytes (100 MiB); a larger one is refused with limit-exceeded. Since 0.9.0. */
 export interface FilesWriteParams {
  delegation_id: string
  job_id: string

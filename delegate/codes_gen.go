@@ -96,7 +96,7 @@ const (
 	CodeTooManyTasks = "too-many-tasks"
 	// CodeQueueFull (refusal): The executor operation queue is full.
 	CodeQueueFull = "queue-full"
-	// CodeLimitExceeded (refusal): The file is larger than max_bytes, or root output is larger than its policy max_output.
+	// CodeLimitExceeded (refusal): The file is larger than max_bytes (files.read) or 100 MiB (files.write), or root output is larger than its policy max_output.
 	CodeLimitExceeded = "limit-exceeded"
 	// CodeOperationCanceled (outcome): The operation was canceled; reason says why.
 	CodeOperationCanceled = "OPERATION_CANCELED"

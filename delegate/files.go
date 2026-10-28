@@ -24,7 +24,13 @@ type JobFiles struct{ JobContext }
 
 var _ filestation.Files = JobFiles{}
 
+// MaxDownloadBytes bounds Read and the URL downloads a worker makes.
 const MaxDownloadBytes int64 = 64 << 20
+
+// MaxWriteBytes bounds Write, which streams from a reader to private staging
+// and never holds the file in memory. The executor enforces the same limit on
+// files.write; it is deliberately separate from MaxDownloadBytes.
+const MaxWriteBytes int64 = 100 << 20
 
 func (f JobFiles) call(ctx context.Context, op string, p map[string]any, out any) error {
 	if f.JobID == "" || f.DelegationID == "" {
@@ -92,10 +98,15 @@ func (f JobFiles) stagingRoot() (*os.Root, error) {
 }
 
 // Write consumes at most size+1 bytes into a random private staging file, then
-// asks the executor to create the destination without overwriting it. Cleanup
+// asks the executor to create the destination without overwriting it. size
+// above MaxWriteBytes (100 MiB) is refused as "limit-exceeded" before anything
+// is read or staged. Copying is streamed with io.Copy's fixed buffer. Cleanup
 // runs on refusals, read failures, cancellation and uncertain responses too.
 func (f JobFiles) Write(ctx context.Context, dir, name string, source io.Reader, size int64) error {
-	if !validPath(dir) || !validName(name) || size < 0 || size > MaxDownloadBytes || source == nil {
+	if size > MaxWriteBytes {
+		return fail(CodeLimitExceeded)
+	}
+	if !validPath(dir) || !validName(name) || size < 0 || source == nil {
 		return fail(CodeInvalidRequest)
 	}
 	root, e := f.stagingRoot()

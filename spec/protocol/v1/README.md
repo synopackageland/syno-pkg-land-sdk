@@ -427,6 +427,15 @@ input MUST be `operation-conflict`. States: `queued`, `copying`, `committed`,
 `files.cancelOperation` report the operation; `code` and `reason` in it are
 codes of kind `outcome` and `reason`.
 
+## files.write size limit
+
+`files.write` publishes a package-staged file into the granted folder as the
+delegated user. The staged file MUST be at most 104857600 bytes (100 MiB); the
+executor MUST check the size of the opened staging file before creating a
+destination or child and refuse a larger one with `limit-exceeded`. The limit is
+independent of the `files.read` cap (`max_bytes`, at most 64 MiB). Copying MUST
+use bounded buffers; the file MUST NOT be held in memory.
+
 ## Vectors
 
 Each line of `vectors/*.jsonl`:
