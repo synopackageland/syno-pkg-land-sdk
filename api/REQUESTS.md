@@ -11,6 +11,12 @@ it through each language.
 
 ## Origin guard
 
+App entry admission precedes route permissions, including public App routes,
+batches and transfers. Only an App without an entry floor can dispatch a public
+business route with an anonymous caller. The SDK's fixed identity ceremony
+remains reachable for sign-in. See [App entry enforcement](../docs/app-entry-access.md)
+for the packaged policy, audit and local IPC boundaries.
+
 DSM's SynoToken does not protect the CGI against cross-site requests. It is
 one value for the whole session, and with DSM's "Improve protection against
 cross-site request forgery attacks" off every session shares one placeholder

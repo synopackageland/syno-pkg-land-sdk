@@ -77,11 +77,19 @@ type Authenticator interface {
 	Authenticate(r *http.Request) (Identity, error)
 }
 
+// EntryAuthenticator carries the App admission floor with its authenticator.
+// Wrappers must preserve EntryMode when they wrap an entry authenticator.
+type EntryAuthenticator interface {
+	Authenticator
+	EntryMode() string
+}
+
 // Server is the http.Handler behind the package CGI.
 type Server struct {
 	auth            Authenticator
 	routes          map[string]Route
 	maxRequestBytes int64
+	entry           string
 }
 
 // NewServerWithPermissions builds the CGI server from the App's trusted
@@ -91,6 +99,9 @@ type Server struct {
 // opening a route.
 func NewServerWithPermissions(auth Authenticator, raw []byte, routes ...Route) (*Server, error) {
 	if err := checkSDKPolicy(); err != nil {
+		return nil, err
+	}
+	if err := checkAppPolicy(raw, routes); err != nil {
 		return nil, err
 	}
 	p, err := parsePermissions(raw)
@@ -117,13 +128,41 @@ func newServer(auth Authenticator, p permissions, routes ...Route) (*Server, err
 		}
 	}
 	for method, route := range registry {
+		if _, owned := sdkPolicy(method); !owned && expectedPermissionsDigest != "" {
+			if _, declared := p.methods[method]; !declared {
+				return nil, errors.New("registered API method missing from permissions: " + method)
+			}
+		}
 		route.policy = p.forMethod(method)
 		if rule, owned := sdkPolicy(method); owned {
 			route.policy = rule
 		}
 		registry[method] = route
 	}
-	return &Server{auth: auth, routes: registry, maxRequestBytes: MaxRequestBytes}, nil
+	entry := expectedEntryMode
+	ceremonyOnly := len(registry) > 0
+	for _, route := range registry {
+		ceremonyOnly = ceremonyOnly && route.ceremony
+	}
+	if ceremonyOnly {
+		entry = ""
+	}
+	if gate, ok := auth.(EntryAuthenticator); ok {
+		if entry != "" && gate.EntryMode() != entry {
+			return nil, errors.New("entry authenticator does not match package build policy")
+		}
+		entry = gate.EntryMode()
+	}
+	switch entry {
+	case "", "admin-only":
+	case "app-privilege":
+		if _, ok := auth.(EntryAuthenticator); !ok {
+			return nil, errors.New("app-privilege needs an entry authenticator")
+		}
+	default:
+		return nil, errors.New("invalid package entry policy")
+	}
+	return &Server{auth: auth, routes: registry, maxRequestBytes: MaxRequestBytes, entry: entry}, nil
 }
 
 // SetMaxRequestBytes declares the App's JSON request body limit, from 1 byte
@@ -263,15 +302,15 @@ func PrepareTransferRequest(w http.ResponseWriter, r *http.Request) *Error {
 	return nil
 }
 
-// authorize is the single access decision. Public routes skip authentication;
-// everything else, including unknown methods, authenticates exactly once
-// first, so anonymous callers cannot probe which methods exist.
+// authorize is the single access decision. Entry admission precedes route
+// permissions, including public routes. Without an entry floor public routes
+// retain their anonymous Caller. Unknown methods authenticate before discovery.
 func (s *Server) authorize(r *http.Request, method string) (Caller, Route, *Error) {
 	route, known := s.routes[method]
-	if known && route.policy == policyPublic {
+	if known && route.policy == policyPublic && (s.entry == "" || route.ceremony) {
 		return Caller{}, route, nil
 	}
-	identity, err := s.auth.Authenticate(r)
+	identity, err := authenticateEntry(s.auth, s.entry, r)
 	if r.Context().Err() != nil {
 		return Caller{}, Route{}, asError(r.Context().Err())
 	}
@@ -298,6 +337,31 @@ func (s *Server) authorize(r *http.Request, method string) (Caller, Route, *Erro
 	}
 	caller := Caller{identity: identity, authenticated: true}
 	return caller, route, nil
+}
+
+func authenticateEntry(auth Authenticator, entry string, r *http.Request) (Identity, error) {
+	if gate, ok := auth.(EntryAuthenticator); ok {
+		if entry == "" {
+			entry = gate.EntryMode()
+		}
+	} else if entry == "app-privilege" {
+		return Identity{}, errors.New("entry authenticator unavailable")
+	}
+	id, err := auth.Authenticate(r)
+	if err == nil && entry == "admin-only" && !id.Admin {
+		return Identity{}, ErrAdminRequired
+	}
+	return id, err
+}
+
+// These immutable SDK operations only establish or dispose of an App session.
+// They never dispatch App code; every business operation still enters authorize.
+func identityCeremony(method string) bool {
+	switch method {
+	case "identity.status", "identity.login", "identity.session", "identity.logout":
+		return true
+	}
+	return false
 }
 
 func readRequest(w http.ResponseWriter, r *http.Request, limit int64) (request, *Error) {

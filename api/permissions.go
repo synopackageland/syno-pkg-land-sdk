@@ -42,6 +42,10 @@ func sdkPolicy(method string) (policy, bool) {
 // the compiled CGI. Empty is permitted for direct Go development builds only.
 var expectedSDKPermissionsDigest string
 
+// The CLI binds these alongside the SDK digest for every packaged App. The
+// entry floor therefore survives a missing wrapper in a Go application's main.
+var expectedEntryMode, expectedPermissionsDigest string
+
 type permissions struct {
 	methods map[string]policy
 }
@@ -130,6 +134,21 @@ func parsePermissions(raw []byte) (permissions, error) {
 		return invalid()
 	}
 	return p, nil
+}
+
+func checkAppPolicy(raw []byte, routes []Route) error {
+	if expectedPermissionsDigest == "" {
+		return nil
+	}
+	for _, route := range routes {
+		if _, owned := sdkPolicy(route.method); !owned {
+			if fmt.Sprintf("%x", sha256.Sum256(raw)) != expectedPermissionsDigest {
+				return fmt.Errorf("App permissions do not match package build policy")
+			}
+			break
+		}
+	}
+	return nil
 }
 
 func checkSDKPolicy() error {

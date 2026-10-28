@@ -85,9 +85,20 @@ func BatchResource(ctx context.Context, key any, create func() (any, func())) an
 type verifiedBatch struct {
 	identity Identity
 	err      error
+	next     Authenticator
+	done     bool
+	entry    string
 }
 
-func (a verifiedBatch) Authenticate(*http.Request) (Identity, error) { return a.identity, a.err }
+func (a *verifiedBatch) EntryMode() string { return a.entry }
+
+func (a *verifiedBatch) Authenticate(r *http.Request) (Identity, error) {
+	if !a.done {
+		a.identity, a.err = a.next.Authenticate(r)
+		a.done = true
+	}
+	return a.identity, a.err
+}
 
 func (s *Server) serveBatch(w http.ResponseWriter, r *http.Request, calls []BatchCall) {
 	resources := &batchResources{values: map[any]any{}}
@@ -103,18 +114,10 @@ func (s *Server) serveBatch(w http.ResponseWriter, r *http.Request, calls []Batc
 		}
 	}()
 
-	// Authenticate once for this request. Public methods still get a zero Caller.
-	var identity Identity
-	var authErr error
-	for _, call := range calls {
-		route, known := s.routes[call.Method]
-		if !known || route.policy != policyPublic {
-			identity, authErr = s.auth.Authenticate(r)
-			break
-		}
-	}
+	// Only authorize decides whether authentication is required. Cache its
+	// result for this request, including an all-public batch with an entry floor.
 	requestServer := *s
-	requestServer.auth = verifiedBatch{identity, authErr}
+	requestServer.auth = &verifiedBatch{next: s.auth, entry: s.entry}
 	out := make([]BatchResult, len(calls))
 	routes := make([]Route, len(calls))
 	authorized := make([]AuthorizedCall, len(calls))

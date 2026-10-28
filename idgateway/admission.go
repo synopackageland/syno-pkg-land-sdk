@@ -75,8 +75,32 @@ func administrator(ctx context.Context, name string, m GroupMembership) (bool, e
 func permitted(ctx context.Context, s Subject, access string, wanted []string, m GroupMembership) bool {
 	return admissionError(ctx, s, access, wanted, m) == nil
 }
-func (f *Front) permits(ctx context.Context, s Subject) bool {
-	return permitted(ctx, s, f.cfg.Access, f.cfg.Groups, f.cfg.Membership)
+func (f *Front) admit(r *http.Request, s Subject) error {
+	return f.admitClient(r.Context(), s, remoteIP(r))
+}
+
+func (f *Front) admitClient(ctx context.Context, s Subject, ip string) error {
+	if err := admissionError(ctx, s, f.cfg.Access, f.cfg.Groups, f.cfg.Membership); err != nil {
+		return err
+	}
+	if f.cfg.Entry != "app-privilege" {
+		return nil
+	}
+	admin, err := administrator(ctx, s.Name, f.cfg.Membership)
+	if err != nil {
+		return err
+	}
+	if admin {
+		return nil
+	}
+	allowed, err := f.cfg.appPrivilege(ctx, s.Name, "SYNO.SDS."+f.cfg.Package+".Instance", ip)
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return api.ErrAppPrivilegeDenied
+	}
+	return nil
 }
 
 // AccessVerifier applies the same configured admission before any assertion is

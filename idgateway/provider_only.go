@@ -2,6 +2,20 @@ package idgateway
 
 import "errors"
 
+func validateEntry(entry, access, upstream string, passthrough, optional int) error {
+	switch entry {
+	case "":
+		return nil
+	case "admin-only", "app-privilege":
+	default:
+		return errors.New("invalid App entry mode")
+	}
+	if access == "public" || upstream == "public" || passthrough != 0 || optional != 0 {
+		return errors.New("App entry cannot combine with public access or passthrough")
+	}
+	return nil
+}
+
 // ProviderOnlyOIDCVersion identifies support for upstream_access in build tools.
 const ProviderOnlyOIDCVersion = 1
 

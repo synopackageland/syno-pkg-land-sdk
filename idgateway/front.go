@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/dsm"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/composeingress"
 	"io"
 	"net"
@@ -85,6 +86,7 @@ type FrontConfig struct {
 	Ready                 func(context.Context) bool
 	ComposeIngress        *ComposeIngress
 	Access                string
+	Entry                 string
 	UpstreamAccess        string
 	Groups                []string
 	Membership            GroupMembership
@@ -130,7 +132,8 @@ type FrontConfig struct {
 	// SignedIn, when set, sees each verified sign-in.
 	SignedIn func(Subject)
 
-	Now func() time.Time
+	Now          func() time.Time
+	appPrivilege func(context.Context, string, string, string) (bool, error)
 }
 
 type txn struct {
@@ -171,6 +174,15 @@ const (
 
 // NewFront validates cfg and builds the gateway handler.
 func NewFront(cfg FrontConfig) (*Front, error) {
+	if err := validateEntry(cfg.Entry, cfg.Access, cfg.UpstreamAccess, len(cfg.Passthrough), len(cfg.OptionalPassthrough)); err != nil {
+		return nil, err
+	}
+	if cfg.Entry == "admin-only" {
+		cfg.Access = "dsm-admins"
+	}
+	if cfg.appPrivilege == nil {
+		cfg.appPrivilege = dsm.AppPrivilege
+	}
 	if err := cfg.BrowserRedirect.validate(); err != nil {
 		return nil, err
 	}
@@ -245,6 +257,9 @@ func NewFront(cfg FrontConfig) (*Front, error) {
 	}
 	cfg.Roles = cfg.Roles.orDefault()
 	f := &Front{cfg: cfg, upstream: up, cookie: "synopkgland_sso_" + cfg.Package, txns: map[string]txn{}, sessions: map[string]session{}}
+	if cfg.Provider != nil && cfg.Entry != "" {
+		cfg.Provider.admit = f.admitClient
+	}
 	if len(cfg.OptionalPassthrough) > 0 {
 		f.optional = &optionalPassthrough{dir: cfg.StateDir, rules: cfg.OptionalPassthrough}
 		f.optional.reload()
@@ -370,7 +385,7 @@ func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, target, http.StatusFound)
 		return
 	}
-	if !f.cfg.ComposeBlocked && (f.providerOnly() || optional || f.cfg.Access == "public" || f.cfg.Mode == ModeOIDC && f.cfg.Access == "" || f.passthrough(r.URL.Path)) {
+	if f.cfg.Entry == "" && !f.cfg.ComposeBlocked && (f.providerOnly() || optional || f.cfg.Access == "public" || f.cfg.Mode == ModeOIDC && f.cfg.Access == "" || f.passthrough(r.URL.Path)) {
 		f.serveProxy(w, r)
 		return
 	}
@@ -383,7 +398,7 @@ func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		f.writeFailure(w, r, "login_required", "", false)
 		return
 	}
-	if err := admissionError(r.Context(), s, f.cfg.Access, f.cfg.Groups, f.cfg.Membership); err != nil {
+	if err := f.admit(r, s); err != nil {
 		f.writeFailure(w, r, admissionCode(err), "", isNavigation(r))
 		return
 	}
@@ -427,6 +442,7 @@ func isNavigation(r *http.Request) bool {
 
 func (f *Front) authorize(w http.ResponseWriter, r *http.Request, origin string) {
 	req, err := f.cfg.Provider.Begin(origin, r.URL.Query())
+	req.clientIP = remoteIP(r)
 	var ae *AuthorizeError
 	switch {
 	case errors.As(err, &ae):
@@ -504,7 +520,7 @@ func (f *Front) dsmReturn(w http.ResponseWriter, r *http.Request, origin string)
 		return
 	}
 	// Membership may change between CGI verification and assertion redemption.
-	if err := admissionError(r.Context(), a.Subject, f.cfg.Access, f.cfg.Groups, f.cfg.Membership); err != nil {
+	if err := f.admit(r, a.Subject); err != nil {
 		f.denied(w, r, t, admissionCode(err))
 		return
 	}
