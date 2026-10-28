@@ -1,8 +1,9 @@
 import {readFileSync,readdirSync} from 'node:fs'
 import {resolve} from 'node:path'
-import {expect,test} from 'vitest'
+import {expect,expectTypeOf,test} from 'vitest'
 import {generate} from '../scripts/gen-protocol.mjs'
 import {protocolCodes,protocolOps,protocolSchemas,decodeResponse,encodeRequest,type ProtocolOp} from '../src/index'
+import type {WebapiCallParams} from '../src/protocol/v1'
 
 const spec=resolve(__dirname,'../../spec/protocol/v1')
 const vectors=readdirSync(resolve(spec,'vectors')).flatMap(file=>readFileSync(resolve(spec,'vectors',file),'utf8').split('\n').filter(Boolean).map(line=>({file,...JSON.parse(line)})))
@@ -16,6 +17,15 @@ test('codes and ops follow errors.json and schema/',()=>{
  expect(Object.keys(protocolCodes)).toEqual(errors.map((c:{code:string})=>c.code))
  for(const c of errors)expect(protocolCodes[c.code as keyof typeof protocolCodes]).toEqual({kind:c.kind,retryable:c.retryable,httpStatus:c.httpStatus})
  expect([...protocolOps].sort()).toEqual(readdirSync(resolve(spec,'schema')).map(f=>f.replace(/\.json$/,'')).sort())
+})
+
+test('webapi.call types and wire metadata expose JSON and raw responses without request uploads',()=>{
+ expectTypeOf<keyof WebapiCallParams>().toEqualTypeOf<'response_type'|'delegation_id'|'job_id'|'api'|'method'|'version'|'params'>()
+ expectTypeOf<WebapiCallParams['response_type']>().toEqualTypeOf<'json'|'raw'|undefined>()
+ const schema=JSON.parse(readFileSync(resolve(spec,'schema/webapi.call.json'),'utf8'))
+ expect(protocolSchemas['webapi.call'].params).toEqual(Object.keys(schema.properties))
+ expect(protocolSchemas['webapi.call'].params).not.toContain('upload')
+ expect(JSON.parse(encodeRequest('webapi.call',{delegation_id:'grant',api:'SYNO.FileStation.List',method:'list',version:2,params:{},response_type:'raw'})).params.response_type).toBe('raw')
 })
 
 test('every well-formed vector request encodes to one canonical line',()=>{

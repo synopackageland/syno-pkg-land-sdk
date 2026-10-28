@@ -92,12 +92,13 @@ registry checks protect SDK dispatch when source inspection cannot resolve an
 external helper. This does not prove arbitrary App code cannot expose another
 server.
 
-Existing projects relying on `default: administrators` with an empty App method
-table must explicitly list every registered App method. Generated native
+Every App method must appear in the permissions table, including methods whose
+permission equals `default: administrators`. Generated native
 templates receive explicit policies for `app.status`, `greeting.get` and
 `greeting.set`. Custom HTTP dispatch must move into `HandleRequest`,
 `HandleResponse` or `HandleStream`; dynamic registries must declare fixed method
-names. Entry-enabled builds require an SDK containing this bound floor.
+names. Use `upstream_auth_paths` for client API paths that use upstream
+authentication. Rebuild with SDK 0.32.0 and CLI 0.34.0 to bind the entry floor.
 
 Administrator admission grants App access, never a root UID. The privileged
 executor remains an isolated, explicitly approved helper. CGI Application
