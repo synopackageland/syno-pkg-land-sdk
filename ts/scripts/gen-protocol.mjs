@@ -8,14 +8,19 @@ import {fileURLToPath} from 'node:url'
 const here=dirname(fileURLToPath(import.meta.url))
 const pascal=op=>op.split(/[._]/).map(p=>p[0].toUpperCase()+p.slice(1)).join('')
 const literal=value=>JSON.stringify(value)
-function type(schema){
+function type(schema,depth=1){
  if('const' in schema)return literal(schema.const)
  if(schema.enum)return schema.enum.map(literal).join(' | ')
- if(schema.type==='array')return `${type(schema.items)}[]`
+ if(schema.type==='array')return `${type(schema.items,depth)}[]`
  if(schema.type==='integer'||schema.type==='number')return 'number'
  if(schema.type==='string'||schema.type==='boolean')return schema.type
  // An object without properties is free-form, such as root params a policy schema checks.
  if(schema.type==='object'&&!schema.properties)return 'Record<string, unknown>'
+ if(schema.type==='object'&&schema.properties)return [
+  '{',
+  ...Object.entries(schema.properties).map(([name,prop])=>`${' '.repeat(depth+1)}${/^[A-Za-z_$][\w$]*$/.test(name)?name:literal(name)}${schema.required?.includes(name)?'':'?'}: ${type(prop,depth+1)}`),
+  `${' '.repeat(depth)}}`,
+ ].join('\n')
  throw Error(`unsupported schema ${JSON.stringify(schema)}`)
 }
 
