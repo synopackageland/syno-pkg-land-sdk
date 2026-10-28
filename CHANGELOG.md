@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.33.0 (2026-10-29)
+
+- Add `api.HandleHTTP` for fixed HTTP prefixes with centralized permissions,
+  entry and identity checks, raw bodies, streaming and HTTP upgrade support.
+  CLI 0.35.0 binds the registration inventory into the packaged binary.
+- Add `ipc.ServeUnix` and `ipc.DialUnix` for Linux package-private HTTP on
+  owned mode-0600 Unix sockets beneath the package's private `var/run`.
+- Audit only the Linux import graphs of configured Go binaries; unshipped
+  development commands remain outside the package entry boundary.
+- Align App SDK identifiers at 0.33.0 and retain the unchanged executor 0.32.0
+  payload inventory. No device acceptance or Rust crate publication is claimed.
+
 ## 0.32.0 (2026-10-29)
 
 - Enforce the App entry gate before App handlers across JSON, batches, HTTP

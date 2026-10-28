@@ -18,7 +18,11 @@ const DescriptionFile = "synopkgland-api.json"
 // outside a standalone App session. next retains all business/session guards.
 // filename is a trusted private package path, never a request parameter.
 func WithDescription(next http.Handler, auth Authenticator, filename string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return &routeWrapper{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if HTTPRouteMethod(next, r) != "" {
+			next.ServeHTTP(w, r)
+			return
+		}
 		if r.Method != "POST" || r.URL.Query().Get("method") != "" {
 			next.ServeHTTP(w, r)
 			return
@@ -84,7 +88,7 @@ func WithDescription(next http.Handler, auth Authenticator, filename string) htt
 			return
 		}
 		WriteData(w, json.RawMessage(raw))
-	})
+	}), next: next}
 }
 
 // DescribeRoutes exports actual routes with their effective central policy.
@@ -99,6 +103,9 @@ func DescribeRoutes(raw []byte, routes ...Route) ([]map[string]string, error) {
 	}
 	registry, err := buildRegistry(routes)
 	if err != nil {
+		return nil, err
+	}
+	if err := validateHTTPRoutes(registry); err != nil {
 		return nil, err
 	}
 	names := make([]string, 0, len(registry))
@@ -118,6 +125,12 @@ func DescribeRoutes(raw []byte, routes ...Route) ([]map[string]string, error) {
 		if r.streamHandler != nil {
 			kind = "transfer"
 		}
+		if r.httpHandler != nil {
+			if _, declared := p.methods[name]; !declared || p.forMethod(name) == policyPublic {
+				return nil, errors.New("HTTP route requires an explicit authenticated permission: " + name)
+			}
+			kind = "http"
+		}
 
 		rule := p.forMethod(name)
 		if fixed, ok := sdkPolicy(name); ok {
@@ -130,7 +143,11 @@ func DescribeRoutes(raw []byte, routes ...Route) ([]map[string]string, error) {
 		if rule == policyPublic {
 			permission = "public"
 		}
-		out = append(out, map[string]string{"method": name, "permission": permission, "kind": kind})
+		item := map[string]string{"method": name, "permission": permission, "kind": kind}
+		if r.httpHandler != nil {
+			item["prefix"] = r.httpPrefix
+		}
+		out = append(out, item)
 	}
 	return out, nil
 }

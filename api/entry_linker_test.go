@@ -22,7 +22,7 @@ func TestPackagedEntryAndPolicyBindingsInCompiledBinary(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(mod), 0600); err != nil {
 		t.Fatal(err)
 	}
-	const raw = `{"schema":1,"default":"administrators","methods":{"app.public":"public"}}`
+	const raw = `{"schema":1,"default":"administrators","methods":{"app.public":"public","app.proxy":"administrators"}}`
 	source := `package main
 import (
  "context"; "encoding/json"; "fmt"; "net/http"; "net/http/httptest"; "os"; "strings"
@@ -32,16 +32,20 @@ type auth struct{}
 func(auth) Authenticate(*http.Request)(api.Identity,error){return api.Identity{User:"ordinary"},nil}
 func main(){
  raw:=[]byte(` + "`" + raw + "`" + `)
+ prefix:="/proxy/"
  routes:=[]api.Route{api.Handle("app.public",func(context.Context,api.Caller,json.RawMessage)(any,error){panic("denied handler ran")})}
  if len(os.Args)>1 {switch os.Args[1] {
  case "changed":raw=append(raw,' ')
  case "unlisted":routes=append(routes,api.Handle("app.unlisted",func(context.Context,api.Caller,json.RawMessage)(any,error){panic("unlisted handler ran")}))
+ case "changed-prefix":prefix="/changed/"
  }}
+ routes=append(routes,api.HandleHTTP(prefix,"app.proxy",http.HandlerFunc(func(http.ResponseWriter,*http.Request){panic("denied raw handler ran")})))
  server,err:=api.NewServerWithPermissions(auth{},raw,routes...)
  if err!=nil {fmt.Print(err);return}
  request:=httptest.NewRequest("POST","https://app.example/api.cgi",strings.NewReader(` + "`" + `{"method":"app.public"}` + "`" + `))
  request.Header.Set("Content-Type","application/json")
  request.Header.Set("Origin","https://app.example")
+ if len(os.Args)>1 && os.Args[1]=="raw" {request=httptest.NewRequest("GET","https://app.example/proxy/item",nil)}
  response:=httptest.NewRecorder();server.ServeHTTP(response,request);fmt.Print(response.Body.String())
 }`
 	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(source), 0600); err != nil {
@@ -49,15 +53,18 @@ func main(){
 	}
 	binary := filepath.Join(dir, "probe")
 	flags := fmt.Sprintf("-X %s/api.expectedEntryMode=admin-only -X %s/api.expectedPermissionsDigest=%x", module, module, sha256.Sum256([]byte(raw)))
+	flags += fmt.Sprintf(" -X %s/api.expectedHTTPRoutesDigest=%x", module, sha256.Sum256([]byte(`[{"prefix":"/proxy/","method":"app.proxy"}]`)))
 	build := exec.Command("go", "build", "-mod=mod", "-buildvcs=false", "-ldflags", flags, "-o", binary, ".")
 	build.Dir = dir
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build: %v\n%s", err, out)
 	}
 	for arg, want := range map[string]string{
-		"":         `"code":"admin_required"`,
-		"changed":  "App permissions do not match package build policy",
-		"unlisted": "registered API method missing from permissions: app.unlisted",
+		"":               `"code":"admin_required"`,
+		"changed":        "App permissions do not match package build policy",
+		"unlisted":       "registered API method missing from permissions: app.unlisted",
+		"raw":            `"code":"admin_required"`,
+		"changed-prefix": "HTTP routes do not match package build policy",
 	} {
 		out, err := exec.Command(binary, arg).CombinedOutput()
 		if err != nil || !strings.Contains(string(out), want) {

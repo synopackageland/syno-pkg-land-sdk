@@ -131,7 +131,7 @@ func (s *Server) serveBatch(w http.ResponseWriter, r *http.Request, calls []Batc
 			out[i] = BatchFailure(err)
 			continue
 		}
-		if route.streamHandler != nil || route.responseHandler != nil {
+		if route.streamHandler != nil || route.responseHandler != nil || route.httpHandler != nil {
 			out[i] = BatchFailure(BadRequest("method cannot be batched"))
 			continue
 		}

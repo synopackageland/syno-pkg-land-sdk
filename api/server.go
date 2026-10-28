@@ -55,11 +55,11 @@ func WithRequestDeadline(next http.Handler, opts ...DeadlineOption) http.Handler
 	if o.timeout <= 0 {
 		panic("api.Timeout must be positive")
 	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return &routeWrapper{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), o.timeout)
 		defer cancel()
 		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+	}), next: next}
 }
 
 // ErrNoSession means the request carries no valid DSM session.
@@ -119,6 +119,9 @@ func newServer(auth Authenticator, p permissions, routes ...Route) (*Server, err
 	if err != nil {
 		return nil, err
 	}
+	if err := validateHTTPRoutes(registry); err != nil {
+		return nil, err
+	}
 	for method := range p.methods {
 		if _, owned := sdkPolicy(method); owned {
 			return nil, errors.New("App policy cannot override SDK route: " + method)
@@ -134,6 +137,14 @@ func newServer(auth Authenticator, p permissions, routes ...Route) (*Server, err
 			}
 		}
 		route.policy = p.forMethod(method)
+		if route.httpHandler != nil {
+			if _, declared := p.methods[method]; !declared {
+				return nil, errors.New("HTTP route missing from permissions: " + method)
+			}
+			if route.policy == policyPublic {
+				return nil, errors.New("HTTP routes require authenticated or administrators permission")
+			}
+		}
 		if rule, owned := sdkPolicy(method); owned {
 			route.policy = rule
 		}
@@ -193,7 +204,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// bytes unread, so drain whatever the handling below did not consume.
 	defer io.Copy(io.Discard, r.Body)
 	writeFailure := writeError
-	if r.URL.Query().Get("method") != "" {
+	if r.URL.Query().Get("method") != "" || s.HTTPRoute(r) != "" {
 		transfer := &transferResponse{ResponseWriter: w}
 		w = transfer
 		writeFailure = func(_ http.ResponseWriter, err error) {
@@ -210,6 +221,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writeFailure(w, internalError)
 		}
 	}()
+	if s.serveHTTPRoute(w, r) {
+		return
+	}
 	if method := r.URL.Query().Get("method"); method != "" {
 		if e := CheckOrigin(r); e != nil {
 			writeFailure(w, e)
@@ -247,7 +261,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeFailure(w, apiErr)
 		return
 	}
-	if route.streamHandler != nil {
+	if route.streamHandler != nil || route.httpHandler != nil {
 		writeFailure(w, BadRequest("use HTTP transfer endpoint"))
 		return
 	}

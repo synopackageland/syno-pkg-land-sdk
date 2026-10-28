@@ -444,6 +444,56 @@ func TestBusinessPolicyAndPasswordOnlyReads(t *testing.T) {
 		}
 	}
 }
+
+func TestRawHTTPKeepsBodyAndIdentityThroughSDKMiddleware(t *testing.T) {
+	f := setup(t)
+	rec, _ := f.call("identity.login", `{"account":"alice","password":"p"}`, nil, false)
+	cookie := sessionCookie(t, rec)
+	calls := 0
+	var body string
+	srv, err := api.NewServerWithPermissions(f.service,
+		[]byte(`{"schema":1,"default":"administrators","methods":{"app.proxy":"authenticated"}}`),
+		api.HandleHTTP("/proxy/", "app.proxy", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			calls++
+			if c := api.HTTPCaller(r.Context()); !c.Authenticated() || c.User() != "alice" {
+				t.Error("raw handler lost identity")
+			}
+			raw, _ := io.ReadAll(r.Body)
+			body = string(raw)
+			w.WriteHeader(204)
+		})))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrapped := api.WithRequestDeadline(api.WithDescription(f.service.Wrap(srv), f.service, "missing.json"))
+	for _, method := range []string{"GET", "POST", "PUT"} {
+		payload := `{"method":"synopkgland.describe","params":{}}`
+		r := httptest.NewRequest(method, "https://nas.example/proxy/item?method=identity.login", strings.NewReader(payload))
+		r.Header.Set("Content-Type", "application/json")
+		r.Header.Set("Origin", "https://nas.example")
+		r.AddCookie(cookie)
+		r.AddCookie(&http.Cookie{Name: "id", Value: "valid-dsm-cookie"})
+		if api.HTTPRouteMethod(wrapped, r) != "app.proxy" {
+			t.Fatal("middleware lost transport registration")
+		}
+		w := httptest.NewRecorder()
+		wrapped.ServeHTTP(w, r)
+		if w.Code != 204 || body != payload {
+			t.Fatalf("%s: body=%q status=%d %s", method, body, w.Code, w.Body)
+		}
+	}
+	if calls != 3 {
+		t.Fatal("raw handler did not run exactly once per request")
+	}
+	f.valid = false
+	r := httptest.NewRequest("GET", "https://nas.example/proxy/item", nil)
+	r.AddCookie(cookie)
+	r.AddCookie(&http.Cookie{Name: "id", Value: "valid-dsm-cookie"})
+	wrapped.ServeHTTP(httptest.NewRecorder(), r)
+	if calls != 3 {
+		t.Fatal("invalidated native identity reached raw handler")
+	}
+}
 func TestIdentityRejectsMalformedRequestsAndRotates(t *testing.T) {
 	f := setup(t)
 	rec, _ := f.call("identity.login", `{"account":"alice","password":"p"}`, nil, false)
