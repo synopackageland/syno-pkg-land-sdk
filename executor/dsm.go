@@ -157,7 +157,12 @@ func webAPIArgs(api, method, version, runner string, params map[string]any) ([]s
 		if err != nil {
 			return nil, err
 		}
-		args = append(args, k+"="+string(b))
+		arg := k + "=" + string(b)
+		// Linux refuses an argument of 131072 bytes including the NUL: refuse, never truncate.
+		if len(arg)+1 > maxArgvString {
+			return nil, errors.New("WebAPI argument too large")
+		}
+		args = append(args, arg)
 	}
 	return args, nil
 }
