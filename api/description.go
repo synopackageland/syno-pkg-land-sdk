@@ -131,6 +131,12 @@ func DescribeRoutes(raw []byte, routes ...Route) ([]map[string]string, error) {
 			}
 			kind = "http"
 		}
+		if r.integration != (p.forMethod(name) == policyIntegration) {
+			return nil, errors.New("integration permission and HandleIntegration must be used together: " + name)
+		}
+		if r.integration {
+			kind = "integration"
+		}
 
 		rule := p.forMethod(name)
 		if fixed, ok := sdkPolicy(name); ok {
@@ -143,8 +149,11 @@ func DescribeRoutes(raw []byte, routes ...Route) ([]map[string]string, error) {
 		if rule == policyPublic {
 			permission = "public"
 		}
+		if rule == policyIntegration {
+			permission = IntegrationPermission
+		}
 		item := map[string]string{"method": name, "permission": permission, "kind": kind}
-		if r.httpHandler != nil {
+		if r.httpHandler != nil && !r.integration {
 			item["prefix"] = r.httpPrefix
 		}
 		out = append(out, item)

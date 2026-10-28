@@ -20,6 +20,7 @@ const (
 	policyUser
 	policyAdmin
 	policyPublic
+	policyIntegration
 )
 
 // Handler runs one business operation. It receives the caller the server
@@ -37,6 +38,7 @@ type Route struct {
 	streamHandler   StreamHandler
 	httpHandler     http.Handler
 	httpPrefix      string
+	integration     bool
 	ceremony        bool
 }
 

@@ -145,6 +145,11 @@ func newServer(auth Authenticator, p permissions, routes ...Route) (*Server, err
 				return nil, errors.New("HTTP routes require authenticated or administrators permission")
 			}
 		}
+		// Only a HandleIntegration route skips the session, and only with the
+		// integration permission; the value grants nothing to any other route.
+		if route.integration != (route.policy == policyIntegration) {
+			return nil, errors.New("integration permission and HandleIntegration must be used together: " + method)
+		}
 		if rule, owned := sdkPolicy(method); owned {
 			route.policy = rule
 		}
@@ -221,7 +226,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writeFailure(w, internalError)
 		}
 	}()
-	if s.serveHTTPRoute(w, r) {
+	if s.serveHTTPRoute(w, r) || s.serveIntegration(w, r) {
 		return
 	}
 	if method := r.URL.Query().Get("method"); method != "" {
@@ -343,7 +348,7 @@ func (s *Server) authorize(r *http.Request, method string) (Caller, Route, *Erro
 	}
 	// Signed-in callers learn that a method is unregistered; method names
 	// already ship in the app's UI. Route constructors never grant permission.
-	if !known {
+	if !known || route.policy == policyIntegration {
 		return Caller{}, Route{}, &Error{"unknown_method", "unknown method"}
 	}
 	if route.policy == policyAdmin && !identity.Admin {

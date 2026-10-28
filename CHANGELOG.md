@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+- Add `api.HandleIntegration` for fixed service callbacks that arrive without
+  a DSM session, such as Chat buttons and webhooks. It is a raw HTTP route
+  selected by exactly one `?method=` value and declared with the new
+  `"integration"` permission. Only these methods skip the DSM session and App
+  entry gate; JSON, batch and transfer calls cannot reach them. Browser
+  requests still pass `CheckOrigin`. The handler must verify its caller
+  (token, HMAC, key or signed locator) itself. Integration selectors join the
+  HTTP route inventory digest, so CLI builds bind the audited list.
+- Add `api.ActAs(ctx, r, user)` for integration handlers. It returns a
+  non-administrator `Caller` only after `dsm.EntryGate.AdmitPrincipal` admits
+  the account: it must exist, be enabled with no expiry date, and DSM
+  Application Privileges must allow it from 127.0.0.1. Admin-only Apps admit no
+  account this way. Add `dsm.AccountEnabled`, `api.ErrAccountDisabled` and
+  `api.PrincipalAdmitter`. The account bridge run as the package account is
+  not yet verified on a device; an unavailable bridge refuses.
+- Standalone identity passes integration callbacks to the SDK server without
+  an App session check. Requires the matching CLI release, which requires
+  each integration method in `dsm-package.yaml` and lists them for approval.
+
 ## 0.33.0 (2026-10-29)
 
 - Add `api.HandleHTTP` for fixed HTTP prefixes with centralized permissions,

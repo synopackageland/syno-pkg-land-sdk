@@ -58,6 +58,8 @@ func permissionValue(value string) (policy, bool) {
 		return policyUser, true
 	case "public":
 		return policyPublic, true
+	case IntegrationPermission:
+		return policyIntegration, true
 	}
 	return policyUnset, false
 }

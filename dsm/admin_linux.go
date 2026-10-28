@@ -35,10 +35,20 @@ var adminARMv7 []byte
 //go:embed native/apppriv-armv7.elf
 var appPrivARMv7 []byte
 
+//go:embed native/account-x86_64.elf
+var accountAMD64 []byte
+
+//go:embed native/account-aarch64.elf
+var accountARM64 []byte
+
+//go:embed native/account-armv7.elf
+var accountARMv7 []byte
+
 // Bridges per runtime.GOARCH; an architecture without one is refused.
 var (
 	adminBridges   = map[string][]byte{"amd64": adminAMD64, "arm64": adminARM64, "arm": adminARMv7}
 	appPrivBridges = map[string][]byte{"amd64": appPrivAMD64, "arm64": appPrivARM64, "arm": appPrivARMv7}
+	accountBridges = map[string][]byte{"amd64": accountAMD64, "arm64": accountARM64, "arm": accountARMv7}
 )
 
 func nativeAdministrator(ctx context.Context, principal string) (bool, error) {
@@ -51,9 +61,19 @@ func nativeAppPrivilege(ctx context.Context, principal, app, addr string) (bool,
 	return parseNativeBit(out, err, errNativeAppPriv)
 }
 
+func nativeAccountEnabled(ctx context.Context, principal string) (bool, error) {
+	// Up to 1024 group IDs and a home path follow the fields read here.
+	out, err := runBridgeLimit(ctx, accountBridges, 32768, principal)
+	return parseNativeAccount(out, principal, err)
+}
+
 // runBridge executes the sealed bridge for this architecture with fixed
 // arguments and a minimal environment, returning at most 16 bytes of output.
 func runBridge(ctx context.Context, bridges map[string][]byte, args ...string) ([]byte, error) {
+	return runBridgeLimit(ctx, bridges, 16, args...)
+}
+
+func runBridgeLimit(ctx context.Context, bridges map[string][]byte, limit int, args ...string) ([]byte, error) {
 	payload, ok := bridges[runtime.GOARCH]
 	if !ok {
 		return nil, errors.New("unsupported architecture")
@@ -67,7 +87,7 @@ func runBridge(ctx context.Context, bridges map[string][]byte, args ...string) (
 	cmd.ExtraFiles = []*os.File{file}
 	// In particular, never inherit LD_PRELOAD/LD_LIBRARY_PATH or credentials.
 	cmd.Env = []string{"LANG=C", "LC_ALL=C"}
-	return commandOutput(cmd, 16)
+	return commandOutput(cmd, limit)
 }
 
 // memfdCreate is the sealing primitive; tests replace it to model old kernels.

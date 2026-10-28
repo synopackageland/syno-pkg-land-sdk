@@ -54,6 +54,68 @@ ingress. Use a deployment transport that already supports upgrades. No DSM
 WebSocket deployment acceptance is claimed. Streams retain the server request
 deadline; account revocation after an upgrade is the App's responsibility.
 
+## Integration callbacks
+
+Some callers cannot hold a DSM session: Chat button and slash-command
+callbacks, Drive webhooks and third-party webhooks. Register each one with a
+fixed method name:
+
+```go
+route := api.HandleIntegration("app.chat.callback", callbackHandler)
+```
+
+```json
+{"schema":1,"default":"administrators","methods":{"app.chat.callback":"integration"}}
+```
+
+```yaml
+integrations:
+  - app.chat.callback
+```
+
+The request selects the route by exactly one `?method=app.chat.callback`
+query value, so a callback URL such as `.../api.cgi?method=app.chat.callback`
+keeps working. Repeated or unparsable `method` values are refused. Prefix
+routes are matched first; an integration selector never matches a path that
+belongs to a `HandleHTTP` prefix.
+
+`"integration"` is valid only with `HandleIntegration`, and
+`HandleIntegration` accepts no other permission. For these methods only, the
+SDK skips the DSM session and the App entry gate and hands the original
+request to the handler with no verified caller. Everything else is unchanged:
+JSON, batch and `?method=` transfer calls cannot reach an integration method,
+and every other method still requires a session. A request carrying
+`Origin`, `Referer` or `Sec-Fetch-Site` must pass `CheckOrigin`; service
+callbacks normally carry none.
+
+The handler is the authentication boundary. Before acting it must verify the
+caller with a secret the App holds: a bot token, an HMAC signature, a webhook
+key or a signed, expiring locator. Bound its body, method and content type.
+The SDK cannot check these for it.
+
+To act for a DSM account, call `api.ActAs` after that verification:
+
+```go
+caller, err := api.ActAs(ctx, r, username)
+```
+
+`ActAs` works only inside an integration handler and only when the server's
+authenticator implements `api.PrincipalAdmitter`, as `dsm.EntryGate` does. The
+gate refuses an account that does not exist, is disabled or has any expiry
+date (`api.ErrAccountDisabled`), or that DSM Application Privileges do not
+allow from 127.0.0.1 (`api.ErrAppPrivilegeDenied`). An `admin-only` App
+admits no account this way. The returned caller is never an administrator,
+even for an administrator account. Unknown results refuse. The account check
+runs the native account bridge as the package account, which has not yet been
+verified on a device; if DSM refuses it there, `ActAs` refuses every account.
+
+CLI builds hash integration selectors into the HTTP route inventory as
+`{"prefix":"?method=<method>","method":"<method>"}`, so startup refuses a
+binary whose callbacks differ from the audited list. Discovery reports them
+with kind and permission `integration`. Handlers reachable from a
+`HandleIntegration` handler argument may construct `http.HandlerFunc`, as for
+`HandleHTTP`.
+
 ## Private worker IPC
 
 ```go

@@ -494,6 +494,43 @@ func TestRawHTTPKeepsBodyAndIdentityThroughSDKMiddleware(t *testing.T) {
 		t.Fatal("invalidated native identity reached raw handler")
 	}
 }
+
+// A service callback has neither App nor DSM cookies; only its integration
+// method passes the standalone session, and the SDK still owns the boundary.
+func TestIntegrationCallbackPassesStandaloneIdentityOnly(t *testing.T) {
+	f := setup(t)
+	calls := 0
+	ok := func(context.Context, api.Caller, json.RawMessage) (any, error) { return "ok", nil }
+	srv, err := api.NewServerWithPermissions(f.service,
+		[]byte(`{"schema":1,"default":"administrators","methods":{"app.callback":"integration","greeting.get":"authenticated"}}`),
+		api.HandleIntegration("app.callback", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			calls++
+			w.WriteHeader(204)
+		})),
+		api.HandleStream("greeting.get", func(context.Context, api.Caller, http.ResponseWriter, *http.Request) error { calls++; return nil }),
+		api.Handle("greeting.set", ok))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrapped := api.WithRequestDeadline(api.WithDescription(f.service.Wrap(srv), f.service, "missing.json"))
+	r := httptest.NewRequest("POST", "https://nas.example/cgi/api.cgi?method=app.callback", strings.NewReader("token=x"))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if api.IntegrationRouteMethod(wrapped, r) != "app.callback" {
+		t.Fatal("middleware lost integration registration")
+	}
+	w := httptest.NewRecorder()
+	wrapped.ServeHTTP(w, r)
+	if w.Code != 204 || calls != 1 {
+		t.Fatalf("integration callback: %d %s", w.Code, w.Body)
+	}
+	r = httptest.NewRequest("POST", "https://nas.example/cgi/api.cgi?method=greeting.get", strings.NewReader("token=x"))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.Header.Set("Origin", "https://nas.example")
+	wrapped.ServeHTTP(httptest.NewRecorder(), r)
+	if calls != 1 {
+		t.Fatal("a session transfer passed without an App session")
+	}
+}
 func TestIdentityRejectsMalformedRequestsAndRotates(t *testing.T) {
 	f := setup(t)
 	rec, _ := f.call("identity.login", `{"account":"alice","password":"p"}`, nil, false)

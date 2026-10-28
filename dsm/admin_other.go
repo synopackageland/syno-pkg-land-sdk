@@ -12,4 +12,5 @@ func nativeAdministrator(context.Context, string) (bool, error) { return false, 
 func nativeAppPrivilege(context.Context, string, string, string) (bool, error) {
 	return false, errNativeAppPriv
 }
-func configureCommand(*exec.Cmd) {}
+func nativeAccountEnabled(context.Context, string) (bool, error) { return false, errNativeAccount }
+func configureCommand(*exec.Cmd)                                 {}

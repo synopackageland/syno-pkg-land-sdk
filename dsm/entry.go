@@ -47,6 +47,7 @@ type EntryGate struct {
 	dir     string
 	now     func() time.Time
 	allowed func(ctx context.Context, principal, app, addr string) (bool, error)
+	enabled func(ctx context.Context, principal string) (bool, error)
 }
 
 // EntryMode keeps App admission visible to api.Server, including public routes.
@@ -69,7 +70,7 @@ func NewEntryGate(next api.Authenticator, mode, packageID, dataDir string) (api.
 	if !packageName.MatchString(packageID) {
 		return nil, fmt.Errorf("invalid package ID %q", packageID)
 	}
-	return &EntryGate{next: next, mode: mode, app: "SYNO.SDS." + packageID + ".Instance", dir: filepath.Join(dataDir, "entry"), now: time.Now, allowed: AppPrivilege}, nil
+	return &EntryGate{next: next, mode: mode, app: "SYNO.SDS." + packageID + ".Instance", dir: filepath.Join(dataDir, "entry"), now: time.Now, allowed: AppPrivilege, enabled: AccountEnabled}, nil
 }
 
 func (g *EntryGate) Authenticate(r *http.Request) (api.Identity, error) {
@@ -92,6 +93,37 @@ func (g *EntryGate) Authenticate(r *http.Request) (api.Identity, error) {
 		return api.Identity{}, api.ErrAppPrivilegeDenied
 	}
 	return id, nil
+}
+
+// integrationAddr is the client address an account admitted without a session
+// is checked from: the callback names an account, not where its person is.
+const integrationAddr = "127.0.0.1"
+
+// AdmitPrincipal implements api.PrincipalAdmitter for api.ActAs. The account
+// must exist, be enabled and unexpired, and be allowed by Application
+// Privileges; an admin-only App admits no account this way. Unknown refuses.
+func (g *EntryGate) AdmitPrincipal(ctx context.Context, principal string) (api.Identity, error) {
+	if g.mode == EntryAdminOnly {
+		return api.Identity{}, api.ErrAdminRequired
+	}
+	if !validPrincipal(principal) {
+		return api.Identity{}, api.ErrAppPrivilegeDenied
+	}
+	enabled, err := g.enabled(ctx, principal)
+	if err != nil {
+		return api.Identity{}, err
+	}
+	if !enabled {
+		return api.Identity{}, api.ErrAccountDisabled
+	}
+	allowed, err := g.decide(ctx, principal, integrationAddr)
+	if err != nil {
+		return api.Identity{}, err
+	}
+	if !allowed {
+		return api.Identity{}, api.ErrAppPrivilegeDenied
+	}
+	return api.Identity{User: principal}, nil
 }
 
 type cachedDecision struct {
