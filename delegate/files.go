@@ -14,6 +14,8 @@ type JobContext struct {
 	Client                          ExecutorClient
 	callExecutor                    func(context.Context, string, map[string]any, any) error
 	JobID, DelegationID, StagingDir string
+	// UploadDir is the App-private folder CallUpload stages request bytes in.
+	UploadDir string
 }
 
 func (j JobContext) Files() JobFiles { return JobFiles{j} }

@@ -647,6 +647,14 @@ bodies use App-private staging with size and SHA-256. See
 [contract, security bounds and Go consumer example](../docs/webapi-raw.md).
 Attachment.download and X-Accel-Redirect are excluded.
 
+### Request uploads
+
+Profiles may opt in with `upload_max_bytes` (1..96000); zero/omitted keeps the
+profile and its digest unchanged. `webapi.call` then accepts
+`upload:{param,staging,size,sha256}`: the executor reads the App-staged file,
+verifies it, unlinks it and sends it as one base64 `param`. See
+[the upload contract](../docs/webapi-upload.md).
+
 ### Native account eligibility
 
 Every request reads a pinned, sealed-memfd bridge (unlinked root-only fallback
