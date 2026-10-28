@@ -383,6 +383,6 @@ export const protocolSchemas: {readonly [Op in ProtocolOp]: {readonly auth: 'req
  "root.run": {auth: "required", params: ["name","params"], required: ["name"]},
  "root.start": {auth: "required", params: ["name","params"], required: ["name"]},
  "status": {auth: "optional", params: [], required: []},
- "webapi.call": {auth: "optional", params: ["response_type","delegation_id","job_id","api","method","version","params"], required: ["delegation_id","api","method","version","params"]},
+ "webapi.call": {auth: "optional", params: ["response_type","upload","delegation_id","job_id","api","method","version","params"], required: ["delegation_id","api","method","version","params"]},
 }
 export const protocolOps = Object.keys(protocolSchemas) as ProtocolOp[]
