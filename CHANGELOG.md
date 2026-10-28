@@ -1,13 +1,25 @@
 # Changelog
 
-## Unreleased
+## 0.32.0 (2026-10-29)
 
-- Replace the `webapi.call` request upload (`upload`, profile `upload_max_bytes`,
-  Go `JobWebAPI.CallUpload`, `JobContext.UploadDir`, `docs/webapi-upload.md`) with
-  `files.write`. The upload was unreleased and has been removed outright: it could
-  not carry more than 96000 bytes because every param is one `synowebapi` argv
-  string. Large files now go through the existing streaming `files.write`, which
-  has its own limit.
+- Enforce the App entry gate before App handlers across JSON, batches, HTTP
+  transfers, streamed responses, bridge dispatch and gateway requests. Bind
+  entry and permission digests into packaged runtimes. Every App method must
+  appear in the permissions table; dynamic names and custom HTTP dispatchers
+  are rejected by CLI 0.34.0. Use fixed SDK route constructors.
+- Delegate fixed client API/share paths to upstream authentication with
+  `identity_gateway.upstream_auth_paths`. Other paths retain DSM entry admission.
+  SDK RPC authorization remains independent. Upstream authentication, CSRF,
+  WebSocket policy and token revocation remain the upstream's responsibility.
+- Add background frontend entry checks through `EntryGuard` and
+  `createEntryCheck`, and define notification delivery results without delaying
+  page rendering.
+- Document `app.module.js` ES module bundles and relative lazy chunks with
+  templates 0.32.0 and CLI 0.34.0. The CLI snapshots the complete UI tree and
+  `inspect` verifies it. Reload an open page after an upgrade if an old lazy
+  chunk is no longer available.
+- Keep `webapi.call` request parameters JSON-only, with JSON or raw responses.
+  Use streaming `files.write` for file uploads.
 - Add `delegate.MaxWriteBytes` (100 MiB) as the limit for `JobFiles.Write` and the
   executor's `files.write`, separate from `MaxDownloadBytes` (64 MiB, `files.read`
   and URL downloads), which is unchanged. A larger file is refused as
@@ -16,6 +28,10 @@
   most 1 MiB in the executor), so the file is never held in memory. This changes
   executor behaviour (a new refusal above 100 MiB), so a package using
   `files.write` needs the new executor payload.
+- Align SDK/App runtime identifiers at 0.32.0, with executor/v0.32.0 and refreshed
+  reproducible payload digests. Rebuild Apps with CLI 0.34.0 and obtain fresh
+  administrator approval for changed protected payloads. Rust crate publication
+  is outside this release. No device acceptance is claimed.
 
 ## 0.31.5
 

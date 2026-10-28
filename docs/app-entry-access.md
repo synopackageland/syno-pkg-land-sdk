@@ -65,7 +65,7 @@ References identify the current source entry points. Regression evidence is in
 | DSM issuer CGI: `idgateway/authorize_cgi.go:130` | Uses the configured verifier and entry gate before signing an assertion. Closed. |
 | Ingress, portal and menu launcher: `idgateway/admission.go:129` | Fixed redirects, bootstrap pages and sign-in transport do not execute App handlers. Protected proxy/CGI decisions remain authoritative. Inert launch content is intentionally reachable. |
 | Background APIs: `api/server.go:308`, `api/sdk-permissions.json:11` | Generated job/status/result/schedule routes pass central entry first. Worker execution uses the private package spool. |
-| Background worker: `background/runner.go:117`, `bridge/cmd/runtime/main.go:84` | Fixed algorithms consume previously admitted jobs as the non-root package account. Entry changes do not automatically cancel existing jobs or schedules. Separate local trust boundary. |
+| Background worker: `background/runner.go:117`, `bridge/cmd/runtime/main.go:84` | Fixed algorithms consume accepted jobs as the non-root package account. Entry changes do not automatically cancel existing jobs or schedules. Separate local trust boundary. |
 | Daemon socket: `daemonctl/main.go:80`, `daemonctl/main.go:633` | Requires the configured non-root package account, private state and a mode-0600 Unix socket with peer checks. Lifecycle IPC is a separate local trust boundary. |
 | Delegate/executor: `executor/executor.go:331`, `executor/executor.go:414`, `executor/dsm.go:231` | Package/root peer admission precedes fixed operations; delegated user work resolves the account and rechecks the policy's entry. Explicit package lifecycle controls remain local operations. |
 | Delegated WebAPI uploads: `delegate/webapi.go:170`, `executor/webapi.go:276` | Private staged upload uses the same delegated account/entry revalidation before DSM dispatch. No new anonymous browser path. |
@@ -92,12 +92,13 @@ registry checks protect SDK dispatch when source inspection cannot resolve an
 external helper. This does not prove arbitrary App code cannot expose another
 server.
 
-Existing projects relying on `default: administrators` with an empty App method
-table must explicitly list every registered App method. Generated native
+Every App method must appear in the permissions table, including methods whose
+permission equals `default: administrators`. Generated native
 templates receive explicit policies for `app.status`, `greeting.get` and
 `greeting.set`. Custom HTTP dispatch must move into `HandleRequest`,
 `HandleResponse` or `HandleStream`; dynamic registries must declare fixed method
-names. Entry-enabled builds require an SDK containing this bound floor.
+names. Use `upstream_auth_paths` for client API paths that use upstream
+authentication. Rebuild with SDK 0.32.0 and CLI 0.34.0 to bind the entry floor.
 
 Administrator admission grants App access, never a root UID. The privileged
 executor remains an isolated, explicitly approved helper. CGI Application

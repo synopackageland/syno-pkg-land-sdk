@@ -52,8 +52,7 @@ does not revoke upstream tokens, sessions or active connections.
 The CLI requires SDK sources containing `UpstreamAuthPathsVersion = 1` and links
 the static entry policy digest into the gateway. Editing the entry mode,
 upstream-auth paths or passthrough settings without rebuilding refuses startup
-and CGI loading. Use matching SDK/CLI sources until an approved release ships
-this capability.
+and CGI loading. Build with SDK 0.32.0 and CLI 0.34.0.
 
 The identity gateway distinguishes DSM authentication from App admission. A
 verified DSM session does not grant administrator or admitted-group membership.
@@ -102,15 +101,16 @@ the gateway's existing DSM-session lifetime or revoke an App's independent
 native sessions on explicitly configured passthrough routes.
 
 
-## Optional native-client access (next minor SDK)
+## Optional native-client access
 
 `optional_passthrough` declares fixed App-authenticated prefixes, separately from
 permanent `passthrough`. For example, the CLI manifest can declare:
 
 ```yaml
 identity_gateway:
-  # Other gateway fields omitted. This example uses SDK 0.27.0.
-  sdk: 0.27.0
+  # Keep the App's other gateway fields.
+  sdk: 0.32.0
+  upstream_auth_paths: [/dav, /api/mobile]
   optional_passthrough:
     mobile:
       prefixes: [/dav, /api/mobile]
@@ -153,5 +153,5 @@ an error and writes disabled state. Responses report `configured_enabled` and
 briefly receive 403 until the signal is handled. Changes to the fixed manifest
 prefixes require rebuilding/restarting the gateway; changing the boolean does not.
 
-This is unreleased next-minor functionality. No package version is bumped by
-this change; Apps must wait for an approved SDK/CLI release before adopting it.
+Build with SDK 0.32.0 and CLI 0.34.0. With explicit App entry, contain all
+optional and permanent passthrough in `upstream_auth_paths`.
