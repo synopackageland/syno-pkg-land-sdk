@@ -95,6 +95,7 @@ type Config struct {
 	UpstreamAccess               string                             `json:"upstream_access,omitempty"`
 	Groups                       []string                           `json:"groups,omitempty"`
 	Entry                        string                             `json:"entry,omitempty"`
+	UpstreamAuthPaths            []string                           `json:"upstream_auth_paths,omitempty"`
 	ComposeBlocked               bool                               `json:"compose_blocked,omitempty"`
 	MaxUploadBytes               int64                              `json:"max_upload_bytes,omitempty"`
 	ResponseHeaderTimeoutSeconds int                                `json:"response_header_timeout_seconds,omitempty"`
@@ -138,7 +139,13 @@ func LoadConfig(path string) (Config, error) {
 }
 
 func (c Config) validate() error {
-	if err := validateEntry(c.Entry, c.Access, c.UpstreamAccess, len(c.Passthrough), len(c.OptionalPassthrough)); err != nil {
+	if err := c.checkEntryPolicy(); err != nil {
+		return err
+	}
+	if err := validateUpstreamAuth(c.UpstreamAuthPaths, c.Passthrough, c.OptionalPassthrough); err != nil {
+		return err
+	}
+	if err := validateEntry(c.Entry, c.Access, c.UpstreamAccess, len(c.Passthrough), len(c.OptionalPassthrough), c.UpstreamAuthPaths); err != nil {
 		return err
 	}
 	if err := c.External.validate(); err != nil {
@@ -327,6 +334,9 @@ type Gateway struct {
 
 // Build creates the gateway's key material and handlers from cfg.
 func Build(cfg Config, ports DSMPorts) (*Gateway, error) {
+	if err := cfg.validate(); err != nil {
+		return nil, err
+	}
 	key, err := GatewayKey(cfg.StateDir)
 	if err != nil {
 		return nil, err
@@ -337,7 +347,8 @@ func Build(cfg Config, ports DSMPorts) (*Gateway, error) {
 		External: external.Read, ExternalFresh: external.Fresh, SingleOrigin: cfg.External != nil && cfg.External.SingleOrigin,
 		Ready: cfg.Ready, ComposeIngress: cfg.ComposeIngress, Mode: cfg.Mode, Entry: cfg.Entry, Access: cfg.Access, UpstreamAccess: cfg.UpstreamAccess, Groups: cfg.Groups, Membership: NewDirectory(), ComposeBlocked: cfg.ComposeBlocked, MaxUploadBytes: cfg.MaxUploadBytes, ResponseHeaderTimeout: time.Duration(cfg.ResponseHeaderTimeoutSeconds) * time.Second, Upstream: cfg.Upstream, Key: key, AuthorizeCGI: cfg.AuthorizeCGI, DSMPorts: ports,
 		Package: cfg.Package, EmailDomain: cfg.EmailDomain, Passthrough: cfg.Passthrough, Redirects: cfg.Redirects, OptionalPassthrough: cfg.OptionalPassthrough, StateDir: cfg.StateDir,
-		Headers: cfg.Headers, Roles: cfg.Roles, Accounts: NewDirectory(), SessionTTL: cfg.SessionTTL(),
+		UpstreamAuthPaths: cfg.UpstreamAuthPaths,
+		Headers:           cfg.Headers, Roles: cfg.Roles, Accounts: NewDirectory(), SessionTTL: cfg.SessionTTL(),
 	}
 	switch cfg.Mode {
 	case ModeOIDC:
