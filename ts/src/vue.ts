@@ -5,6 +5,7 @@ export {createSession, type IdentitySession, type SessionSubject} from './identi
 export {useNasRequest} from './nas/use-request'
 export {default as AppShell} from './shell/AppShell.vue'
 export {default as PageActions} from './shell/PageActions.vue'
+export {default as UiUpdateNotice} from './shell/UiUpdateNotice.vue'
 export {PageActionsTarget} from './shell/page-actions'
 export {default as PageInfo} from './shell/PageInfo.vue'
 export {PageInfoTarget} from './shell/page-info'

@@ -7,5 +7,7 @@
   "deniedMessage": "你的 DSM 账号无权使用此应用程序。请管理员在 DSM 的应用程序权限中开放给你。",
   "notes": "附注",
   "notesCount": "附注（{count}）",
-  "loading": "正在加载…"
+  "loading": "正在加载…",
+  "uiUpdated": "已更新，请刷新页面",
+  "uiReload": "刷新"
 }

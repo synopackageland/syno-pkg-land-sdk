@@ -7,5 +7,7 @@
   "deniedMessage": "你的 DSM 帳號無權使用此應用程式。請管理員在 DSM 的應用程式權限中開放給你。",
   "notes": "附註",
   "notesCount": "附註（{count}）",
-  "loading": "載入中…"
+  "loading": "載入中…",
+  "uiUpdated": "已更新，請重新整理頁面",
+  "uiReload": "重新整理"
 }

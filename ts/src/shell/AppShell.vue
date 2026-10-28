@@ -14,6 +14,7 @@ import {hasContent, rendersContent} from './slot-content'
 import type {ShellPage} from './pages'
 import {resolvePages, sidebarGroups, type AppShellDenied, type AppShellPageEntry, type AppShellPageSurface} from './app-pages'
 import ExecutorNotice from '../delegate/ExecutorNotice.vue'
+import UiUpdateNotice from './UiUpdateNotice.vue'
 import {PageActionsTarget} from './page-actions'
 import {PageInfoTarget, ShellLocale} from './page-info'
 
@@ -26,7 +27,8 @@ const props = defineProps<{
   // viewport and the account from it; a DSM window keeps its own. Both take
   // the brand: a window narrowed to the mobile layout shows it in the phone
   // bar, where AppLayout would otherwise show DSM's document.title. With
-  // ctx.executor, every page shows ExecutorNotice while it is not approved.
+  // ctx.executor, every page shows ExecutorNotice while it is not approved;
+  // with ctx.uiUpdate, UiUpdateNotice once the installed UI replaced this page's.
   ctx?: ShellContext
   wideLayout?: WideLayout
   /** Forwarded to AppLayout; omitted keeps its sidebar default. 'top' needs UI 0.13.1+. */
@@ -153,6 +155,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
         <template #meta><span ref="page-info" class="app-page-info" /><slot name="meta" :page="modelValue" /></template>
         <template #actions><div ref="page-actions" class="app-page-actions" /><slot v-if="!loading" name="actions" :page="modelValue" /></template>
       </PageHeader>
+      <UiUpdateNotice v-if="ctx?.uiUpdate" :ctx="ctx" :locale="locale" />
       <ExecutorNotice v-if="ctx?.executor" :ctx="ctx" :locale="locale" />
       <div v-if="hasContent(slots.notices?.({page: modelValue}))" ref="notices" class="app-notices" :hidden="noticesEmpty"><slot name="notices" :page="modelValue" /></div>
       <div class="app-page-content"><LoadingArea v-if="loading" :text="copy.loading" /><template v-else><component :is="page.component" v-if="page?.component" :key="page.id" /><slot :page="modelValue" /></template></div>
