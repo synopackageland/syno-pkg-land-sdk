@@ -63,7 +63,7 @@ func validWebAPIProfiles(p Policy) bool {
 	}
 	total := 0
 	for name, profile := range p.WebAPI {
-		if profile.RawMaxBytes < 0 || profile.RawMaxBytes > maxWebAPIRaw || profile.UploadMaxBytes < 0 || profile.UploadMaxBytes > maxWebAPIUpload {
+		if profile.RawMaxBytes < 0 || profile.RawMaxBytes > maxWebAPIRaw {
 			return false
 		}
 		if !destinationRE.MatchString(name) || name == "home" || strings.TrimSpace(profile.Purpose) == "" || len(profile.Purpose) > 1024 || strings.ContainsFunc(profile.Purpose, unicode.IsControl) || len(profile.APIs) == 0 {
@@ -176,7 +176,6 @@ type webAPIRequest struct {
 	Version      int             `json:"version"`
 	Params       json.RawMessage `json:"params"`
 	ResponseType string          `json:"response_type,omitempty"`
-	Upload       *webAPIUpload   `json:"upload,omitempty"`
 }
 
 // Preserve canonical wire/auth keys while package API payloads may use mixed
@@ -236,16 +235,6 @@ func (e *Executor) callWebAPI(ctx context.Context, r Request) Response {
 	if code != "" {
 		return deny(code)
 	}
-	if p.Upload != nil {
-		// A refused request still consumes a well-formed staged handle.
-		if e.Uploads != nil {
-			defer e.Uploads.Discard(p.Upload.Staging)
-		}
-		// Upload and raw are exclusive; the shape is checked before the grant.
-		if p.ResponseType == "raw" || !validWebAPIUpload(p.Upload, params) {
-			return deny("INVALID_REQUEST")
-		}
-	}
 	e.commitMu.Lock()
 	d, err := e.Store.Get(p.ID)
 	e.commitMu.Unlock()
@@ -256,9 +245,6 @@ func (e *Executor) callWebAPI(ctx context.Context, r Request) Response {
 		return deny("POLICY_DENIED")
 	}
 	if p.ResponseType == "raw" && e.Policy.WebAPI[d.Scope].RawMaxBytes <= 0 {
-		return deny("POLICY_DENIED")
-	}
-	if p.Upload != nil && (e.Policy.WebAPI[d.Scope].UploadMaxBytes <= 0 || *p.Upload.Size > e.Policy.WebAPI[d.Scope].UploadMaxBytes) {
 		return deny("POLICY_DENIED")
 	}
 	if r.Auth.present() {
@@ -290,31 +276,11 @@ func (e *Executor) callWebAPI(ctx context.Context, r Request) Response {
 		return deny("WEBAPI_UNCERTAIN")
 	}
 	target := d.Scope + ":" + p.API + "/" + p.Method + "/" + strconv.Itoa(p.Version)
-	suffix := ""
-	if p.Upload != nil {
-		if e.Uploads == nil {
-			return deny("WEBAPI_UNCERTAIN")
-		}
-		suffix = ":" + strconv.FormatInt(*p.Upload.Size, 10)
-		target += ":upload"
-	}
 	e.commitMu.Lock()
 	err = e.auditLocked(s, "webapi.call", d.ID, target, "admitting")
 	e.commitMu.Unlock()
 	if err != nil {
 		return deny("STORAGE_ERROR")
-	}
-	if p.Upload != nil {
-		body, err := e.Uploads.Take(p.Upload.Staging, *p.Upload.Size, e.Policy.WebAPI[d.Scope].UploadMaxBytes, p.Upload.SHA256)
-		if err != nil {
-			// Nothing was sent to DSM.
-			e.commitMu.Lock()
-			e.auditLocked(s, "webapi.call", d.ID, target, "invalid-upload"+suffix)
-			e.commitMu.Unlock()
-			return deny("INVALID_REQUEST")
-		}
-		params[p.Upload.Param] = encodeUpload(body)
-		ctx = withUploadParam(ctx, p.Upload.Param)
 	}
 	out, err := caller.WebAPI(ctx, s.Username, p.API, p.Method, p.Version, params)
 	result := "completed"
@@ -322,7 +288,7 @@ func (e *Executor) callWebAPI(ctx context.Context, r Request) Response {
 		result = "uncertain"
 	}
 	e.commitMu.Lock()
-	auditErr := e.auditLocked(s, "webapi.call", d.ID, target, result+suffix)
+	auditErr := e.auditLocked(s, "webapi.call", d.ID, target, result)
 	e.commitMu.Unlock()
 	// Once dispatched, any missing reply is ambiguous: no automatic retries.
 	if result == "uncertain" || auditErr != nil {
@@ -335,11 +301,7 @@ func (e *Executor) callWebAPI(ctx context.Context, r Request) Response {
 // executor admits the approved profile first; this adapter repeats the permanent
 // denylist and reserved-parameter checks before constructing fixed argv.
 func (d *liveDSM) WebAPI(ctx context.Context, runner, api, method string, version int, params map[string]any) (json.RawMessage, error) {
-	check, ok := checkWebAPIUploadParams(ctx, params)
-	if !ok {
-		return nil, errors.New("WebAPI params")
-	}
-	raw, err := json.Marshal(check)
+	raw, err := json.Marshal(params)
 	if err != nil {
 		return nil, err
 	}

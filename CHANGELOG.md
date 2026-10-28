@@ -1,17 +1,5 @@
 # Changelog
 
-## Unreleased
-
-- Add request-side `webapi.call` uploads: a profile may set `upload_max_bytes`
-  (1..96000), and a call may carry `upload:{param,staging,size,sha256}` so an
-  App's background job can send up to 96000 staged bytes as one base64 param
-  (for example Synology Drive `Files.create` `file_content`). The executor opens
-  the App-private `executor-upload/app-<hex>` file safely, verifies size and
-  SHA-256, always unlinks it, and refuses an argv string of 131072 bytes or more.
-  Go `JobContext.WebAPI().CallUpload` stages and removes the file. Omitting the
-  field keeps profiles and digests unchanged; setting or changing it needs
-  administrator approval and fresh user consent. Go only. No new API allowlist.
-
 ## 0.31.5
 
 - Show a one-line, non-blocking notice with a **Reload** button above every

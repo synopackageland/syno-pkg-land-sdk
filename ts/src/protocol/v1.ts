@@ -300,15 +300,9 @@ export interface RootStartParams {
 /** status: Executor readiness, protocol version, digests and the folder scope selection. Since 0.9.0. */
 export interface StatusParams {
 }
-/** webapi.call: Call an exact approved WebAPI as the profile grant owner. JSON returns the DSM envelope; raw (since 0.12.1) requires profile raw_max_bytes and returns content_type, size, sha256 and base64 body or private staging handle. An optional upload (profile upload_max_bytes, at most 96000 bytes) injects App-staged bytes as one base64 param. Never retried. Since 0.11.0. */
+/** webapi.call: Call an exact approved WebAPI as the profile grant owner. JSON returns the DSM envelope; raw (since 0.12.1) requires profile raw_max_bytes and returns content_type, size, sha256 and base64 body or private staging handle. Never retried. Since 0.11.0. */
 export interface WebapiCallParams {
  response_type?: "json" | "raw"
- upload?: {
-  param: string
-  staging: string
-  size: number
-  sha256: string
- }
  delegation_id: string
  job_id?: string
  api: string

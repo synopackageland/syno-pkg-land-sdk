@@ -488,19 +488,6 @@ It MUST NOT raise frame limits. Staging MUST be App-owned 0600 under a private
 Header, execution, spool cleanup and error rules are specified in
 [the raw contract](../../../docs/webapi-raw.md).
 
-## WebAPI upload extension
-
-`webapi.call` MAY carry `upload:{param,staging,size,sha256}`. It MUST require a
-positive, approved profile `upload_max_bytes` (1..96000), pinned by policy and
-user consent, MUST NOT combine with `response_type:"raw"`, and MUST name exactly
-one param that is valid, not reserved and absent from `params`. `staging` is a
-bare `app-<32 lowercase hex>` handle in the package's private `executor-upload`
-folder. The executor MUST open it without following symlinks, require a regular
-file owned by the package account with one link, match `size` and `sha256`, read
-at most the limit plus one byte, unlink it on every outcome, and send the bytes
-as the base64 value of the param. The `params` bound (32768 bytes) still applies
-to the caller's own params. Details: [the upload contract](../../../docs/webapi-upload.md).
-
 ### Destination permission observations
 
 `files.checkPermission` also supports an existing until-revoked
