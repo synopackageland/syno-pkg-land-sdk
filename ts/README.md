@@ -7,7 +7,7 @@ App's `backend/go.mod`.
 | Import | Contents |
 |---|---|
 | `@synopackageland/sdk` | Headless: `Context` and the other types, `createBackgroundSaveFacade`, `createNasProvider`, `scopedPicker`, `createPortalAccess`, copy catalogs (`uiLocale`, `saveCopy`, …). Never imports Vue. |
-| `@synopackageland/sdk/vue` | Everything above plus the components (`AppShell`, `PageActions`, `PageInfo`, `FilesPage`, `NasPicker`, `LoginPage`, `PortalSettings`, `BackgroundPanel`, `ExecutorSettings`, `ExecutorApproval`, `ExecutorNotice`, `UiUpdateNotice`, `DelegatePanel`, `BackgroundSavePanel`, `BackgroundSaveSettings`, `AuthorizationGate`, `AuthorizationSettings`) and composables (`createSession`, `useExecutorSetup`, `ExecutorSetupKey`, `useAuthorization`). |
+| `@synopackageland/sdk/vue` | Everything above plus the components (`AppShell`, `PageActions`, `PageInfo`, `FilesPage`, `NasPicker`, `LoginPage`, `PortalSettings`, `BackgroundPanel`, `ExecutorSettings`, `ExecutorApproval`, `ExecutorNotice`, `UiUpdateNotice`, `DelegatePanel`, `BackgroundSavePanel`, `BackgroundSaveSettings`, `AuthorizationGate`, `AuthorizationSettings`, `EntryGuard`) and composables (`createSession`, `useExecutorSetup`, `ExecutorSetupKey`, `useAuthorization`). |
 | `@synopackageland/sdk/vue/style.css` | The component stylesheet. Import it once next to `@synopackageland/ui`'s theme in the App entry. |
 | `@synopackageland/sdk/native` | For a native product with its own pinned root tasks: `ROOT_RUNTIME` (`createRootAccess`) and `AUTHORIZATION_RUNTIME` (`createAuthorizationAccess`), plain ES5 source the product renders into its own DSM window; `AuthorizationGate` shows the result. Generated Apps use the executor instead. Never imports Vue. |
 | `@synopackageland/sdk/i18n/<capability>/<locale>.json` | Copy in `en`, `zh-TW`, `zh-CN`, `ja`, `ko`, `de`, `fr`, `es`, `it`. |
@@ -237,8 +237,9 @@ otherwise picks the first page the sidebar shows. A router drives the shell
 through `v-model`:
 `:model-value="route.name" @update:model-value="name => router.push({name})"`.
 
-Render the shell as soon as the entry gate passes and pass `loading` while
-startup reads run. The sidebar and title show immediately; the page body shows
+Render the shell immediately, with [`EntryGuard`](../docs/app-entry.md) checking
+session/admin access in the background, and pass `loading` while startup reads
+run. The sidebar and title show immediately; the page body shows
 its loading area and the actions slot waits. With the current CLI/SDK, use
 `ctx.batch` for independent startup reads so they share one HTTP request and
 App process:

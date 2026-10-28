@@ -135,6 +135,15 @@ build gives other digests.
 License: MIT for SDK code; retained upstream Compose fixtures have separate
 [licenses and notices](compose/testdata/README.md).
 
+## Notifications and App entry
+
+Use [`notify`](docs/notifications.md) for stable notification delivery identities,
+event/key throttling and App-owned webhook/SMTP attempts. The App retains its
+durable outbox and retry policy.
+
+[`App entry policy`](docs/app-entry.md) covers the centralized CGI admin gate
+and the non-blocking frontend `EntryGuard`.
+
 ## Identity gateway
 
 See [gateway access failures](docs/gateway-access.md) for admission errors and
