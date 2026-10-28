@@ -82,11 +82,14 @@ type FrontConfig struct {
 	ExternalFresh func() External
 	// SingleOrigin redirects browser navigations on other hosts to the primary
 	// external origin while one is set; see ExternalConfig.SingleOrigin.
-	SingleOrigin          bool
-	Ready                 func(context.Context) bool
-	ComposeIngress        *ComposeIngress
-	Access                string
-	Entry                 string
+	SingleOrigin   bool
+	Ready          func(context.Context) bool
+	ComposeIngress *ComposeIngress
+	Access         string
+	Entry          string
+	// UpstreamAuthPaths delegates these fixed path prefixes to upstream auth.
+	// It never changes SDK RPC authorization.
+	UpstreamAuthPaths     []string
 	UpstreamAccess        string
 	Groups                []string
 	Membership            GroupMembership
@@ -174,7 +177,13 @@ const (
 
 // NewFront validates cfg and builds the gateway handler.
 func NewFront(cfg FrontConfig) (*Front, error) {
-	if err := validateEntry(cfg.Entry, cfg.Access, cfg.UpstreamAccess, len(cfg.Passthrough), len(cfg.OptionalPassthrough)); err != nil {
+	if err := (Config{Entry: cfg.Entry, Access: cfg.Access, UpstreamAccess: cfg.UpstreamAccess, Groups: cfg.Groups, ComposeBlocked: cfg.ComposeBlocked, UpstreamAuthPaths: cfg.UpstreamAuthPaths, Passthrough: cfg.Passthrough, OptionalPassthrough: cfg.OptionalPassthrough}).checkEntryPolicy(); err != nil {
+		return nil, err
+	}
+	if err := validateUpstreamAuth(cfg.UpstreamAuthPaths, cfg.Passthrough, cfg.OptionalPassthrough); err != nil {
+		return nil, err
+	}
+	if err := validateEntry(cfg.Entry, cfg.Access, cfg.UpstreamAccess, len(cfg.Passthrough), len(cfg.OptionalPassthrough), cfg.UpstreamAuthPaths); err != nil {
 		return nil, err
 	}
 	if cfg.Entry == "admin-only" {
@@ -303,7 +312,7 @@ func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		servePackagePing(w, r, f.cfg.Package)
 		return
 	}
-	if !cleanPath(r.URL.Path) || f.optional != nil && !cleanOptionalPath(r) {
+	if !cleanPath(r.URL.Path) || (f.optional != nil || len(f.cfg.UpstreamAuthPaths) > 0) && !cleanOptionalPath(r) {
 		http.Error(w, "invalid path", http.StatusBadRequest)
 		return
 	}
@@ -334,6 +343,7 @@ func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	origin := requestOrigin(r)
+	upstreamAuth := !f.cfg.ComposeBlocked && f.upstreamAuthenticated(r)
 	if external := f.external(r); external.Index(origin) >= 0 {
 		origin = external.Accept[external.Index(origin)]
 	}
@@ -341,7 +351,7 @@ func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid authority", http.StatusBadRequest)
 		return
 	}
-	if target := f.canonicalNavigation(r, origin); target != "" {
+	if target := f.canonicalNavigation(r, origin); !upstreamAuth && target != "" {
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		http.Redirect(w, r, target, http.StatusFound)
@@ -349,7 +359,7 @@ func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	// Explicit app-authenticated passthrough also serves native clients without
 	// browser origin headers. It never receives gateway identity or cookies.
-	browserEvidence := !(optional || f.passthrough(r.URL.Path)) || r.Header.Get("Origin") != "" || r.Header.Get("Referer") != "" || isUpgrade(r)
+	browserEvidence := !upstreamAuth && (!(optional || f.passthrough(r.URL.Path)) || r.Header.Get("Origin") != "" || r.Header.Get("Referer") != "" || isUpgrade(r))
 	// Public App routes own authentication, CSRF and native-client/WebSocket
 	// policy. Reserved issuer routes keep the gateway's existing protections.
 	if f.providerOnly() && r.URL.Path != "/_sso" && !strings.HasPrefix(r.URL.Path, "/_sso/") {
@@ -379,6 +389,10 @@ func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	case r.URL.Path == "/_sso" || strings.HasPrefix(r.URL.Path, "/_sso/"):
 		http.NotFound(w, r)
+		return
+	}
+	if upstreamAuth {
+		f.serveProxy(w, r)
 		return
 	}
 	if target, ok := f.cfg.Redirects[r.URL.Path]; ok && r.Method == http.MethodGet {
@@ -702,6 +716,9 @@ func (f *Front) rewrite(pr *httputil.ProxyRequest) {
 	}
 	out.Set("X-Forwarded-Port", port)
 	f.stripGatewayCookies(pr.Out)
+	if f.upstreamAuthenticated(pr.In) {
+		return
+	}
 	if f.rewritesJSON(pr.In) || f.rewritesHTML(pr.In) || f.cfg.Browser != nil && isNavigation(pr.In) {
 		out.Set("Accept-Encoding", "identity")
 	}
@@ -758,7 +775,7 @@ func (f *Front) stripGatewayCookies(r *http.Request) {
 }
 
 func (f *Front) reservedCookie(name string) bool {
-	return name == "id" || name == "did" || name == "_SSID" || name == "_CrPoSt" || name == "stay_login" || strings.HasPrefix(name, "synopkgland_sso_")
+	return name == "id" || name == "did" || name == "_SSID" || name == "_CrPoSt" || name == "stay_login" || strings.HasPrefix(name, "synopkgland_sso_") || strings.HasPrefix(name, "spl_session_")
 }
 
 func (f *Front) rewritesJSON(r *http.Request) bool {
@@ -780,6 +797,9 @@ func (f *Front) modifyResponse(res *http.Response) error {
 		if ok && !f.reservedCookie(strings.TrimSpace(name)) {
 			res.Header.Add("Set-Cookie", value)
 		}
+	}
+	if f.upstreamAuthenticated(res.Request) {
+		return nil
 	}
 	origin, _ := res.Request.Context().Value(originKey).(string)
 	if loc := res.Header.Get("Location"); loc != "" {

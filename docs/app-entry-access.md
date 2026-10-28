@@ -6,11 +6,12 @@ admission (administrators are admitted). Route permissions can further restrict
 access. A public App route does not override either entry floor.
 
 The CLI rejects public or authenticated App permissions in an administrator-only
-App. It also rejects explicit entry combined with public gateway access,
-`upstream_access: public`, permanent passthrough or optional passthrough.
-An App that intentionally delegates admission to its upstream must omit `entry`.
-No-entry Apps retain public routes with anonymous callers and existing gateway
-exceptions.
+App. It also rejects explicit entry combined with public gateway access or
+`upstream_access: public`. Permanent/optional passthrough with entry requires
+containment in static `identity_gateway.upstream_auth_paths`.
+[Upstream-authenticated paths](gateway-access.md#upstream-authenticated-paths)
+delegate admission only for the declared upstream prefixes. No-entry Apps retain
+public routes with anonymous callers and existing gateway exceptions.
 
 ## Packaged policy
 
@@ -26,6 +27,11 @@ Packaged administrator-only builds still enforce the floor if a wrapper loses
 that interface. Application-privilege builds require a gate-bearing
 authenticator; wrappers must forward `EntryMode`. Unknown or mismatched modes
 refuse startup.
+
+Gateway binaries also bind `idgateway.expectedEntryPolicyDigest` to the entry
+mode, access settings, upstream-auth paths and permanent/optional passthrough.
+Configuration loading and direct front construction refuse a mismatched policy.
+This gateway declaration never changes API server or SDK method authorization.
 
 The only public ceremony exception consists of `identity.status`,
 `identity.login`, `identity.session` and `identity.logout`. These fixed SDK
@@ -52,10 +58,10 @@ References identify the current source entry points. Regression evidence is in
 | Standalone identity: `identity/http.go:69` | Ceremony uses a fixed SDK-only server; business JSON and transfers continue into the gated App server. Explicit bounded exception. |
 | Python, Node and Rust bridge: `bridge/runtime.go:100`, `bridge/routes.go:17` | One Go entry gate and registry protect JSON, grouped calls and transfers before spawning App code. Closed. |
 | Bridge service reentry: `bridge/services.go:126`, `api/registry.go:83` | Verified caller reaches SDK services; direct invocation refuses anonymous or non-admin callers under the bound administrator entry. Closed within the trusted bridge. |
-| Gateway HTTP, DAV and initial upgrade: `idgateway/front.go:388` | Explicit entry disables anonymous proxy shortcuts. Each authenticated request rechecks admission before upstream dispatch. Closed. |
+| Gateway HTTP, DAV and initial upgrade: `idgateway/front.go` | Static upstream-auth prefixes delegate admission to upstream auth after path validation and identity stripping. Other entry-protected requests recheck admission before dispatch. |
 | Assertion redemption and OIDC authorization: `idgateway/front.go:523` | Rechecks admission between CGI verification and session/code creation. Closed. |
 | OIDC token and userinfo: `idgateway/provider.go:285` | Entry-bound providers recheck admission on code redemption and access-token use, using the original browser address for Application Privileges. Closed at provider endpoints. |
-| WebSocket continuation: `idgateway/websocket.go:128` | Periodic account/admission checks include Application Privileges; refusal closes the stream within the existing recheck interval. |
+| WebSocket continuation: `idgateway/websocket.go:128` | DSM-protected streams periodically recheck account/admission. Upstream-auth streams use upstream credentials and lifetimes. |
 | DSM issuer CGI: `idgateway/authorize_cgi.go:130` | Uses the configured verifier and entry gate before signing an assertion. Closed. |
 | Ingress, portal and menu launcher: `idgateway/admission.go:129` | Fixed redirects, bootstrap pages and sign-in transport do not execute App handlers. Protected proxy/CGI decisions remain authoritative. Inert launch content is intentionally reachable. |
 | Background APIs: `api/server.go:308`, `api/sdk-permissions.json:11` | Generated job/status/result/schedule routes pass central entry first. Worker execution uses the private package spool. |
@@ -74,7 +80,8 @@ initializers or `--describe`. It checks every SDK route constructor against the
 App policy or immutable SDK table, understands import aliases and literal
 constants, and refuses dynamic method names, constructor aliases, custom
 `ServeHTTP`, direct standard-library HTTP handlers/listeners, dot imports and
-source symlinks. Build repeats the audit after the UI hook so a hook cannot add
+source symlinks and App-created gateway listeners. Upstream-auth prefixes never
+exempt SDK registrations or custom handlers. Build repeats the audit after the UI hook so a hook cannot add
 an undeclared handler after validation. Bridge method inventories must also be
 fully declared.
 

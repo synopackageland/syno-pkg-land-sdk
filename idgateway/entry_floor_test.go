@@ -180,10 +180,10 @@ func TestEntryCannotBeCombinedWithPublicGatewayExceptions(t *testing.T) {
 		}{
 			{access: "public"}, {upstream: "public"}, {permanent: 1}, {optional: 1},
 		} {
-			if err := validateEntry(entry, tc.access, tc.upstream, tc.permanent, tc.optional); err == nil {
+			if err := validateEntry(entry, tc.access, tc.upstream, tc.permanent, tc.optional, nil); err == nil {
 				t.Fatalf("accepted %s %+v", entry, tc)
 			}
-			if err := validateEntry("", tc.access, tc.upstream, tc.permanent, tc.optional); err != nil {
+			if err := validateEntry("", tc.access, tc.upstream, tc.permanent, tc.optional, nil); err != nil {
 				t.Fatalf("legacy no-entry exception changed: %v", err)
 			}
 		}

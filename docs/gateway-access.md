@@ -1,10 +1,59 @@
 # Gateway access failures
 
-An explicit App `entry` is an admission floor for all proxied traffic, including
-public paths, OIDC mode and WebSocket upgrades. It cannot combine with public
-gateway/upstream access or passthrough. Omit `entry` when the upstream owns
-admission. See [App entry enforcement](app-entry-access.md) for the access-path
-inventory and migration rules.
+An explicit App `entry` is the admission floor for proxied traffic, including
+OIDC mode, uploads and WebSocket upgrades. Fixed `upstream_auth_paths` delegate
+only the listed upstream prefixes to the App's own authentication. Public
+gateway/upstream access cannot combine with explicit entry. See
+[App entry enforcement](app-entry-access.md) for the access-path inventory.
+
+## Upstream-authenticated paths
+
+Declare prefixes in the package manifest:
+
+```yaml
+entry: admin-only
+identity_gateway:
+  # Keep the App's existing sdk, mode, upstream, listen and adapter fields.
+  upstream_auth_paths: [/rest, /share]
+  passthrough: [/rest, /share]
+```
+
+The corresponding gateway JSON field is `upstream_auth_paths`; direct Go
+configurations use `Config.UpstreamAuthPaths` or `FrontConfig.UpstreamAuthPaths`.
+The field accepts 1-16 nonoverlapping, case-sensitive absolute prefixes of at most
+512 characters. Use URL unreserved characters and `/`. Root, empty values, dot
+segments, repeated slashes, percent encodings, backslashes, query/fragment
+delimiters and wildcards are rejected. `/_sso` and `/_spl` are reserved. `/rest`
+and `/rest/` both match `/rest` and descendants, never `/restore` or `/REST`.
+The gateway decodes requests once before matching and rejects ambiguous dot
+segments, encoded separators, nested delimiter escapes and repeated slashes.
+
+Each listed prefix directly proxies to the upstream without DSM admission,
+gateway identity injection, login redirects or response rewriting. The proxy
+preserves upstream credentials, request bodies, queries, conditional headers and
+upstream responses. It removes DSM cookies, gateway cookies, SDK `spl_session_*`
+cookies, and configured or reserved identity headers, including client-supplied
+spellings. Normal reverse-proxy forwarding headers and hop-by-hop handling still
+apply. Readiness, upload limits and blocked Shared Folder activation still apply.
+
+Permanent and optional passthrough must be fully contained in the declared
+prefixes when this field is present. Optional passthrough remains default-off and
+retains its enable/disable checks and stream cancellation. With explicit entry,
+passthrough without this declaration is rejected. All other paths retain DSM
+entry admission, including WebSocket and upload paths. The OIDC issuer and SDK
+RPC methods keep their independent entry policy; an upstream prefix cannot
+exempt a method from `permissions.json` or the SDK registry.
+
+**Security:** these paths are only as strong as the upstream's own authentication,
+authorization, CSRF and WebSocket policy. The declaration also covers browser
+requests to these paths. Upstream-public share links remain public; DSM logout
+does not revoke upstream tokens, sessions or active connections.
+
+The CLI requires SDK sources containing `UpstreamAuthPathsVersion = 1` and links
+the static entry policy digest into the gateway. Editing the entry mode,
+upstream-auth paths or passthrough settings without rebuilding refuses startup
+and CGI loading. Use matching SDK/CLI sources until an approved release ships
+this capability.
 
 The identity gateway distinguishes DSM authentication from App admission. A
 verified DSM session does not grant administrator or admitted-group membership.

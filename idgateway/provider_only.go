@@ -2,7 +2,7 @@ package idgateway
 
 import "errors"
 
-func validateEntry(entry, access, upstream string, passthrough, optional int) error {
+func validateEntry(entry, access, upstream string, passthrough, optional int, upstreamAuth []string) error {
 	switch entry {
 	case "":
 		return nil
@@ -10,7 +10,7 @@ func validateEntry(entry, access, upstream string, passthrough, optional int) er
 	default:
 		return errors.New("invalid App entry mode")
 	}
-	if access == "public" || upstream == "public" || passthrough != 0 || optional != 0 {
+	if access == "public" || upstream == "public" || len(upstreamAuth) == 0 && (passthrough != 0 || optional != 0) {
 		return errors.New("App entry cannot combine with public access or passthrough")
 	}
 	return nil
