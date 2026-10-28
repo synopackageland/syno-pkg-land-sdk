@@ -7,5 +7,7 @@
   "deniedMessage": "Votre compte DSM n’est pas autorisé à utiliser cette application. Demandez à un administrateur de l’autoriser dans les privilèges d’application de DSM.",
   "notes": "Remarques",
   "notesCount": "Remarques ({count})",
-  "loading": "Chargement…"
+  "loading": "Chargement…",
+  "uiUpdated": "Mis à jour. Rechargez la page",
+  "uiReload": "Recharger"
 }

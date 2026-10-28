@@ -7,5 +7,7 @@
   "deniedMessage": "Ihr DSM-Konto darf diese App nicht verwenden. Bitten Sie einen Administrator, sie in den DSM-Anwendungsberechtigungen freizugeben.",
   "notes": "Hinweise",
   "notesCount": "Hinweise ({count})",
-  "loading": "Wird geladen…"
+  "loading": "Wird geladen…",
+  "uiUpdated": "Aktualisiert. Laden Sie die Seite neu",
+  "uiReload": "Neu laden"
 }

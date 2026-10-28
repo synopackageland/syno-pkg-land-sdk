@@ -7,5 +7,7 @@
   "deniedMessage": "Your DSM account is not allowed to use this app. Ask an administrator to allow it in DSM Application Privileges.",
   "notes": "Notes",
   "notesCount": "Notes ({count})",
-  "loading": "Loading…"
+  "loading": "Loading…",
+  "uiUpdated": "Updated. Reload the page",
+  "uiReload": "Reload"
 }

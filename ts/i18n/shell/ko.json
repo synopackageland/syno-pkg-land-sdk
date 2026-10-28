@@ -7,5 +7,7 @@
   "deniedMessage": "이 DSM 계정에는 이 앱을 사용할 권한이 없습니다. 관리자에게 DSM 응용 프로그램 권한에서 허용하도록 요청하십시오.",
   "notes": "참고",
   "notesCount": "참고 ({count})",
-  "loading": "불러오는 중…"
+  "loading": "불러오는 중…",
+  "uiUpdated": "업데이트되었습니다. 페이지를 새로 고치십시오",
+  "uiReload": "새로 고침"
 }

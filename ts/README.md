@@ -7,7 +7,7 @@ App's `backend/go.mod`.
 | Import | Contents |
 |---|---|
 | `@synopackageland/sdk` | Headless: `Context` and the other types, `createBackgroundSaveFacade`, `createNasProvider`, `scopedPicker`, `createPortalAccess`, copy catalogs (`uiLocale`, `saveCopy`, …). Never imports Vue. |
-| `@synopackageland/sdk/vue` | Everything above plus the components (`AppShell`, `PageActions`, `PageInfo`, `FilesPage`, `NasPicker`, `LoginPage`, `PortalSettings`, `BackgroundPanel`, `ExecutorSettings`, `ExecutorApproval`, `ExecutorNotice`, `DelegatePanel`, `BackgroundSavePanel`, `BackgroundSaveSettings`, `AuthorizationGate`, `AuthorizationSettings`) and composables (`createSession`, `useExecutorSetup`, `ExecutorSetupKey`, `useAuthorization`). |
+| `@synopackageland/sdk/vue` | Everything above plus the components (`AppShell`, `PageActions`, `PageInfo`, `FilesPage`, `NasPicker`, `LoginPage`, `PortalSettings`, `BackgroundPanel`, `ExecutorSettings`, `ExecutorApproval`, `ExecutorNotice`, `UiUpdateNotice`, `DelegatePanel`, `BackgroundSavePanel`, `BackgroundSaveSettings`, `AuthorizationGate`, `AuthorizationSettings`) and composables (`createSession`, `useExecutorSetup`, `ExecutorSetupKey`, `useAuthorization`). |
 | `@synopackageland/sdk/vue/style.css` | The component stylesheet. Import it once next to `@synopackageland/ui`'s theme in the App entry. |
 | `@synopackageland/sdk/native` | For a native product with its own pinned root tasks: `ROOT_RUNTIME` (`createRootAccess`) and `AUTHORIZATION_RUNTIME` (`createAuthorizationAccess`), plain ES5 source the product renders into its own DSM window; `AuthorizationGate` shows the result. Generated Apps use the executor instead. Never imports Vue. |
 | `@synopackageland/sdk/i18n/<capability>/<locale>.json` | Copy in `en`, `zh-TW`, `zh-CN`, `ja`, `ko`, `de`, `fr`, `es`, `it`. |
@@ -461,6 +461,18 @@ The notice uses the setup the App provides (`ExecutorSetupKey`) before
 whose routes for the approval's reads (`delegate.status`, `bg.browse`)
 differ provides its adapter there, and the dialog reads as its settings
 page does.
+
+A full page, or a window DSM left open, keeps running the UI it loaded across
+a package upgrade until the page reloads (CLI 0.33.2+ windows opened after
+the upgrade load the new UI themselves). The CLI's DSM window (CLI 0.33.2+) gives `ctx.uiUpdate`: its `check()` reads the package's `ui/config`
+without the browser cache and answers whether the installed build replaced
+the window this page loaded. `AppShell` given that `ctx` shows
+`UiUpdateNotice` above every page once it answers yes: one line, Updated.
+Reload the page, with a **Reload** button, and nothing held back. It checks on
+mount, when the window reopens and when the page is shown again (at most once
+a minute). A failed check, or a window without `uiUpdate`, shows nothing. An
+App without `AppShell` places `<UiUpdateNotice :ctx="ctx" :locale="ctx.locale" />`
+above its pages.
 
 The backend's `executor.status` and `executor.control` are the SDK's: a Go
 App registers `delegate.ExecutorRoutes`, and the bridge runtime serves them

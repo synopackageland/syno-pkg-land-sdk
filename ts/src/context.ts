@@ -179,15 +179,19 @@ export interface Context {
  // fall back to English, then the key; {name} takes params.name, and
  // params.count picks key.one or key.other.
  t?: (key: string, params?: Record<string, unknown>) => string
+ // Whether the installed package has replaced the UI this page loaded: DSM
+ // keeps an App's scripts after a package upgrade until the page reloads. The
+ // CLI's DSM window provides it; AppShell then offers to reload the page.
+ uiUpdate?: {check(signal?: AbortSignal): Promise<boolean>}
  // DSM's AppWindow behind host; opaque to the App, which uses host instead.
  appWindow?: unknown
  host: HostAdapter
 }
 /** What tells a full page apart: the launch, or the host when an older CLI omits it. */
 export type LaunchContext = {fullPage: boolean; host?: Pick<HostAdapter, 'platform'>} | {fullPage?: boolean; host: Pick<HostAdapter, 'platform'>}
-/** What AppShell reads: the launch, the brand, the signed-in account, the executor to approve and, with app-root, the window to bring to the front. */
+/** What AppShell reads: the launch, the brand, the signed-in account, the executor to approve, the UI update check and, with app-root, the window to bring to the front. */
 export type ShellContext = LaunchContext & Pick<Context, 'displayName' | 'appIcon' | 'user'> &
- Partial<Pick<Context, 'executor' | 'call' | 'reopen'>> & {host?: Partial<Pick<HostAdapter, 'activateWindow'>>}
+ Partial<Pick<Context, 'executor' | 'call' | 'reopen' | 'uiUpdate'>> & {host?: Partial<Pick<HostAdapter, 'activateWindow'>>}
 // Older CLIs pass no fullPage: then only a DSM desktop window is not a full page.
 export function isFullPage(ctx: LaunchContext): boolean {
  if(ctx.fullPage !== undefined) return ctx.fullPage
