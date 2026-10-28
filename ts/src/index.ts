@@ -38,6 +38,7 @@ export {createSharedFolderAccess, sharedFolderAccessFor, type SharedFolderOption
 export * from './protocol/v1'
 export {encodeRequest, decodeResponse, type ProtocolAuth, type ProtocolResponse} from './protocol/codec'
 export {appDenial,appRefusal,type AppDenial} from './authorization/refusal'
+export {createEntryCheck, type EntryCheck, type EntryFailure, type EntryMode} from './entry/check'
 
 export {createClient, type Batch, type BatchCall, type BatchResult, type ClientOptions} from './client'
 

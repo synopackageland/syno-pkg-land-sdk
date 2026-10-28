@@ -27,3 +27,4 @@ export {default as BackgroundSaveSettings} from './delegate/BackgroundSaveSettin
 export {default as AuthorizationGate} from './authorization/AuthorizationGate.vue'
 export {useAuthorization, type AuthorizationControl, type AuthorizationGateState} from './authorization/use-authorization'
 export {default as AuthorizationSettings} from './authorization/AuthorizationSettings.vue'
+export {default as EntryGuard} from './entry/EntryGuard.vue'
