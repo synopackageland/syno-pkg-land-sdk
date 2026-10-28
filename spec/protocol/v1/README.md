@@ -427,6 +427,15 @@ input MUST be `operation-conflict`. States: `queued`, `copying`, `committed`,
 `files.cancelOperation` report the operation; `code` and `reason` in it are
 codes of kind `outcome` and `reason`.
 
+## files.write size limit
+
+`files.write` publishes a package-staged file into the granted folder as the
+delegated user. The staged file MUST be at most 104857600 bytes (100 MiB); the
+executor MUST check the size of the opened staging file before creating a
+destination or child and refuse a larger one with `limit-exceeded`. The limit is
+independent of the `files.read` cap (`max_bytes`, at most 64 MiB). Copying MUST
+use bounded buffers; the file MUST NOT be held in memory.
+
 ## Vectors
 
 Each line of `vectors/*.jsonl`:
@@ -487,19 +496,6 @@ It MUST NOT raise frame limits. Staging MUST be App-owned 0600 under a private
 0700 package directory. The App MUST verify size/hash and unlink after reading.
 Header, execution, spool cleanup and error rules are specified in
 [the raw contract](../../../docs/webapi-raw.md).
-
-## WebAPI upload extension
-
-`webapi.call` MAY carry `upload:{param,staging,size,sha256}`. It MUST require a
-positive, approved profile `upload_max_bytes` (1..96000), pinned by policy and
-user consent, MUST NOT combine with `response_type:"raw"`, and MUST name exactly
-one param that is valid, not reserved and absent from `params`. `staging` is a
-bare `app-<32 lowercase hex>` handle in the package's private `executor-upload`
-folder. The executor MUST open it without following symlinks, require a regular
-file owned by the package account with one link, match `size` and `sha256`, read
-at most the limit plus one byte, unlink it on every outcome, and send the bytes
-as the base64 value of the param. The `params` bound (32768 bytes) still applies
-to the caller's own params. Details: [the upload contract](../../../docs/webapi-upload.md).
 
 ### Destination permission observations
 

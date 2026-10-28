@@ -2,7 +2,6 @@ package delegate
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -48,11 +47,11 @@ func (j JobContext) WebAPI() JobWebAPI { return JobWebAPI{j} }
 // App to reconcile the outcome before it offers a deliberate new operation.
 func (w JobWebAPI) Call(ctx context.Context, api, method string, version int, params map[string]any) (json.RawMessage, error) {
 	var out json.RawMessage
-	err := w.call(ctx, api, method, version, params, "", nil, &out)
+	err := w.call(ctx, api, method, version, params, "", &out)
 	return out, err
 }
 
-func (w JobWebAPI) call(ctx context.Context, api, method string, version int, params map[string]any, responseType string, upload map[string]any, out any) error {
+func (w JobWebAPI) call(ctx context.Context, api, method string, version int, params map[string]any, responseType string, out any) error {
 	if w.DelegationID == "" {
 		return fail(CodeInvalidRequest)
 	}
@@ -62,9 +61,6 @@ func (w JobWebAPI) call(ctx context.Context, api, method string, version int, pa
 	p := map[string]any{"delegation_id": w.DelegationID, "api": api, "method": method, "version": version, "params": params}
 	if responseType != "" {
 		p["response_type"] = responseType
-	}
-	if upload != nil {
-		p["upload"] = upload
 	}
 	if w.JobID != "" {
 		p["job_id"] = w.JobID
@@ -96,7 +92,7 @@ func (w JobWebAPI) CallRaw(ctx context.Context, api, method string, version int,
 		Body         *string `json:"body"`
 		Staging      string  `json:"staging"`
 	}
-	if err := w.call(ctx, api, method, version, params, "raw", nil, &out); err != nil {
+	if err := w.call(ctx, api, method, version, params, "raw", &out); err != nil {
 		return RawWebAPIResult{}, err
 	}
 	var root *os.Root
@@ -156,59 +152,4 @@ func (w JobWebAPI) CallRaw(ctx context.Context, api, method string, version int,
 		return RawWebAPIResult{}, fail(CodeExecutorProtocol)
 	}
 	return RawWebAPIResult{Body: body, ContentType: out.ContentType, Size: out.Size, SHA256: out.SHA256}, nil
-}
-
-// MaxWebAPIUploadBytes is the largest CallUpload body: 96000 bytes encode to
-// 128000 base64 bytes, which stays under Linux's 131072-byte limit on the one
-// argv string synowebapi receives for the parameter.
-const MaxWebAPIUploadBytes = 96000
-
-// CallUpload requires profile upload_max_bytes opt-in. It stages data in the
-// App-private UploadDir (0700; file 0600), asks the executor to send it as the
-// base64 value of param, and removes the file whatever happens. param must not
-// be in params. The response is handled exactly as Call. It never retries.
-func (w JobWebAPI) CallUpload(ctx context.Context, api, method string, version int, params map[string]any, param string, data []byte) (json.RawMessage, error) {
-	if param == "" || len(data) > MaxWebAPIUploadBytes || w.UploadDir == "" {
-		return nil, fail(CodeInvalidRequest)
-	}
-	if _, dup := params[param]; dup {
-		return nil, fail(CodeInvalidRequest)
-	}
-	if err := os.MkdirAll(w.UploadDir, 0700); err != nil {
-		return nil, fail("STAGING_UNAVAILABLE")
-	}
-	info, err := os.Lstat(w.UploadDir)
-	if err != nil || !info.IsDir() || info.Mode().Perm()&0077 != 0 {
-		return nil, fail("STAGING_UNAVAILABLE")
-	}
-	root, err := os.OpenRoot(w.UploadDir)
-	if err != nil {
-		return nil, fail("STAGING_UNAVAILABLE")
-	}
-	defer root.Close()
-	if opened, err := root.Stat("."); err != nil || !os.SameFile(info, opened) {
-		return nil, fail("STAGING_UNAVAILABLE")
-	}
-	id := make([]byte, 16)
-	if _, err := rand.Read(id); err != nil {
-		return nil, fail(CodeInvalidRequest)
-	}
-	name := "app-" + hex.EncodeToString(id)
-	f, err := root.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL|syscall.O_NOFOLLOW, 0600)
-	if err != nil {
-		return nil, fail("STAGING_UNAVAILABLE")
-	}
-	defer root.Remove(name)
-	_, err = f.Write(data)
-	if cerr := f.Close(); err == nil {
-		err = cerr
-	}
-	if err != nil {
-		return nil, fail("STAGING_UNAVAILABLE")
-	}
-	sum := sha256.Sum256(data)
-	upload := map[string]any{"param": param, "staging": name, "size": len(data), "sha256": hex.EncodeToString(sum[:])}
-	var out json.RawMessage
-	err = w.call(ctx, api, method, version, params, "", upload, &out)
-	return out, err
 }

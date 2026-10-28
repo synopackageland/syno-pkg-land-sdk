@@ -2,15 +2,20 @@
 
 ## Unreleased
 
-- Add request-side `webapi.call` uploads: a profile may set `upload_max_bytes`
-  (1..96000), and a call may carry `upload:{param,staging,size,sha256}` so an
-  App's background job can send up to 96000 staged bytes as one base64 param
-  (for example Synology Drive `Files.create` `file_content`). The executor opens
-  the App-private `executor-upload/app-<hex>` file safely, verifies size and
-  SHA-256, always unlinks it, and refuses an argv string of 131072 bytes or more.
-  Go `JobContext.WebAPI().CallUpload` stages and removes the file. Omitting the
-  field keeps profiles and digests unchanged; setting or changing it needs
-  administrator approval and fresh user consent. Go only. No new API allowlist.
+- Replace the `webapi.call` request upload (`upload`, profile `upload_max_bytes`,
+  Go `JobWebAPI.CallUpload`, `JobContext.UploadDir`, `docs/webapi-upload.md`) with
+  `files.write`. The upload was unreleased and has been removed outright: it could
+  not carry more than 96000 bytes because every param is one `synowebapi` argv
+  string. Large files now go through the existing streaming `files.write`, which
+  has its own limit.
+- Add `delegate.MaxWriteBytes` (100 MiB) as the limit for `JobFiles.Write` and the
+  executor's `files.write`, separate from `MaxDownloadBytes` (64 MiB, `files.read`
+  and URL downloads), which is unchanged. A larger file is refused as
+  `limit-exceeded`: the client before reading or staging anything, the executor
+  before it creates a destination or child. Both already stream (fixed buffers; at
+  most 1 MiB in the executor), so the file is never held in memory. This changes
+  executor behaviour (a new refusal above 100 MiB), so a package using
+  `files.write` needs the new executor payload.
 
 ## 0.31.5
 

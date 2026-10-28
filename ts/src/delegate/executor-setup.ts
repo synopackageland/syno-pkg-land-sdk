@@ -19,7 +19,7 @@ export interface CapabilityStatus {state:CapabilityState;approval?:ApprovalDiffe
 // Passwords belong only to this call and must never be persisted or logged.
 export interface ExecutorSetup {
  // Approved policy profiles provided by the package window for consent details.
- webapiProfiles?:Record<string,{purpose:string;apis:Record<string,Record<string,number[]>>;raw_max_bytes?:number;upload_max_bytes?:number}>
+ webapiProfiles?:Record<string,{purpose:string;apis:Record<string,Record<string,number[]>>;raw_max_bytes?:number}>
  status():Promise<CapabilityStatus>
  authorize(password:string,selectedScope?:string):Promise<CapabilityStatus>
  control(action:'start'|'stop'|'purge'):Promise<CapabilityStatus>

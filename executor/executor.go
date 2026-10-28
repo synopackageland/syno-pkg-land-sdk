@@ -62,8 +62,6 @@ type WebAPIProfile struct {
 	APIs    map[string]map[string][]int `json:"apis"`
 	// Zero preserves JSON-only profiles and their existing digest.
 	RawMaxBytes int64 `json:"raw_max_bytes,omitempty"`
-	// Zero keeps the profile without request uploads and its existing digest.
-	UploadMaxBytes int64 `json:"upload_max_bytes,omitempty"`
 }
 
 // PortalPolicy is the Application Portal entry the executor registers in
@@ -190,8 +188,6 @@ type Executor struct {
 	Reader      FileReader
 	Runner      RootRunner
 	RootStaging RootStaging
-	// Uploads consumes App-staged webapi.call upload bytes.
-	Uploads UploadStore
 	// StopStep runs the policy's stop step for a package stop or upgrade.
 	StopStep func(reason string)
 	// PackageVersion is the INFO version of the package being served.
@@ -242,7 +238,7 @@ func within(root, p string) bool {
 }
 func strictJSON(b []byte, v any) error {
 	if _, ok := v.(*webAPIRequest); ok {
-		return strictWebJSON(b, v, "delegation_id job_id api method version params response_type upload")
+		return strictWebJSON(b, v, "delegation_id job_id api method version params response_type")
 	}
 	if _, ok := v.(*Request); ok {
 		var head map[string]json.RawMessage
@@ -904,6 +900,9 @@ func (e *Executor) Handle(ctx context.Context, r Request) Response {
 			return publish()
 		})
 		out, err := e.Writer.Write(writerCtx, s, p.Staging, real, p.Name, d.Root)
+		if errors.Is(err, errWriteTooLarge) {
+			return deny("limit-exceeded")
+		}
 		if err != nil {
 			return deny("WRITE_FAILED")
 		}

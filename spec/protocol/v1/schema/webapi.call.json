@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/synopackageland/syno-pkg-land-sdk/spec/protocol/v1/schema/webapi.call.json",
   "title": "webapi.call",
-  "description": "Call an exact approved WebAPI as the profile grant owner. JSON returns the DSM envelope; raw (since 0.12.1) requires profile raw_max_bytes and returns content_type, size, sha256 and base64 body or private staging handle. An optional upload (profile upload_max_bytes, at most 96000 bytes) injects App-staged bytes as one base64 param. Never retried.",
+  "description": "Call an exact approved WebAPI as the profile grant owner. JSON returns the DSM envelope; raw (since 0.12.1) requires profile raw_max_bytes and returns content_type, size, sha256 and base64 body or private staging handle. Never retried.",
   "since": "0.11.0",
   "auth": "optional",
   "type": "object",
@@ -11,18 +11,6 @@
       "type": "string",
       "enum": ["json", "raw"],
       "description": "Defaults to json. Raw requires an explicitly approved raw_max_bytes profile."
-    },
-    "upload": {
-      "type": "object",
-      "description": "Inject App-staged bytes as the base64 value of one param. Requires an approved profile upload_max_bytes (1..96000); not combined with raw; param must not be in params.",
-      "properties": {
-        "param": {"type": "string"},
-        "staging": {"type": "string", "pattern": "^app-[a-f0-9]{32}$"},
-        "size": {"type": "integer", "minimum": 0, "maximum": 96000},
-        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
-      },
-      "required": ["param", "staging", "size", "sha256"],
-      "additionalProperties": false
     },
     "delegation_id": {
       "type": "string",

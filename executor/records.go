@@ -14,6 +14,23 @@ import (
 const maxJournalBytes int64 = 10 << 20
 const maxAuditBytes int64 = 50 << 20
 const maxMoveBytes int64 = 16 << 30
+
+// maxWriteBytes bounds the legacy files.write op (the App's JobFiles.Write). It
+// matches delegate.MaxWriteBytes and is independent of maxReadBytes (downloads).
+const maxWriteBytes int64 = 100 << 20
+
+// errWriteTooLarge is the Writer's refusal of a staged file over maxWriteBytes;
+// the handler answers it as the explicit "limit-exceeded" code.
+var errWriteTooLarge = errors.New("staged file over the write limit")
+
+// checkWriteSize refuses a staged size over maxWriteBytes.
+func checkWriteSize(size int64) error {
+	if size > maxWriteBytes {
+		return errWriteTooLarge
+	}
+	return nil
+}
+
 const maxQueued = 16
 
 type directoryIdentity struct {

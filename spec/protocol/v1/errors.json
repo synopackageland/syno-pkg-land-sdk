@@ -375,8 +375,8 @@
       "kind": "refusal",
       "retryable": false,
       "httpStatus": 413,
-      "en": "The file is larger than max_bytes, or root output is larger than its policy max_output.",
-      "zh-TW": "檔案超過 max_bytes，或 root 輸出超過 policy 的 max_output。"
+      "en": "The file is larger than max_bytes (files.read) or 100 MiB (files.write), or root output is larger than its policy max_output.",
+      "zh-TW": "檔案超過 max_bytes（files.read）或 100 MiB（files.write），或 root 輸出超過 policy 的 max_output。"
     },
     {
       "code": "OPERATION_CANCELED",
