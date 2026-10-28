@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/identityroute"
 )
 
 type policy int
@@ -33,6 +35,14 @@ type Route struct {
 	requestHandler  RequestHandler
 	responseHandler ResponseHandler
 	streamHandler   StreamHandler
+	ceremony        bool
+}
+
+// SDKIdentityRoute marks a fixed SDK sign-in ceremony route. Only SDK assembly
+// can supply a valid internal key; App handlers with the same name stay gated.
+func SDKIdentityRoute(route Route, key identityroute.Key) Route {
+	route.ceremony = key.Valid() && identityCeremony(route.method)
+	return route
 }
 
 // Handle registers an operation without scattering permissions among handlers.
@@ -71,6 +81,14 @@ func HandleStream(method string, h StreamHandler) Route {
 // the server already verified: the bridge runtime answers an App's service
 // request with the SDK's own route. Whoever invokes it decides who may.
 func (r Route) Invoke(ctx context.Context, caller Caller, req *http.Request, params json.RawMessage) (any, error) {
+	if expectedEntryMode != "" {
+		if !caller.Authenticated() {
+			return nil, &Error{"session_required", "sign in to DSM again"}
+		}
+		if expectedEntryMode == "admin-only" && !caller.Admin() {
+			return nil, adminRequired
+		}
+	}
 	switch {
 	case r.handler != nil:
 		return r.handler(ctx, caller, params)

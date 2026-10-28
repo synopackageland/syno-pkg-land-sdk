@@ -49,6 +49,9 @@ type EntryGate struct {
 	allowed func(ctx context.Context, principal, app, addr string) (bool, error)
 }
 
+// EntryMode keeps App admission visible to api.Server, including public routes.
+func (g *EntryGate) EntryMode() string { return g.mode }
+
 // NewEntryGate wraps next for the build-time entry mode. An empty mode keeps
 // next unchanged: the route policy alone decides, as before entry modes.
 // dataDir holds the short-lived decision cache shared by CGI processes.

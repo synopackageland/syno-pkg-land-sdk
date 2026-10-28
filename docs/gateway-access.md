@@ -1,5 +1,11 @@
 # Gateway access failures
 
+An explicit App `entry` is an admission floor for all proxied traffic, including
+public paths, OIDC mode and WebSocket upgrades. It cannot combine with public
+gateway/upstream access or passthrough. Omit `entry` when the upstream owns
+admission. See [App entry enforcement](app-entry-access.md) for the access-path
+inventory and migration rules.
+
 The identity gateway distinguishes DSM authentication from App admission. A
 verified DSM session does not grant administrator or admitted-group membership.
 The authorize CGI returns `access_denied` for admission refusals, including DSM

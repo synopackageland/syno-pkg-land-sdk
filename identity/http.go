@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/synopackageland/syno-pkg-land-sdk/api"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/identityroute"
 	"io"
 	"mime"
 	"net"
@@ -52,13 +53,13 @@ func (s *Service) Routes() []api.Route {
 	routes := []api.Route{}
 	for _, method := range []string{"identity.status", "identity.login", "identity.session", "identity.logout"} {
 		name := method
-		routes = append(routes, api.HandleResponse(name, func(_ context.Context, _ api.Caller, w http.ResponseWriter, r *http.Request, p json.RawMessage) error {
+		routes = append(routes, api.SDKIdentityRoute(api.HandleResponse(name, func(_ context.Context, _ api.Caller, w http.ResponseWriter, r *http.Request, p json.RawMessage) error {
 			if len(p) == 0 {
 				p = []byte(`{}`)
 			}
 			s.handle(w, r, request{Method: name, Params: p})
 			return nil
-		}))
+		}), identityroute.New()))
 	}
 	return routes
 }

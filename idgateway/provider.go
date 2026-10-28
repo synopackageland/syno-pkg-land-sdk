@@ -1,6 +1,7 @@
 package idgateway
 
 import (
+	"context"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
@@ -53,6 +54,7 @@ type Client struct {
 // AuthRequest is a validated authorization request.
 type AuthRequest struct {
 	ClientID, RedirectURI, State, Nonce, Challenge, Prompt string
+	clientIP                                               string
 }
 
 // AuthorizeError is a request error the provider reports to the app's
@@ -72,8 +74,10 @@ type grant struct {
 }
 
 type accessToken struct {
-	claims  map[string]any
-	expires time.Time
+	claims   map[string]any
+	expires  time.Time
+	subject  Subject
+	clientIP string
 }
 
 // Provider is the embedded OpenID Connect provider. Its HTTP handler serves
@@ -85,6 +89,7 @@ type Provider struct {
 	key         *SigningKey
 	clients     map[string]Client
 	now         func() time.Time
+	admit       func(context.Context, Subject, string) error
 
 	mu     sync.Mutex
 	codes  map[string]grant
@@ -279,6 +284,10 @@ func (p *Provider) token(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_grant"})
 		return
 	}
+	if p.admit != nil && p.admit(r.Context(), g.subject, g.AuthRequest.clientIP) != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_grant"})
+		return
+	}
 	now := p.now()
 	claims := p.claims(client.ID, g.subject)
 	idClaims := map[string]any{"iss": p.issuer, "aud": client.ID, "iat": now.Unix(), "exp": now.Add(IDTokenTTL).Unix(), "auth_time": now.Unix()}
@@ -296,7 +305,7 @@ func (p *Provider) token(w http.ResponseWriter, r *http.Request) {
 	access := randomID(32)
 	p.mu.Lock()
 	p.sweep()
-	p.tokens[access] = accessToken{claims: claims, expires: now.Add(AccessTokenTTL)}
+	p.tokens[access] = accessToken{claims: claims, expires: now.Add(AccessTokenTTL), subject: g.subject, clientIP: g.AuthRequest.clientIP}
 	p.mu.Unlock()
 	writeJSON(w, http.StatusOK, map[string]any{"access_token": access, "token_type": "Bearer", "expires_in": int(AccessTokenTTL.Seconds()), "id_token": idToken, "scope": "openid profile email groups"})
 }
@@ -327,7 +336,7 @@ func (p *Provider) userinfo(w http.ResponseWriter, r *http.Request) {
 	p.mu.Lock()
 	t, found := p.tokens[bearer]
 	p.mu.Unlock()
-	if !ok || !found || p.now().After(t.expires) {
+	if !ok || !found || p.now().After(t.expires) || p.admit != nil && p.admit(r.Context(), t.subject, t.clientIP) != nil {
 		w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid_token"})
 		return

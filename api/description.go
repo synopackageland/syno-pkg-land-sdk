@@ -47,7 +47,7 @@ func WithDescription(next http.Handler, auth Authenticator, filename string) htt
 			writeError(w, &Error{"auth_unavailable", "DSM authentication unavailable"})
 			return
 		}
-		_, err = auth.Authenticate(r)
+		_, err = authenticateEntry(auth, expectedEntryMode, r)
 		switch {
 		case errors.Is(err, ErrNoSession):
 			writeError(w, &Error{"session_required", "sign in to DSM again"})
@@ -90,6 +90,9 @@ func WithDescription(next http.Handler, auth Authenticator, filename string) htt
 // DescribeRoutes exports actual routes with their effective central policy.
 // Build tools call it before any handler/migration is run; transfers are marked so build tools can bind a fixed upload adapter.
 func DescribeRoutes(raw []byte, routes ...Route) ([]map[string]string, error) {
+	if err := checkAppPolicy(raw, routes); err != nil {
+		return nil, err
+	}
 	p, err := parsePermissions(raw)
 	if err != nil {
 		return nil, err
@@ -106,6 +109,11 @@ func DescribeRoutes(raw []byte, routes ...Route) ([]map[string]string, error) {
 	out := []map[string]string{}
 	for _, name := range names {
 		r := registry[name]
+		if _, owned := sdkPolicy(name); !owned && expectedPermissionsDigest != "" {
+			if _, declared := p.methods[name]; !declared {
+				return nil, errors.New("registered API method missing from permissions: " + name)
+			}
+		}
 		kind := "json"
 		if r.streamHandler != nil {
 			kind = "transfer"

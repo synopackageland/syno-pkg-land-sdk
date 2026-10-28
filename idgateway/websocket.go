@@ -133,7 +133,7 @@ func (f *Front) upgradeAllowed(ctx context.Context, id, ip string) bool {
 		return false
 	}
 	name, err := f.cfg.Accounts.Name(ctx, s.subject.UID)
-	if err != nil || name != s.subject.Name || !f.permits(ctx, s.subject) {
+	if err != nil || name != s.subject.Name || f.admitClient(ctx, s.subject, ip) != nil {
 		return false
 	}
 	// An admitted dsm-users session can still carry an obsolete admin role in
