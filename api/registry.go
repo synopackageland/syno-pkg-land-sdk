@@ -35,6 +35,8 @@ type Route struct {
 	requestHandler  RequestHandler
 	responseHandler ResponseHandler
 	streamHandler   StreamHandler
+	httpHandler     http.Handler
+	httpPrefix      string
 	ceremony        bool
 }
 
@@ -135,7 +137,7 @@ func buildRegistry(routes []Route) (map[string]Route, error) {
 		if !methodName.MatchString(r.method) {
 			return nil, fmt.Errorf("route %q: method must look like \"area.action\" (lowercase)", r.method)
 		}
-		if r.handler == nil && r.requestHandler == nil && r.responseHandler == nil && r.streamHandler == nil {
+		if r.handler == nil && r.requestHandler == nil && r.responseHandler == nil && r.streamHandler == nil && r.httpHandler == nil {
 			return nil, fmt.Errorf("route %q has no handler", r.method)
 		}
 		if _, dup := registry[r.method]; dup {

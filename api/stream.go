@@ -1,6 +1,10 @@
 package api
 
-import "net/http"
+import (
+	"bufio"
+	"net"
+	"net/http"
+)
 
 // transferResponse tracks when an HTTP status can no longer be changed.
 // Unwrap keeps http.ResponseController available to streaming handlers.
@@ -25,6 +29,13 @@ func (w *transferResponse) FlushError() error {
 	return http.NewResponseController(w.ResponseWriter).Flush()
 }
 func (w *transferResponse) Flush() { _ = w.FlushError() }
+func (w *transferResponse) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	conn, rw, err := http.NewResponseController(w.ResponseWriter).Hijack()
+	if err == nil {
+		w.started = true
+	}
+	return conn, rw, err
+}
 
 func streamStatus(code string) int {
 	switch code {

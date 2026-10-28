@@ -75,13 +75,15 @@ References identify the current source entry points. Regression evidence is in
 
 ## CLI registration audit and migration
 
-`check` parses all non-test Go source under the backend without running App
+`check` parses the shipped Linux import graphs of configured Go binaries without running App
 initializers or `--describe`. It checks every SDK route constructor against the
 App policy or immutable SDK table, understands import aliases and literal
 constants, and refuses dynamic method names, constructor aliases, custom
-`ServeHTTP`, direct standard-library HTTP handlers/listeners, dot imports and
-source symlinks and App-created gateway listeners. Upstream-auth prefixes never
-exempt SDK registrations or custom handlers. Build repeats the audit after the UI hook so a hook cannot add
+unregistered `ServeHTTP`, direct standard-library HTTP listeners, dot imports and
+source symlinks and App-created gateway listeners. Fixed `api.HandleHTTP`
+routes and private `ipc.ServeUnix` handler graphs have explicit
+[HTTP boundaries](http-boundaries.md); unshipped dev commands are excluded.
+Upstream-auth prefixes never exempt SDK registrations. Build repeats the audit after the UI hook so a hook cannot add
 an undeclared handler after validation. Bridge method inventories must also be
 fully declared.
 
@@ -96,9 +98,9 @@ Every App method must appear in the permissions table, including methods whose
 permission equals `default: administrators`. Generated native
 templates receive explicit policies for `app.status`, `greeting.get` and
 `greeting.set`. Custom HTTP dispatch must move into `HandleRequest`,
-`HandleResponse` or `HandleStream`; dynamic registries must declare fixed method
+`HandleResponse`, `HandleStream` or fixed `HandleHTTP`; dynamic registries must declare fixed method
 names. Use `upstream_auth_paths` for client API paths that use upstream
-authentication. Rebuild with SDK 0.32.0 and CLI 0.34.0 to bind the entry floor.
+authentication. Rebuild with SDK 0.33.0 and CLI 0.35.0 to bind the entry floor and HTTP inventory.
 
 Administrator admission grants App access, never a root UID. The privileged
 executor remains an isolated, explicitly approved helper. CGI Application

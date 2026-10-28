@@ -64,17 +64,30 @@ func (s *Service) Routes() []api.Route {
 	return routes
 }
 
-// Wrap revalidates App identity before business JSON and HTTP transfers.
+type identityHandler struct {
+	http.Handler
+	next http.Handler
+}
+
+func (h *identityHandler) Unwrap() http.Handler { return h.next }
+
+// Wrap revalidates App identity before business JSON and raw HTTP requests.
 // Identity operations use the same central policy engine with no App methods.
 func (s *Service) Wrap(next http.Handler) http.Handler {
 	identityServer, err := api.NewServerWithPermissions(s, []byte(`{"schema":1,"default":"administrators","methods":{}}`), s.Routes()...)
 	if err != nil {
 		panic(err)
 	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return &identityHandler{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer io.Copy(io.Discard, r.Body)
 		if e := api.CheckOrigin(r); e != nil {
 			reply(w, nil, e.Code)
+			return
+		}
+		if method := api.HTTPRouteMethod(next, r); method != "" {
+			if s.guard(w, r, method) {
+				next.ServeHTTP(w, r)
+			}
 			return
 		}
 		if r.URL.Query().Get("method") != "" {
@@ -120,7 +133,7 @@ func (s *Service) Wrap(next http.Handler) http.Handler {
 		}
 		r.Body = io.NopCloser(bytes.NewReader(raw))
 		next.ServeHTTP(w, r)
-	})
+	}), next: next}
 }
 func (s *Service) guard(w http.ResponseWriter, r *http.Request, method string) bool {
 	// Every business request rechecks identity: no developer-maintained list of
