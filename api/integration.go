@@ -46,10 +46,14 @@ type integrationScope struct {
 // ActAs returns a non-administrator Caller for user after the App entry gate
 // admits that account: it must exist, be enabled and unexpired, and DSM
 // Application Privileges must allow it. Only an integration handler may call
-// it, after its own verification has bound the request to user. The Caller
-// never carries DSM administrator authority, even for an administrator.
+// it, after its own verification has bound the request to user; ctx or r must
+// come from that handler's request. The Caller never carries DSM administrator
+// authority, even for an administrator.
 func ActAs(ctx context.Context, r *http.Request, user string) (Caller, error) {
-	scope, ok := r.Context().Value(integrationKey{}).(integrationScope)
+	scope, ok := ctx.Value(integrationKey{}).(integrationScope)
+	if !ok && r != nil {
+		scope, ok = r.Context().Value(integrationKey{}).(integrationScope)
+	}
 	if !ok {
 		return Caller{}, ErrNotIntegration
 	}

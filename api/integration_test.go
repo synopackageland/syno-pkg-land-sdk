@@ -232,8 +232,10 @@ func TestActAsRunsTheEntryGateAndNeverConfersAdmin(t *testing.T) {
 
 func TestActAsOnlyInsideAnIntegrationHandler(t *testing.T) {
 	r := httptest.NewRequest("POST", "/api.cgi?method=app.callback", nil)
-	if _, err := ActAs(context.Background(), r, "alice"); !errors.Is(err, ErrNotIntegration) {
-		t.Fatalf("ActAs outside a handler: %v", err)
+	for _, req := range []*http.Request{r, nil} {
+		if _, err := ActAs(context.Background(), req, "alice"); !errors.Is(err, ErrNotIntegration) {
+			t.Fatalf("ActAs outside a handler: %v", err)
+		}
 	}
 	// A server without an admitting entry gate cannot act for an account.
 	srv := integrationServer(t, &fakeAuth{err: ErrNoSession}, http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
