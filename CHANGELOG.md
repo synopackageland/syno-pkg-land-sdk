@@ -4,7 +4,7 @@
 
 - Show a one-line, non-blocking notice with a **Reload** button above every
   `AppShell` page once the installed package has replaced the UI the page
-  loaded (DSM keeps an App's scripts after an upgrade until the page reloads).
+  loaded (an open page keeps running the old UI after an upgrade until it reloads).
   The CLI's DSM window answers through the new optional `ctx.uiUpdate.check()`;
   `UiUpdateNotice` is exported for Apps without `AppShell`. Older windows show
   nothing. Reuse the unchanged executor inventory.

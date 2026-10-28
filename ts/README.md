@@ -462,9 +462,9 @@ whose routes for the approval's reads (`delegate.status`, `bg.browse`)
 differ provides its adapter there, and the dialog reads as its settings
 page does.
 
-DSM keeps an App's scripts after a package upgrade until the page reloads,
-so a window opened again still runs the old UI. The CLI's DSM window (CLI
-0.33.2+) gives `ctx.uiUpdate`: its `check()` reads the package's `ui/config`
+A full page, or a window DSM left open, keeps running the UI it loaded across
+a package upgrade until the page reloads (CLI 0.33.2+ windows opened after
+the upgrade load the new UI themselves). The CLI's DSM window (CLI 0.33.2+) gives `ctx.uiUpdate`: its `check()` reads the package's `ui/config`
 without the browser cache and answers whether the installed build replaced
 the window this page loaded. `AppShell` given that `ctx` shows
 `UiUpdateNotice` above every page once it answers yes: one line, Updated.

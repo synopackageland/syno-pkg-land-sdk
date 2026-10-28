@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // One line above an App's pages once the installed package has replaced the
-// UI this page loaded. DSM keeps an App's scripts after a package upgrade
-// until the page reloads, so a window opened again still runs the old ones.
+// UI this page loaded: a full page, or a window DSM left open, keeps running
+// the old UI across a package upgrade until the page reloads.
 // It holds nothing back: the App keeps working until the user reloads.
 // ctx.uiUpdate (the CLI's DSM window) answers; without it nothing shows.
 // Checks on mount, on reopen and when the page is shown again, at most once
