@@ -1,6 +1,6 @@
 {
   "name": "@synopackageland/sdk",
-  "version": "0.34.0",
+  "version": "0.35.0",
   "description": "Frontend SDK for DSM packages built with synopkgland: headless client and Vue components",
   "license": "MIT",
   "homepage": "https://github.com/synopackageland/syno-pkg-land-sdk/tree/main/ts#readme",
