@@ -33,6 +33,13 @@ mode, access settings, upstream-auth paths and permanent/optional passthrough.
 Configuration loading and direct front construction refuse a mismatched policy.
 This gateway declaration never changes API server or SDK method authorization.
 
+`HandleIntegration` routes are the one App-declared exception. Each needs the
+`"integration"` permission and a matching `dsm-package.yaml` `integrations`
+entry, which the CLI shows on the approval screen. Only those methods skip
+the session and entry gate; their handlers verify the caller and use
+`api.ActAs`, which runs the entry gate for the named account. See
+[HTTP boundaries](http-boundaries.md#integration-callbacks).
+
 The only public ceremony exception consists of `identity.status`,
 `identity.login`, `identity.session` and `identity.logout`. These fixed SDK
 operations establish, inspect or dispose of an App identity. They do not invoke
@@ -55,6 +62,7 @@ References identify the current source entry points. Regression evidence is in
 | Request/response handlers and NDJSON: `api/server.go:245` | Dispatch follows central authorization; streaming responses do not create another admission decision. Closed. |
 | Upload, download and form adapters: `api/server.go:222` | Transfer preparation normalizes transport and origin before central authorization. It grants no identity. Closed. |
 | API description CGI helper: `api/description.go:47` | Applies entry before reading the description. Export validates the bound policy and complete App registry. Closed. |
+| Integration callbacks: `api/integration.go` | Only `HandleIntegration` routes with the `integration` permission skip the session and entry gate; selected by one `?method=` value, refused on JSON, batch and transfer paths. The handler verifies the caller; `ActAs` reruns entry admission for the named account and never grants admin. Explicit bounded exception, listed for approval. |
 | Standalone identity: `identity/http.go:69` | Ceremony uses a fixed SDK-only server; business JSON and transfers continue into the gated App server. Explicit bounded exception. |
 | Python, Node and Rust bridge: `bridge/runtime.go:100`, `bridge/routes.go:17` | One Go entry gate and registry protect JSON, grouped calls and transfers before spawning App code. Closed. |
 | Bridge service reentry: `bridge/services.go:126`, `api/registry.go:83` | Verified caller reaches SDK services; direct invocation refuses anonymous or non-admin callers under the bound administrator entry. Closed within the trusted bridge. |

@@ -33,12 +33,19 @@ type httpRegistration struct {
 var httpPrefixPattern = regexp.MustCompile(`^/([A-Za-z0-9_-]+/)+$`)
 
 func validateHTTPRoutes(registry map[string]Route) error {
-	registrations := []httpRegistration{}
+	registrations, integrations := []httpRegistration{}, []httpRegistration{}
 	hasApp := false
 	for _, route := range registry {
 		_, sdk := sdkPolicy(route.method)
 		hasApp = hasApp || !sdk
 		if route.httpPrefix == "" && route.httpHandler == nil {
+			continue
+		}
+		if route.integration {
+			if route.httpHandler == nil || route.httpPrefix != "" || sdk {
+				return fmt.Errorf("invalid integration route %q", route.method)
+			}
+			integrations = append(integrations, httpRegistration{"?method=" + route.method, route.method})
 			continue
 		}
 		prefix := route.httpPrefix
@@ -57,6 +64,9 @@ func validateHTTPRoutes(registry map[string]Route) error {
 		}
 		registrations = append(registrations, httpRegistration{prefix, route.method})
 	}
+	// Integration selectors share the inventory digest, so the CLI's audited
+	// list of unauthenticated callbacks is bound into the packaged binary.
+	registrations = append(registrations, integrations...)
 	sort.Slice(registrations, func(i, j int) bool { return registrations[i].Prefix < registrations[j].Prefix })
 	raw, _ := json.Marshal(registrations)
 	if hasApp && expectedHTTPRoutesDigest != "" && fmt.Sprintf("%x", sha256.Sum256(raw)) != expectedHTTPRoutesDigest {
@@ -76,7 +86,7 @@ func HTTPCaller(ctx context.Context) Caller {
 func (s *Server) serveHTTPRoute(w http.ResponseWriter, r *http.Request) bool {
 	requestPath := rawHTTPPath(r)
 	for method, route := range s.routes {
-		if route.httpHandler == nil || !strings.HasPrefix(requestPath, route.httpPrefix) {
+		if route.httpHandler == nil || route.integration || !strings.HasPrefix(requestPath, route.httpPrefix) {
 			continue
 		}
 		// Do not let a proxy interpret a different, decoded/cleaned path after
@@ -111,7 +121,7 @@ func (s *Server) serveHTTPRoute(w http.ResponseWriter, r *http.Request) bool {
 func (s *Server) HTTPRoute(r *http.Request) string {
 	requestPath := rawHTTPPath(r)
 	for _, route := range s.routes {
-		if route.httpHandler != nil && strings.HasPrefix(requestPath, route.httpPrefix) {
+		if route.httpHandler != nil && !route.integration && strings.HasPrefix(requestPath, route.httpPrefix) {
 			return route.method
 		}
 	}

@@ -80,6 +80,11 @@ func (s *Service) Wrap(next http.Handler) http.Handler {
 	}
 	return &identityHandler{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer io.Copy(io.Discard, r.Body)
+		// Integration callbacks carry no App session; Server applies their boundary.
+		if api.IntegrationRouteMethod(next, r) != "" {
+			next.ServeHTTP(w, r)
+			return
+		}
 		if e := api.CheckOrigin(r); e != nil {
 			reply(w, nil, e.Code)
 			return
