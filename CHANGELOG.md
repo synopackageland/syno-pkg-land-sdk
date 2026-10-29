@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+- Add `api.ServeIngress` for a resident daemon that declares `daemon.ingress`
+  (CLI 0.40.0 or later). It serves the App's usual handler, normally its
+  `api.Server` in the same middleware as the CGI, on the CLI's ingress socket:
+  every request still passes origin, App entry, DSM session and route
+  permission checks. The ingress path is stripped so `api.HandleHTTP` prefixes
+  match as under CGI; the client address is nginx's `X-Real-IP`; JSON calls get
+  the request deadline and raw HTTP routes a longer stream deadline
+  (`api.IngressTimeouts`).
+- Add `dsm.CacheSessions` for daemons: remembers a verified DSM session (the
+  Cookie header, SynoToken and client address together) and its administrator
+  flag for an App-chosen TTL of at most one hour. Sign-out, a disabled account
+  or a lost administrator role take effect only after that TTL. Wrap the
+  session authenticator inside `dsm.NewEntryGate`.
+- `daemonctl` runs the App's own backend (`ui/cgi/api.cgi`) as the daemon when
+  the CLI writes `"backend": true`, so the daemon is the same audited binary,
+  with the same build-time route and permission digests, as the CGI.
+
 ## 0.36.0 (2026-10-29)
 
 - Add `ipc.StartPeerUnix` and `PeerServer.StopAccepting`, `Close` and `Wait`.
