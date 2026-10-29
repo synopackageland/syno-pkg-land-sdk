@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.37.0 (2026-10-29)
 
 - Add `api.ServeIngress` for a resident daemon that declares `daemon.ingress`
   (CLI 0.40.0 or later). It serves the App's usual handler, normally its
@@ -18,6 +18,9 @@
 - `daemonctl` runs the App's own backend (`ui/cgi/api.cgi`) as the daemon when
   the CLI writes `"backend": true`, so the daemon is the same audited binary,
   with the same build-time route and permission digests, as the CGI.
+- Align SDK/App versions at 0.37.0; use CLI 0.40.0 for `daemon.backend` and
+  `daemon.ingress`. The executor 0.32.0 payload inventory is unchanged. Rust
+  consumers use the SDK git tag; the crate is not published.
 
 ## 0.36.0 (2026-10-29)
 
