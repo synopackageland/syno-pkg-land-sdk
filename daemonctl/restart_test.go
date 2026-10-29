@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"syscall"
 	"testing"
@@ -46,6 +47,19 @@ func TestRestartBudgetBackoffCapAndSlidingWindow(t *testing.T) {
 	}
 	if got, ok := b.next(now.Add(122 * time.Second)); !ok || got != time.Second {
 		t.Fatalf("stable interval must reset backoff: %s %v", got, ok)
+	}
+	// The logged attempt is the window's count, which went back to one with the delay.
+	if b.reserved() != 1 {
+		t.Fatalf("attempts in window: %d", b.reserved())
+	}
+}
+
+func TestSupervisorLogIsStamped(t *testing.T) {
+	var out strings.Builder
+	supervisorLog(&out, "%s attempt=%d", "DAEMON_RESTART_BACKOFF", 1)
+	stamp, line, _ := strings.Cut(out.String(), " ")
+	if at, err := time.Parse(time.RFC3339, stamp); err != nil || time.Since(at) > time.Minute || line != "DAEMON_RESTART_BACKOFF attempt=1\n" {
+		t.Fatalf("%q %v", out.String(), err)
 	}
 }
 
@@ -299,6 +313,10 @@ func TestCompiledNativeRestartNeedsNoConfig(t *testing.T) {
 	recovered := awaitRestartState(t, data, "running", r.Child)
 	if recovered.Restarts != 1 {
 		t.Fatalf("no default recovery: %+v", recovered)
+	}
+	raw, _ := os.ReadFile(filepath.Join(data, "daemon/daemon.log"))
+	if !regexp.MustCompile(`(?m)^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ DAEMON_RESTART_BACKOFF attempt=1 delay=1s restarts=1$`).Match(raw) {
+		t.Fatalf("supervisor lines need their time: %s", raw)
 	}
 }
 

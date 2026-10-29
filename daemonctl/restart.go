@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -69,6 +71,16 @@ func (b *restartBudget) next(now time.Time) (time.Duration, bool) {
 	}
 	b.attempts = append(b.attempts, now)
 	return delay, true
+}
+
+// reserved is the attempts in the current window: the count the delay and the
+// limit go by, which drops as reservations expire (Restarts never does).
+func (b *restartBudget) reserved() int { return len(b.attempts) }
+
+// supervisorLog writes one supervisor line to w, after the UTC time: the line
+// lands in daemon.log beside the child's output, which has times of its own.
+func supervisorLog(w io.Writer, format string, args ...any) {
+	fmt.Fprintf(w, "%s "+format+"\n", append([]any{time.Now().UTC().Format(time.RFC3339)}, args...)...)
 }
 
 func (c *controller) writeRecord(r record) error {

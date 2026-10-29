@@ -747,7 +747,7 @@ func (c *controller) supervise() error {
 		r.RetryAt = time.Time{}
 		if exitErr == nil {
 			r.State, r.Reason = "exited", "DAEMON_CHILD_EXIT"
-			fmt.Fprintln(os.Stderr, r.Reason)
+			supervisorLog(os.Stderr, "%s", r.Reason)
 			return false, c.writeRecord(r)
 		}
 		r.State, r.Reason = "failed", "DAEMON_CHILD_FAILED"
@@ -755,7 +755,7 @@ func (c *controller) supervise() error {
 			r.Restarts++
 			r.State, r.Reason = "restarting", "DAEMON_RESTART_BACKOFF"
 			r.RetryAt = time.Now().Add(delay)
-			fmt.Fprintf(os.Stderr, "%s attempt=%d delay=%s\n", r.Reason, r.Restarts, delay)
+			supervisorLog(os.Stderr, "%s attempt=%d delay=%s restarts=%d", r.Reason, budget.reserved(), delay, r.Restarts)
 			if err := c.writeRecord(r); err != nil {
 				return false, err
 			}
@@ -766,7 +766,7 @@ func (c *controller) supervise() error {
 		if c.Restart != nil && c.Restart.Mode == "on-failure" {
 			r.Reason = "DAEMON_RESTART_LIMIT"
 		}
-		fmt.Fprintf(os.Stderr, "%s attempts=%d; manual start required\n", r.Reason, r.Restarts)
+		supervisorLog(os.Stderr, "%s attempts=%d restarts=%d; manual start required", r.Reason, budget.reserved(), r.Restarts)
 		if err := c.writeRecord(r); err != nil {
 			return false, err
 		}
@@ -837,7 +837,7 @@ func (c *controller) supervise() error {
 				stop()
 				return err
 			}
-			fmt.Fprintf(os.Stderr, "DAEMON_RESTART_RECOVERED attempts=%d\n", r.Restarts)
+			supervisorLog(os.Stderr, "DAEMON_RESTART_RECOVERED attempts=%d restarts=%d", budget.reserved(), r.Restarts)
 		case <-tick.C:
 			if done != nil && stableC == nil && !probing {
 				probing = true

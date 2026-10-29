@@ -38,6 +38,10 @@ The initial manual launch does not count. Expired reservations leave the window;
 the delay depends on the remaining reservations. A full window terminates the
 supervisor with `DAEMON_RESTART_LIMIT`; it does **not** wait for a window reset
 and start again. Only an explicit package start/restart begins a new budget.
+A successful recovery does not clear the window, so a child that keeps failing
+soon after recovering still reaches the limit. Supervisor lines in `daemon.log`
+start with the UTC time; `attempt=` counts the reservations in the window and
+`restarts=` all automatic restarts of this supervisor.
 
 A child must survive the existing one-second process stability check before it
 is reported running again. Exits during this recovery check and exec failures
