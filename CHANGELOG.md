@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.38.0 (2026-10-29)
+
 - background: `Store.RemoveFor` drops a finished job the caller sees, with the
   copy of its input kept since it succeeded. An App calls it when it removes
   the job's result, so `inputs/` no longer holds files of removed jobs until
@@ -10,7 +12,7 @@
   App that hides the banner with the CLI's `ui.banner: hidden` (CLIs before it
   leave the method out; outside DSM it answers `unsupported`). On a DSM full
   page where DSM draws no account, `AppShell` shows a Sign out button under the
-  sidebar account.
+  sidebar account. Its Simplified Chinese label follows DSM's glossary.
 - daemonctl: supervisor lines in daemon.log (`DAEMON_RESTART_*`,
   `DAEMON_CHILD_EXIT`) start with the UTC time. `attempt=` is the count in the
   restart window, the one the delay and the limit use, so it drops as
@@ -26,6 +28,8 @@
   existing background admission/progress/status pattern. Queued/running means
   still working; a slow NAS or lost status request alone does not fail a job.
   Executor batch caps, approved root budgets and credential lifetimes are unchanged.
+- Align SDK/App versions at 0.38.0. The executor 0.32.0 payload inventory
+  is unchanged. Rust consumers use the SDK git tag; the crate is not published.
 
 ## 0.37.0 (2026-10-29)
 
