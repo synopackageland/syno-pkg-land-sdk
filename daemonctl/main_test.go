@@ -313,3 +313,37 @@ func TestFIFOInventoryCannotBlockStatus(t *testing.T) {
 		t.Fatalf("FIFO status: %s %v", raw, err)
 	}
 }
+
+// A backend daemon runs the App's installed ui/cgi/api.cgi with its args.
+func TestBackendDaemonRunsInstalledBackend(t *testing.T) {
+	control, dest, data := fixture(t, "normal")
+	path := filepath.Join(dest, "daemon/config.json")
+	raw, _ := os.ReadFile(path)
+	var cfg config
+	json.Unmarshal(raw, &cfg)
+	app, _ := os.ReadFile(filepath.Join(dest, "daemon/payload/app"))
+	os.MkdirAll(filepath.Join(dest, "ui/cgi"), 0755)
+	if err := os.WriteFile(filepath.Join(dest, "ui/cgi/api.cgi"), app, 0755); err != nil {
+		t.Fatal(err)
+	}
+	os.Remove(filepath.Join(dest, "daemon/payload/app"))
+	cfg.Exec, cfg.Backend = "", true
+	raw, _ = json.Marshal(cfg)
+	os.WriteFile(path, raw, 0644)
+	if rc, out := runControl(control, "start", dest, data); rc != 0 {
+		t.Fatalf("start: %d %s", rc, out)
+	}
+	if rc, out := runControl(control, "status", dest, data); rc != 0 {
+		t.Fatalf("status: %d %s", rc, out)
+	}
+	if rc, out := runControl(control, "stop", dest, data); rc != 0 {
+		t.Fatalf("stop: %d %s", rc, out)
+	}
+	cfg.Exec = "app"
+	raw, _ = json.Marshal(cfg)
+	os.WriteFile(path, raw, 0644)
+	if rc, out := runControl(control, "start", dest, data); rc != 1 {
+		runControl(control, "stop", dest, data)
+		t.Fatalf("backend with another executable accepted: %d %s", rc, out)
+	}
+}

@@ -143,6 +143,46 @@ Never call `ServeHTTP` on a server in process to obtain a `Caller`; the CLI
 route audit rejects it. The CLI audit requires a literal method declared
 `administrators` in permissions.json for each `InvokeAsAdministrator` call.
 
+## Backend daemon ingress
+
+A resident daemon serves the same routes as the CGI without a process per
+request. Declare the backend itself as the daemon (CLI 0.40.0 or later):
+
+```yaml
+daemon:
+  backend: true
+  args: [serve]
+  ingress: {path: /sample-api/}
+```
+
+DSM's nginx proxies `/sample-api/` to the CLI's ingress socket. In the
+backend's `serve` mode, build the same server as for CGI and serve it:
+
+```go
+auth, _ := dsm.CacheSessions(dsm.NewAuthenticator(), 10*time.Minute)
+gate, _ := dsm.NewEntryGate(auth, entry, packageID, dataDir)
+srv, _ := api.NewServerWithPermissions(gate, permissions, routes...)
+err := api.ServeIngress(ctx, srv)
+```
+
+`ServeIngress` refuses under CGI and outside the CLI's ingress environment.
+It removes the ingress prefix from the path (`/sample-api/proxy/x` reaches the
+server as `/proxy/x`), sets the client address from nginx's `X-Real-IP` and
+applies the request deadline to JSON and transfer calls and the longer stream
+deadline to `api.HandleHTTP` routes. Do not wrap the handler in
+`WithRequestDeadline` as well.
+
+The socket is mode 0666 because nginx runs as another account. A local
+process that connects to it directly cannot skip DSM session verification but
+can choose the client address that Application Privileges IP rules see.
+
+`dsm.CacheSessions` keeps each verified session for the TTL the App chooses
+(at most one hour): sign-out, a disabled account and a lost administrator role
+take effect only after it. It keys on the whole Cookie header, the SynoToken
+and the client address and keeps only successes. App entry decisions keep
+`dsm.EntryCacheTTL`. Integration callbacks keep their CGI URL: the external
+service holds `.../api.cgi?method=...`.
+
 ## Private worker IPC
 
 ```go

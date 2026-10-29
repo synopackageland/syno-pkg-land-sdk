@@ -34,15 +34,18 @@ type deadlines struct {
 	Uninstall int `json:"uninstall"`
 }
 type config struct {
-	Restart          *restartPolicy    `json:"restart,omitempty"`
-	OperationSeconds int               `json:"operation_seconds,omitempty"`
-	Network          *networkPolicy    `json:"network,omitempty"`
-	Package          string            `json:"package"`
-	Exec             string            `json:"exec"`
-	Args             []string          `json:"args"`
-	UninstallArgs    []string          `json:"uninstall_args,omitempty"`
-	Env              map[string]string `json:"env"`
-	Timeouts         deadlines         `json:"timeouts"`
+	Restart          *restartPolicy `json:"restart,omitempty"`
+	OperationSeconds int            `json:"operation_seconds,omitempty"`
+	Network          *networkPolicy `json:"network,omitempty"`
+	Package          string         `json:"package"`
+	Exec             string         `json:"exec,omitempty"`
+	// Backend runs the App's own audited backend binary (ui/cgi/api.cgi)
+	// with Args as the daemon, in place of an executable in daemon/payload.
+	Backend       bool              `json:"backend,omitempty"`
+	Args          []string          `json:"args"`
+	UninstallArgs []string          `json:"uninstall_args,omitempty"`
+	Env           map[string]string `json:"env"`
+	Timeouts      deadlines         `json:"timeouts"`
 }
 type record struct {
 	State      string    `json:"state,omitempty"`
@@ -98,7 +101,11 @@ func load(dest, data string) (*controller, error) {
 	if err != nil || account.Uid != strconv.Itoa(os.Geteuid()) {
 		return nil, errors.New("daemon requires its configured package account")
 	}
-	if cfg.Exec == "" || filepath.IsAbs(cfg.Exec) || filepath.Clean(cfg.Exec) != cfg.Exec || strings.HasPrefix(cfg.Exec, "../") {
+	if cfg.Backend {
+		if cfg.Exec != "" || cfg.Network != nil {
+			return nil, errors.New("a backend daemon names no other executable and no Compose network")
+		}
+	} else if cfg.Exec == "" || filepath.IsAbs(cfg.Exec) || filepath.Clean(cfg.Exec) != cfg.Exec || strings.HasPrefix(cfg.Exec, "../") {
 		return nil, errors.New("invalid fixed executable")
 	}
 	if cfg.OperationSeconds < 0 || cfg.OperationSeconds > 3600 {
@@ -479,12 +486,22 @@ func (c *controller) expand(v string) string {
 	return strings.ReplaceAll(strings.ReplaceAll(v, "${SYNOPKG_PKGDEST}", c.dest), "${SYNOPKG_PKGVAR}", c.data)
 }
 
+// backendExecutable is where the packaging CLI installs the App's backend.
+const backendExecutable = "ui/cgi/api.cgi"
+
+func (c *controller) executable() string {
+	if c.Backend {
+		return filepath.Join(c.dest, backendExecutable)
+	}
+	return filepath.Join(c.dest, "daemon/payload", c.Exec)
+}
+
 func (c *controller) child(args []string) *exec.Cmd {
 	expanded := make([]string, len(args))
 	for i, v := range args {
 		expanded[i] = c.expand(v)
 	}
-	cmd := exec.Command(filepath.Join(c.dest, "daemon/payload", c.Exec), expanded...)
+	cmd := exec.Command(c.executable(), expanded...)
 	cmd.Dir = c.data
 	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + c.data, "TMPDIR=" + filepath.Join(c.dir, "tmp")}
 	keys := make([]string, 0, len(c.Env))
