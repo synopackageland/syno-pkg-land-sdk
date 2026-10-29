@@ -22,8 +22,11 @@ func TestPeerServerRequiresExecutorBindingAndRoot(t *testing.T) {
 	for _, tier := range []string{"", "none", "executor"} {
 		executorTier = tier
 		if os.Geteuid() != 0 || tier != "executor" {
-			if err := ServePeerUnix(context.Background(), path, PeerPolicy{UID: 1000, GID: 1000}, h); err == nil {
+			if _, err := StartPeerUnix(context.Background(), path, PeerPolicy{UID: 1000, GID: 1000}, h); err == nil {
 				t.Fatalf("accepted server euid=%d tier=%q", os.Geteuid(), tier)
+			}
+			if err := ServePeerUnix(context.Background(), path, PeerPolicy{UID: 1000, GID: 1000}, h); err == nil {
+				t.Fatalf("accepted blocking server euid=%d tier=%q", os.Geteuid(), tier)
 			}
 		}
 	}

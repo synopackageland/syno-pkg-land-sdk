@@ -1,6 +1,6 @@
 # HTTP boundaries
 
-Use SDK/App 0.34.0 with CLI 0.36.0. JSON operations still use `api.Handle`,
+Use SDK/App 0.36.0 with CLI 0.38.0. JSON operations use `api.Handle`,
 `HandleRequest`, `HandleResponse` or query-selected `HandleStream`.
 
 ## Fixed browser routes
@@ -234,28 +234,65 @@ builds bind `ipc.executorTier=none` even when using SDK executor capabilities.
 The SDK provides no setuid, sudo or root process launch.
 
 The protected helper build binds both `ipc.packageID=SampleApp` and
-`ipc.executorTier=executor` with `-X` linker flags. `ipc.ServePeerUnix` also
+`ipc.executorTier=executor` with `-X` linker flags. `ipc.StartPeerUnix` also
 requires effective UID zero. Bind only the separately approved helper this
 way; never a CGI, package worker or package-writable executable.
 
 ```go
-err := ipc.ServePeerUnix(ctx,
+peerServer, err := ipc.StartPeerUnix(ctx,
     "/var/run/synopkgland/SampleApp/helper.sock",
     ipc.PeerPolicy{UID: packageUID, GID: packageGID},
     func(ctx context.Context, conn net.Conn, peer ipc.PeerCredentials) {
-        // Decode a bounded JSON frame, verify protocol and current approval,
-        // execute only fixed authorized operations, and encode the reply.
+        // Decode a bounded frame and verify protocol/current approval.
+        // Own conn until explicitly closing it, server Close or process exit.
+        // Returning from this callback leaves conn open.
     })
+if err != nil {
+    return err
+}
+defer peerServer.Close()
 ```
+
+`StartPeerUnix` returns only after the socket is bound and secured; startup
+errors are synchronous. It exposes no listener. The handler owns the verified
+connection, including after callback return, and must close it when finished.
+`ServePeerUnix` is the blocking convenience form: it closes each connection
+when its callback returns and closes all connections when serving stops.
 
 Linux pins root-owned, non-group/world-writable directories beneath the
 platform `/var/run` anchor and refuses child symlinks. Each socket is root-owned
 0660 with the selected GID; directory ownership stays with root. Existing paths
 are refused. SO_PEERCRED admits exactly `PeerPolicy.UID` before the callback;
-UID zero explicitly selects a root-to-root channel. At most eight callbacks
-are active, each connection has a five-second deadline, and cancellation
-closes all accepted connections. The handler remains responsible for bounded
-frame sizes, method validation, digest/grant checks and cancellation.
+UID zero explicitly selects a root-to-root channel. There are eight admission
+slots. A slot stays occupied until both its callback returns and its connection
+closes, so retaining a connection or closing one early cannot bypass the limit.
+Each connection starts with a five-second deadline. The handler must bound
+frame sizes, validate methods and digest/grant checks, honor cancellation and
+set explicit deadlines for longer exchanges.
+
+`peerServer.StopAccepting()` closes the listener, removes only its owned
+socket and returns after the accept loop exits. New dials fail; accepted,
+verified connections and handler contexts remain usable. It can be called
+from a callback and does not wait for callbacks. `Wait()` waits for that same
+admission stop and socket cleanup, not for retained peers or handler completion.
+Explicit StopAccepting/Close return nil on success; context cancellation and
+unexpected serving or cleanup failures are reported by Wait.
+
+A supervisor's ordered shutdown is:
+
+1. Stop and reap its child on the OS thread that owns the child lifecycle.
+2. Call StopAccepting and check its result.
+3. Write the complete final ACK on the existing verified connection.
+4. Retain that connection until process exit so the client receives ACK then EOF.
+
+Keep the server context alive through the ACK. `Close()` or cancellation of
+the original context cancels handler contexts and closes every accepted peer,
+even after StopAccepting; use these for abort/revoke, not before the final ACK.
+Close waits for admission stop and socket cleanup; handlers must stop their
+own work. After StopAccepting, call Close when retained peers are no longer
+needed, or exit the helper process. Connection deadlines still apply to I/O;
+they do not themselves close a retained descriptor or free its slot.
+
 `ipc.DialPeerUnix` checks root ownership, exact mode, protected ancestors and
 server UID zero. Ordinary package processes may use the client without an
 executor binding. Neither this transport nor a successful audit proves the

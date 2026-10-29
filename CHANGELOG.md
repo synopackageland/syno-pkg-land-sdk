@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.36.0 (2026-10-29)
+
+- Add `ipc.StartPeerUnix` and `PeerServer.StopAccepting`, `Close` and `Wait`.
+  Admission can stop and remove the protected socket while verified peers
+  remain open beyond callback return, including a supervisor final ACK before
+  process exit. Cancellation/Close still close all peers. Retained connections
+  and running callbacks both occupy the eight admission slots.
+- Keep `ServePeerUnix` as the blocking form that closes peers on callback return.
+  Use CLI 0.38.0, whose audit rejects constructor aliases.
+- Align SDK/App versions at 0.36.0. The executor 0.32.0 payload inventory
+  is unchanged. Rust consumers use the SDK git tag; the crate is not published.
+
 ## 0.35.0 (2026-10-29)
 
 - Add `appbackup` and `appbackup/cmd/control` for Hyper Backup application
