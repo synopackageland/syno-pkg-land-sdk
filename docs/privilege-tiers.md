@@ -20,7 +20,7 @@ terminate privileged work using the helper's verified lifecycle.
 The protected helper alone may bind `ipc.packageID=<package>` and
 `ipc.executorTier=executor` via `-X` linker flags. `ipc.StartPeerUnix` and
 `ipc.ServePeerUnix` then
-requires effective UID zero at runtime, a protected package-scoped socket path,
+require effective UID zero at runtime, a protected package-scoped socket path,
 and a numeric peer policy. A flag is not administrator approval. Never bind an
 ordinary CGI/worker to this tier or launch it as root. `ipc.DialPeerUnix` only
 authenticates a running root helper; it neither approves nor starts it.

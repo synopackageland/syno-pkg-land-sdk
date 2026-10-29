@@ -10,6 +10,25 @@
 - Keep `ServePeerUnix` as the blocking form that closes peers on callback return.
   Pair the new constructor with the CLI audit that rejects its aliases.
 
+## 0.35.0 (2026-10-29)
+
+- Add `appbackup` and `appbackup/cmd/control` for Hyper Backup application
+  backup. The control runs as the package account only: it archives the whole
+  data folder (`var`) to standard output and restores it from standard input.
+  Offline mode copies files while Hyper Backup has the App stopped; online
+  mode snapshots SQLite databases through `sqlite3 .backup` and leaves out
+  their journals. An optional hook runs as `freeze` and `thaw` around an
+  export. The archive records the package and its `major.minor` data version;
+  a restore accepts the same package and major version with an equal or lower
+  minor version, unpacks into a private folder first and leaves the current
+  data unchanged when it refuses. The root side is a fixed script that the
+  matching CLI generates; see [docs/app-backup.md](docs/app-backup.md).
+- Native Apps rebuilt with CLI 0.37.0 gain a fixed `scripts/backup/` shim
+  that Hyper Backup runs as root. It only switches to the package account and
+  moves one archive it never reads; the App itself still runs as the package
+  user and its privilege tier is unchanged. Opt out with
+  `backup: { hyper_backup: false }` in `dsm-package.yaml`.
+
 ## 0.34.0 (2026-10-29)
 
 - Add `ipc.ReserveLoopback` and `ProbeLoopback` for official supervised
