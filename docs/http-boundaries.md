@@ -1,6 +1,6 @@
 # HTTP boundaries
 
-Use SDK/App 0.37.0 with CLI 0.40.0. JSON operations use `api.Handle`,
+Use SDK/App 0.38.0 with CLI 0.40.0. JSON operations use `api.Handle`,
 `HandleRequest`, `HandleResponse` or query-selected `HandleStream`.
 
 ## Fixed browser routes
