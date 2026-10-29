@@ -116,6 +116,33 @@ with kind and permission `integration`. Handlers reachable from a
 `HandleIntegration` handler argument may construct `http.HandlerFunc`, as for
 `HandleHTTP`.
 
+## In-process administrator calls
+
+A package-account command that runs outside CGI and already authenticated the
+person who asked, such as a helper daemon's `api.cgi <subcommand>`, may need
+one App route's result for that administrator. Build the App's normal server
+with `dsm.NewEntryGate` and call it in process:
+
+```go
+out, err := server.InvokeAsAdministrator(ctx, user, "app.support.propose", params)
+```
+
+The SDK, not the App, decides who runs it. `dsm.EntryGate.AdmitAdministrator`
+asks DSM's native role provider whether `user` is a current administrator and
+requires the account to be enabled and unexpired; the route then runs with an
+administrator `Caller` under the same permission and entry checks as a request.
+
+It refuses:
+
+- under CGI (`GATEWAY_INTERFACE` set) and inside any request the server is
+  dispatching, so no request can choose the account it runs as;
+- integration, raw HTTP, stream, SDK and unknown methods;
+- params that are not one JSON value within the server's request limit.
+
+Never call `ServeHTTP` on a server in process to obtain a `Caller`; the CLI
+route audit rejects it. The CLI audit requires a literal method declared
+`administrators` in permissions.json for each `InvokeAsAdministrator` call.
+
 ## Private worker IPC
 
 ```go

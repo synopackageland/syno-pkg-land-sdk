@@ -114,3 +114,43 @@ func TestParseNativeAccount(t *testing.T) {
 		}
 	}
 }
+
+func TestAdmitAdministratorAsksDSMNotTheApp(t *testing.T) {
+	unavailable := errors.New("role provider unavailable")
+	for _, tc := range []struct {
+		name           string
+		mode           string
+		admin, enabled bool
+		adminErr       error
+		want           error
+	}{
+		{"administrator", EntryAppPrivilege, true, true, nil, nil},
+		{"administrator of an admin-only app", EntryAdminOnly, true, true, nil, nil},
+		{"not an administrator", EntryAppPrivilege, false, true, nil, api.ErrAdminRequired},
+		{"disabled administrator", EntryAppPrivilege, true, false, nil, api.ErrAccountDisabled},
+		{"role provider unavailable", EntryAppPrivilege, true, true, unavailable, unavailable},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// The session authenticator would vouch for anyone; it is never asked.
+			gate, _ := newTestGate(t, tc.mode, fixedAuth{id: api.Identity{User: "alice", Admin: true}}, &lookup{allowed: true})
+			gate.admin = func(_ context.Context, user string) (bool, error) {
+				if user != "alice" {
+					t.Errorf("role check for %q", user)
+				}
+				return tc.admin, tc.adminErr
+			}
+			gate.enabled = func(context.Context, string) (bool, error) { return tc.enabled, nil }
+			id, err := gate.AdmitAdministrator(context.Background(), "alice")
+			if !errors.Is(err, tc.want) || (tc.want == nil) != (id.Admin && id.User == "alice") {
+				t.Fatalf("AdmitAdministrator = %+v, %v", id, err)
+			}
+		})
+	}
+	gate, _ := newTestGate(t, EntryAppPrivilege, ordinary("unused"), &lookup{allowed: true})
+	gate.admin = func(context.Context, string) (bool, error) { t.Fatal("role provider ran"); return true, nil }
+	for _, name := range []string{"", " alice", "a/b", "a\x00b"} {
+		if _, err := gate.AdmitAdministrator(context.Background(), name); err == nil {
+			t.Fatalf("admitted %q", name)
+		}
+	}
+}
