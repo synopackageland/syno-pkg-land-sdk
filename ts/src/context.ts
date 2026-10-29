@@ -25,6 +25,9 @@ export interface HostAdapter {
  setTitle(title: string): HostTitleResult
  activateWindow(): HostRequestResult
  requestClose(): HostRequestResult
+ // Signs out of DSM as DSM's banner menu does; a page that hides the banner (CLI ui.banner: hidden)
+ // offers it instead. CLIs before ui.banner leave it out.
+ signOut?(): HostRequestResult
  openApp(appId: string): HostRequestResult
  openURL(url: string): HostURLResult
  openFileManager(path: string): HostFileNavigationResult
@@ -189,9 +192,9 @@ export interface Context {
 }
 /** What tells a full page apart: the launch, or the host when an older CLI omits it. */
 export type LaunchContext = {fullPage: boolean; host?: Pick<HostAdapter, 'platform'>} | {fullPage?: boolean; host: Pick<HostAdapter, 'platform'>}
-/** What AppShell reads: the launch, the brand, the signed-in account, the executor to approve, the UI update check and, with app-root, the window to bring to the front. */
+/** What AppShell reads: the launch, the brand, the signed-in account, the executor to approve, the UI update check, with app-root, the window to bring to the front and, on a DSM full page, how to sign out. */
 export type ShellContext = LaunchContext & Pick<Context, 'displayName' | 'appIcon' | 'user'> &
- Partial<Pick<Context, 'executor' | 'call' | 'reopen' | 'uiUpdate'>> & {host?: Partial<Pick<HostAdapter, 'activateWindow'>>}
+ Partial<Pick<Context, 'executor' | 'call' | 'reopen' | 'uiUpdate'>> & {host?: Partial<Pick<HostAdapter, 'activateWindow' | 'signOut'>>}
 // Older CLIs pass no fullPage: then only a DSM desktop window is not a full page.
 export function isFullPage(ctx: LaunchContext): boolean {
  if(ctx.fullPage !== undefined) return ctx.fullPage

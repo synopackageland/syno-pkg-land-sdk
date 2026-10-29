@@ -3,6 +3,7 @@
   "background": "Tâches en arrière-plan",
   "administrator": "Administrateur",
   "dsmUser": "Utilisateur DSM",
+  "signOut": "Se déconnecter",
   "deniedTitle": "Accès refusé",
   "deniedMessage": "Votre compte DSM n’est pas autorisé à utiliser cette application. Demandez à un administrateur de l’autoriser dans les privilèges d’application de DSM.",
   "notes": "Remarques",

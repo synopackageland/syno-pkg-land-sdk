@@ -75,9 +75,17 @@ banner visibly names this App, the shell hides its duplicate brand block. It
 also hides its default account footer while DSM's account menu is visible;
 a custom `sidebar-footer` stays. Detection reads only the containing DSM
 standalone window's DOM, with no settings API or administrator permission.
-Hidden, missing or unrecognized banner markup keeps the shell's own chrome. `AppShell` reads only
-`fullPage` (or `host`), `displayName`, `appIcon` and `user` (`ShellContext`),
-so the DSM window's ctx works as it is.
+Hidden, missing or unrecognized banner markup keeps the shell's own chrome.
+
+An App whose own frame already names it and shows the account (a full-page
+web App) can drop DSM's banner with the CLI's `ui.banner: hidden` in
+`dsm-package.yaml`. The shell then shows the account, and on a DSM full page a
+Sign out button under it that calls `ctx.host.signOut()`, DSM's banner sign-out.
+An App with its own `sidebar-footer` offers sign-out itself with the same call;
+it answers `unsupported` outside DSM and is absent with CLIs before `ui.banner`.
+Keep the banner (the default) when the App relies on DSM for the account menu.
+`AppShell` reads only `fullPage` (or `host`), `displayName`, `appIcon` and
+`user` (`ShellContext`), so the DSM window's ctx works as it is.
 
 ```vue
 <AppShell v-model="page" :ctx="ctx" :locale="ctx.locale" :pages="pages" sidebar-storage-key="HelloGo" />

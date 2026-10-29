@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- `ctx.host.signOut()` signs out of DSM the way DSM's banner menu does, for an
+  App that hides the banner with the CLI's `ui.banner: hidden` (CLIs before it
+  leave the method out; outside DSM it answers `unsupported`). On a DSM full
+  page where DSM draws no account, `AppShell` shows a Sign out button under the
+  sidebar account.
 - daemonctl: supervisor lines in daemon.log (`DAEMON_RESTART_*`,
   `DAEMON_CHILD_EXIT`) start with the UTC time. `attempt=` is the count in the
   restart window, the one the delay and the limit use, so it drops as

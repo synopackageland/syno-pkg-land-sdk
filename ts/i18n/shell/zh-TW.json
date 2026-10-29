@@ -3,6 +3,7 @@
   "background": "背景工作",
   "administrator": "管理員",
   "dsmUser": "DSM 使用者",
+  "signOut": "登出",
   "deniedTitle": "無法存取",
   "deniedMessage": "你的 DSM 帳號無權使用此應用程式。請管理員在 DSM 的應用程式權限中開放給你。",
   "notes": "附註",

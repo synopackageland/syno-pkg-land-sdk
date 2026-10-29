@@ -18,6 +18,7 @@ export function createStandaloneHost(platform: Partial<HostPlatformSnapshot> = {
   },
   activateWindow: () => unsupported,
   requestClose: () => unsupported,
+  signOut: () => unsupported,
   openApp: () => unsupported,
   openURL(url) {
    let parsed: URL

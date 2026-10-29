@@ -154,3 +154,26 @@ test.each([1365,390])('the published UI brand selects home and allows an App ove
   expect(root.querySelector('[data-ui-page-header]')?.textContent).toContain('Custom home')
  }finally{app.unmount();root.remove();vi.restoreAllMocks()}
 })
+
+// ui.banner: hidden leaves no DSM account menu: the shell's account signs out of DSM.
+test.each([
+ {host:'dsm',signOut:true,shown:true},
+ {host:'standalone-web',signOut:true,shown:false},
+ {host:'dsm',signOut:false,shown:false},
+] as const)('a full page signs out from the sidebar account on $host (signOut=$signOut)',async({host,signOut,shown})=>{
+ vi.spyOn(HTMLElement.prototype,'getBoundingClientRect').mockReturnValue({width:1400} as DOMRect)
+ const root=document.createElement('div');document.body.append(root)
+ const requested=vi.fn(()=>({status:'requested'} as const))
+ const hostAdapter={platform:()=>({host}),...(signOut?{signOut:requested}:{})}
+ const app=createApp({render:()=>h(AppShell,{locale:'en',modelValue:'home',pages:[{id:'home',title:'Home'}],
+  ctx:{fullPage:true,displayName:'My App',user:{name:'alice',isAdmin:false},host:hostAdapter as never}})})
+ try{
+  app.mount(root);await nextTick();await nextTick()
+  const footer=root.querySelector('[data-ui-sidebar-footer]')!
+  expect(footer.textContent).toContain('alice')
+  const button=Array.from(footer.querySelectorAll('button')).find(b=>b.textContent?.includes('Sign out'))
+  expect(button!==undefined).toBe(shown)
+  button?.click()
+  expect(requested).toHaveBeenCalledTimes(shown?1:0)
+ }finally{app.unmount();root.remove();vi.restoreAllMocks()}
+})
