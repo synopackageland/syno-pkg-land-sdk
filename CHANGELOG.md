@@ -4,6 +4,10 @@
 
 ## 0.38.0 (2026-10-29)
 
+- background: `Store.RemoveFor` drops a finished job the caller sees, with the
+  copy of its input kept since it succeeded. An App calls it when it removes
+  the job's result, so `inputs/` no longer holds files of removed jobs until
+  they leave the 64-job history. Unfinished jobs answer `ErrNotFinished`.
 - `ctx.host.signOut()` signs out of DSM the way DSM's banner menu does, for an
   App that hides the banner with the CLI's `ui.banner: hidden` (CLIs before it
   leave the method out; outside DSM it answers `unsupported`). On a DSM full
@@ -24,7 +28,6 @@
   existing background admission/progress/status pattern. Queued/running means
   still working; a slow NAS or lost status request alone does not fail a job.
   Executor batch caps, approved root budgets and credential lifetimes are unchanged.
-
 - Align SDK/App versions at 0.38.0. The executor 0.32.0 payload inventory
   is unchanged. Rust consumers use the SDK git tag; the crate is not published.
 
