@@ -371,3 +371,34 @@ func TestStatusReportsWorkerHeartbeat(t *testing.T) {
 		t.Fatalf("worker: %+v", st.Worker)
 	}
 }
+
+func TestRemoveDropsAFinishedJobAndItsRetainedCopy(t *testing.T) {
+	s, dir := newStore(t)
+	ctx := context.Background()
+	owner := Submitter{User: "fixtureuser1", UID: "1025"}
+	job, _, err := s.Submit(ctx, SubmitRequest{Key: "k", Name: "a.txt", Data: []byte("x"), Submitter: owner})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RemoveFor(ctx, job.ID, Access{Owner: owner}); !errors.Is(err, ErrNotFinished) {
+		t.Fatalf("queued job removed: %v", err)
+	}
+	_, _ = s.Claim(ctx)
+	_ = s.Finish(ctx, job.ID, Outcome{State: StateSucceeded, Result: &Result{Bytes: 1}})
+	input := filepath.Join(dir, inputs, job.ID)
+	if _, err := os.Stat(input); err != nil {
+		t.Fatalf("a succeeded job keeps its copy: %v", err)
+	}
+	if err := s.RemoveFor(ctx, job.ID, Access{Owner: Submitter{User: "other", UID: "1026"}}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("another account removed the job: %v", err)
+	}
+	if err := s.RemoveFor(ctx, job.ID, Access{Owner: owner}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Get(ctx, job.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("removed job still listed: %v", err)
+	}
+	if _, err := os.Stat(input); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("retained copy left behind: %v", err)
+	}
+}
