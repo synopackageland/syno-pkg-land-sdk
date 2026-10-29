@@ -7,18 +7,6 @@ import (
 )
 
 // PeerServer owns a protected peer listener and its verified connections.
-// Hold the slot until both the callback and its connection have finished.
-// Closing early cannot create unbounded still-running callbacks; returning
-// early cannot create unbounded retained connections.
-func (c *peerConn) handlerReturned() {
-	c.owner.mu.Lock()
-	c.handlerDone = true
-	if c.closed {
-		<-c.owner.slots
-	}
-	c.owner.mu.Unlock()
-}
-
 // StopAccepting ends admission; Close or context cancellation ends connections.
 // Methods are safe to call concurrently, including from a handler.
 type PeerServer struct {
@@ -57,6 +45,18 @@ func (c *peerConn) Close() error {
 		c.owner.mu.Unlock()
 	})
 	return err
+}
+
+// Hold the slot until both the callback and its connection have finished.
+// Closing early cannot create unbounded still-running callbacks; returning
+// early cannot create unbounded retained connections.
+func (c *peerConn) handlerReturned() {
+	c.owner.mu.Lock()
+	c.handlerDone = true
+	if c.closed {
+		<-c.owner.slots
+	}
+	c.owner.mu.Unlock()
 }
 
 // StopAccepting closes the listener, removes the owned socket and waits for
