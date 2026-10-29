@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Add `ipc.StartPeerUnix` and `PeerServer.StopAccepting`, `Close` and `Wait`.
+  Admission can stop and remove the protected socket while verified peers
+  remain open beyond callback return, including a supervisor final ACK before
+  process exit. Cancellation/Close still close all peers. Retained connections
+  and running callbacks both occupy the eight admission slots.
+- Keep `ServePeerUnix` as the blocking form that closes peers on callback return.
+  Pair the new constructor with the CLI audit that rejects its aliases.
+
 ## 0.34.0 (2026-10-29)
 
 - Add `ipc.ReserveLoopback` and `ProbeLoopback` for official supervised

@@ -18,11 +18,22 @@ non-writable by the package account. Disable admission before revoke/stop and
 terminate privileged work using the helper's verified lifecycle.
 
 The protected helper alone may bind `ipc.packageID=<package>` and
-`ipc.executorTier=executor` via `-X` linker flags. `ipc.ServePeerUnix` then
+`ipc.executorTier=executor` via `-X` linker flags. `ipc.StartPeerUnix` and
+`ipc.ServePeerUnix` then
 requires effective UID zero at runtime, a protected package-scoped socket path,
 and a numeric peer policy. A flag is not administrator approval. Never bind an
 ordinary CGI/worker to this tier or launch it as root. `ipc.DialPeerUnix` only
 authenticates a running root helper; it neither approves nor starts it.
+
+`StartPeerUnix` returns a handle and gives the handler ownership of the
+verified connection beyond callback return. For an orderly supervisor exit,
+stop and reap the child on its owning OS thread, call `StopAccepting`, write
+the final ACK on the retained peer, then exit. StopAccepting waits for socket
+removal and the accept loop, preserving existing peers and handler contexts.
+`Close` or context cancellation aborts all peers and cancels handler contexts;
+do not use them before the final ACK. Keep bounded frames, explicit I/O
+deadlines and current-operation authorization in the handler. Retained peers
+and running callbacks continue to count against the eight-slot limit.
 
 The [HTTP and IPC contracts](http-boundaries.md) describe the peer transport,
 connection limits and callback responsibilities. For custom build hooks, run

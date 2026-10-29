@@ -72,70 +72,89 @@ func peerSocket(fd int, name string) (unix.Stat_t, error) {
 	return st, err
 }
 
-func servePeerUnix(ctx context.Context, run, name string, policy PeerPolicy, h func(context.Context, net.Conn, PeerCredentials)) error {
+func startPeerUnix(ctx context.Context, run, name string, policy PeerPolicy, h func(context.Context, net.Conn, PeerCredentials)) (*PeerServer, error) {
 	if os.Geteuid() != 0 {
-		return errors.New("ipc: peer server requires root executor identity")
+		return nil, errors.New("ipc: peer server requires root executor identity")
 	}
 	if err := ctx.Err(); err != nil {
-		return err
+		return nil, err
 	}
 	fd, err := peerRun(true)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer unix.Close(fd)
+	owned := false
+	defer func() {
+		if !owned {
+			unix.Close(fd)
+		}
+	}()
 	var st unix.Stat_t
 	if err := unix.Fstatat(fd, name, &st, unix.AT_SYMLINK_NOFOLLOW); err != unix.ENOENT {
-		return errors.New("ipc: executor socket already exists or cannot be inspected")
+		return nil, errors.New("ipc: executor socket already exists or cannot be inspected")
 	}
 	l, err := net.ListenUnix("unix", &net.UnixAddr{Name: fmt.Sprintf("/proc/self/fd/%d/%s", fd, name), Net: "unix"})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	l.SetUnlinkOnClose(false)
-	defer l.Close()
+	defer func() {
+		if !owned {
+			l.Close()
+		}
+	}()
 	if err := unix.Fchownat(fd, name, 0, int(policy.GID), unix.AT_SYMLINK_NOFOLLOW); err != nil {
 		unix.Unlinkat(fd, name, 0)
-		return err
+		return nil, err
 	}
 	if err := unix.Fchmodat(fd, name, 0660, 0); err != nil {
 		unix.Unlinkat(fd, name, 0)
-		return err
+		return nil, err
 	}
 	st, err = peerSocket(fd, name)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer func() {
+	handlerCtx, cancel := context.WithCancel(ctx)
+	s := &PeerServer{listener: l, ctx: handlerCtx, cancel: cancel, done: make(chan struct{}), closed: make(chan struct{}), conns: make(map[*peerConn]struct{}), slots: make(chan struct{}, 8)}
+	s.cleanup = func() {
+		defer unix.Close(fd)
 		current, err := peerSocket(fd, name)
 		if err == nil && st.Dev == current.Dev && st.Ino == current.Ino {
-			unix.Unlinkat(fd, name, 0)
+			if err := unix.Unlinkat(fd, name, 0); err != nil {
+				s.err = errors.Join(s.err, err)
+			}
+		} else if err != nil && err != unix.ENOENT {
+			s.err = errors.Join(s.err, err)
 		}
-	}()
-	return servePeers(ctx, l, policy, h)
-}
-
-func servePeers(ctx context.Context, l *net.UnixListener, policy PeerPolicy, h func(context.Context, net.Conn, PeerCredentials)) error {
-	s := &Server{conns: make(map[*trackedConn]struct{})}
-	done := make(chan struct{})
-	defer close(done)
-	defer s.closeConnections()
+	}
+	owned = true
+	go s.servePeers(ctx, l, policy, h)
 	go func() {
 		select {
 		case <-ctx.Done():
-			s.closeConnections()
-			l.Close()
-		case <-done:
+			s.Close()
+		case <-s.closed:
 		}
 	}()
-	slots := make(chan struct{}, 8)
+	return s, nil
+}
+
+func (s *PeerServer) servePeers(ctx context.Context, l *net.UnixListener, policy PeerPolicy, h func(context.Context, net.Conn, PeerCredentials)) {
+	defer close(s.done)
+	defer s.cleanup()
 	for {
 		c, err := l.AcceptUnix()
 		if err != nil {
 			if ctx.Err() != nil {
-				return ctx.Err()
+				s.err = ctx.Err()
+			} else if !errors.Is(err, net.ErrClosed) {
+				s.err = err
 			}
-			return err
+			if s.err != nil {
+				s.closeConnections()
+			}
+			return
 		}
 		peer, err := peerCredentials(c)
 		if err != nil || peer.UID != policy.UID {
@@ -143,25 +162,25 @@ func servePeers(ctx context.Context, l *net.UnixListener, policy PeerPolicy, h f
 			continue
 		}
 		select {
-		case slots <- struct{}{}:
+		case s.slots <- struct{}{}:
 		default:
 			c.Close()
 			continue
 		}
-		t := &trackedConn{Conn: c, owner: s}
+		t := &peerConn{Conn: c, owner: s}
 		s.mu.Lock()
 		if s.closing {
 			s.mu.Unlock()
-			c.Close()
-			<-slots
+			t.handlerReturned()
+			t.Close()
 			continue
 		}
 		s.conns[t] = struct{}{}
 		s.mu.Unlock()
 		c.SetDeadline(time.Now().Add(5 * time.Second))
 		go func() {
-			defer func() { t.Close(); <-slots }()
-			h(ctx, t, peer)
+			defer t.handlerReturned()
+			h(s.ctx, t, peer)
 		}()
 	}
 }
