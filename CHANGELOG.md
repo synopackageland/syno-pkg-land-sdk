@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Add `(*api.Server).InvokeAsAdministrator(ctx, user, method, params)` for
+  package-account commands outside CGI, such as a helper daemon's subcommand,
+  that already authenticated the person asking. It runs one App JSON route in
+  process with an administrator `Caller` only after the entry authenticator's
+  `AdmitAdministrator` confirms the account: `dsm.EntryGate` asks DSM's native
+  role provider and requires the account to be enabled and unexpired. It
+  refuses under CGI (`GATEWAY_INTERFACE`), inside any request the server
+  dispatches, and for integration, HTTP, stream, SDK and unknown routes. This
+  replaces building a private server and calling `ServeHTTP` in process, which
+  the CLI route audit rejects. Add `api.AdministratorAdmitter` and
+  `api.ErrInsideDispatch`.
 - Add `api.HandleIntegration` for fixed service callbacks that arrive without
   a DSM session, such as Chat buttons and webhooks. It is a raw HTTP route
   selected by exactly one `?method=` value and declared with the new

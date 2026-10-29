@@ -204,7 +204,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel = context.WithTimeout(ctx, DefaultRequestTimeout)
 	}
 	defer cancel()
-	r = r.WithContext(ctx)
+	r = r.WithContext(context.WithValue(ctx, dispatchKey{}, true))
 	// DSM's CGI gateway cuts the reply short if the CGI exits with request
 	// bytes unread, so drain whatever the handling below did not consume.
 	defer io.Copy(io.Discard, r.Body)
