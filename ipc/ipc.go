@@ -1,5 +1,5 @@
-// Package ipc serves private HTTP IPC for the non-root package account.
-// It never returns a listener or accepts a network address.
+// Package ipc serves private HTTP IPC for the non-root package account and
+// reserves loopback ports for supervised children. It never returns a listener.
 package ipc
 
 import (
