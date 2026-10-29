@@ -12,10 +12,12 @@ import tarfile
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent
 prepare = runpy.run_path(str(ROOT / 'prepare-npm-publish.py'))['prepare']
 validate = runpy.run_path(str(ROOT / 'check-npm-metadata.py'))['validate']
+publish = runpy.run_path(str(ROOT / 'publish-npm.py'))['publish']
 
 class PublishTests(unittest.TestCase):
     def test_directory_request_is_clean_and_preserves_gated_bytes(self):
@@ -43,11 +45,12 @@ class PublishTests(unittest.TestCase):
                 stage = prepare(original, work / 'clean')
                 registry = 'http://127.0.0.1:' + str(server.server_port)
                 config = work / 'npmrc'
-                config.write_text('//127.0.0.1:'+str(server.server_port)+'/:_authToken=synthetic-test-value\n')
+                config.write_text('registry='+registry+'\n//127.0.0.1:'+str(server.server_port)+'/:_authToken=synthetic-test-value\n')
                 env = {**os.environ, 'NPM_CONFIG_USERCONFIG':str(config), 'NPM_CONFIG_PROVENANCE':'false'}
                 for argument, cwd in [(str(original), work), (None, Path(stage['packageDirectory']))]:
-                    command = ['npm','publish'] + ([argument] if argument else [])
-                    subprocess.run(command+['--registry='+registry,'--ignore-scripts','--access=public'],cwd=cwd,env=env,capture_output=True,check=True,timeout=30)
+                    command = (['npm','publish',argument,'--registry='+registry,'--ignore-scripts','--access=public'] if argument else
+                               [os.sys.executable,str(ROOT/'publish-npm.py'),stage['packageDirectory'],'--userconfig',str(config)])
+                    subprocess.run(command,cwd=cwd,env=env,capture_output=True,check=True,timeout=30)
                 old = requests[0]['versions']['1.0.0']
                 with self.assertRaises(ValueError): validate(old)
                 clean = requests[1]['versions']['1.0.0']
@@ -70,5 +73,14 @@ class PublishTests(unittest.TestCase):
     def test_nested_registry_metadata_is_rejected(self):
         for key in ['_from','_resolved']:
             with self.assertRaises(ValueError): validate({'versions':{'1.0.0':{key:'fixture'}}})
+
+    def test_publish_wrapper_rejects_tarball_before_running_npm(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            artifact = Path(temporary) / 'package.tgz'
+            artifact.write_bytes(b'fixture')
+            with patch('subprocess.run') as run:
+                with self.assertRaisesRegex(ValueError, 'tarball paths are forbidden'):
+                    publish(artifact, Path(temporary) / 'npmrc')
+                run.assert_not_called()
 
 if __name__ == '__main__': unittest.main()
