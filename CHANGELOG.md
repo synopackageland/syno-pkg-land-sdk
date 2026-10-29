@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.35.0 (2026-10-29)
 
 - Add `appbackup` and `appbackup/cmd/control` for Hyper Backup application
   backup. The control runs as the package account only: it archives the whole
@@ -13,6 +13,35 @@
   minor version, unpacks into a private folder first and leaves the current
   data unchanged when it refuses. The root side is a fixed script that the
   matching CLI generates; see [docs/app-backup.md](docs/app-backup.md).
+- Native Apps rebuilt with CLI 0.37.0 gain a fixed `scripts/backup/` shim
+  that Hyper Backup runs as root. It only switches to the package account and
+  moves one archive it never reads; the App itself still runs as the package
+  user and its privilege tier is unchanged. Opt out with
+  `backup: { hyper_backup: false }` in `dsm-package.yaml`.
+
+## 0.34.0 (2026-10-29)
+
+- Add `ipc.ReserveLoopback` and `ProbeLoopback` for official supervised
+  children, without exposing an App listener.
+- Add named `ipc.StartUnix` server handles with Close, Shutdown and Wait;
+  stop/revoke also closes hijacked connections and active streams.
+- Add `ipc.ServePeerUnix` and `DialPeerUnix` with protected root-owned 0660
+  sockets and SO_PEERCRED. Servers require a separately approved executor
+  build and root identity; ordinary CGI/workers retain the package account.
+- Align SDK/App versions at 0.34.0 for CLI 0.36.0. The executor 0.32.0 payload
+  inventory is unchanged. No publication or device acceptance is claimed.
+
+- Add `(*api.Server).InvokeAsAdministrator(ctx, user, method, params)` for
+  package-account commands outside CGI, such as a helper daemon's subcommand,
+  that already authenticated the person asking. It runs one App JSON route in
+  process with an administrator `Caller` only after the entry authenticator's
+  `AdmitAdministrator` confirms the account: `dsm.EntryGate` asks DSM's native
+  role provider and requires the account to be enabled and unexpired. It
+  refuses under CGI (`GATEWAY_INTERFACE`), inside any request the server
+  dispatches, and for integration, HTTP, stream, SDK and unknown routes. This
+  replaces building a private server and calling `ServeHTTP` in process, which
+  the CLI route audit rejects. Add `api.AdministratorAdmitter` and
+  `api.ErrInsideDispatch`.
 - Add `api.HandleIntegration` for fixed service callbacks that arrive without
   a DSM session, such as Chat buttons and webhooks. It is a raw HTTP route
   selected by exactly one `?method=` value and declared with the new

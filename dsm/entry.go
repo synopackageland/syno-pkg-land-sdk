@@ -48,6 +48,7 @@ type EntryGate struct {
 	now     func() time.Time
 	allowed func(ctx context.Context, principal, app, addr string) (bool, error)
 	enabled func(ctx context.Context, principal string) (bool, error)
+	admin   func(ctx context.Context, principal string) (bool, error)
 }
 
 // EntryMode keeps App admission visible to api.Server, including public routes.
@@ -70,7 +71,7 @@ func NewEntryGate(next api.Authenticator, mode, packageID, dataDir string) (api.
 	if !packageName.MatchString(packageID) {
 		return nil, fmt.Errorf("invalid package ID %q", packageID)
 	}
-	return &EntryGate{next: next, mode: mode, app: "SYNO.SDS." + packageID + ".Instance", dir: filepath.Join(dataDir, "entry"), now: time.Now, allowed: AppPrivilege, enabled: AccountEnabled}, nil
+	return &EntryGate{next: next, mode: mode, app: "SYNO.SDS." + packageID + ".Instance", dir: filepath.Join(dataDir, "entry"), now: time.Now, allowed: AppPrivilege, enabled: AccountEnabled, admin: IsAdministrator}, nil
 }
 
 func (g *EntryGate) Authenticate(r *http.Request) (api.Identity, error) {
@@ -124,6 +125,30 @@ func (g *EntryGate) AdmitPrincipal(ctx context.Context, principal string) (api.I
 		return api.Identity{}, api.ErrAppPrivilegeDenied
 	}
 	return api.Identity{User: principal}, nil
+}
+
+// AdmitAdministrator implements api.AdministratorAdmitter for
+// api.Server.InvokeAsAdministrator. DSM's native role provider, not the App,
+// decides; the account must also be enabled and unexpired. Unknown refuses.
+func (g *EntryGate) AdmitAdministrator(ctx context.Context, principal string) (api.Identity, error) {
+	if !validPrincipal(principal) {
+		return api.Identity{}, api.ErrAdminRequired
+	}
+	admin, err := g.admin(ctx, principal)
+	if err != nil {
+		return api.Identity{}, err
+	}
+	if !admin {
+		return api.Identity{}, api.ErrAdminRequired
+	}
+	enabled, err := g.enabled(ctx, principal)
+	if err != nil {
+		return api.Identity{}, err
+	}
+	if !enabled {
+		return api.Identity{}, api.ErrAccountDisabled
+	}
+	return api.Identity{User: principal, Admin: true}, nil
 }
 
 type cachedDecision struct {

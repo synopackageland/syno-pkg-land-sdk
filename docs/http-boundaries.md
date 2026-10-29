@@ -1,6 +1,6 @@
 # HTTP boundaries
 
-Use SDK 0.33.0 with CLI 0.35.0. JSON operations still use `api.Handle`,
+Use SDK/App 0.34.0 with CLI 0.36.0. JSON operations still use `api.Handle`,
 `HandleRequest`, `HandleResponse` or query-selected `HandleStream`.
 
 ## Fixed browser routes
@@ -116,6 +116,33 @@ with kind and permission `integration`. Handlers reachable from a
 `HandleIntegration` handler argument may construct `http.HandlerFunc`, as for
 `HandleHTTP`.
 
+## In-process administrator calls
+
+A package-account command that runs outside CGI and already authenticated the
+person who asked, such as a helper daemon's `api.cgi <subcommand>`, may need
+one App route's result for that administrator. Build the App's normal server
+with `dsm.NewEntryGate` and call it in process:
+
+```go
+out, err := server.InvokeAsAdministrator(ctx, user, "app.support.propose", params)
+```
+
+The SDK, not the App, decides who runs it. `dsm.EntryGate.AdmitAdministrator`
+asks DSM's native role provider whether `user` is a current administrator and
+requires the account to be enabled and unexpired; the route then runs with an
+administrator `Caller` under the same permission and entry checks as a request.
+
+It refuses:
+
+- under CGI (`GATEWAY_INTERFACE` set) and inside any request the server is
+  dispatching, so no request can choose the account it runs as;
+- integration, raw HTTP, stream, SDK and unknown methods;
+- params that are not one JSON value within the server's request limit.
+
+Never call `ServeHTTP` on a server in process to obtain a `Caller`; the CLI
+route audit rejects it. The CLI audit requires a literal method declared
+`administrators` in permissions.json for each `InvokeAsAdministrator` call.
+
 ## Private worker IPC
 
 ```go
@@ -143,9 +170,96 @@ An existing path is refused, including stale sockets; inspect and remove a
 stale socket explicitly while the worker is stopped. Cancellation closes
 connections and removes only the socket the helper created.
 
+For independent data-plane sockets, use `ipc.StartUnix(ctx, path, handler)`:
+
+```go
+site, err := ipc.StartUnix(ctx,
+    "/var/packages/SampleApp/var/run/site-one.sock", proxy)
+if err != nil {
+    return err
+}
+defer site.Close()
+// On stop or authority revocation:
+err = site.Shutdown(stopContext)
+```
+
+Each path names a different direct child of the same run directory.
+`StartUnix` returns after binding and securing the socket, or returns a startup
+error synchronously. Its handle exposes `Close`, `Shutdown` and `Wait`, never
+a listener. `ServeUnix` is the blocking convenience form. Both forms track
+accepted connections through their entire lifetime, including HTTP hijacks.
+Cancellation, Close and Shutdown close active streams and hijacked connections
+and remove only the owned socket. Shutdown is a stop/revoke operation, not a
+promise to drain active streams. Stopping one server leaves the others running.
+Handlers must propagate cancellation to upstream work and enforce their own
+target approval, pinning and authentication. This data plane can serve root
+paths, WebSocket and streams without routing through CGI or granting browser
+ingress.
+
 The matching dial helper checks socket ownership, type and exact mode 0600.
 This is local IPC within one package account, not a user-identity boundary or
 a DSM nginx ingress. Other processes running as that account are trusted.
+
+## Ports for supervised children
+
+```go
+reservation, err := ipc.ReserveLoopback(ctx, 0)
+if err != nil {
+    return err
+}
+defer reservation.Release()
+address := reservation.Address() // always 127.0.0.1:<port>
+// Configure the official child binary to bind address.
+if err := reservation.Release(); err != nil {
+    return err
+}
+// Start the child and verify readiness; retry allocation on bind failure.
+```
+
+Zero selects an ephemeral TCP4 loopback port; a nonzero `uint16` requests a
+specific port. `Port` returns its number. The reservation holds the bind until
+Release and has no Accept, listener or serving API.
+`ipc.ProbeLoopback(ctx, port)` checks a specific nonzero port and releases it
+immediately. Neither API proves future availability. An official binary that
+cannot inherit the descriptor has a release-to-bind race; supervise it, verify
+readiness and retry on conflict. These APIs neither start nor elevate a child
+and do not reserve UDP or wildcard/IPv6 addresses.
+
+## Optional executor peer protocol
+
+An optional helper is a separate, explicitly approved executor payload, with
+protected installation, digest approval and stop/revoke lifecycle. Importing
+a client never approves, installs or starts that payload. Ordinary CGI/worker
+builds bind `ipc.executorTier=none` even when using SDK executor capabilities.
+The SDK provides no setuid, sudo or root process launch.
+
+The protected helper build binds both `ipc.packageID=SampleApp` and
+`ipc.executorTier=executor` with `-X` linker flags. `ipc.ServePeerUnix` also
+requires effective UID zero. Bind only the separately approved helper this
+way; never a CGI, package worker or package-writable executable.
+
+```go
+err := ipc.ServePeerUnix(ctx,
+    "/var/run/synopkgland/SampleApp/helper.sock",
+    ipc.PeerPolicy{UID: packageUID, GID: packageGID},
+    func(ctx context.Context, conn net.Conn, peer ipc.PeerCredentials) {
+        // Decode a bounded JSON frame, verify protocol and current approval,
+        // execute only fixed authorized operations, and encode the reply.
+    })
+```
+
+Linux pins root-owned, non-group/world-writable directories beneath the
+platform `/var/run` anchor and refuses child symlinks. Each socket is root-owned
+0660 with the selected GID; directory ownership stays with root. Existing paths
+are refused. SO_PEERCRED admits exactly `PeerPolicy.UID` before the callback;
+UID zero explicitly selects a root-to-root channel. At most eight callbacks
+are active, each connection has a five-second deadline, and cancellation
+closes all accepted connections. The handler remains responsible for bounded
+frame sizes, method validation, digest/grant checks and cancellation.
+`ipc.DialPeerUnix` checks root ownership, exact mode, protected ancestors and
+server UID zero. Ordinary package processes may use the client without an
+executor binding. Neither this transport nor a successful audit proves the
+helper's privileged operations safe.
 
 ## Source audit
 
@@ -157,8 +271,8 @@ package imported by a shipped root becomes audited. Local replacement modules
 are included. Published dependencies and prebuilt/custom-hook executables
 remain trusted packaging inputs; the audit is not a whole-program sandbox.
 
-Only handler declarations reachable from a direct `HandleHTTP` or
-`ipc.ServeUnix` handler argument may construct local HTTP muxes/handler
+Only handler declarations reachable from a direct `HandleHTTP`,
+`ipc.ServeUnix` or `ipc.StartUnix` handler argument may construct local HTTP muxes/handler
 functions or implement `ServeHTTP`. This includes local factories and types
 in imported local packages. Unrelated handlers remain rejected. Dynamic
 prefixes, constructor aliases, undeclared permissions, source symlinks,
@@ -166,3 +280,22 @@ global default-mux handlers and direct HTTP/TCP/TLS/other listeners remain
 rejected even when they reuse an approved IPC handler. Build repeats the audit
 after UI hooks. Runtime inventory checks remain authoritative for SDK routes.
 Raw HTTP registrations may appear in discovery, but cannot back ctl RPC commands.
+
+Listener types such as `net.Listener` and `net.ListenConfig` create no entry.
+Real listener constructors, their aliases and direct serving calls remain
+rejected; declared `ListenConfig` and `http.Server` serving methods are also
+checked. Direct SDK port and peer-IPC calls are supported boundaries; SDK
+constructor aliases are refused.
+
+Custom prepare hooks must audit every shipped Go entry independently:
+`synopkgland audit-entry ./cmd/helper --dir backend --json`. Select the same
+`--arch amd64,arm64,arm` targets as the build. Supply `--permissions` relative
+to the module directory when an entry registers App methods. The command
+resolves only that entry's actual import graph without running init/main.
+Regular backend/worker build audits use the same rule. Importing a package
+includes all its target-selected files, including unused server functions;
+there is no function-level dead-code exemption. Split client/server
+responsibilities into real packages or migrate shared server code to SDK
+boundaries. Do not hide files, rename imports or exempt whole packages.
+Custom hooks remain responsible for their protected executor build binding
+and approval.
