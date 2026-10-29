@@ -10,10 +10,18 @@ Scan the resulting archive with the repository content scanner and the independe
 publication audit scanner. Supply the private policy through `SPL_INTERNAL_DENYLIST`;
 never commit policy contents. Resolve all findings and scanner errors before release.
 
-When publication is authorized, run `npm publish --ignore-scripts --access public`
-with the prepared **package directory as the current directory**, and without a
-tarball or `file:` argument. Keep the temporary npm userconfig outside that directory.
-Do not publish the original archive pathname: npm can copy it into public metadata.
+When publication is authorized, use the directory-only wrapper:
+
+```sh
+python3 scripts/publish-npm.py PACKAGE_DIRECTORY --userconfig PRIVATE_NPMRC
+```
+
+Pass the exact `packageDirectory` returned by preparation. The wrapper rejects
+tarball paths and invokes `npm publish --ignore-scripts --access public` with
+the prepared directory as its current directory and no package argument.
+Keep the temporary npm userconfig outside that directory and delete it afterwards.
+Never pass any archive pathname to `npm publish`, including the cleaned archive:
+npm can copy that pathname into public `_resolved` and `_from` metadata.
 
 After publication, save the full `npm view PACKAGE@VERSION --json` output and the
 raw JSON response from `https://registry.npmjs.org/PACKAGE/VERSION`.
@@ -24,7 +32,8 @@ mirror separately. A version or integrity match alone does not establish clean m
 `python3 scripts/test-npm-publish.py` captures real npm requests against a loopback
 registry. The old archive-path request must fail metadata validation; the directory
 request must pass and upload exactly the scanned repacked archive bytes. This test
-never contacts or modifies a public registry.
+also verifies that the wrapper rejects tarball paths before running npm. It never
+contacts or modifies a public registry.
 
 ## Executor manifest contract
 

@@ -1,0 +1,38 @@
+{
+  "version": "0.38.1",
+  "executorVersion": "0.32.0",
+  "executorRootSDK": "v0.19.0",
+  "packages": {
+    "@synopackageland/sdk": "0.38.1",
+    "@synopackageland/app": "0.38.1",
+    "syno-pkg-land-app": "0.38.1",
+    "synopkgland_app": "0.38.1"
+  },
+  "executorDigests": {
+    "x86_64": "aa8259f22620c3301ee83b76f6de6fbf06b4df36f49b64a5cc12772a3072abcc",
+    "aarch64": "97d2b3d8d4a169ba39583a78d5f30428f877d9aac7b38415a69ac024200716bd",
+    "armv7": "3cb936feabe1252a6fc4d44ac5318ff340bbc5fc89acd53a9afaddeaa94914bf",
+    "lifecycle": {
+      "x86_64": "c6fbb377ecd5ec7ee5b96439f22091d9fa5965dfd616d510ca9445722f436721",
+      "aarch64": "a9ca1750d4d5cff4727dc29789e6eaf0a365cb0e674f1bb796971d82f2d4fa27",
+      "armv7": "6d25fc972eba12e3ac68f8b6a95a45e9e5706ebe19ffc1ff774fc318acbeb90f"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Metadata correction only: version and pin checks, directory-only publish guard, pack file and byte comparisons, and leak scans. Reuse 0.38.0 compiled runtime content and unchanged executor inventory. No full matrix, qemu, Rust crate publish or DSM acceptance."
+  },
+  "ui": {
+    "builtAgainst": "0.17.0",
+    "peer": ">=0.10.1 <0.18.0"
+  },
+  "node": {
+    "build": "24.22.1",
+    "compatibility": "22.23.4",
+    "minimum": "22"
+  }
+}

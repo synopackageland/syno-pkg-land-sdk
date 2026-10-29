@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.38.1 (2026-10-29)
+
+- Republish with clean registry metadata
+
 ## 0.38.0 (2026-10-29)
 
 - background: `Store.RemoveFor` drops a finished job the caller sees, with the
