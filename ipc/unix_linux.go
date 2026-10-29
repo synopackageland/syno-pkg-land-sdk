@@ -51,51 +51,83 @@ func privateSocket(fd int, name string) error {
 }
 
 func serveUnix(ctx context.Context, run, name string, h http.Handler) error {
-	fd, err := privateRun(run)
+	s, err := startUnix(ctx, run, name, h)
 	if err != nil {
 		return err
 	}
-	defer unix.Close(fd)
+	return s.Wait()
+}
+
+func startUnix(ctx context.Context, run, name string, h http.Handler) (*Server, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	fd, err := privateRun(run)
+	if err != nil {
+		return nil, err
+	}
+	owned := false
+	defer func() {
+		if !owned {
+			unix.Close(fd)
+		}
+	}()
 	var st unix.Stat_t
 	if err := unix.Fstatat(fd, name, &st, unix.AT_SYMLINK_NOFOLLOW); err != unix.ENOENT {
-		return errors.New("ipc: socket path already exists or cannot be inspected")
+		return nil, errors.New("ipc: socket path already exists or cannot be inspected")
 	}
 	path := fmt.Sprintf("/proc/self/fd/%d/%s", fd, name)
 	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: path, Net: "unix"})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	listener.SetUnlinkOnClose(false)
-	defer listener.Close()
 	if err := unix.Fchmodat(fd, name, 0600, 0); err != nil {
+		listener.Close()
 		unix.Unlinkat(fd, name, 0)
-		return err
+		return nil, err
 	}
 	if err := privateSocket(fd, name); err != nil {
-		return err
+		listener.Close()
+		unix.Unlinkat(fd, name, 0)
+		return nil, err
 	}
-	unix.Fstatat(fd, name, &st, unix.AT_SYMLINK_NOFOLLOW)
-	defer func() {
+	if err := unix.Fstatat(fd, name, &st, unix.AT_SYMLINK_NOFOLLOW); err != nil {
+		listener.Close()
+		return nil, err
+	}
+	cleanup := func() {
 		var current unix.Stat_t
 		if unix.Fstatat(fd, name, &current, unix.AT_SYMLINK_NOFOLLOW) == nil && current.Ino == st.Ino && current.Dev == st.Dev {
 			unix.Unlinkat(fd, name, 0)
 		}
+		unix.Close(fd)
+	}
+	s := &Server{
+		http:  &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second},
+		conns: make(map[*trackedConn]struct{}),
+		done:  make(chan struct{}),
+	}
+	owned = true
+	go func() {
+		err := s.http.Serve(trackedListener{Listener: listener, owner: s})
+		s.closeConnections()
+		if errors.Is(err, http.ErrServerClosed) || errors.Is(err, net.ErrClosed) {
+			err = ctx.Err()
+		}
+		s.err = err
+		listener.Close()
+		cleanup()
+		close(s.done)
 	}()
-	server := &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second}
-	done := make(chan struct{})
-	defer close(done)
 	go func() {
 		select {
 		case <-ctx.Done():
-			server.Close()
-		case <-done:
+			s.Close()
+		case <-s.done:
 		}
 	}()
-	err = server.Serve(listener)
-	if errors.Is(err, http.ErrServerClosed) {
-		return ctx.Err()
-	}
-	return err
+	return s, nil
 }
 
 func dialUnix(ctx context.Context, run, name string) (net.Conn, error) {

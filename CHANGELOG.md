@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.34.0 (2026-10-29)
+
+- Add `ipc.ReserveLoopback` and `ProbeLoopback` for official supervised
+  children, without exposing an App listener.
+- Add named `ipc.StartUnix` server handles with Close, Shutdown and Wait;
+  stop/revoke also closes hijacked connections and active streams.
+- Add `ipc.ServePeerUnix` and `DialPeerUnix` with protected root-owned 0660
+  sockets and SO_PEERCRED. Servers require a separately approved executor
+  build and root identity; ordinary CGI/workers retain the package account.
+- Align SDK/App versions at 0.34.0 for CLI 0.36.0. The executor 0.32.0 payload
+  inventory is unchanged. No publication or device acceptance is claimed.
 
 - Add `api.HandleIntegration` for fixed service callbacks that arrive without
   a DSM session, such as Chat buttons and webhooks. It is a raw HTTP route
