@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Add `appbackup` and `appbackup/cmd/control` for Hyper Backup application
+  backup. The control runs as the package account only: it archives the whole
+  data folder (`var`) to standard output and restores it from standard input.
+  Offline mode copies files while Hyper Backup has the App stopped; online
+  mode snapshots SQLite databases through `sqlite3 .backup` and leaves out
+  their journals. An optional hook runs as `freeze` and `thaw` around an
+  export. The archive records the package and its `major.minor` data version;
+  a restore accepts the same package and major version with an equal or lower
+  minor version, unpacks into a private folder first and leaves the current
+  data unchanged when it refuses. The root side is a fixed script that the
+  matching CLI generates; see [docs/app-backup.md](docs/app-backup.md).
 - Add `api.HandleIntegration` for fixed service callbacks that arrive without
   a DSM session, such as Chat buttons and webhooks. It is a raw HTTP route
   selected by exactly one `?method=` value and declared with the new

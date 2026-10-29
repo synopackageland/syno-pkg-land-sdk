@@ -4,7 +4,7 @@ SDK for DSM packages built with [synopkgland](https://github.com/synopackageland
 
 | Path | Contents |
 |---|---|
-| `/` | Go module `github.com/synopackageland/syno-pkg-land-sdk`: `api`, `background`, `datamigrate`, `delegate`, `dsm`, `filestation`, `identity`, `ipc`, `jsonlimits`, `portal`, `sharedfolder` |
+| `/` | Go module `github.com/synopackageland/syno-pkg-land-sdk`: `api`, `appbackup`, `background`, `datamigrate`, `delegate`, `dsm`, `filestation`, `identity`, `ipc`, `jsonlimits`, `portal`, `sharedfolder` |
 | `executor/` | Go module `github.com/synopackageland/syno-pkg-land-sdk/executor`: the delegated executor; pins the root Go SDK for the shared DSM role provider |
 | `ts/` | npm package `@synopackageland/sdk` (`.` headless, `./vue` components) |
 | `spec/protocol/v1/` | Executor protocol: rules (RFC 2119), op schemas, `errors.json`, vectors |
@@ -44,6 +44,11 @@ an SDK policy that differs from the digest the CLI binds with
 
 For owner-bound asynchronous Go work, structured results and ctl integration, see
 [Structured background jobs](docs/background-results.md).
+
+Native Apps appear in Hyper Backup as applications by default; see
+[Hyper Backup application backup](docs/app-backup.md) for what is archived,
+offline and online modes, the data version check, and the fixed root script
+Hyper Backup runs.
 
 ## Testing an App with the executor
 
