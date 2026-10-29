@@ -51,13 +51,22 @@ same codes.
 
 ## Deadline
 
-A request has one deadline, 60 seconds unless the App sets another
+A request has one deadline, 300 seconds unless the App sets another
 (`api.WithRequestDeadline(handler, api.Timeout(d))`). The server keeps a
-deadline it finds and applies 60 seconds only to a request without one. A
-handler still running at the deadline answers `request_timeout`; a request the
+deadline it finds and applies 300 seconds only to a request without one. A
+cooperative handler that returns its context error at the deadline answers
+`request_timeout`; a request the
 browser canceled answers `request_canceled`. The TS client waits two seconds
 longer than the deadline (`clientTimeout(ctx.requestTimeout)`), so the
-server's reply arrives first.
+server has time to reply before the client stops waiting. These are SDK budgets,
+not guarantees about a proxy outside the App.
+
+Move NAS operations of uncertain duration to the existing package-account
+background worker. Return the admitted job ID promptly and poll its authorized
+status/result. A queued or running job means "still working"; elapsed time alone
+does not make it failed. See [request deadlines](../docs/request-deadlines.md)
+for the audited limits and [background results](../docs/background-results.md)
+for submission, progress, cancellation and recovery.
 
 ## Error codes
 

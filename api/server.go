@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"github.com/synopackageland/syno-pkg-land-sdk/jsonlimits"
 )
 
@@ -28,8 +29,9 @@ const MaxRequestBytesCeiling = 16 << 20
 // DefaultRequestTimeout bounds cooperative CGI work even after a browser
 // disconnect: net/http/cgi does not add a deadline. The SDK's browser client
 // waits two seconds longer (TS clientTimeout), so the reply arrives first. An
-// App with longer or shorter operations sets its own with Timeout.
-const DefaultRequestTimeout = 60 * time.Second
+// App can set its own with Timeout. Unbounded or longer NAS work belongs in
+// a background job, independently of the request and any outer proxy limits.
+const DefaultRequestTimeout = runtimebudget.Operation
 
 type deadlineOptions struct{ timeout time.Duration }
 

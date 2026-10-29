@@ -7,6 +7,7 @@ import (
 	"errors"
 	"github.com/synopackageland/syno-pkg-land-sdk/api"
 	"github.com/synopackageland/syno-pkg-land-sdk/background"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"io"
 	"log"
 	"net"
@@ -16,10 +17,12 @@ import (
 	"time"
 )
 
-const DownloadTimeout = 60 * time.Second
+// DownloadTimeout bounds the background transfer, independently of the CGI.
+// Delegation expiry and revocation still bound the final authorized write.
+const DownloadTimeout = background.JobTimeout
 
 func downloadClient() *http.Client {
-	return &http.Client{Timeout: DownloadTimeout, Transport: &http.Transport{Proxy: nil, DisableKeepAlives: true, DialContext: (&net.Dialer{Timeout: 5 * time.Second}).DialContext, ResponseHeaderTimeout: 10 * time.Second, MaxResponseHeaderBytes: 32 << 10, DisableCompression: true}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	return &http.Client{Timeout: DownloadTimeout, Transport: &http.Transport{Proxy: nil, DisableKeepAlives: true, DialContext: (&net.Dialer{Timeout: 5 * time.Second}).DialContext, ResponseHeaderTimeout: runtimebudget.Operation, MaxResponseHeaderBytes: 32 << 10, DisableCompression: true}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 }
 func (s *Service) download(parent context.Context, in DownloadInput, job JobContext) error {
 	if !validDownload(in) {

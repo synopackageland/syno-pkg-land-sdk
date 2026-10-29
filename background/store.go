@@ -34,10 +34,12 @@ const (
 	MaxOwnerBytes   = 1 << 20
 	MaxPurgeAudit   = 64
 	MaxTotalBytes   = 16 << 20
-	JobTimeout      = 60 * time.Second
-	// RequestLockTimeout leaves room within the CGI request deadline (60 seconds
-	// unless the App sets another) for DSM authentication, file import and the
-	// response. Workers have no lock cap.
+	// JobTimeout is independent of HTTP. Apps can set Runner.Timeout for their
+	// fixed Work; cancel, pause and package stop still interrupt it.
+	JobTimeout = 30 * time.Minute
+	// RequestLockTimeout bounds journal contention, not job execution. Leave
+	// time for authentication, file import and the response. Workers have no
+	// lock cap.
 	RequestLockTimeout = 5 * time.Second
 	// MaxHistory bounds finished jobs kept for reading results and for key reuse.
 	MaxHistory = 64

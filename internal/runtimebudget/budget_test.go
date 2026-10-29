@@ -23,3 +23,9 @@ func TestExecDeadlineLosesElapsedTimeInsteadOfResetting(t *testing.T) {
 		t.Fatal("invalid reserve")
 	}
 }
+
+func TestDefaultOperationToleratesSlowNAS(t *testing.T) {
+	if Operation != 5*time.Minute {
+		t.Fatalf("operation budget %v, want 5m", Operation)
+	}
+}

@@ -120,9 +120,9 @@ export interface AuthorizationAccess {
  revoke(): Promise<AuthorizationStatus>
 }
 
-// The App backend's request deadline in milliseconds (Go api.Timeout); 60
+// The App backend's request deadline in milliseconds (Go api.Timeout); 300
 // seconds (Go api.DefaultRequestTimeout) unless the App sets its own.
-export const DEFAULT_REQUEST_TIMEOUT=60000
+export const DEFAULT_REQUEST_TIMEOUT=300000
 // A client waits this long for a reply: past the backend deadline, so the
 // backend's own request_timeout reply arrives first.
 export function clientTimeout(requestTimeout=DEFAULT_REQUEST_TIMEOUT):number{return requestTimeout+2000}

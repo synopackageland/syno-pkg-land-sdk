@@ -9,11 +9,22 @@ DSM or Container Manager permits that much time.
 | --- | --- | --- |
 | Compose start | `compose.startup_timeout_seconds` (900, 2–900) | One monotonic deadline includes lock, status, spawn, readiness, stability and handoff. The default lets a loaded HDD NAS with 2 GB RAM start an App; declare a shorter value only with device evidence. The 900-second cap remains until native outer limits are verified. |
 | Native lifecycle | `daemon.timeouts` | Start/stop/uninstall accept 2–3600 seconds; status accepts 1–3600. Defaults remain 30/30/60/5. A declaration containing only `timeouts` starts no daemon and works with Compose and background workers. |
-| Request/operation | `backend.timeout_seconds` (60, 1–3600) | Reaches supervisor health window, gateway token adapter and approved executor policy. Each nested operation is clipped to remaining caller time and leaves reply reserve. Binary/Compose Apps without a CGI request setting can enlarge the shared operation allowance through `daemon.timeouts.status` (at least the 60-second default). |
+| Request/operation | `backend.timeout_seconds` (300, 1–3600) | The SDK request and unconfigured operation allowance default to 300 seconds. The matching CLI reads the request default from the SDK's `spec/protocol/v1/timeouts.json` and passes the manifest budget to the backend, browser, supervisor, gateway token adapter and approved executor policy. Explicit values remain authoritative. Each nested operation is clipped to remaining caller time and leaves reply reserve. Binary/Compose Apps without a CGI request setting can enlarge the shared operation allowance through `daemon.timeouts.status`. |
 | Bridge cold start | `backend.timeout_seconds` | Interpreter detection and hello share half the request allowance, leaving time for the call and cancellation. An explicit Go `Config.StartTimeout` overrides the boot share. |
 | App uninstall hook | `uninstall.purge.timeout` (60, 2–3600) | Includes TERM/reap reserve, uses elapsed monotonic time on Linux, and retains a pending marker when termination cannot be confirmed. |
 | CLI transport/wait | `ctl --timeout` (1–3600 seconds) | Applies to discovery, JSON calls, polling and transfer inactivity. Default transport allowance is 62 seconds. An operation shares its remaining allowance across calls; jobs retain their descriptor wait default when no override is supplied. |
-| Jobs | Existing background and root program limits | Execution bounds remain separate from requests; shutdown grace is clipped to the lifecycle stop allowance. |
+| Jobs | `background.Runner.Timeout` (30 minutes by default) and existing root program limits | Package-account job execution is independent of HTTP. Root program policy limits remain separately approved; shutdown grace is clipped to the lifecycle stop allowance. |
+
+The browser waits 302 seconds by default; the identity gateway waits 310 seconds
+for upstream response headers unless configured otherwise. Background downloads
+allow 30 minutes for the transfer and 300 seconds for headers. Journal lock
+contention remains bounded to five seconds. Executor batches retain their
+60-second protocol cap. See [request deadlines](request-deadlines.md) for the
+audit, outer proxy limits and the background job pattern for slow NAS work.
+
+The separate CLI `ctl` transport can still impose its own 62-second default;
+use an explicit `--timeout` for longer synchronous calls. An SDK update does not
+change an already built App, an explicit manifest value or a separate ctl binary.
 
 Each readiness probe may take up to 30 seconds (clipped to the operation budget),
 independently of the DSM status command budget. After startup, a failed or delayed

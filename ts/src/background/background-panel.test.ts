@@ -34,6 +34,18 @@ test('a running job pauses and a paused job resumes or cancels',async()=>{
   expect(v.call).toHaveBeenCalledWith('bg.jobs.resume',{id:'held'})
  }finally{v.done()}
 })
+test('slow work remains Running and is polled without another submission',async()=>{
+ vi.useFakeTimers()
+ const v=mountPanel([job('slow','running',{progress:{done:0,total:0,bytes:0,totalBytes:0}})])
+ try{
+  await settle()
+  await vi.advanceTimersByTimeAsync(6*60*1000)
+  await settle()
+  expect(v.row('slow').querySelector('[data-bg-state]')!.textContent).toBe('Running')
+  expect(v.call.mock.calls.filter(([m])=>m==='bg.jobs.list').length).toBeGreaterThan(1)
+  expect(v.call.mock.calls.some(([m])=>m==='bg.jobs.submit'||m==='bg.download.submit')).toBe(false)
+ }finally{v.done();vi.useRealTimers()}
+})
 test('a delegated job offers no pause: its executor recovery cannot pause',async()=>{
  const v=mountPanel([job('dl','running',{delegation_id:'d1'})])
  try{

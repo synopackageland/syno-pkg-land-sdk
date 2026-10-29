@@ -1,4 +1,5 @@
 import {createDsmSession} from './session.js'
+import {clientTimeout} from '../context'
 import type {ListOptions} from '../nas/contract'
 
 // Destination URLs and API names are never consumer-controlled. An App URL,
@@ -64,7 +65,7 @@ export function createDsmFileStation(options:DsmFileOptions={}){
   const abort=()=>controller.abort()
   signal.addEventListener('abort',abort,{once:true})
   if(signal.aborted)controller.abort()
-  const timer=setTimeout(()=>{timeout=true;controller.abort()},options.timeout??(upload?20*60*1000:60000))
+  const timer=setTimeout(()=>{timeout=true;controller.abort()},options.timeout??(upload?20*60*1000:clientTimeout()))
   try{
    if(controller.signal.aborted)throw {code:'canceled'}
    sent=true

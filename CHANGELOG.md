@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- Allow five minutes by default for cooperative API requests and unconfigured
+  runtime work, with the TS client waiting 302 seconds and the identity gateway
+  waiting 310 seconds for upstream headers. Keep explicit App budgets and earlier
+  parent deadlines. Bridge hello shares the actual default request allowance.
+- Allow 30 minutes for package-account background jobs and delegated downloads;
+  download response headers allow five minutes. Direct browser File Station
+  reads use the same default wait as the TS client; upload budgets are unchanged.
+- Document the request deadline audit, observed DSM CGI/nginx limits and the
+  existing background admission/progress/status pattern. Queued/running means
+  still working; a slow NAS or lost status request alone does not fail a job.
+  Executor batch caps, approved root budgets and credential lifetimes are unchanged.
+
 ## 0.37.0 (2026-10-29)
 
 - Add `api.ServeIngress` for a resident daemon that declares `daemon.ingress`

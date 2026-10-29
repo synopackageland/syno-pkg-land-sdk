@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/synopackageland/syno-pkg-land-sdk/dsm"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/composeingress"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"io"
 	"net"
 	"net/http"
@@ -286,7 +287,7 @@ func NewFront(cfg FrontConfig) (*Front, error) {
 	transport.DialContext = (&net.Dialer{Timeout: 5 * time.Second, KeepAlive: 30 * time.Second}).DialContext
 	transport.ResponseHeaderTimeout = cfg.ResponseHeaderTimeout
 	if transport.ResponseHeaderTimeout <= 0 {
-		transport.ResponseHeaderTimeout = 60 * time.Second
+		transport.ResponseHeaderTimeout = runtimebudget.Operation + 10*time.Second
 	}
 	transport.TLSHandshakeTimeout = 10 * time.Second
 	f.proxy = &httputil.ReverseProxy{Rewrite: f.rewrite, ModifyResponse: f.modifyProxyResponse, Transport: transport, ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
