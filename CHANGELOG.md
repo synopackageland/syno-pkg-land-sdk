@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- daemonctl: supervisor lines in daemon.log (`DAEMON_RESTART_*`,
+  `DAEMON_CHILD_EXIT`) start with the UTC time. `attempt=` is the count in the
+  restart window, the one the delay and the limit use, so it drops as
+  reservations expire; `restarts=` keeps the lifetime count.
 - Allow five minutes by default for cooperative API requests and unconfigured
   runtime work, with the TS client waiting 302 seconds and the identity gateway
   waiting 310 seconds for upstream headers. Keep explicit App budgets and earlier
