@@ -485,8 +485,17 @@ with `capabilities.root`.
 `signal` rejects it with `{code: 'request_canceled'}`, for a page the user
 leaves; past `clientTimeout(ctx.requestTimeout)` it rejects with `{code:
 'request_timeout'}`.
-Without `ctx.requestTimeout` the deadline is `DEFAULT_REQUEST_TIMEOUT`, 60
-seconds like the backend's, and the client waits 62.
+Without `ctx.requestTimeout` the deadline is `DEFAULT_REQUEST_TIMEOUT`, 300
+seconds like the backend's, and the client waits 302. Explicit App deadlines
+still take precedence; set the backend and browser together.
+
+For NAS work of uncertain duration, submit to the existing background worker,
+return its original job ID and poll authorized status/result endpoints. Show
+queued/running as still working, optionally labeling a long wait as slow; do not
+infer failure from elapsed time or a failed status request. A timeout after a
+mutation was sent leaves its completion uncertain: read back the original job
+or operation, without automatically submitting a new one. See
+[request deadlines](../docs/request-deadlines.md).
 
 ```ts
 const controller = new AbortController()

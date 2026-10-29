@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 )
 
@@ -173,8 +174,29 @@ func TestCGIDeadlineIncludesOuterIdentityMiddleware(t *testing.T) {
 	WithRequestDeadline(outer).ServeHTTP(httptest.NewRecorder(), r)
 }
 
-func TestDefaultRequestTimeoutIsSixtySeconds(t *testing.T) {
-	if DefaultRequestTimeout != 60*time.Second {
-		t.Fatalf("DefaultRequestTimeout = %v, want 60s", DefaultRequestTimeout)
+func TestDefaultRequestTimeoutAllowsFiveMinutes(t *testing.T) {
+	if DefaultRequestTimeout != 5*time.Minute {
+		t.Fatalf("DefaultRequestTimeout = %v, want 5m", DefaultRequestTimeout)
 	}
+}
+
+func TestSlowNASRequestOutlivesOneMinute(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		srv := newTestServer(t, &fakeAuth{admin: true}, Handle("demo.slow", func(ctx context.Context, _ Caller, _ json.RawMessage) (any, error) {
+			select {
+			case <-time.After(90 * time.Second):
+				return "joined", nil
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}))
+		r := httptest.NewRequest("POST", "/api.cgi", strings.NewReader(`{"method":"demo.slow"}`))
+		r.Header.Set("Content-Type", "application/json")
+		r.Header.Set("Origin", "http://example.com")
+		w := httptest.NewRecorder()
+		WithRequestDeadline(srv).ServeHTTP(w, r)
+		if !strings.Contains(w.Body.String(), `"data":"joined"`) {
+			t.Fatal(w.Body.String())
+		}
+	})
 }

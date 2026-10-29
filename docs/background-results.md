@@ -41,7 +41,7 @@ Configure the existing Runner's Work in the package worker assembly:
 
 ```go
 runner := background.NewRunner(spool, workerInfo)
-runner.Timeout = 2 * time.Minute // Choose an App execution budget, independently of HTTP.
+runner.Timeout = 30 * time.Minute // The default; choose a finite budget for this fixed Work.
 runner.Work = func(ctx context.Context, task *background.Task) (background.Result, error) {
     task.Report(background.Progress{Phase: "searching", Done: 0, Total: 0})
     // Decode task.Input and call the App's context-aware, fixed operation.
@@ -52,6 +52,26 @@ runner.Work = func(ctx context.Context, task *background.Task) (background.Resul
 }
 err = runner.Run(packageContext)
 ```
+
+The default job allowance is 30 minutes, independently of the five-minute
+request budget. A slower NAS is not a failure while the job remains queued or
+running. `Task.Report` publishes a phase even when no total or percentage is
+known. The UI can label a long-running phase as "Still working" or "Slow NAS"
+while continuing to poll; these are presentation hints over `running`, not new
+terminal journal states. `BackgroundPanel` keeps showing Running and polling.
+Do not change a job to failed because a browser timer or one status read expires.
+
+Keep the worker under the package's own lifecycle context, independent of the
+submitting HTTP context. Do not start a goroutine in CGI and expect it to survive
+CGI exit. Each status/result/cancel request authenticates again; sign-out does
+not cancel accepted package-account work or store a reusable DSM credential.
+When a status read fails, retain the original ID and last known state, mark
+status temporarily unavailable and retry reads with bounded backoff. Resume
+polling after reconnect. Do not resubmit a mutation with a new key.
+Only a terminal job outcome proves success/failure/cancellation. A real worker
+execution timeout still fails the job; a package stop or crash retains the
+existing pause/interruption semantics. See [request deadlines](request-deadlines.md)
+for the request path and proxy limits.
 
 The default Work is still SHA256V1. Custom Work is a trusted Go assembly choice;
 the legacy `worker`/`algorithm` metadata remains `sha256-v1` for this slot, rather
@@ -65,7 +85,7 @@ The runner verifies a bounded snapshot of the private input before calling Work;
 Work consumes that same snapshot. Structured results do not have to return the
 input's hash. Legacy hash results remain `{sha256, bytes}` and keep their existing
 validation. Check the context during I/O and between work units: cancellation and
-timeouts are cooperative. The default job timeout is 60 seconds; changing request
+timeouts are cooperative. The default job timeout is 30 minutes; changing request
 timeouts does not extend it.
 
 ## Result reads and limits

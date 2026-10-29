@@ -6,6 +6,24 @@ import {createDsmFileStation} from './filestation'
 
 afterEach(()=>vi.unstubAllGlobals())
 const signal=()=>new AbortController().signal
+test('direct File Station reads tolerate slow NAS responses and honor a shorter override',async()=>{
+ vi.useFakeTimers()
+ try{
+  const fetch=vi.fn((_url:unknown,init?:RequestInit)=>new Promise((_resolve,reject)=>{
+   init!.signal!.addEventListener('abort',()=>reject(new Error('aborted')),{once:true})
+  }))
+  vi.stubGlobal('fetch',fetch)
+  for(const [timeout,wait] of [[undefined,302000],[1000,1000]] as const){
+   const files=createDsmFileStation({token:()=> 'token',timeout}),seen=vi.fn()
+   const pending=files.shares(0,signal()).catch(seen)
+   await vi.advanceTimersByTimeAsync(wait-1)
+   expect(seen).not.toHaveBeenCalled()
+   await vi.advanceTimersByTimeAsync(1)
+   await pending
+   expect(seen).toHaveBeenCalledWith({code:'timeout'})
+  }
+ }finally{vi.useRealTimers()}
+})
 function browser(){
  const fetch=vi.fn(async(_url:unknown,init?:RequestInit)=>{
   const form=init?.body as URLSearchParams

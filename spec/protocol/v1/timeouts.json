@@ -13,7 +13,7 @@
     "root_run_s": 140
   },
   "request": {
-    "default_s": 60
+    "default_s": 300
   },
   "browser": {
     "margin_ms": 2000

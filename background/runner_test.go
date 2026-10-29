@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 )
 
@@ -176,4 +177,48 @@ func TestNewRunnerUsesProductLimitsAndTheFixedWorker(t *testing.T) {
 	if err != nil || res.SHA256 != digest([]byte("abc")) {
 		t.Fatalf("the production worker must be sha256-v1: %+v %v", res, err)
 	}
+}
+
+func TestSlowJobKeepsProgressAfterSubmittingRequestEnds(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, _ := newStore(t)
+		request, disconnect := context.WithCancel(context.Background())
+		job, _, err := s.Submit(request, SubmitRequest{
+			Key: "slow", Name: "NAS operation", Data: []byte("input"), Submitter: Submitter{User: "alice", UID: "1025"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		disconnect()
+		claimed, err := s.Claim(context.Background())
+		if err != nil || claimed == nil {
+			t.Fatalf("claim: %v %v", claimed, err)
+		}
+		r := NewRunner(s.dir, WorkerInfo{UID: 5})
+		if r.Timeout != 30*time.Minute {
+			t.Fatalf("job budget %v, want 30m", r.Timeout)
+		}
+		r.Work = func(ctx context.Context, task *Task) (Result, error) {
+			task.Report(Progress{Phase: "contacting-nas"})
+			select {
+			case <-time.After(6 * time.Minute):
+				return Result{JSON: []byte(`{"joined":true}`)}, nil
+			case <-ctx.Done():
+				return Result{}, ctx.Err()
+			}
+		}
+		done := make(chan struct{})
+		go func() { r.Process(context.Background(), claimed); close(done) }()
+		time.Sleep(5 * time.Minute)
+		synctest.Wait()
+		pending, err := s.Get(context.Background(), job.ID)
+		if err != nil || pending.State != StateRunning || pending.ErrorCode != "" || pending.Progress == nil || pending.Progress.Phase != "contacting-nas" {
+			t.Fatalf("slow job must remain running with progress: %+v %v", pending, err)
+		}
+		<-done
+		completed, err := s.Get(context.Background(), job.ID)
+		if err != nil || completed.State != StateSucceeded || completed.Result == nil || string(completed.Result.JSON) != `{"joined":true}` {
+			t.Fatalf("completed: %+v %v", completed, err)
+		}
+	})
 }

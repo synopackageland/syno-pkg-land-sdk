@@ -59,7 +59,7 @@ test('the client waits two seconds past the App request deadline',async()=>{
  vi.useFakeTimers()
  try{
   const call=vi.fn(()=>new Promise(()=>{}))
-  for(const [requestTimeout,wait] of [[undefined,62000],[90000,92000]] as const){
+  for(const [requestTimeout,wait] of [[undefined,302000],[90000,92000]] as const){
    const p=createNasProvider({...nasContext(call),requestTimeout}),seen=vi.fn()
    const pending=p.shares(0,signal()).catch(seen)
    await vi.advanceTimersByTimeAsync(wait-1);expect(seen).not.toHaveBeenCalled()

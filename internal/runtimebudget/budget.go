@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const Operation = 60 * time.Second
+const Operation = 5 * time.Minute
 const Cleanup = 5 * time.Second
 const MaxSeconds = 3600
 

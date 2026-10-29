@@ -51,7 +51,8 @@ type Config struct {
 	ScriptName string
 	// PackagesDir is /var/packages unless set; Python is /usr/bin/python3 unless set.
 	PackagesDir, Python string
-	// StartTimeout bounds the wait for the App's hello; 0 is DefaultStartTimeout.
+	// StartTimeout bounds the wait for the App's hello; zero shares half of
+	// the manifest's request budget (api.DefaultRequestTimeout when omitted).
 	StartTimeout time.Duration
 	// ExecutorSocket is the package executor's socket; empty is
 	// /run/synopkgland/<package>/executor.sock. Only Go tests set it, to serve a
@@ -80,11 +81,11 @@ func NewRuntime(cfg Config) (http.Handler, error) {
 	}
 	sv := cfg.services(m)
 	if cfg.StartTimeout <= 0 {
-		seconds := m.TimeoutSeconds
-		if seconds <= 0 {
-			seconds = 60
+		budget := time.Duration(m.TimeoutSeconds) * time.Second
+		if budget <= 0 {
+			budget = api.DefaultRequestTimeout
 		}
-		cfg.StartTimeout = time.Duration(seconds) * time.Second / 2
+		cfg.StartTimeout = budget / 2
 	}
 	session := &Session{Dial: cfg.exec(m), Methods: m.Methods, StartTimeout: cfg.StartTimeout, Services: sv.table(),
 		Transfers: m.Transfers, Spool: filepath.Join(cfg.DataDir, SpoolDir), MaxUploadBytes: m.MaxUploadBytes}

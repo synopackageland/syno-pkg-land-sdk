@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/composeingress"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"io"
 	"log"
 	"net/http"
@@ -476,5 +477,5 @@ func (c Config) operationBudget() time.Duration {
 	if c.OperationSeconds > 0 && c.OperationSeconds <= 3600 {
 		return time.Duration(c.OperationSeconds) * time.Second
 	}
-	return 60 * time.Second
+	return runtimebudget.Operation
 }

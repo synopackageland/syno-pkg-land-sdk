@@ -42,14 +42,16 @@ browser waits 2 seconds past the request (`timeouts.json` holds the values).
 | Executor, `root.run` | the program, then its reply | answers within 130 s (120 + 10) |
 | Executor, every other op | its DSM calls | answers within 30 s |
 | Executor client (Go `delegate.Client`, the bridge runtime's `root.*` and `delegate.*`) | the executor | `root.run` 140 s (`delegate.RootRunTimeout`), every other op 40 s (`delegate.ExecutorTimeout`) |
-| Request (`api.Timeout`, manifest `timeout_seconds`) | the App's backend | default 60 s (`api.DefaultRequestTimeout`), 1–3600 |
+| Request (`api.Timeout`, manifest `timeout_seconds`) | the App's backend | default 300 s (`api.DefaultRequestTimeout`), 1–3600 |
 | Browser (`clientTimeout`, the CLI window's `call`) | the request | the request's deadline + 2 s |
 
 - The request's deadline ends every inner wait: a client never waits past it.
   An App whose backend awaits `root.run` therefore needs a deadline of at
   least the program's `run.timeout_s` + 20 seconds (the executor's 10 and the
   client's 10), so a 120-second program needs `timeout_seconds` 140; a build
-  tool SHOULD refuse less. The default 60 covers programs of up to 40 seconds.
+  tool SHOULD refuse less. The default 300 covers the maximum synchronous
+  program and its response reserve. Longer privileged work uses root jobs;
+  request time never enlarges an approved program budget.
 - A client that gave up does not stop the work: `root.run` runs on (it cannot
   be canceled), and `portal.register` and `portal.unregister` finish their
   steps within 2 minutes. The client reads the result again (`status`,
