@@ -4,7 +4,7 @@ SDK for DSM packages built with [synopkgland](https://github.com/synopackageland
 
 | Path | Contents |
 |---|---|
-| `/` | Go module `github.com/synopackageland/syno-pkg-land-sdk`: `api`, `background`, `datamigrate`, `delegate`, `dsm`, `filestation`, `identity`, `ipc`, `jsonlimits`, `portal`, `sharedfolder` |
+| `/` | Go module `github.com/synopackageland/syno-pkg-land-sdk`: `api`, `appbackup`, `background`, `datamigrate`, `delegate`, `dsm`, `filestation`, `identity`, `ipc`, `jsonlimits`, `portal`, `sharedfolder` |
 | `executor/` | Go module `github.com/synopackageland/syno-pkg-land-sdk/executor`: the delegated executor; pins the root Go SDK for the shared DSM role provider |
 | `ts/` | npm package `@synopackageland/sdk` (`.` headless, `./vue` components) |
 | `spec/protocol/v1/` | Executor protocol: rules (RFC 2119), op schemas, `errors.json`, vectors |
@@ -20,22 +20,22 @@ SDK for DSM packages built with [synopkgland](https://github.com/synopackageland
 An app depends on the SDK through `backend/go.mod`:
 
 ```
-require github.com/synopackageland/syno-pkg-land-sdk v0.34.0
+require github.com/synopackageland/syno-pkg-land-sdk v0.35.0
 ```
 
 A Rust App depends on `syno-pkg-land-app` (`rust/app/`) and runs behind the
 Go runtime:
 
 ```
-syno-pkg-land-app = { git = "https://github.com/synopackageland/syno-pkg-land-sdk", tag = "v0.34.0" }
+syno-pkg-land-app = { git = "https://github.com/synopackageland/syno-pkg-land-sdk", tag = "v0.35.0" }
 ```
 
 The `go.mod` line is the only source of the SDK version. The CLI builds the executor
 from `github.com/synopackageland/syno-pkg-land-sdk/executor` at the immutable
-release declared by the SDK executor manifest. SDK 0.34.0 uses executor/v0.32.0
+release declared by the SDK executor manifest. SDK 0.35.0 uses executor/v0.32.0
 and its six verified payload digests. The manifest ships in both the Go module
-and npm package. Use CLI 0.35.0 for the entry policy and upstream-authenticated
-paths, and templates 0.32.0 for Vue module bundles with lazy chunks.
+and npm package. Use CLI 0.37.0 and templates 0.33.0 with this SDK; CLI 0.37.0
+builds the Hyper Backup control from `appbackup`.
 
 Apps build their API server with
 `api.NewServerWithPermissions(auth, permissionsJSON, routes...)`; it refuses
@@ -44,6 +44,11 @@ an SDK policy that differs from the digest the CLI binds with
 
 For owner-bound asynchronous Go work, structured results and ctl integration, see
 [Structured background jobs](docs/background-results.md).
+
+Native Apps appear in Hyper Backup as applications by default; see
+[Hyper Backup application backup](docs/app-backup.md) for what is archived,
+offline and online modes, the data version check, and the fixed root script
+Hyper Backup runs.
 
 ## Testing an App with the executor
 
