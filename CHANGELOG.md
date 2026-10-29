@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- background: `Store.RemoveFor` drops a finished job the caller sees, with the
+  copy of its input kept since it succeeded. An App calls it when it removes
+  the job's result, so `inputs/` no longer holds files of removed jobs until
+  they leave the 64-job history. Unfinished jobs answer `ErrNotFinished`.
 - `ctx.host.signOut()` signs out of DSM the way DSM's banner menu does, for an
   App that hides the banner with the CLI's `ui.banner: hidden` (CLIs before it
   leave the method out; outside DSM it answers `unsupported`). On a DSM full

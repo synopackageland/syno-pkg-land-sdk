@@ -14,6 +14,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"slices"
 	"syscall"
 	"time"
 	"unicode"
@@ -90,6 +91,7 @@ var (
 	ErrKeyConflict       = errors.New("idempotency key already used for another input")
 	ErrNotFound          = errors.New("job not found")
 	ErrNotCancelable     = errors.New("job already finished")
+	ErrNotFinished       = errors.New("job has not finished")
 	ErrNotRunning        = errors.New("job is not running")
 	ErrNotPausable       = errors.New("job cannot be paused or resumed")
 	ErrUnsafeSpool       = errors.New("background spool is not private to the package account")
@@ -651,6 +653,24 @@ func (s *Store) CancelFor(ctx context.Context, id string, access Access) (Job, e
 		return true, nil
 	})
 	return out, err
+}
+
+// RemoveFor drops a finished job the caller sees from the journal, with its
+// retained copy of the input, once the App is done with it (its result was
+// downloaded or deleted). A schedule made from the job keeps its own copy.
+// Unfinished jobs are refused: cancel them first.
+func (s *Store) RemoveFor(ctx context.Context, id string, access Access) error {
+	return s.withJournal(ctx, func(_ *os.Root, j *journal) (bool, error) {
+		job := find(j, id)
+		if job == nil || !access.sees(*job) {
+			return false, ErrNotFound
+		}
+		if !job.State.terminal() {
+			return false, ErrNotFinished
+		}
+		j.Jobs = slices.DeleteFunc(j.Jobs, func(other Job) bool { return other.ID == id })
+		return true, nil
+	})
 }
 
 // Claim hands the oldest queued job to the worker, or nil when there is none,
