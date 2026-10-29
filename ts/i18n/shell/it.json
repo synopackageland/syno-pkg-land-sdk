@@ -3,6 +3,7 @@
   "background": "Attività in background",
   "administrator": "Amministratore",
   "dsmUser": "Utente DSM",
+  "signOut": "Esci",
   "deniedTitle": "Accesso negato",
   "deniedMessage": "L’account DSM non è autorizzato a usare questa app. Chiedere a un amministratore di consentirlo nei privilegi delle applicazioni DSM.",
   "notes": "Note",

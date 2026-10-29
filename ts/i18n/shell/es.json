@@ -3,6 +3,7 @@
   "background": "Tareas en segundo plano",
   "administrator": "Administrador",
   "dsmUser": "Usuario DSM",
+  "signOut": "Cerrar sesión",
   "deniedTitle": "Sin acceso",
   "deniedMessage": "Su cuenta de DSM no tiene permiso para usar esta aplicación. Pida a un administrador que la permita en los privilegios de aplicaciones de DSM.",
   "notes": "Notas",

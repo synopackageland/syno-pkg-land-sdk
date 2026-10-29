@@ -3,6 +3,7 @@
   "background": "バックグラウンドジョブ",
   "administrator": "管理者",
   "dsmUser": "DSM ユーザー",
+  "signOut": "サインアウト",
   "deniedTitle": "アクセスできません",
   "deniedMessage": "この DSM アカウントにはこのアプリを使用する権限がありません。DSM のアプリケーション権限で許可するよう管理者に依頼してください。",
   "notes": "注記",

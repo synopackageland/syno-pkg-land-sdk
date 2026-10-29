@@ -4,7 +4,7 @@
 // leases and job polling keep running while the user moves between pages; a
 // page's own component is rendered only while it is the current page.
 import {computed, provide, ref, useTemplateRef, watch, watchEffect, type FunctionalComponent} from 'vue'
-import {AppLayout, AppRoot, AppSidebar, AppSidebarUser, Callout, ConfigProvider, LoadingArea, PageContent, PageHeader, ensureDeviceViewport, type WideLayout} from '@synopackageland/ui'
+import {AppLayout, AppRoot, AppSidebar, AppSidebarUser, Button, Callout, ConfigProvider, LoadingArea, PageContent, PageHeader, ensureDeviceViewport, type WideLayout} from '@synopackageland/ui'
 import {isFullPage, type ShellContext} from '../context'
 import {appRefusal} from '../authorization/refusal'
 import {shellCopy} from './i18n'
@@ -112,6 +112,12 @@ watch([fullPage,layout], (_, __, onCleanup) => {
   onCleanup(()=>{observer.disconnect();view?.removeEventListener('resize',read)})
 }, {flush:'post',immediate:true})
 const user = computed(() => !portalChrome.value.user && pageCtx.value?.user?.name ? pageCtx.value.user : undefined)
+// Where DSM draws no account (ui.banner: hidden), the shell's account also signs out.
+const canSignOut = computed(() => {
+  const host = pageCtx.value?.host
+  return typeof host?.signOut === 'function' && host.platform().host === 'dsm'
+})
+function signOut() {pageCtx.value?.host?.signOut?.()}
 // A page component's PageActions render into the header, before the App's actions.
 provide(PageActionsTarget, useTemplateRef<HTMLElement>('page-actions'))
 // A page component's PageInfo renders on the title line, before the App's meta.
@@ -147,7 +153,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
       <AppSidebar :model-value="modelValue" :groups="groups" @update:model-value="emit('update:modelValue', $event)" />
     </template>
     <template v-if="slots['sidebar-footer'] || user" #sidebar-footer>
-      <slot name="sidebar-footer"><AppSidebarUser v-if="user" :name="user.name" :detail="user.isAdmin ? copy.administrator : copy.dsmUser" /></slot>
+      <slot name="sidebar-footer"><div v-if="user" class="app-shell-account"><AppSidebarUser :name="user.name" :detail="user.isAdmin ? copy.administrator : copy.dsmUser" /><Button v-if="canSignOut" class="app-shell-sign-out" variant="ghost" size="sm" @click="signOut">{{ copy.signOut }}</Button></div></slot>
     </template>
     <template v-if="slots.toolbar" #toolbar><slot name="toolbar" :page="modelValue" /></template>
     <PageContent ref="scroller" :class="['app-page', {'app-page-fill': page?.fill}]" :width="pageWidth" :surface="contentSurface">
@@ -177,6 +183,8 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
 .app-shell :deep(main) { display: flex; flex-direction: column; overflow: hidden; }
 .app-page { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .app-denied { height: 100%; overflow-y: auto; }
+.app-shell-account { display: flex; flex-direction: column; gap: var(--ui-space-1, 4px); }
+.app-shell-sign-out { align-self: flex-start; }
 /* Lays a page's own actions and notes out as the header's own items. */
 .app-page-actions, .app-page-info { display: contents; }
 /* A fill page: the body takes the height under the header and notices, its
