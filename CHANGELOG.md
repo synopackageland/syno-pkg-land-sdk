@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.36.0 (2026-10-29)
 
 - Add `ipc.StartPeerUnix` and `PeerServer.StopAccepting`, `Close` and `Wait`.
   Admission can stop and remove the protected socket while verified peers
@@ -8,7 +8,9 @@
   process exit. Cancellation/Close still close all peers. Retained connections
   and running callbacks both occupy the eight admission slots.
 - Keep `ServePeerUnix` as the blocking form that closes peers on callback return.
-  Pair the new constructor with the CLI audit that rejects its aliases.
+  Use CLI 0.38.0, whose audit rejects constructor aliases.
+- Align SDK/App versions at 0.36.0. The executor 0.32.0 payload inventory
+  is unchanged. Rust consumers use the SDK git tag; the crate is not published.
 
 ## 0.35.0 (2026-10-29)
 
