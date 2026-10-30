@@ -174,7 +174,7 @@ func TestWebAPIRawLimitIsExplicitAndLegacyDigestUnchanged(t *testing.T) {
 	if strings.Contains(string(b), "raw_max_bytes") {
 		t.Fatal("changed legacy digest")
 	}
-	for _, limit := range []int64{-1, (64 << 20) + 1} {
+	for _, limit := range []int64{-1, maxWebAPIRaw + 1} {
 		profile.RawMaxBytes = limit
 		e.Policy.WebAPI["calendar"] = profile
 		if validWebAPIProfiles(e.Policy) {

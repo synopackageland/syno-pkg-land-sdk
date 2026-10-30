@@ -26,7 +26,7 @@ const (
 	rootStagingAge   = time.Hour
 	rootRunSlots     = 2
 	rootRunRequestBy = maxRootRunTimeout + 10*time.Second
-	// executorOpBound is how long any other op may take to answer.
+	// executorOpBound is the default answer bound; raw WebAPI has its own.
 	executorOpBound = 30 * time.Second
 )
 
@@ -281,10 +281,13 @@ type rootOutput struct {
 	n       int64
 	mem     bytes.Buffer
 	staging RootStaging
-	file    *os.File
-	name    string
-	failed  chan struct{}
-	err     error
+	// Raw transfers reserve their quota before streaming; root.run keeps its
+	// existing 256 MiB quota when this is zero.
+	stagingLimit int64
+	file         *os.File
+	name         string
+	failed       chan struct{}
+	err          error
 }
 
 func (o *rootOutput) Write(b []byte) (int, error) {
@@ -324,7 +327,11 @@ func (o *rootOutput) spill() error {
 	if err != nil {
 		return fmt.Errorf("%w: %w", errRootStaging, err)
 	}
-	if used+o.limit > maxRootStaging {
+	quota := o.stagingLimit
+	if quota == 0 {
+		quota = maxRootStaging
+	}
+	if used+o.limit > quota {
 		return errRootStagingFull
 	}
 	if o.file, o.name, err = o.staging.Create(); err != nil {

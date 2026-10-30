@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Replace Go `JobWebAPI.CallRaw` and its buffered `Body` result with
+  `CallRawTo(..., io.Writer)`. Approved raw profiles can allow up to 2 GiB;
+  executor staging and client copying use bounded memory and verify size/hash.
+  Raw transfers allow 30 minutes, honor earlier parent/grant deadlines, and
+  cancel/drain on revoke or disable. JSON limits and root.run quotas stay the
+  same. Existing raw consumers must migrate; see `docs/webapi-raw.md`.
+
 ## 0.38.1 (2026-10-29)
 
 - Republish with clean registry metadata

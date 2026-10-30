@@ -105,6 +105,9 @@ func (e *Executor) wakeLocked() {
 	}
 }
 func (e *Executor) cancelGrantLocked(id, reason string) {
+	for _, cancel := range e.rawCalls[id] {
+		cancel()
+	}
 	if e.async == nil {
 		return
 	}

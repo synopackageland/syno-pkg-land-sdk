@@ -14,11 +14,14 @@ type Timeouts struct {
 	Margin   int `json:"margin_s"`
 	Executor struct {
 		Op            int `json:"op_s"`
+		RawExecution  int `json:"webapi_raw_execution_s"`
+		RawAnswer     int `json:"webapi_raw_answer_s"`
 		RunMax        int `json:"root_run_program_max_s"`
 		RootRunAnswer int `json:"root_run_answer_s"`
 	} `json:"executor"`
 	Client struct {
 		Op      int `json:"op_s"`
+		Raw     int `json:"webapi_raw_s"`
 		RootRun int `json:"root_run_s"`
 	} `json:"client"`
 	Request struct {
@@ -50,6 +53,8 @@ func TestEveryLayerWaitsPastTheLayerItCalls(t *testing.T) {
 		t.Fatalf("SDK %v %v %v, spec %+v", ExecutorTimeout, RootRunTimeout, api.DefaultRequestTimeout, s)
 	}
 	for name, outer := range map[string][2]time.Duration{
+		"raw client > executor":     {seconds(s.Client.Raw), seconds(s.Executor.RawAnswer)},
+		"raw answer > execution":    {seconds(s.Executor.RawAnswer), WebAPIRawTimeout},
 		"root.run answer > program": {seconds(s.Executor.RootRunAnswer), seconds(s.Executor.RunMax)},
 		"client > executor op":      {ExecutorTimeout, seconds(s.Executor.Op)},
 		"client > root.run answer":  {RootRunTimeout, seconds(s.Executor.RootRunAnswer)},
@@ -61,6 +66,9 @@ func TestEveryLayerWaitsPastTheLayerItCalls(t *testing.T) {
 	}
 	if Local("p").Timeout != ExecutorTimeout {
 		t.Fatal("Local waits", Local("p").Timeout)
+	}
+	if WebAPIRawTimeout != seconds(s.Executor.RawExecution) || WebAPIRawTimeout+20*time.Second != seconds(s.Client.Raw) {
+		t.Fatal("raw transfer timeouts differ from spec")
 	}
 }
 
