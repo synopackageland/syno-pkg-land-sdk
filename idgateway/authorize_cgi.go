@@ -46,11 +46,13 @@ type AuthorizeCGI struct {
 	AppHTTPSPort int
 	// LoginApp is the CLI-generated DSM App instance used to resume a cold login.
 	LoginApp string
-	Key      []byte
-	AppPorts []int
-	Verifier SessionVerifier
-	Accounts Accounts
-	Now      func() time.Time
+	// Available checks the local gateway, independently of the browser session
+	Available func() bool
+	Key       []byte
+	AppPorts  []int
+	Verifier  SessionVerifier
+	Accounts  Accounts
+	Now       func() time.Time
 }
 
 var txnPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,128}$`)
@@ -68,6 +70,10 @@ func (h *AuthorizeCGI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ret, ok := h.returnURLWithExternal(r, external)
 	if !ok || !txnPattern.MatchString(txn) {
 		http.Error(w, "invalid sign-in request", http.StatusBadRequest)
+		return
+	}
+	if h.Available != nil && !h.Available() {
+		writeAppStopped(w, r)
 		return
 	}
 	switch r.Method {

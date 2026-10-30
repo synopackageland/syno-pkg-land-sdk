@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/synopackageland/syno-pkg-land-sdk/installsettings"
 	"os"
+	"path/filepath"
 )
 
 func main() {
@@ -17,6 +18,23 @@ func main() {
 	pkg := fs.String("package", "", "package ID")
 	fs.Parse(os.Args[2:])
 	var err error
+	_, portsError := os.Stat(filepath.Join(*root, "install/ports.json"))
+	_, settingsError := os.Stat(filepath.Join(*root, "install/settings.json"))
+	if portsError == nil {
+		switch os.Args[1] {
+		case "prepare":
+			err = installsettings.PreparePorts(*root, *pkg, "")
+		case "remember":
+			err = installsettings.RememberPorts(*root, *pkg, "")
+		}
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	}
+	if settingsError != nil && os.Args[1] != "purge" {
+		return
+	}
 	switch os.Args[1] {
 	case "prepare":
 		err = installsettings.Prepare(*root, *pkg, "")

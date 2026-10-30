@@ -210,7 +210,7 @@ func TestNativeRunDoesNotExposeAnUnauthenticatedProxyPort(t *testing.T) {
 func TestDirectFallbackExplainsCertificateBeforeOpening(t *testing.T) {
 	cfg := Config{Package: "App", Listen: Listen{HTTPS: 18443}}
 	w := httptest.NewRecorder()
-	EntryHandler(cfg).ServeHTTP(w, httptest.NewRequest("GET", "https://nas.example:5001/webman/3rdparty/App/sso/open.cgi", nil))
+	entryHandler(cfg, func() error { return nil }).ServeHTTP(w, httptest.NewRequest("GET", "https://nas.example:5001/webman/3rdparty/App/sso/open.cgi", nil))
 	if w.Code != 200 || w.Header().Get("Location") != "" || !strings.Contains(w.Body.String(), "certificate") || !strings.Contains(w.Body.String(), `href="https://nas.example:18443/"`) {
 		t.Fatal("direct fallback opened without an explanation", w.Code, w.Body.String())
 	}

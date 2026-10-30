@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.38.2
+
+- Default shared data to DSM-managed dedicated folders; check package access before Compose startup and localize recovery. Resume cold DSM sign-in in every gateway mode, report stopped gateways accurately, and keep registry probes out of native operation failures.
+
+- Select and validate host ports in the DSM wizard; materialize gateway, ingress, service definitions and app environment from one retained selection.
+
 ## Unreleased
 
 ## 0.38.1 (2026-10-29)

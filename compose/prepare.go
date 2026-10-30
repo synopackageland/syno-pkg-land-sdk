@@ -3,6 +3,7 @@ package compose
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/installsettings"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/composeingress"
 	"net"
 	"os"
@@ -177,7 +178,16 @@ func Prepare(project, pkg, pkgvar string) error {
 		f.Close()
 		return err
 	}
-	_, err = fmt.Fprintf(f, "SYNOPKGLAND_UID=%s\nSYNOPKGLAND_GID=%s\nSYNOPKG_PKGVAR=%s\n%s", strconv.Itoa(os.Geteuid()), strconv.Itoa(os.Getegid()), dotenvLiteral(pkgvar), shareEnvironment)
+	portValues, portErr := installsettings.PortValues(filepath.Dir(project))
+	if portErr != nil {
+		f.Close()
+		return portErr
+	}
+	var portEnvironment strings.Builder
+	for key, n := range portValues {
+		fmt.Fprintf(&portEnvironment, "SYNOPKGLAND_PORT_%s=%d\n", strings.ToUpper(key), n)
+	}
+	_, err = fmt.Fprintf(f, "SYNOPKGLAND_UID=%s\nSYNOPKGLAND_GID=%s\nSYNOPKG_PKGVAR=%s\n%s", strconv.Itoa(os.Geteuid()), strconv.Itoa(os.Getegid()), dotenvLiteral(pkgvar), shareEnvironment+portEnvironment.String())
 	if err == nil {
 		err = f.Sync()
 	}

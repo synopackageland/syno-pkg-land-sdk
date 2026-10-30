@@ -11,7 +11,7 @@ import (
 )
 
 // RuntimeSettingsVersion identifies bounded installation values for build tools.
-const RuntimeSettingsVersion = 2
+const RuntimeSettingsVersion = 3
 
 // Settings are nonempty private UTF-8 strings, not generated authentication keys.
 // Missing values fail before the upstream is started. Never evaluate their text.

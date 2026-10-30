@@ -132,9 +132,16 @@ func EntryHandler(cfg Config) http.Handler {
 	if gate != nil {
 		auth = AccessVerifier{Next: gate, Access: cfg.Access, Groups: cfg.Groups, Membership: NewDirectory()}
 	}
-	return entryHandlerWithShares(cfg, containerpreflight.Check, func() error {
+	next := entryHandlerWithShares(cfg, containerpreflight.Check, func() error {
 		return sharepreflight.Check(filepath.Join("/var/packages", cfg.Package, "target/compose"), filepath.Join("/var/packages", cfg.Package, "var"))
 	}, auth)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !GatewayAvailable(cfg) {
+			writeAppStopped(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 func entryHandler(cfg Config, preflight func() error) http.Handler {
 	return entryHandlerWithShares(cfg, preflight, nil, nil)
@@ -218,7 +225,7 @@ func entryHandlerWithMenu(cfg Config, preflight func() error, shares func() erro
 		// into a server-managed OIDC consumer's HTML.
 		query := r.URL.Query()
 		values, resume := query["ssoResume"]
-		if nested, present := query["launchParam"]; present && cfg.OIDC.resumesColdLogin() {
+		if nested, present := query["launchParam"]; present && cfg.AuthorizeCGI != "" {
 			if len(nested) != 1 || len(nested[0]) > 4096 || resume {
 				http.Error(w, "invalid sign-in resume", 400)
 				return
@@ -237,7 +244,7 @@ func entryHandlerWithMenu(cfg Config, preflight func() error, shares func() erro
 			}
 		}
 		if resume {
-			if cfg.Mode != ModeOIDC || !cfg.OIDC.resumesColdLogin() || len(values) != 1 {
+			if cfg.AuthorizeCGI == "" || len(values) != 1 {
 				http.Error(w, "invalid sign-in resume", 400)
 				return
 			}
