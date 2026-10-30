@@ -72,7 +72,7 @@ func applyStorageInit(pkg string, s *types.ServiceConfig, init *StorageInitializ
 		for _, key := range keys {
 			e := init.Runtime.Environment[key]
 			directory := "secrets"
-			if e.Setting != "" || e.ExternalOrigin {
+			if e.Setting != "" || e.Port != "" || e.ExternalOrigin {
 				directory = "settings"
 			}
 			target := "/synopkgland/" + directory + "/" + e.filename()
@@ -90,6 +90,9 @@ func applyStorageInit(pkg string, s *types.ServiceConfig, init *StorageInitializ
 			}
 			if !found {
 				source := "/var/packages/" + pkg + "/target/compose/" + directory + "/" + e.filename()
+				if e.Port != "" {
+					source = "/var/packages/" + pkg + "/target/install/port-values/" + e.Port + ".value"
+				}
 				if e.Setting != "" && !e.ExternalOrigin {
 					source = "/var/packages/" + pkg + "/target/install/values/" + e.filename()
 				}

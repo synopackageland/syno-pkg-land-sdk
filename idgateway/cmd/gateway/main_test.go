@@ -5,6 +5,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -85,6 +86,7 @@ func TestCGIRoleServesTheAuthorizePage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	h.(*idgateway.AuthorizeCGI).Available = func() bool { return true }
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest("GET", "https://nas.example:5001/webman/3rdparty/paperless/sso/authorize.cgi?txn=abc&return=https%3A%2F%2Fnas.example%3A18443%2F_sso%2Fdsm-return", nil))
 	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `method="post"`) {
@@ -146,6 +148,12 @@ func TestAccountStatusPrintsJSON(t *testing.T) {
 // Exercise CGI parsing and dispatch in an actual linked binary. No DSM session
 // or network service is needed for entry, bootstrap and stale-token fallback.
 func TestCompiledCGIExternalResume(t *testing.T) {
+	packageName := fmt.Sprintf("ExampleApp%d", os.Getpid())
+	listener, err := net.Listen("unix", "/tmp/synopkgland-gateway-"+packageName+".sock")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
 	dir := t.TempDir()
 	state := filepath.Join(dir, "state")
 	if err := os.Mkdir(state, 0700); err != nil {
@@ -153,6 +161,7 @@ func TestCompiledCGIExternalResume(t *testing.T) {
 	}
 	config := filepath.Join(dir, "gateway.json")
 	body := fmt.Sprintf(`{"package":"ExampleApp","native_ingress":true,"mode":"oidc","upstream":"http://127.0.0.1:8000","listen":{"https":18443},"authorize_cgi":"/webman/3rdparty/ExampleApp/sso/authorize.cgi","state_dir":%q,"oidc":{"issuer_port":18444,"native_login":true,"clients":[{"id":"app","redirect_paths":["/cb"]}]}}`, state)
+	body = strings.ReplaceAll(body, "ExampleApp", packageName)
 	if err := os.WriteFile(config, []byte(body), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +180,7 @@ func TestCompiledCGIExternalResume(t *testing.T) {
 	invoke := func(script, query string) string {
 		t.Helper()
 		cmd := exec.Command(binary)
-		cmd.Env = append(os.Environ(), "GATEWAY_INTERFACE=CGI/1.1", "REQUEST_METHOD=GET", "SERVER_PROTOCOL=HTTP/1.1", "HTTP_HOST=dsm.example.com:5001", "SERVER_NAME=dsm.example.com", "SERVER_PORT=5001", "REMOTE_ADDR=192.0.2.7", "HTTPS=on", "SCRIPT_NAME=/webman/3rdparty/ExampleApp/sso/"+script, "QUERY_STRING="+query)
+		cmd.Env = append(os.Environ(), "GATEWAY_INTERFACE=CGI/1.1", "REQUEST_METHOD=GET", "SERVER_PROTOCOL=HTTP/1.1", "HTTP_HOST=dsm.example.com:5001", "SERVER_NAME=dsm.example.com", "SERVER_PORT=5001", "REMOTE_ADDR=192.0.2.7", "HTTPS=on", "SCRIPT_NAME=/webman/3rdparty/"+packageName+"/sso/"+script, "QUERY_STRING="+query)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatalf("CGI: %v %s", err, out)
@@ -191,5 +200,20 @@ func TestCompiledCGIExternalResume(t *testing.T) {
 	output = invoke("authorize.cgi", "resume="+url.QueryEscape(token))
 	if !strings.Contains(output, "Location: https://dsm.example.com:18443/") || strings.Contains(output, "<form") {
 		t.Fatal("stale token", output)
+	}
+}
+
+func TestEveryGatewayModeLaunchesDSMForColdSignIn(t *testing.T) {
+	for _, mode := range []string{"none", "header"} {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "gateway.json")
+		os.WriteFile(path, []byte(`{"package":"Reader","mode":"`+mode+`","upstream":"http://127.0.0.1:8000","listen":{"https":18443},"authorize_cgi":"/webman/3rdparty/Reader/sso/authorize.cgi","state_dir":"`+filepath.Join(dir, "state")+`","headers":{"user":"Remote-User"}}`), 0600)
+		h, err := authorizeHandler(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if h.(*idgateway.AuthorizeCGI).LoginApp != "Reader" {
+			t.Fatalf("%s omits automatic DSM login", mode)
+		}
 	}
 }

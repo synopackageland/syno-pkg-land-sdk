@@ -12,7 +12,7 @@ import (
 	"github.com/synopackageland/syno-pkg-land-sdk/compose"
 )
 
-func TestDiagnosisIsInformationalAndAppendsNativeMessageWithoutReplacingAppText(t *testing.T) {
+func TestDiagnosisNeverTurnsAnAdvisoryProbeIntoANativeFailure(t *testing.T) {
 	project := t.TempDir()
 	native := filepath.Join(t.TempDir(), "native.log")
 	os.WriteFile(native, []byte("App hook result\n"), 0600)
@@ -30,7 +30,7 @@ func TestDiagnosisIsInformationalAndAppendsNativeMessageWithoutReplacingAppText(
 		t.Fatalf("%s %v", out.String(), err)
 	}
 	text, _ := os.ReadFile(native)
-	if !strings.HasPrefix(string(text), "App hook result\n") || !strings.Contains(string(text), "登錄站檢查") || !strings.HasSuffix(string(text), "修正原因後，使用套件中心的「修復」。（錯誤碼：COMPOSE_IMAGE_UNKNOWN）\n") {
+	if string(text) != "App hook result\n" {
 		t.Fatal(string(text))
 	}
 }

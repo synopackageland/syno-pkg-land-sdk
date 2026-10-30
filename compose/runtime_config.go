@@ -25,6 +25,7 @@ type RuntimeEnvironment struct {
 	ExternalOrigin bool `json:"external_origin,omitempty"`
 	// Setting reads a package-owned value supplied by the App installation flow.
 	Setting    string `json:"setting,omitempty"`
+	Port       string `json:"port,omitempty"`
 	OIDCClient string `json:"oidc_client,omitempty"`
 	Secret     string `json:"secret,omitempty"`
 }
@@ -32,6 +33,9 @@ type RuntimeEnvironment struct {
 func (e RuntimeEnvironment) filename() string {
 	if e.ExternalOrigin {
 		return "external-origin.value"
+	}
+	if e.Port != "" {
+		return "port-" + e.Port + ".value"
 	}
 	if e.Setting != "" {
 		return e.Setting + ".value"
@@ -124,7 +128,7 @@ func validateRuntime(i StorageInitialization) error {
 			count++
 			id = "external-origin"
 		}
-		for _, v := range []string{e.Secret, e.OIDCClient, e.Setting} {
+		for _, v := range []string{e.Secret, e.OIDCClient, e.Setting, e.Port} {
 			if v != "" {
 				count++
 			}
@@ -137,6 +141,9 @@ func validateRuntime(i StorageInitialization) error {
 			}
 		} else if e.Setting != "" {
 			id = e.Setting
+		}
+		if e.Port != "" {
+			id = e.Port
 		}
 		if e.OIDCClient != "" {
 			id = e.OIDCClient

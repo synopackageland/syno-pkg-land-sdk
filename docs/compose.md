@@ -188,12 +188,12 @@ modification and deletion. DSM identity/account bridge and file authority are
 separate features. Per-DSM-user filesystem access requires a File Station session
 or Broker Adapter; it is outside this change and cannot be obtained through a mount.
 
-For one existing Shared Folder, reuse the native install/upgrade wizard:
+For shared data, use a dedicated folder with an optional existing-folder selection:
 
 ```yaml
 capabilities: {composeMounts: true}
 install:
-  sharedFolder: {mode: select, key: media, permission: ro}
+  sharedFolder: {mode: dedicated, key: media, name: ExampleApp, permission: ro}
 compose:
   shares:
     media:
@@ -203,21 +203,22 @@ compose:
 ```
 
 The share key and permission must match `install.sharedFolder` exactly. This
-route supports `mode: select`; `create` resource ordering is not supported.
-The package-account preinst resolves the chosen name on `/volumeN` and writes
-only the fixed source placeholder into the worker's private `.env`. Missing,
-ambiguous or symlinked sources fail installation. Host paths are never wizard
-answers. Every mounted service uses the fixed package UID:GID, drops all Linux
-capabilities and has no-new-privileges. Container-root cannot mount Shares.
+route supports `mode: dedicated` and `mode: select`. DSM's data-share resource
+creates the dedicated folder and grants the fixed package account the declared
+permission. No root helper or Docker socket is given to the App. The optional
+existing-folder field blocks Next unless its type and package-account access can
+be verified. Host paths are never wizard answers.
 
-**Selecting an existing share does not grant permission.** An administrator must
-grant the package account access in **Control Panel > Shared Folder > Edit >
-Permissions > System internal user**. Until then, container file operations fail
-under the kernel's ACL checks. No root helper, ACL writer or Docker socket is
-given to the App. Grant directly to the package account; supplementary DSM groups
-are not added to the container. See [Shared Folder permission](shared-folder.md).
+Package-account preparation resolves an existing folder on `/volumeN`; before a
+new dedicated folder is created it uses DSM's selected package volume. Missing,
+ambiguous and symlinked existing sources fail closed. Every mounted service uses
+the fixed package UID:GID, drops Linux capabilities and has no-new-privileges.
+Container-root cannot mount Shares. Start repeats the kernel permission check;
+loss of access reports the folder and RO/RW recovery in the localized hook log.
 
-The upgrade wizard keeps the saved name unless its change checkbox is selected.
+Dedicated-mode dynamic upgrade wizards prefill the saved name. Changing it does
+not move existing data. See [Shared Folder permission](shared-folder.md).
+Dedicated first installs require no folder parameter. To select an existing folder,
 CLI deployment uses `--param media=Media` on first install, and
 `--param CHANGE_media=true --param media=OtherMedia` to change it on upgrade.
 Stop/disable and uninstall use DSM's official project worker; source data and

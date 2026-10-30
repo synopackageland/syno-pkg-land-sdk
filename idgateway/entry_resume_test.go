@@ -81,13 +81,13 @@ func TestClasslessBrowserBridgeEntryResumesDeclaredTransaction(t *testing.T) {
 	}
 }
 
-func TestClasslessEntryWithoutResumeIgnoresLaunchParam(t *testing.T) {
+func TestClasslessProviderOnlyEntryResumesColdSignIn(t *testing.T) {
 	cfg := Config{Package: "Reader", Mode: ModeOIDC, NativeIngress: true, Listen: Listen{HTTPS: 28443}, OIDC: &OIDCConfig{}, AuthorizeCGI: "/webman/3rdparty/Reader/sso/authorize.cgi"}
 	h := entryHandler(cfg, func() error { return nil })
 	r := httptest.NewRequest("GET", "https://nas.example:5001/webman/3rdparty/Reader/sso/open.cgi?ssoResume=opaque_txn%3A28443", nil)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
-	if w.Code != 400 {
-		t.Fatalf("resume accepted without native login or browser bridge: %d", w.Code)
+	if w.Code != 302 {
+		t.Fatalf("provider-only entry did not resume: %d", w.Code)
 	}
 }

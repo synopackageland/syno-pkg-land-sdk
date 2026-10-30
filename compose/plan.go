@@ -31,6 +31,7 @@ const PackageUser = "${SYNOPKGLAND_UID}:${SYNOPKGLAND_GID}"
 
 // Request contains only package differences; Files are never rewritten.
 type Request struct {
+	InstallPorts          map[string]installsettings.Port    `json:"install_ports,omitempty"`
 	InstallSettings       map[string]installsettings.Setting `json:"install_settings,omitempty"`
 	HostUDP               []HostUDPListener                  `json:"host_udp,omitempty"`
 	Devices               *Devices                           `json:"devices,omitempty"`
@@ -180,6 +181,11 @@ func problem(code, format string, args ...any) error {
 // Build loads with the reference Compose loader, applies DSM policy, and emits
 // both a true replacement override and the tag-free single worker document.
 func Build(ctx context.Context, r Request) (*Plan, error) {
+	for key, p := range r.InstallPorts {
+		if !nativeShareKey.MatchString(key) || !installsettings.ValidPort(p.Default) || (p.Protocol != "tcp" && p.Protocol != "udp") {
+			return nil, problem("COMPOSE_STORAGE_INIT_INVALID", "invalid install.ports declaration")
+		}
+	}
 	if r.InstallSettings != nil {
 		if err := (installsettings.Config{Schema: 1, Package: r.Package, Settings: r.InstallSettings}).Validate(); err != nil {
 			return nil, problem("COMPOSE_STORAGE_INIT_INVALID", "invalid install.settings declaration")
@@ -579,6 +585,12 @@ func Build(ctx context.Context, r Request) (*Plan, error) {
 		}
 		if policy.StorageInit != nil && policy.StorageInit.Runtime != nil {
 			for _, e := range policy.StorageInit.Runtime.Environment {
+				if e.Port != "" {
+					p, ok := r.InstallPorts[e.Port]
+					if !ok || !installsettings.ValidPort(p.Default) {
+						return nil, problem("COMPOSE_STORAGE_INIT_INVALID", "runtime port must reference install.ports")
+					}
+				}
 				if e.Setting != "" {
 					if _, ok := r.InstallSettings[e.Setting]; !ok {
 						return nil, problem("COMPOSE_STORAGE_INIT_INVALID", "runtime setting must reference install.settings")

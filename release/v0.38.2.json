@@ -1,0 +1,38 @@
+{
+  "version": "0.38.2",
+  "executorVersion": "0.38.2",
+  "executorRootSDK": "v0.19.0",
+  "packages": {
+    "@synopackageland/sdk": "0.38.2",
+    "@synopackageland/app": "0.38.2",
+    "syno-pkg-land-app": "0.38.2",
+    "synopkgland_app": "0.38.2"
+  },
+  "executorDigests": {
+    "x86_64": "c25375fd73da6fa91388f8d827e94782779a9d007d9a147f250774219e768476",
+    "aarch64": "9f523ba0482814c61e441a681a2082979e96718043f13112c40fb0cd061dedb2",
+    "armv7": "75a0046758a47dd81d62662996465c0b701f9d7de13e808b46f0a627ae5c011e",
+    "lifecycle": {
+      "x86_64": "c6fbb377ecd5ec7ee5b96439f22091d9fa5965dfd616d510ca9445722f436721",
+      "aarch64": "a9ca1750d4d5cff4727dc29789e6eaf0a365cb0e674f1bb796971d82f2d4fa27",
+      "armv7": "6d25fc972eba12e3ac68f8b6a95a45e9e5706ebe19ffc1ff774fc318acbeb90f"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": false,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Runtime shared-folder, installer-selected port, cold-login, stopped-service and advisory-registry fixes; release validation is recorded in the pull request. No NAS acceptance or Rust crate publication."
+  },
+  "ui": {
+    "builtAgainst": "0.17.0",
+    "peer": ">=0.10.1 <0.18.0"
+  },
+  "node": {
+    "build": "24.22.1",
+    "compatibility": "22.23.4",
+    "minimum": "22"
+  }
+}

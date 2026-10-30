@@ -107,3 +107,28 @@ func TestRuntimeSettingPlannerRequiresDeclarationAndUsesOnlyNativePayload(t *tes
 		t.Fatal("native setting mount missing")
 	}
 }
+
+func TestRuntimePortBindingUsesReadOnlySelectedValue(t *testing.T) {
+	r := upstreamProject(t, "openlist")
+	r.Data = nil
+	os.WriteFile(filepath.Join(r.Root, "compose.yaml"), []byte("services:\n  openlist:\n    image: alpine\n    entrypoint: ['/app/server']\n    volumes: ['state:/tmp']\nvolumes:\n  state: {}\n"), 0600)
+	r.Services["openlist"] = ServicePolicy{StorageInit: &StorageInitialization{Directories: []WritableDirectory{{Base: "/tmp", Path: "app"}}, Runtime: &RuntimeConfiguration{Environment: map[string]RuntimeEnvironment{"PUBLIC_PORT": {Port: "gateway_http"}}}}}
+	r.InstallPorts = map[string]installsettings.Port{"gateway_http": {Default: 28000, Protocol: "tcp"}}
+	p, err := Build(context.Background(), r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, mount := range p.Effective.Services["openlist"].Volumes {
+		if mount.Target == "/synopkgland/settings/port-gateway_http.value" {
+			found = mount.ReadOnly && mount.Source == "/var/packages/Fixture/target/install/port-values/gateway_http.value" && mount.Bind.CreateHostPath == false
+		}
+	}
+	if !found {
+		t.Fatal("selected port mount missing")
+	}
+	r.InstallPorts = nil
+	if _, err = Build(context.Background(), r); err == nil {
+		t.Fatal("undeclared port binding accepted")
+	}
+}

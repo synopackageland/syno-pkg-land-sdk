@@ -136,3 +136,28 @@ func TestNativeShareMaterializationUsesWizardOrPersistedName(t *testing.T) {
 		t.Fatal("symlink source accepted")
 	}
 }
+
+func TestDedicatedSharePlansWithoutRootAndDefaultsBeforeResourceAcquisition(t *testing.T) {
+	r := nativeRequest(t)
+	r.InstallSharedFolder.Mode = "dedicated"
+	r.InstallSharedFolder.Name = "Reader"
+	p, err := Build(context.Background(), r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.MountsBlocked || p.InstallSharedFolder.Name != "Reader" {
+		t.Fatalf("%+v", p)
+	}
+	t.Setenv("SYNOPKG_PKG_STATUS", "INSTALL")
+	t.Setenv("SYNOPKG_PKGINST_TEMP_DIR", t.TempDir())
+	t.Setenv("SYNOPKG_PKGDEST_VOL", "/volume3")
+	t.Setenv("media", "")
+	env, err := nativeShareEnvironment(r.InstallSharedFolder, t.TempDir(), t.TempDir())
+	if err != nil || env != "SYNOPKGLAND_MOUNT_media='/volume3/Reader'\n" {
+		t.Fatalf("%q %v", env, err)
+	}
+	t.Setenv("SYNOPKG_PKGINST_TEMP_DIR", "")
+	if _, err = nativeShareEnvironment(r.InstallSharedFolder, t.TempDir(), t.TempDir()); err == nil {
+		t.Fatal("missing dedicated share accepted outside installer")
+	}
+}
