@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- Raise delegated raw WebAPI downloads to 10 GiB (10737418240 bytes). Reserve
+  staging from Content-Length or the pinned source's optional `expected_size`,
+  falling back to the approved profile ceiling only for unknown sizes. Check
+  filesystem space before body writes and file destination copies; insufficient
+  space returns `NO_SPACE`. Known-size file destinations sharing the
+  staging filesystem account for both copies before dispatch.
+- Scale raw execution to 18 minutes per started GiB, with a 30-minute floor
+  and a three-hour ceiling; earlier parent deadlines and grant expiry still
+  win. Revocation/disable still cancel and drain. Protect active staging from
+  one-hour orphan cleanup. CLI validators and consuming App profile limits,
+  background job budgets and SDK/executor pins must be updated together;
+  profile changes require administrator approval and fresh user consent.
+
 ## 0.38.2
 
 - Default shared data to DSM-managed dedicated folders; check package access before Compose startup and localize recovery. Resume cold DSM sign-in in every gateway mode, report stopped gateways accurately, and keep registry probes out of native operation failures.

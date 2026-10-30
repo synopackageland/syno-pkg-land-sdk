@@ -20,7 +20,7 @@ test('codes and ops follow errors.json and schema/',()=>{
 })
 
 test('webapi.call types and wire metadata expose JSON and raw responses without request uploads',()=>{
- expectTypeOf<keyof WebapiCallParams>().toEqualTypeOf<'response_type'|'delegation_id'|'job_id'|'api'|'method'|'version'|'params'>()
+ expectTypeOf<keyof WebapiCallParams>().toEqualTypeOf<'response_type'|'expected_size'|'delegation_id'|'job_id'|'api'|'method'|'version'|'params'>()
  expectTypeOf<WebapiCallParams['response_type']>().toEqualTypeOf<'json'|'raw'|undefined>()
  const schema=JSON.parse(readFileSync(resolve(spec,'schema/webapi.call.json'),'utf8'))
  expect(protocolSchemas['webapi.call'].params).toEqual(Object.keys(schema.properties))

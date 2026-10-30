@@ -88,3 +88,4 @@ func processStart(int) (string, error) { return "", errLinux }
 func (subprocessWriter) Create() (*os.File, string, error) { return nil, "", errLinux }
 func (subprocessWriter) Remove(string)                     {}
 func (subprocessWriter) Used() (int64, error)              { return 0, errLinux }
+func (subprocessWriter) Available() (int64, error)         { return 0, errLinux }

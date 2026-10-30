@@ -240,7 +240,7 @@ func within(root, p string) bool {
 }
 func strictJSON(b []byte, v any) error {
 	if _, ok := v.(*webAPIRequest); ok {
-		return strictWebJSON(b, v, "delegation_id job_id api method version params response_type")
+		return strictWebJSON(b, v, "delegation_id job_id api method version params response_type expected_size")
 	}
 	if _, ok := v.(*Request); ok {
 		var head map[string]json.RawMessage
@@ -364,7 +364,11 @@ func (e *Executor) Connection(parent context.Context, c net.Conn, uid int, peer 
 		} else if req.DeadlineMS > 0 {
 			bound = e.Policy.budgets().Duration("operation")
 		}
-		if req.DeadlineMS < 0 || req.DeadlineMS > 3600000 {
+		maxDeadline := int64(3600000)
+		if req.Op == "webapi.call" && rawWebAPIRequest(req.Params) {
+			maxDeadline = (webAPIRawTimeout + 20*time.Second).Milliseconds()
+		}
+		if req.DeadlineMS < 0 || req.DeadlineMS > maxDeadline {
 			json.NewEncoder(c).Encode(deny("INVALID_REQUEST"))
 			return
 		}

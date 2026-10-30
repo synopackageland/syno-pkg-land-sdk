@@ -641,13 +641,17 @@ against its target DSM/package version before enabling it.
 
 ## Raw WebAPI profiles (0.12.1)
 
-Profiles may opt in with `raw_max_bytes` (1..2147483648, at most 2 GiB); zero/omitted stays JSON-only.
+Profiles may opt in with `raw_max_bytes` (1..10737418240, at most 10 GiB); zero/omitted stays JSON-only.
 `webapi.call` then accepts `response_type:"raw"`. Small bodies use base64; large
 bodies use App-private staging with size and SHA-256. See
 [contract, security bounds and Go consumer example](../docs/webapi-raw.md).
 Attachment.download and X-Accel-Redirect are excluded.
-Raw calls stream with bounded memory and a 30-minute deadline (parent deadline
-and timed-grant expiry can narrow it). Revocation/disable cancel and drain the
+Raw calls stream with bounded memory and allow 18 minutes per started GiB,
+at least 30 minutes and at most three hours (parent deadline and timed-grant
+expiry can narrow it). Metadata `expected_size` or CGI Content-Length supplies
+the staging reservation; unknown sizes use the profile ceiling. Available disk
+space is checked before body writes; insufficient space is `NO_SPACE`.
+Active staging is protected from orphan cleanup. Revocation/disable cancel and drain the
 transfer; incomplete staging is removed. JSON calls retain the 10-second bound.
 Go consumers use `JobContext.WebAPI().CallRawTo` with a temporary-file writer.
 

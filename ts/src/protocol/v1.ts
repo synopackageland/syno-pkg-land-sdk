@@ -303,6 +303,7 @@ export interface StatusParams {
 /** webapi.call: Call an exact approved WebAPI as the profile grant owner. JSON returns the DSM envelope; raw (since 0.12.1) requires profile raw_max_bytes and returns content_type, size, sha256 and base64 body or private staging handle. Never retried. Since 0.11.0. */
 export interface WebapiCallParams {
  response_type?: "json" | "raw"
+ expected_size?: number
  delegation_id: string
  job_id?: string
  api: string
@@ -377,6 +378,6 @@ export const protocolSchemas: {readonly [Op in ProtocolOp]: {readonly auth: 'req
  "root.run": {auth: "required", params: ["name","params"], required: ["name"]},
  "root.start": {auth: "required", params: ["name","params"], required: ["name"]},
  "status": {auth: "optional", params: [], required: []},
- "webapi.call": {auth: "optional", params: ["response_type","delegation_id","job_id","api","method","version","params"], required: ["delegation_id","api","method","version","params"]},
+ "webapi.call": {auth: "optional", params: ["response_type","expected_size","delegation_id","job_id","api","method","version","params"], required: ["delegation_id","api","method","version","params"]},
 }
 export const protocolOps = Object.keys(protocolSchemas) as ProtocolOp[]

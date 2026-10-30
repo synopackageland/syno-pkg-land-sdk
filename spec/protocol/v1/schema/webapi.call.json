@@ -12,6 +12,12 @@
       "enum": ["json", "raw"],
       "description": "Defaults to json. Raw requires an explicitly approved raw_max_bytes profile."
     },
+    "expected_size": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10737418240,
+      "description": "Raw only: exact byte size of the pinned source version from metadata. Narrows staging reservation and execution budget; mismatch is refused."
+    },
     "delegation_id": {
       "type": "string",
       "pattern": "^[a-f0-9]{64}$"
