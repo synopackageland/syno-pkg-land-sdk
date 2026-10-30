@@ -1,6 +1,6 @@
 {
   "version": "0.38.2",
-  "executorVersion": "0.32.0",
+  "executorVersion": "0.38.2",
   "executorRootSDK": "v0.19.0",
   "packages": {
     "@synopackageland/sdk": "0.38.2",
@@ -9,9 +9,9 @@
     "synopkgland_app": "0.38.2"
   },
   "executorDigests": {
-    "x86_64": "aa8259f22620c3301ee83b76f6de6fbf06b4df36f49b64a5cc12772a3072abcc",
-    "aarch64": "97d2b3d8d4a169ba39583a78d5f30428f877d9aac7b38415a69ac024200716bd",
-    "armv7": "3cb936feabe1252a6fc4d44ac5318ff340bbc5fc89acd53a9afaddeaa94914bf",
+    "x86_64": "c25375fd73da6fa91388f8d827e94782779a9d007d9a147f250774219e768476",
+    "aarch64": "9f523ba0482814c61e441a681a2082979e96718043f13112c40fb0cd061dedb2",
+    "armv7": "75a0046758a47dd81d62662996465c0b701f9d7de13e808b46f0a627ae5c011e",
     "lifecycle": {
       "x86_64": "c6fbb377ecd5ec7ee5b96439f22091d9fa5965dfd616d510ca9445722f436721",
       "aarch64": "a9ca1750d4d5cff4727dc29789e6eaf0a365cb0e674f1bb796971d82f2d4fa27",
@@ -20,7 +20,7 @@
     "goToolchain": "go1.26.10"
   },
   "verification": {
-    "executorSourceUnchanged": true,
+    "executorSourceUnchanged": false,
     "canonicalTaskDefinitionsUnchanged": true,
     "nasAcceptance": false,
     "rustCratePublished": false,

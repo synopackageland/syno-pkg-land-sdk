@@ -6,8 +6,6 @@
 
 - Select and validate host ports in the DSM wizard; materialize gateway, ingress, service definitions and app environment from one retained selection.
 
-## Unreleased
-
 - Replace Go `JobWebAPI.CallRaw` and its buffered `Body` result with
   `CallRawTo(..., io.Writer)`. Approved raw profiles can allow up to 2 GiB;
   executor staging and client copying use bounded memory and verify size/hash.
