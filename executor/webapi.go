@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 	"io"
 	"regexp"
 	"strconv"
@@ -176,6 +177,7 @@ type webAPIRequest struct {
 	Version      int             `json:"version"`
 	Params       json.RawMessage `json:"params"`
 	ResponseType string          `json:"response_type,omitempty"`
+	ExpectedSize *int64          `json:"expected_size,omitempty"`
 }
 
 func rawWebAPIRequest(raw json.RawMessage) bool {
@@ -252,6 +254,9 @@ func (e *Executor) callWebAPI(ctx context.Context, r Request) Response {
 	if p.ResponseType == "raw" && e.Policy.WebAPI[d.Scope].RawMaxBytes <= 0 {
 		return deny("POLICY_DENIED")
 	}
+	if p.ExpectedSize != nil && (p.ResponseType != "raw" || *p.ExpectedSize < 0 || *p.ExpectedSize > e.Policy.WebAPI[d.Scope].RawMaxBytes) {
+		return deny("INVALID_REQUEST")
+	}
 	if r.Auth.present() {
 		caller, code := e.verified(ctx, r.Auth)
 		if code != "" {
@@ -265,6 +270,9 @@ func (e *Executor) callWebAPI(ctx context.Context, r Request) Response {
 	timeout := webAPITimeout
 	if p.ResponseType == "raw" {
 		timeout = webAPIRawTimeout
+		if p.ExpectedSize != nil {
+			timeout = budget.WebAPIRawForSize(*p.ExpectedSize)
+		}
 		if d.Lifetime != "until-revoked" {
 			timeout = min(timeout, d.Expires.Sub(e.Now()))
 		}

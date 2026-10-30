@@ -3,8 +3,8 @@
   "margin_s": 10,
   "executor": {
     "op_s": 30,
-    "webapi_raw_execution_s": 1800,
-    "webapi_raw_answer_s": 1810,
+    "webapi_raw_execution_s": 10800,
+    "webapi_raw_answer_s": 10810,
     "root_run_program_default_s": 20,
     "root_run_program_max_s": 120,
     "root_run_answer_s": 130,
@@ -12,7 +12,7 @@
   },
   "client": {
     "op_s": 40,
-    "webapi_raw_s": 1820,
+    "webapi_raw_s": 10820,
     "root_run_s": 140
   },
   "request": {

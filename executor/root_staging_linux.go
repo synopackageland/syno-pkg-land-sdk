@@ -4,6 +4,7 @@ package main
 
 import (
 	"errors"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -98,12 +99,37 @@ func (w subprocessWriter) Create() (*os.File, string, error) {
 		return nil, "", err
 	}
 	f := os.NewFile(uintptr(fd), name)
-	if err = f.Chown(w.PackageUID, w.PackageGID); err != nil {
+	// Active raw transfers can outlive orphan retention. A scanner must not
+	// reclaim an open output just because its last write was over an hour ago.
+	if err = syscall.Flock(fd, syscall.LOCK_EX|syscall.LOCK_NB); err == nil {
+		err = f.Chown(w.PackageUID, w.PackageGID)
+	}
+	if err != nil {
 		f.Close()
 		syscall.Unlinkat(int(dir.Fd()), name)
 		return nil, "", err
 	}
 	return f, name, nil
+}
+
+func (w subprocessWriter) Available() (int64, error) {
+	dir, err := w.rootStagingDir()
+	if err != nil {
+		return 0, err
+	}
+	defer dir.Close()
+	var st syscall.Statfs_t
+	if err := syscall.Fstatfs(int(dir.Fd()), &st); err != nil {
+		return 0, err
+	}
+	block := uint64(st.Bsize)
+	if block == 0 {
+		return 0, os.ErrInvalid
+	}
+	if st.Bavail > math.MaxInt64/block {
+		return math.MaxInt64, nil
+	}
+	return int64(st.Bavail * block), nil
 }
 
 func (w subprocessWriter) Remove(name string) {
@@ -137,11 +163,12 @@ func (w subprocessWriter) Used() (int64, error) {
 		}
 		var st syscall.Stat_t
 		err = syscall.Fstat(fd, &st)
+		locked := syscall.Flock(fd, syscall.LOCK_EX|syscall.LOCK_NB) != nil
 		syscall.Close(fd)
 		if err != nil || st.Mode&syscall.S_IFMT != syscall.S_IFREG {
 			continue
 		}
-		if time.Since(time.Unix(st.Mtim.Unix())) > rootStagingAge {
+		if !locked && time.Since(time.Unix(st.Mtim.Unix())) > rootStagingAge {
 			syscall.Unlinkat(int(dir.Fd()), name)
 			continue
 		}

@@ -91,6 +91,8 @@ func (p *fakeProcess) Kill() {
 // dirStaging is the package staging folder in a test directory.
 type dirStaging struct{ dir string }
 
+func (s dirStaging) Available() (int64, error) { return maxWebAPIStaging, nil }
+
 func (s dirStaging) Create() (*os.File, string, error) {
 	f, err := os.CreateTemp(s.dir, "root-")
 	if err != nil {

@@ -7,22 +7,25 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 	"hash"
 	"io"
 	"mime"
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
-const maxWebAPIRaw int64 = 2 << 30
-const webAPIRawTimeout = 30 * time.Minute
+const maxWebAPIRaw int64 = budget.MaxWebAPIRawBytes
+const webAPIRawTimeout = budget.WebAPIRawTimeout
 const maxWebAPIStaging = maxWebAPIRaw + maxRootStaging
 const inlineWebAPIRaw = 32 << 10
 const maxCGIHeaders = 8 << 10
 
 var errCGI = errors.New("invalid WebAPI CGI response")
+var errRawSpace = errors.New("insufficient raw destination space")
 var headerName = regexp.MustCompile("^[!#$%&'*+.^_`|~0-9A-Za-z-]+$")
 
 type webAPIRawCaller interface {
@@ -39,6 +42,7 @@ type rawWebOutput struct {
 	length      int64
 	body        *rootOutput
 	hash        hash.Hash
+	admit       func(int64) error
 }
 
 func (w *rawWebOutput) Write(p []byte) (int, error) {
@@ -61,6 +65,9 @@ func (w *rawWebOutput) Write(p []byte) (int, error) {
 		}
 	}
 	if len(p) > 0 {
+		if w.length >= 0 && int64(len(p)) > w.length-w.body.n {
+			return 0, errOutputLimit
+		}
 		if _, err := w.body.Write(p); err != nil {
 			return 0, err
 		}
@@ -135,6 +142,9 @@ func (w *rawWebOutput) parse() error {
 	if count == 0 {
 		return errCGI
 	}
+	if w.admit != nil {
+		return w.admit(w.length)
+	}
 	return nil
 }
 
@@ -148,28 +158,84 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 	}
 	defer e.rootSlotDone()
 	limit := e.Policy.WebAPI[d.Scope].RawMaxBytes
-	e.rootMu.Lock()
-	var used int64
-	var err error
-	if e.RootStaging != nil {
-		used, err = e.RootStaging.Used()
-	}
-	if err != nil || used+e.rawReserved+limit > maxWebAPIStaging {
-		e.rootMu.Unlock()
-		return deny("STORAGE_ERROR")
-	}
-	e.rawReserved += limit
-	e.rootMu.Unlock()
+	var reserved int64
 	defer func() {
 		e.rootMu.Lock()
-		e.rawReserved -= limit
+		e.rawReserved -= reserved
 		e.rootMu.Unlock()
 	}()
 	out := &rootOutput{limit: limit, spillAt: inlineWebAPIRaw + 1, staging: e.RootStaging, stagingLimit: maxWebAPIStaging, failed: make(chan struct{})}
 	defer out.discard()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	started := time.Now()
+	var timer *time.Timer
+	defer func() {
+		if timer != nil {
+			timer.Stop()
+		}
+	}()
+	reserve := func(size int64) error {
+		if size < 0 {
+			size = limit
+		}
+		if size > limit {
+			return errOutputLimit
+		}
+		e.rootMu.Lock()
+		defer e.rootMu.Unlock()
+		staging, ok := e.RootStaging.(interface{ Available() (int64, error) })
+		if !ok {
+			return errRootStaging
+		}
+		used, err := e.RootStaging.Used()
+		if err != nil {
+			return errRootStaging
+		}
+		others := e.rawReserved - reserved
+		if used+others+size > maxWebAPIStaging {
+			return errRootStagingFull
+		}
+		free, err := staging.Available()
+		if err != nil {
+			return errRootStaging
+		}
+		if free < others+size {
+			return errRawSpace
+		}
+		e.rawReserved = others + size
+		reserved = size
+		// Narrow the spool's own spill check and body limit to this exact size.
+		out.limit = size
+		return nil
+	}
+	if p.ExpectedSize != nil {
+		if err := reserve(*p.ExpectedSize); err != nil {
+			if errors.Is(err, errRawSpace) {
+				return deny("NO_SPACE")
+			}
+			return deny("STORAGE_ERROR")
+		}
+	}
 	w := &rawWebOutput{ctx: ctx, body: out, hash: sha256.New()}
+	w.admit = func(length int64) error {
+		size := length
+		if p.ExpectedSize != nil {
+			if length >= 0 && length != *p.ExpectedSize {
+				return errCGI
+			}
+			size = *p.ExpectedSize
+		}
+		budgetSize := size
+		if budgetSize < 0 {
+			budgetSize = limit
+		}
+		if err := reserve(size); err != nil {
+			return err
+		}
+		timer = time.AfterFunc(time.Until(started.Add(budget.WebAPIRawForSize(budgetSize))), cancel)
+		return nil
+	}
 	target := d.Scope + ":" + p.API + "/" + p.Method + "/" + strconv.Itoa(p.Version) + ":raw"
 	e.commitMu.Lock()
 	code := e.rawGrantCodeLocked(d)
@@ -184,7 +250,7 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 		e.rawCalls[d.ID] = map[*rawWebOutput]context.CancelFunc{}
 	}
 	e.rawCalls[d.ID][w] = cancel
-	err = e.auditLocked(s, "webapi.call", d.ID, target, "admitting")
+	err := e.auditLocked(s, "webapi.call", d.ID, target, "admitting")
 	e.commitMu.Unlock()
 	defer func() {
 		e.commitMu.Lock()
@@ -202,9 +268,12 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 	switch {
 	case errors.Is(err, errOutputLimit):
 		code = "limit-exceeded"
+	case errors.Is(err, errRawSpace), errors.Is(err, syscall.ENOSPC), errors.Is(err, syscall.EDQUOT):
+		code = "NO_SPACE"
 	case errors.Is(err, errRootStaging), errors.Is(err, errRootStagingFull):
 		code = "STORAGE_ERROR"
-	case err != nil || ctx.Err() != nil || !w.parsed || (w.length >= 0 && w.length != out.n):
+	case err != nil || ctx.Err() != nil || !w.parsed || (w.length >= 0 && w.length != out.n) ||
+		(p.ExpectedSize != nil && *p.ExpectedSize != out.n):
 		code = "WEBAPI_UNCERTAIN"
 	}
 	result := "completed"
@@ -230,6 +299,9 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 	} else {
 		name, _, err := out.keep()
 		if err != nil {
+			if errors.Is(err, syscall.ENOSPC) || errors.Is(err, syscall.EDQUOT) {
+				return deny("NO_SPACE")
+			}
 			return deny("STORAGE_ERROR")
 		}
 		reply["staging"] = name

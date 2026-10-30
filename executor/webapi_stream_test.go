@@ -45,7 +45,7 @@ func streamSetup(t *testing.T, body func(context.Context, io.Writer) error) (*Ex
 	dir := t.TempDir()
 	e.RootStaging = dirStaging{dir}
 	if !validWebAPIProfiles(e.Policy) {
-		t.Fatal("2 GiB profile rejected")
+		t.Fatal("10 GiB profile rejected")
 	}
 	return e, f, webGrant(t, e, true), dir
 }
@@ -145,7 +145,7 @@ func TestWebAPIStreamFailuresRemovePartialStaging(t *testing.T) {
 				case "disconnect":
 					return io.ErrUnexpectedEOF
 				case "oversize body":
-					// Exercise the exact byte boundary without writing 2 GiB.
+					// Exercise the exact byte boundary without writing 10 GiB.
 					dst.(*rawWebOutput).body.n = maxWebAPIRaw
 					_, err := dst.Write([]byte{0})
 					return err
@@ -282,7 +282,7 @@ func TestWebAPIStreamTimedGrantCancelsDuringTransfer(t *testing.T) {
 }
 
 func TestWebAPIStreamSocketDoesNotKeepOldOperationCap(t *testing.T) {
-	for _, hint := range []int64{0, 250, 3600000} {
+	for _, hint := range []int64{0, 250, 3600000, 10820000} {
 		t.Run(strconv.FormatInt(hint, 10), func(t *testing.T) {
 			e, _, id, _ := streamSetup(t, func(ctx context.Context, dst io.Writer) error {
 				deadline, ok := ctx.Deadline()
@@ -318,20 +318,20 @@ func TestWebAPIStreamSocketDoesNotKeepOldOperationCap(t *testing.T) {
 }
 
 func TestWebAPIStreamQuotaAndExactBodyBoundary(t *testing.T) {
-	e, f, id, _ := streamSetup(t, func(context.Context, io.Writer) error {
-		t.Error("quota-refused download reached DSM")
-		return nil
+	e, f, id, _ := streamSetup(t, func(_ context.Context, dst io.Writer) error {
+		_, err := io.WriteString(dst, "Content-Type: application/octet-stream\n\n")
+		return err
 	})
 	e.rawReserved = maxWebAPIRaw
-	if r := streamCall(e, id); r.Code != "STORAGE_ERROR" || f.calls != 0 {
+	if r := streamCall(e, id); r.Code != "STORAGE_ERROR" || f.calls != 1 {
 		t.Fatalf("unreserved large output admitted: %+v", r)
 	}
 	e.rawReserved = 0
 	out := &rootOutput{limit: maxWebAPIRaw, n: maxWebAPIRaw - 1, failed: make(chan struct{})}
 	if _, err := out.Write([]byte{0}); err != nil || out.n != maxWebAPIRaw {
-		t.Fatal("exact 2 GiB boundary rejected", err)
+		t.Fatal("exact 10 GiB boundary rejected", err)
 	}
 	if _, err := out.Write([]byte{0}); !errors.Is(err, errOutputLimit) {
-		t.Fatal("body over 2 GiB accepted", err)
+		t.Fatal("body over 10 GiB accepted", err)
 	}
 }

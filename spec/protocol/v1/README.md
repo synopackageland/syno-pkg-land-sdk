@@ -491,7 +491,7 @@ MUST be refused. These bounds and semantics also apply to until-revoked grants.
 
 The JSON-only restriction above applies to the default response mode. An explicit
 `response_type:"raw"` MUST require a positive, approved profile `raw_max_bytes`
-(1..2147483648, at most 2 GiB), pinned by policy and user consent. The executor MUST parse bounded
+(1..10737418240, at most 10 GiB), pinned by policy and user consent. The executor MUST parse bounded
 CGI headers, refuse redirects, enforce the body limit without truncation, and
 return `response_type`, `content_type`, `size`, `sha256` and exactly one of
 base64 `body` (at most 32768 bytes decoded) or a package-private `staging` handle.
@@ -499,9 +499,16 @@ It MUST NOT raise frame limits. Staging MUST be App-owned 0600 under a private
 0700 package directory. The App MUST verify size/hash and unlink after reading.
 Header, execution, spool cleanup and error rules are specified in
 [the raw contract](../../../docs/webapi-raw.md).
-Raw calls have a 30-minute execution bound, narrowed by the parent deadline and
-any timed grant's remaining lifetime. They MUST stream with bounded memory,
-reserve staging capacity, and cancel/drain when the grant is revoked or the
+Raw calls allow 18 minutes per started GiB (at least 30 minutes, at most three
+hours), narrowed by the parent deadline and any timed grant's remaining lifetime.
+Optional raw-only `expected_size` asserts the exact pinned source size, bounded
+by the profile. It MUST match Content-Length if present and the final body size.
+Reserve staging from that size or validated Content-Length before body writes;
+only unknown sizes use the profile ceiling. Check available filesystem space
+and refuse insufficient capacity with `NO_SPACE`. Raw socket deadline
+hints may reach 10820000 ms; other operations retain their one-hour ceiling.
+They MUST stream with bounded memory, protect active output from orphan cleanup,
+and cancel/drain when the grant is revoked or the
 integration is disabled. JSON calls retain their 10-second bound.
 
 ### Destination permission observations

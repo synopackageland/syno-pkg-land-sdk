@@ -86,6 +86,9 @@ func timeoutFor(op string, timeout time.Duration) time.Duration {
 }
 
 func fail(code string) error {
+	if code == CodeNoSpace {
+		return &api.Error{Code: code, Message: "Insufficient available space on the destination filesystem"}
+	}
 	return &api.Error{Code: code, Message: "Executor operation refused (" + code + ")"}
 }
 
@@ -133,10 +136,14 @@ func (c *Client) Call(parent context.Context, op string, auth map[string]string,
 	if op == "webapi.call" && (c.Timeout <= 0 || c.Timeout == ExecutorTimeout) {
 		var mode struct {
 			ResponseType string `json:"response_type"`
+			ExpectedSize *int64 `json:"expected_size"`
 		}
 		if json.Unmarshal(p, &mode) == nil && mode.ResponseType == "raw" {
 			rawWebAPI = true
 			timeout = WebAPIRawTimeout + 20*time.Second
+			if mode.ExpectedSize != nil {
+				timeout = WebAPIRawTimeoutForSize(*mode.ExpectedSize) + 20*time.Second
+			}
 		}
 	}
 	if until, ok := parent.Deadline(); ok {

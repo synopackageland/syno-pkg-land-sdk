@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"syscall"
 	"time"
 	"unicode/utf8"
 )
@@ -348,6 +349,11 @@ func (o *rootOutput) keep() (string, int64, error) {
 		if err := o.spill(); err != nil {
 			return "", 0, err
 		}
+	}
+	// Orphan retention begins at handoff, even after a long idle transfer.
+	now := syscall.NsecToTimeval(time.Now().UnixNano())
+	if err := syscall.Futimes(int(o.file.Fd()), []syscall.Timeval{now, now}); err != nil {
+		return "", 0, err
 	}
 	if err := o.file.Sync(); err != nil {
 		return "", 0, err

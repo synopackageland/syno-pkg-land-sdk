@@ -1,17 +1,20 @@
 # Raw WebAPI responses
 
 `webapi.call` remains JSON by default. A named administrator-approved profile
-opts into raw responses with one optional `raw_max_bytes` integer (1..2147483648,
-at most 2 GiB).
+opts into raw responses with one optional `raw_max_bytes` integer (1..10737418240,
+at most 10 GiB).
 Omitting it or setting zero keeps JSON-only behavior and the old profile digest.
-Use a small limit for mail and 2147483648 for Studio Drive imports. Changing the
+Use a small limit for mail and 10737418240 for Studio Drive imports. Changing the
 limit changes the policy and profile digests: administrator approval and fresh
 user consent are required.
 
-The request adds only `response_type: "raw"` (or `"json"`, the default). There is
-no request-selected filesystem path, inline threshold, encoding or header map.
-The profile owns the body limit; an extra caller limit is unnecessary for the
-current consumer. Future per-call limits can narrow that ceiling additively.
+The request adds `response_type: "raw"` (or `"json"`, the default), and optionally
+`expected_size` (0..10737418240), the exact byte size from the pinned source
+version's metadata. It is raw-only and cannot exceed the profile ceiling.
+There is no request-selected filesystem path, inline threshold, encoding or
+header map. The size is an assertion: a different Content-Length, a truncated
+body or bytes beyond the asserted size fail; a smaller assertion cannot bypass
+quota. Keep source identifier/version and size from the same metadata snapshot.
 
 Raw success returns `response_type: "raw"`, `content_type`, `size`, `sha256`, and
 exactly one of `body` (base64, including empty string) or `staging` (bare handle).
@@ -26,11 +29,19 @@ Apps use their existing `webapi.call` service and consume the same wire result
 locally. They must not inline a large body into a bridge/RPC reply.
 
 This reuses the root output spool rather than adding a download endpoint, token
-store or new privileged operation. Raw transfers reserve their approved ceiling
-against a 2 GiB + 256 MiB staging budget, including already staged output and
-active raw reservations. Admission is conservative if the disk scan already
-counts another active file. The root.run quota stays 256 MiB. The two shared
-output slots and one-hour orphan reclamation still bound abandoned output. An
+store or new privileged operation. Raw transfers reserve their actual size
+against a 10 GiB + 256 MiB staging budget, including already staged output and
+active raw reservations. Metadata `expected_size` is checked before dispatch;
+otherwise admission waits for validated CGI headers, before any body write.
+Content-Length supplies the reservation when present; only a response with
+neither size source reserves the approved profile ceiling. Space available to
+the package account is checked on the staging filesystem, accounting for other
+active reservations. Disk-query failures refuse the transfer. Admission is
+conservative if the disk scan already counts another active file.
+The root.run quota stays 256 MiB. The two shared
+output slots and one-hour orphan reclamation still bound abandoned output.
+Open output files remain locked so cleanup cannot delete an active long transfer;
+handoff refreshes the timestamp so completed output gets its full retention window. An
 App may only consume its own spool; it never gets access to root state or another App.
 The process runs as the consenting user's DSM runner; the executor strips CGI
 headers and writes only body bytes to the App spool. This does not expand the
@@ -44,9 +55,18 @@ defaults to application/octet-stream. Arbitrary headers (including Set-Cookie)
 are discarded. Location and X-Accel-Redirect are refused, never followed or
 interpreted as local paths. MailPlus Attachment.download is outside this feature.
 
-Raw execution allows 30 minutes, capped by the parent deadline and a timed
-grant's remaining lifetime. The socket handler allows 30 minutes plus 10 seconds;
-the default Go client waits 30 minutes plus 20 seconds. Explicit shorter client
+Raw execution allows `max(30 minutes, ceil(size / GiB) * 18 minutes)`, capped at
+three hours and by the parent deadline and a timed grant's remaining lifetime.
+This permits roughly 1 MiB/s at the largest size, with at least 30 minutes for
+setup and small files on a busy disk. Known metadata selects the budget before
+dispatch. A Content-Length narrows it after header validation, measured from
+execution start, without renewing any grant. When size is unknown, use the
+profile ceiling to calculate the budget (at most three hours).
+The socket handler allows three hours plus 10 seconds;
+the default Go client waits three hours plus 20 seconds, or the metadata-derived
+budget plus 20 seconds when supplied. Raw socket `deadline_ms` may therefore
+reach 10820000; other operations retain their existing one-hour hint ceiling.
+Explicit shorter client
 timeouts remain effective. JSON WebAPI keeps its 10-second bound, and ordinary
 DSM commands keep their existing budgets. A short CGI/bridge deadline still
 wins: run large transfers in an existing background job.
@@ -62,7 +82,9 @@ The subprocess streams
 stdout; invalid headers or a body over the profile limit terminate the process
 group and remove partial staging. `limit-exceeded` explicitly means no complete
 body was returned. Execution/invalid reply/audit failures remain nonretryable
-`WEBAPI_UNCERTAIN`; staging/quota failures return `STORAGE_ERROR`. Grant refusal
+`WEBAPI_UNCERTAIN`; staging/quota failures return `STORAGE_ERROR`.
+Insufficient staging or destination filesystem space returns `NO_SPACE`
+(HTTP 507); no body bytes are written after a failed admission check. Grant refusal
 returns `DELEGATION_DENIED`, and integration disable returns `disabled`. No
 response is truncated and labeled successful. Audit records mode, byte count and result,
 never CGI headers, MIME, subject, attachment bytes or params.
@@ -84,8 +106,10 @@ if err != nil {
 }
 defer os.Remove(tmp.Name())
 defer tmp.Close()
+// sourceSize comes from metadata for the exact downloaded identifier/version.
 result, err := job.WebAPI().CallRawTo(ctx,
-    approvedAPI, approvedMethod, approvedVersion, downloadParams, tmp)
+    approvedAPI, approvedMethod, approvedVersion, downloadParams, tmp,
+    delegate.RawWebAPIOptions{ExpectedSize: &sourceSize})
 if err != nil {
     return err
 }
@@ -112,18 +136,32 @@ after success. Cancellation is checked between reads/writes; a blocking custom
 writer must implement its own cancellation. Small consumers such as MIME parsing
 can explicitly supply a `bytes.Buffer` under their existing small profile limit.
 Large consumers must not buffer or encode the whole body into bridge/RPC output.
-A destination copy can temporarily need a second file of the same size.
+For an `*os.File` writer, the SDK checks destination free space before dispatch
+when metadata size is supplied, counting both copies if staging and destination
+share a filesystem. It checks again against the actual reply size before the
+first destination write, including when metadata was unknown. A destination
+copy can temporarily need a second file of the same size. With an unknown size,
+the executor cannot preflight the final destination before downloading: supply
+metadata for early refusal. Other writer implementations (including wrapped
+files, buffers and remote sinks) must check their own destination capacity.
+These checks are snapshots, not filesystem allocation guarantees; concurrent
+external writes may still exhaust space and cause cleanup after a write error.
 
 For Studio, keep its existing approved Drive API/method/version and file
 identifier/version parameters. This change does not negotiate versions, resolve
 a Drive path, or certify a new Drive endpoint. A job-bound grant must also carry
 its original `JobID`. Increase the Drive profile's limit and renew approval and
-consent. Update all existing `CallRaw` consumers, including MailPlus, to pass a
-writer. Lost socket replies can leave completed staging for orphan cleanup; do
+consent. Set the existing background job's timeout to
+`delegate.WebAPIRawTimeoutForSize(sourceSize)` plus enough time for the destination
+copy and publication (the default background budget is still 30 minutes).
+Keep earlier caller deadlines effective. Existing `CallRawTo` callers may
+continue without options, but interface/mocks declaring its method must accept
+the new `...delegate.RawWebAPIOptions` argument. Lost socket replies can leave
+completed staging for orphan cleanup; do
 not automatically retry an uncertain operation.
 
-The CLI manifest validator must also accept 2147483648 before building an App
-with a larger profile. Older CLI versions hard-code a 67108864 maximum and reject
+The CLI manifest validator must also accept 10737418240 before building an App
+with a larger profile. Older CLI versions hard-code smaller maxima and reject
 the manifest before the SDK runs. Update the CLI validator and its boundary tests
 together with the consuming App's SDK/executor pins.
 
