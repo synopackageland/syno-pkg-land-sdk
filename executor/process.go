@@ -34,7 +34,7 @@ type processCommand struct{}
 // StreamBody isolates a DSM streaming handler's outfile from synowebapi's JSON
 // control reply. The only output path is the inherited pipe, never an App path.
 func (processCommand) StreamBody(ctx context.Context, path string, args []string, body io.Writer) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(ctx, commandTimeout(ctx))
+	ctx, cancel := context.WithTimeout(ctx, streamCommandTimeout(ctx))
 	defer cancel()
 	r, w, err := os.Pipe()
 	if err != nil {
@@ -86,7 +86,7 @@ func (processCommand) StreamBody(ctx context.Context, path string, args []string
 // Stream cancels the process group as soon as the bounded consumer refuses a
 // write. Stdout never passes through the generic command's 1 MiB buffer.
 func (processCommand) Stream(ctx context.Context, path string, args []string, stdout io.Writer) error {
-	ctx, cancel := context.WithTimeout(ctx, commandTimeout(ctx))
+	ctx, cancel := context.WithTimeout(ctx, streamCommandTimeout(ctx))
 	defer cancel()
 	cmd := command(ctx, path, args)
 	output := &cancelWriter{writer: stdout, cancel: cancel}
@@ -105,6 +105,15 @@ type cancelWriter struct {
 	writer io.Writer
 	cancel context.CancelFunc
 	err    error
+}
+
+// Only raw WebAPI handlers use these streaming commands. Leave the generic
+// DSM command budget unchanged while allowing a bounded large-file transfer.
+func streamCommandTimeout(ctx context.Context) time.Duration {
+	if until, ok := ctx.Deadline(); ok {
+		return min(webAPIRawTimeout, budget.Inner(time.Until(until)))
+	}
+	return webAPIRawTimeout
 }
 
 func (w *cancelWriter) Write(p []byte) (int, error) {

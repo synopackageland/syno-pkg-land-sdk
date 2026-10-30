@@ -40,8 +40,9 @@ browser waits 2 seconds past the request (`timeouts.json` holds the values).
 |---|---|---|
 | Root program (`run.timeout_s`) | its own work | 1–120 s, default 20; the process group is then killed |
 | Executor, `root.run` | the program, then its reply | answers within 130 s (120 + 10) |
-| Executor, every other op | its DSM calls | answers within 30 s |
-| Executor client (Go `delegate.Client`, the bridge runtime's `root.*` and `delegate.*`) | the executor | `root.run` 140 s (`delegate.RootRunTimeout`), every other op 40 s (`delegate.ExecutorTimeout`) |
+| Executor, raw `webapi.call` | its streaming DSM call | executes within 1800 s, answers within 1810 s |
+| Executor, other ops | its DSM calls | answers within 30 s |
+| Executor client (Go `delegate.Client`, the bridge runtime's `root.*` and `delegate.*`) | the executor | `root.run` 140 s (`delegate.RootRunTimeout`); Go raw WebAPI 1820 s; other ops 40 s (`delegate.ExecutorTimeout`) |
 | Request (`api.Timeout`, manifest `timeout_seconds`) | the App's backend | default 300 s (`api.DefaultRequestTimeout`), 1–3600 |
 | Browser (`clientTimeout`, the CLI window's `call`) | the request | the request's deadline + 2 s |
 
@@ -490,7 +491,7 @@ MUST be refused. These bounds and semantics also apply to until-revoked grants.
 
 The JSON-only restriction above applies to the default response mode. An explicit
 `response_type:"raw"` MUST require a positive, approved profile `raw_max_bytes`
-(1..67108864), pinned by policy and user consent. The executor MUST parse bounded
+(1..2147483648, at most 2 GiB), pinned by policy and user consent. The executor MUST parse bounded
 CGI headers, refuse redirects, enforce the body limit without truncation, and
 return `response_type`, `content_type`, `size`, `sha256` and exactly one of
 base64 `body` (at most 32768 bytes decoded) or a package-private `staging` handle.
@@ -498,6 +499,10 @@ It MUST NOT raise frame limits. Staging MUST be App-owned 0600 under a private
 0700 package directory. The App MUST verify size/hash and unlink after reading.
 Header, execution, spool cleanup and error rules are specified in
 [the raw contract](../../../docs/webapi-raw.md).
+Raw calls have a 30-minute execution bound, narrowed by the parent deadline and
+any timed grant's remaining lifetime. They MUST stream with bounded memory,
+reserve staging capacity, and cancel/drain when the grant is revoked or the
+integration is disabled. JSON calls retain their 10-second bound.
 
 ### Destination permission observations
 
