@@ -122,3 +122,22 @@ direct-access notice with the fixed destination as its continue link.
 See [external access](external-access.md) for SDK 0.29.0 policy, file contracts,
 public sign-in continuation and the heartbeat, streaming, upload and WebSocket
 requirements for App authors.
+
+
+## DSM sign-in and stopped services
+
+Every protected gateway mode resumes cold DSM sign-in automatically through the
+package's fixed DSM launcher and authorize CGI. Resume tokens contain only a
+bounded transaction and declared port or configured-origin revision. A second
+failed sign-in attempt remains a refusal rather than a redirect loop. Public
+upstream paths keep their declared authentication behavior.
+
+The CGI checks the local gateway listener before presenting sign-in. A stopped
+service returns localized `app_not_running` with Package Center Run or Repair
+instructions. Registry endpoint probes remain advisory and never write Repair
+advice into DSM's package-operation result. Container Manager owns the actual pull
+result, including configured mirrors and cached images.
+
+Service workers require a certificate the browser trusts. A self-signed NAS
+certificate may prevent service-worker registration even when the app itself
+opens; the SDK does not weaken browser TLS checks.

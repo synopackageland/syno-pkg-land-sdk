@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/installsettings"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/composeingress"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"io"
@@ -132,6 +133,22 @@ func LoadConfig(path string) (Config, error) {
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&cfg); err != nil {
 		return Config{}, fmt.Errorf("%s: %w", path, err)
+	}
+	payload := filepath.Dir(filepath.Dir(path))
+	if _, e := os.Stat(filepath.Join(payload, "install/ports.json")); e == nil {
+		values, e := installsettings.PortValues(payload)
+		if e != nil {
+			return Config{}, e
+		}
+		if n := values["gateway_http"]; n != 0 {
+			cfg.Listen.HTTP = n
+		}
+		if n := values["gateway_https"]; n != 0 {
+			cfg.Listen.HTTPS = n
+		}
+		if n := values["oidc_issuer"]; n != 0 && cfg.OIDC != nil {
+			cfg.OIDC.IssuerPort = n
+		}
 	}
 	if err := cfg.validate(); err != nil {
 		return Config{}, fmt.Errorf("%s: %w", path, err)

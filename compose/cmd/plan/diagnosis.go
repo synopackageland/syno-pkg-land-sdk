@@ -52,15 +52,10 @@ func runDiagnosis(args []string, out io.Writer) error {
 	if err := json.NewEncoder(out).Encode(results); err != nil {
 		return err
 	}
-	if len(results) == 0 {
-		return nil
-	}
-	catalog := diagnosisCatalog(*project, os.Getenv("SYNOPKG_DSM_LANGUAGE"))
-	var messages strings.Builder
-	for _, d := range results {
-		messages.WriteString(renderNativeDiagnosis(d, catalog, os.Getenv("SYNOPKG_DSM_LANGUAGE")))
-	}
-	appendNativeDiagnosis(os.Getenv("SYNOPKG_TEMP_LOGFILE"), messages.String())
+	// A /v2/ probe is advisory, not a native pull result. Container Manager
+	// may use a mirror, cached image or a different trust store. Its operation
+	// owns the package result log; a probe must never append Repair advice.
+
 	return nil
 }
 

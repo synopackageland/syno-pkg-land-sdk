@@ -1,29 +1,42 @@
 # Shared Folder permission
 
-An App that keeps its files in a Shared Folder the administrator picks at
-install time (`install.sharedFolder` with `mode: select`) has a gap DSM does not
-close: the wizard stores the folder's *name*, but DSM gives the package account
-no access to it. `sharedfolder` (Go) and `SharedFolderSettings` (Vue) report that
-gap, guide the administrator through closing it, and let the App's daemon fail
-with a clear error instead of an unreadable file.
+Apps that need a shared data folder use `install.sharedFolder` with
+`mode: dedicated`, a fixed app-specific `name`, `key` and `permission: ro|rw`.
+DSM's native `data-share` resource creates that folder on the package volume and
+grants only the declared permission to the package account. Installation needs
+no folder choice. Apps and containers keep running as the package account.
+Shared data survives uninstall.
 
-For a fixed name, prefer `mode: create`: DSM's `data-share` resource creates the
-folder if needed and grants the package account `permission` at package startup.
-Checks remain useful after permission changes. See the
-[native DSM investigation and design](shared-folder-permission-design.md).
+The wizard prefills the dedicated folder, never an arbitrary existing share.
+An administrator may select an existing folder instead. That field checks DSM
+folder metadata and the package account's existing permission before Next is
+allowed. System, encrypted-unmounted, immutable, unavailable and unsupported
+folders are rejected. Unknown permission results fail closed. A first install
+whose package account does not exist cannot verify access to an existing folder:
+use the dedicated folder. The wizard does not modify permissions on unrelated
+existing folders. Fixed `mode: create` and explicit `mode: select` remain available.
 
-Compose packages can reuse `mode: select` through
-[`compose.shares` with `select: install`](compose.md#shared-folder-authority).
-The container runs as the same fixed package UID:GID. Selecting is still not a
-grant, and ACL revocation does not recall already-open file descriptors.
+Dedicated-mode upgrades prefill the recorded folder using the localized dynamic
+wizard. A malformed retained record requires an explicit valid selection; a
+static wizard also requires an explicit selection. Clearing the editable field
+chooses the dedicated folder. The installed data is never moved or deleted by
+changing a selection.
 
-The installed Compose control checks its selected share in prestart/start before
-the generated lifecycle proceeds. Missing access produces a native hook message
-with the exact Control Panel steps. The incoming preinst tool skips that check
-so installation can finish before an administrator grants access. The existing
-gateway CGI entry can show the same instructions while the daemon is stopped;
-its Retry only rechecks access, then asks the administrator to start the App in
-Package Center. See the [design and device acceptance boundary](shared-folder-permission-design.md#compose-start-and-stopped-package-entry).
+Compose maps `compose.shares.<key>.select: install` to the same declaration and
+permission. Preparation writes the dedicated source on DSM's selected package
+volume before resource acquisition. Every start repeats the kernel permission
+check as the fixed package account. Permission loss stops startup with the folder,
+account, needed RO/RW and grant-or-reinstall recovery in the DSM hook log, localized
+in all supported languages. A stopped gateway answers `app_not_running` and points
+to Package Center Run or Repair, independently of DSM browser sign-in.
+
+Wizard permission metadata is a preflight, not a grant or a guarantee about child
+ACLs or future changes. Runtime kernel checks remain authoritative. Revocation
+cannot recall already-open file descriptors. DSM device acceptance of resource
+timing and wizard behavior is separate from generated-artifact and unit tests.
+
+DSM mechanism: [Data Share](https://help.synology.com/developer-guide/resource_acquisition/data_share.html)
+and [resource acquisition](https://help.synology.com/developer-guide/resource_acquisition/resources.html).
 
 ## What the SDK decides and who decides it
 

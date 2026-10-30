@@ -16,15 +16,18 @@ import (
 // importing the build-time Compose planner into the runtime gateway.
 type InstallSharedFolder struct {
 	Mode       string `json:"mode"`
+	Name       string `json:"name,omitempty"`
 	Key        string `json:"key"`
 	Permission string `json:"permission"`
 }
 
 var packageName = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]{1,63}$`)
+var dedicatedShareName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$`)
+var systemShareName = regexp.MustCompile(`(?i)^(homes?|users|ftp|root|admin|guest|system|volume[0-9]*|(usb|sata|sd)share[0-9]*)$`)
 var shareKey = regexp.MustCompile(`^[a-z][a-z0-9_]{0,31}$`)
 
 func validNativeShare(f *InstallSharedFolder) bool {
-	return f != nil && f.Mode == "select" && shareKey.MatchString(f.Key) && !strings.HasPrefix(f.Key, "pkgwizard_") && !strings.HasPrefix(f.Key, "synopkg") && !strings.HasPrefix(f.Key, "change_") && (f.Permission == "ro" || f.Permission == "rw")
+	return f != nil && (f.Mode == "select" && f.Name == "" || f.Mode == "dedicated" && dedicatedShareName.MatchString(f.Name) && !systemShareName.MatchString(f.Name)) && shareKey.MatchString(f.Key) && !strings.HasPrefix(f.Key, "pkgwizard_") && !strings.HasPrefix(f.Key, "synopkg") && !strings.HasPrefix(f.Key, "change_") && (f.Permission == "ro" || f.Permission == "rw")
 }
 func problem(code, message string) error { return fmt.Errorf("[%s] %s", code, message) }
 

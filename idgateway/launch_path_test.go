@@ -13,7 +13,7 @@ func TestFixedLaunchPathKeepsOriginAndNativeFragment(t *testing.T) {
 	}
 	cfg.NativeIngress = true
 	w := httptest.NewRecorder()
-	EntryHandler(cfg).ServeHTTP(w, httptest.NewRequest("GET", "https://nas.example:5001/webman/3rdparty/App/sso/open.cgi?launch_path=//foreign.example", nil))
+	entryHandler(cfg, func() error { return nil }).ServeHTTP(w, httptest.NewRequest("GET", "https://nas.example:5001/webman/3rdparty/App/sso/open.cgi?launch_path=//foreign.example", nil))
 	if got := w.Header().Get("Location"); got != "https://nas.example:18443/#/sso?identifier=fixed-organization" {
 		t.Fatalf("fixed launch: %d %q", w.Code, got)
 	}

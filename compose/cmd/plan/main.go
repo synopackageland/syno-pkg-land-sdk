@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/synopackageland/syno-pkg-land-sdk/compose"
+	"github.com/synopackageland/syno-pkg-land-sdk/sharedfolder"
 	"syscall"
 )
 
@@ -25,11 +27,15 @@ func main() {
 	}
 	if len(os.Args) == 2 && os.Args[1] == "preflight" {
 		if err := preflight(); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			message := err.Error()
+			if errors.Is(err, sharedfolder.ErrPermissionPending) {
+				message = "[shared_folder_permission] " + sharedfolder.Message(err, os.Getenv("SYNOPKG_DSM_LANGUAGE"))
+			}
+			fmt.Fprintln(os.Stderr, message)
 			// DSM's installer displays this package-account hook log when available.
 			if path := os.Getenv("SYNOPKG_TEMP_LOGFILE"); path != "" {
 				if f, e := os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE|syscall.O_NOFOLLOW, 0600); e == nil {
-					fmt.Fprintln(f, err)
+					fmt.Fprintln(f, message)
 					f.Close()
 				}
 			}

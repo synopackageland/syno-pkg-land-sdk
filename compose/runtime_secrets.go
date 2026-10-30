@@ -30,6 +30,12 @@ func prepareRuntimeSecrets(project, pkg, pkgvar string, services []Inventory) er
 				if e.ExternalOrigin {
 					continue
 				}
+				if e.Port != "" {
+					if _, err := readRuntimeSetting(filepath.Join(project, "../install/port-values", e.Port+".value")); err != nil {
+						return err
+					}
+					continue
+				}
 				if e.Setting != "" {
 					if _, err := readRuntimeSetting(filepath.Join(project, "../install/values", e.filename())); err != nil {
 						return err
@@ -181,7 +187,7 @@ func loadRuntimeEnvironmentAt(values map[string]RuntimeEnvironment, root string)
 				}
 				continue
 			}
-		} else if e.Setting != "" {
+		} else if e.Setting != "" || e.Port != "" {
 			b, err = readRuntimeSetting(filepath.Join(root, "settings", e.filename()))
 		} else {
 			b, err = readRuntimeSecret(filepath.Join(root, "secrets", e.filename()))
