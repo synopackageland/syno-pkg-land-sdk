@@ -1,9 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.38.3
 
 - Raise delegated raw WebAPI downloads to 10 GiB (10737418240 bytes). Reserve
-  staging from Content-Length or the pinned source's optional `expected_size`,
+  staging from Content-Length or the pinned source's optional `expected_size`
+  (Go `RawWebAPIOptions{ExpectedSize}`),
   falling back to the approved profile ceiling only for unknown sizes. Check
   filesystem space before body writes and file destination copies; insufficient
   space returns `NO_SPACE`. Known-size file destinations sharing the
