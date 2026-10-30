@@ -22,6 +22,20 @@ App registrations missing from that policy. SDK methods use the immutable SDK
 table. Direct Go development builds without linker bindings retain their
 administrator default for unlisted methods.
 
+Bridge method validation checks names directly against the same immutable SDK
+table, without inventing an administrator policy or comparing its re-encoded
+JSON with the App's pin. This applies to Python, Node/TypeScript and Rust Apps;
+their runners share the Go bridge. Go Apps use the actual policy directly.
+
+Policy pins deliberately retain exact-byte SHA-256 compatibility with existing
+CLI builds. Pretty JSON, compact JSON, key ordering and a trailing newline are
+all valid build inputs; the runtime checks the exact bytes the build pinned.
+After building, even a whitespace-only file edit is rejected, as is any semantic
+change. Rebuild to change the installed policy or manifest. Apps on SDK 0.38.4
+no longer need to sort, compact, strip a newline from, or force administrator
+permissions into their policy to match the bridge's former temporary policy.
+No CLI digest migration or App-specific JSON formatter is required.
+
 `dsm.EntryGate.EntryMode` automatically carries the floor into the server.
 Packaged administrator-only builds still enforce the floor if a wrapper loses
 that interface. Application-privilege builds require a gate-bearing

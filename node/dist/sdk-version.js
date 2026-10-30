@@ -1,2 +1,2 @@
 // Generated from package.json by scripts/sdk-version.mjs. DO NOT EDIT.
-export const SDK_VERSION = "0.38.3";
+export const SDK_VERSION = "0.38.4";

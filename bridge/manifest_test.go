@@ -50,6 +50,7 @@ func TestParseManifestRefusesWhatTheRuntimeCannotHonour(t *testing.T) {
 		"entry outside":     {`"app/main.mjs"`, `"../x.mjs"`},
 		"no methods":        {`["hello.greet", "hello.save"]`, `[]`},
 		"method name":       {`"hello.save"`, `"Hello"`},
+		"long method":       {`"hello.save"`, `"hello.` + strings.Repeat("s", 123) + `"`},
 		"duplicate method":  {`"hello.save"`, `"hello.greet"`},
 		"access":            {`"admin-only"`, `"everyone"`},
 		"timeout":           {`"timeout_seconds": 60`, `"timeout_seconds": -1`},

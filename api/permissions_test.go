@@ -86,10 +86,16 @@ func TestSDKPolicyDigestMismatchFailsClosed(t *testing.T) {
 	t.Cleanup(func() { expectedSDKPermissionsDigest = before })
 	h := func(context.Context, Caller, json.RawMessage) (any, error) { return nil, nil }
 	expectedSDKPermissionsDigest = "mismatch"
+	if err := ValidateAppMethods([]string{"demo.read"}); err == nil {
+		t.Fatal("bridge inventory accepted mismatched SDK policy")
+	}
 	if srv, err := NewServerWithPermissions(&fakeAuth{}, []byte(emptyAppPolicy), Handle("demo.read", h)); err == nil || srv != nil {
 		t.Fatal("SDK policy digest mismatch accepted")
 	}
 	expectedSDKPermissionsDigest = fmt.Sprintf("%x", sha256.Sum256(sdkPermissionsJSON))
+	if err := ValidateAppMethods([]string{"demo.read"}); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := NewServerWithPermissions(&fakeAuth{}, []byte(emptyAppPolicy), Handle("demo.read", h)); err != nil {
 		t.Fatal(err)
 	}

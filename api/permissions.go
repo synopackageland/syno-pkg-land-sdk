@@ -160,6 +160,29 @@ func checkSDKPolicy() error {
 	return nil
 }
 
+// ValidateAppMethods checks a bridge's method inventory against the immutable
+// SDK table. It does not construct an App policy: only the actual permissions
+// bytes validated by the package build may be compared with the App digest.
+func ValidateAppMethods(methods []string) error {
+	if err := checkSDKPolicy(); err != nil {
+		return err
+	}
+	if len(methods) == 0 || len(methods) > MaxPermissionMethods {
+		return fmt.Errorf("methods: %d, want 1..%d", len(methods), MaxPermissionMethods)
+	}
+	seen := map[string]bool{}
+	for _, method := range methods {
+		if len(method) > 128 || !methodName.MatchString(method) || seen[method] {
+			return fmt.Errorf("method %q is invalid or listed twice", method)
+		}
+		seen[method] = true
+		if _, owned := sdkPolicy(method); owned {
+			return fmt.Errorf("App method cannot override SDK route: %s", method)
+		}
+	}
+	return nil
+}
+
 // declaredPermission is the SDK rule for an SDK method; before a server
 // applies the App policy every other method is administrators-only.
 func (r Route) declaredPermission() policy {
