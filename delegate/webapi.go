@@ -1,6 +1,7 @@
 package delegate
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
@@ -10,6 +11,7 @@ import (
 	"mime"
 	"os"
 	"syscall"
+	"time"
 )
 
 // WebAPIGrantOptions chooses a job-bound lifetime (1..2592000 seconds) or an
@@ -71,19 +73,30 @@ func (w JobWebAPI) call(ctx context.Context, api, method string, version int, pa
 	return w.Client.Call(ctx, "webapi.call", nil, p, out)
 }
 
-// RawWebAPIResult contains the exact body after CGI header removal. Staged
-// content has already been verified and deleted before CallRaw returns.
+// MaxWebAPIRawBytes is the approved raw response ceiling (2 GiB).
+const MaxWebAPIRawBytes int64 = 2 << 30
+
+// WebAPIRawTimeout bounds a raw transfer, independently of JSON WebAPI calls.
+const WebAPIRawTimeout = 30 * time.Minute
+
+// RawWebAPIResult describes the body written by CallRawTo after CGI header
+// removal. The body is verified and staging is deleted before success.
 type RawWebAPIResult struct {
-	Body        []byte
 	ContentType string
 	Size        int64
 	SHA256      string
 }
 
-// CallRaw requires profile raw_max_bytes opt-in. It returns at most 64 MiB,
-// verifies the size/hash for both transports, and consumes App-private staging.
-// It never retries a request or follows a server redirect.
-func (w JobWebAPI) CallRaw(ctx context.Context, api, method string, version int, params map[string]any) (RawWebAPIResult, error) {
+// CallRawTo writes at most 2 GiB to dst using bounded memory and requires the
+// profile's raw_max_bytes opt-in. It verifies size/hash and consumes private
+// staging even on failure. dst may contain partial or unverified bytes on error:
+// use a temporary file and publish it only after success. It never closes dst,
+// retries a request, or follows redirects. A blocking dst must honor cancellation
+// itself; context cancellation is checked between reads and writes.
+func (w JobWebAPI) CallRawTo(ctx context.Context, api, method string, version int, params map[string]any, dst io.Writer) (RawWebAPIResult, error) {
+	if dst == nil {
+		return RawWebAPIResult{}, fail(CodeInvalidRequest)
+	}
 	var out struct {
 		ResponseType string  `json:"response_type"`
 		ContentType  string  `json:"content_type"`
@@ -115,41 +128,55 @@ func (w JobWebAPI) CallRaw(ctx context.Context, api, method string, version int,
 			return RawWebAPIResult{}, fail("STAGING_UNAVAILABLE")
 		}
 	}
-	if out.ResponseType != "raw" || out.ContentType == "" || len(out.ContentType) > 256 || out.Size < 0 || out.Size > 64<<20 || !rootJobRE.MatchString(out.SHA256) || (out.Body == nil) == (out.Staging == "") {
+	if out.ResponseType != "raw" || out.ContentType == "" || len(out.ContentType) > 256 || out.Size < 0 || out.Size > MaxWebAPIRawBytes || !rootJobRE.MatchString(out.SHA256) || (out.Body == nil) == (out.Staging == "") {
 		return RawWebAPIResult{}, fail(CodeExecutorProtocol)
 	}
 	if _, _, err := mime.ParseMediaType(out.ContentType); err != nil {
 		return RawWebAPIResult{}, fail(CodeExecutorProtocol)
 	}
-	var body []byte
-	var err error
+	var src io.Reader
 	if out.Body != nil {
-		if out.Size > 32<<10 {
+		if out.Size > 32<<10 || len(*out.Body) > base64.StdEncoding.EncodedLen(32<<10) {
 			return RawWebAPIResult{}, fail(CodeExecutorProtocol)
 		}
-		body, err = base64.StdEncoding.Strict().DecodeString(*out.Body)
+		body, err := base64.StdEncoding.Strict().DecodeString(*out.Body)
+		if err != nil || int64(len(body)) != out.Size {
+			return RawWebAPIResult{}, fail(CodeExecutorProtocol)
+		}
+		src = bytes.NewReader(body)
 	} else {
+		prior, statErr := root.Lstat(out.Staging)
+		if statErr != nil || !prior.Mode().IsRegular() {
+			return RawWebAPIResult{}, fail(CodeExecutorProtocol)
+		}
 		f, openErr := root.OpenFile(out.Staging, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
 		if openErr != nil {
 			return RawWebAPIResult{}, fail(CodeExecutorProtocol)
 		}
 		defer f.Close()
 		info, statErr := f.Stat()
-		if statErr != nil || !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || info.Size() != out.Size {
+		if statErr != nil || !os.SameFile(prior, info) || !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || info.Size() != out.Size {
 			return RawWebAPIResult{}, fail(CodeExecutorProtocol)
 		}
 		st, ok := info.Sys().(*syscall.Stat_t)
 		if !ok || st.Nlink != 1 || st.Uid != uint32(os.Geteuid()) {
 			return RawWebAPIResult{}, fail(CodeExecutorProtocol)
 		}
-		body, err = io.ReadAll(io.LimitReader(contextReader{ctx, f}, out.Size+1))
+		src = f
 	}
-	if err != nil || int64(len(body)) != out.Size {
+	h := sha256.New()
+	reader := contextReader{ctx, src}
+	n, err := io.CopyBuffer(io.MultiWriter(dst, h), io.LimitReader(reader, out.Size), make([]byte, 32<<10))
+	if err != nil {
+		return RawWebAPIResult{}, err
+	}
+	var extra [1]byte
+	excess, endErr := reader.Read(extra[:])
+	if ctx.Err() != nil {
+		return RawWebAPIResult{}, ctx.Err()
+	}
+	if n != out.Size || excess != 0 || endErr != io.EOF || hex.EncodeToString(h.Sum(nil)) != out.SHA256 {
 		return RawWebAPIResult{}, fail(CodeExecutorProtocol)
 	}
-	h := sha256.Sum256(body)
-	if hex.EncodeToString(h[:]) != out.SHA256 {
-		return RawWebAPIResult{}, fail(CodeExecutorProtocol)
-	}
-	return RawWebAPIResult{Body: body, ContentType: out.ContentType, Size: out.Size, SHA256: out.SHA256}, nil
+	return RawWebAPIResult{ContentType: out.ContentType, Size: out.Size, SHA256: out.SHA256}, nil
 }

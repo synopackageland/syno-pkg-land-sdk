@@ -17,6 +17,8 @@ func TestExecutorBoundsAreTheSpecTimeouts(t *testing.T) {
 	var spec struct {
 		Executor struct {
 			Op            int `json:"op_s"`
+			RawExecution  int `json:"webapi_raw_execution_s"`
+			RawAnswer     int `json:"webapi_raw_answer_s"`
 			RunDefault    int `json:"root_run_program_default_s"`
 			RunMax        int `json:"root_run_program_max_s"`
 			RootRunAnswer int `json:"root_run_answer_s"`
@@ -30,6 +32,8 @@ func TestExecutorBoundsAreTheSpecTimeouts(t *testing.T) {
 	e := spec.Executor
 	for name, pair := range map[string][2]time.Duration{
 		"op_s":                       {executorOpBound, s(e.Op)},
+		"webapi_raw_execution_s":     {webAPIRawTimeout, s(e.RawExecution)},
+		"webapi_raw_answer_s":        {webAPIRawTimeout + 10*time.Second, s(e.RawAnswer)},
 		"root_run_program_default_s": {defaultRootRunTimeout, s(e.RunDefault)},
 		"root_run_program_max_s":     {maxRootRunTimeout, s(e.RunMax)},
 		"root_run_answer_s":          {rootRunRequestBy, s(e.RootRunAnswer)},

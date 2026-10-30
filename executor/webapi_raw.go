@@ -13,9 +13,12 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
-const maxWebAPIRaw int64 = 64 << 20
+const maxWebAPIRaw int64 = 2 << 30
+const webAPIRawTimeout = 30 * time.Minute
+const maxWebAPIStaging = maxWebAPIRaw + maxRootStaging
 const inlineWebAPIRaw = 32 << 10
 const maxCGIHeaders = 8 << 10
 
@@ -29,6 +32,7 @@ type webAPIRawCaller interface {
 // rawWebOutput strips a bounded CGI preamble before streaming opaque body bytes.
 // It retains no header values after parsing except validated content type/length.
 type rawWebOutput struct {
+	ctx         context.Context
 	head        []byte
 	parsed      bool
 	contentType string
@@ -38,6 +42,9 @@ type rawWebOutput struct {
 }
 
 func (w *rawWebOutput) Write(p []byte) (int, error) {
+	if w.ctx != nil && w.ctx.Err() != nil {
+		return 0, w.ctx.Err()
+	}
 	n := len(p)
 	for !w.parsed && len(p) > 0 {
 		w.head = append(w.head, p[0])
@@ -140,18 +147,58 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 		return deny("ROOT_BUSY")
 	}
 	defer e.rootSlotDone()
-	out := &rootOutput{limit: e.Policy.WebAPI[d.Scope].RawMaxBytes, spillAt: inlineWebAPIRaw + 1, staging: e.RootStaging, failed: make(chan struct{})}
+	limit := e.Policy.WebAPI[d.Scope].RawMaxBytes
+	e.rootMu.Lock()
+	var used int64
+	var err error
+	if e.RootStaging != nil {
+		used, err = e.RootStaging.Used()
+	}
+	if err != nil || used+e.rawReserved+limit > maxWebAPIStaging {
+		e.rootMu.Unlock()
+		return deny("STORAGE_ERROR")
+	}
+	e.rawReserved += limit
+	e.rootMu.Unlock()
+	defer func() {
+		e.rootMu.Lock()
+		e.rawReserved -= limit
+		e.rootMu.Unlock()
+	}()
+	out := &rootOutput{limit: limit, spillAt: inlineWebAPIRaw + 1, staging: e.RootStaging, stagingLimit: maxWebAPIStaging, failed: make(chan struct{})}
 	defer out.discard()
-	w := &rawWebOutput{body: out, hash: sha256.New()}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	w := &rawWebOutput{ctx: ctx, body: out, hash: sha256.New()}
 	target := d.Scope + ":" + p.API + "/" + p.Method + "/" + strconv.Itoa(p.Version) + ":raw"
 	e.commitMu.Lock()
-	err := e.auditLocked(s, "webapi.call", d.ID, target, "admitting")
+	code := e.rawGrantCodeLocked(d)
+	if code != "" {
+		e.commitMu.Unlock()
+		return deny(code)
+	}
+	if e.rawCalls == nil {
+		e.rawCalls = map[string]map[*rawWebOutput]context.CancelFunc{}
+	}
+	if e.rawCalls[d.ID] == nil {
+		e.rawCalls[d.ID] = map[*rawWebOutput]context.CancelFunc{}
+	}
+	e.rawCalls[d.ID][w] = cancel
+	err = e.auditLocked(s, "webapi.call", d.ID, target, "admitting")
 	e.commitMu.Unlock()
+	defer func() {
+		e.commitMu.Lock()
+		delete(e.rawCalls[d.ID], w)
+		if len(e.rawCalls[d.ID]) == 0 {
+			delete(e.rawCalls, d.ID)
+		}
+		e.commitMu.Unlock()
+	}()
 	if err != nil {
 		return deny("STORAGE_ERROR")
 	}
 	err = caller.WebAPIRaw(ctx, s.Username, p.API, p.Method, p.Version, params, w)
-	code := ""
+	code = ""
 	switch {
 	case errors.Is(err, errOutputLimit):
 		code = "limit-exceeded"
@@ -165,6 +212,9 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 		result = code
 	}
 	e.commitMu.Lock()
+	if fence := e.rawGrantCodeLocked(d); fence != "" {
+		code, result = fence, fence
+	}
 	auditErr := e.auditLocked(s, "webapi.call", d.ID, target, result+":"+strconv.FormatInt(out.n, 10))
 	e.commitMu.Unlock()
 	if auditErr != nil {
@@ -185,6 +235,23 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 		reply["staging"] = name
 	}
 	return success(reply)
+}
+
+// rawGrantCodeLocked fences completion as well as admission. Transfers may
+// outlive the old short JSON lease; revoke/disable cancel their running command.
+func (e *Executor) rawGrantCodeLocked(d Delegation) string {
+	disabled, err := e.Store.Disabled()
+	fresh, getErr := e.Store.Get(d.ID)
+	if err != nil || getErr != nil {
+		return "STORAGE_ERROR"
+	}
+	if disabled {
+		return "disabled"
+	}
+	if fresh.Revoked || !e.webGrantMatches(fresh) || (fresh.Lifetime != "until-revoked" && !e.Now().Before(fresh.Expires)) {
+		return "DELEGATION_DENIED"
+	}
+	return ""
 }
 
 // WebAPIRaw uses the same fixed argv and permanent restrictions as JSON, with

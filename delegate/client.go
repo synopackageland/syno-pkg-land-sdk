@@ -22,7 +22,7 @@ import (
 
 const MaxFrame = 64 * 1024
 
-// ExecutorTimeout is how long a client waits for an op other than root.run:
+// ExecutorTimeout is the default wait, except for root.run and raw WebAPI:
 // the executor answers within 30 seconds, and the client waits 10 longer
 // (spec/protocol/v1/timeouts.json).
 const ExecutorTimeout = 40 * time.Second
@@ -129,9 +129,19 @@ func (c *Client) Call(parent context.Context, op string, auth map[string]string,
 		timeout = ExecutorTimeout
 	}
 	timeout = timeoutFor(op, timeout)
+	rawWebAPI := false
+	if op == "webapi.call" && (c.Timeout <= 0 || c.Timeout == ExecutorTimeout) {
+		var mode struct {
+			ResponseType string `json:"response_type"`
+		}
+		if json.Unmarshal(p, &mode) == nil && mode.ResponseType == "raw" {
+			rawWebAPI = true
+			timeout = WebAPIRawTimeout + 20*time.Second
+		}
+	}
 	if until, ok := parent.Deadline(); ok {
 		remaining := runtimebudget.Inner(time.Until(until))
-		if op != "root.run" && (c.Timeout <= 0 || c.Timeout == ExecutorTimeout) {
+		if !rawWebAPI && op != "root.run" && (c.Timeout <= 0 || c.Timeout == ExecutorTimeout) {
 			timeout = remaining
 		} else {
 			timeout = min(timeout, remaining)

@@ -178,6 +178,11 @@ type webAPIRequest struct {
 	ResponseType string          `json:"response_type,omitempty"`
 }
 
+func rawWebAPIRequest(raw json.RawMessage) bool {
+	var p webAPIRequest
+	return json.Unmarshal(raw, &p) == nil && p.ResponseType == "raw"
+}
+
 // Preserve canonical wire/auth keys while package API payloads may use mixed
 // case property names. Duplicate keys at every depth are still refused.
 func strictWebJSON(raw []byte, out any, allowed string) error {
@@ -257,7 +262,14 @@ func (e *Executor) callWebAPI(ctx context.Context, r Request) Response {
 		}
 	}
 	ctx = withGrantAddress(ctx, r.Auth, d.ClientAddr)
-	ctx, cancel := context.WithTimeout(ctx, webAPITimeout)
+	timeout := webAPITimeout
+	if p.ResponseType == "raw" {
+		timeout = webAPIRawTimeout
+		if d.Lifetime != "until-revoked" {
+			timeout = min(timeout, d.Expires.Sub(e.Now()))
+		}
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	s, code := e.eligible(ctx, d.Subject.Username, d.Subject.UID, false)
 	if code != "" {

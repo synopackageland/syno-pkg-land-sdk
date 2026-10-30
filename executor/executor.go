@@ -209,6 +209,8 @@ type Executor struct {
 	shutdownUntil                time.Time
 	rootMu                       sync.Mutex
 	rootRunning                  int
+	rawReserved                  int64
+	rawCalls                     map[string]map[*rawWebOutput]context.CancelFunc // commitMu
 	jobs                         *rootJobs
 	jobEndReason                 string
 	starting                     atomic.Bool // A due start step has not ended.
@@ -357,6 +359,8 @@ func (e *Executor) Connection(parent context.Context, c net.Conn, uid int, peer 
 		bound := executorOpBound
 		if req.Op == "root.run" {
 			bound = rootRunRequestBy
+		} else if req.Op == "webapi.call" && rawWebAPIRequest(req.Params) {
+			bound = webAPIRawTimeout + 10*time.Second
 		} else if req.DeadlineMS > 0 {
 			bound = e.Policy.budgets().Duration("operation")
 		}
