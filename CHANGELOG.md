@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.38.4
+
+- Fix packaged Python, Node/TypeScript and Rust bridge startup with real App
+  policy linker pins. Validate method names against the immutable SDK table
+  directly; compare only the original build-pinned policy bytes. Apps no longer
+  need to sort/compact administrator policy JSON or strip its trailing newline
+  to match a temporary SDK policy. Authenticated/public policies work too.
+  Post-build whitespace edits and semantic changes still fail closed.
+- Align SDK/App versions at 0.38.4; reuse the unchanged executor/v0.38.3 inventory.
+
 ## 0.38.3
 
 - Raise delegated raw WebAPI downloads to 10 GiB (10737418240 bytes). Reserve

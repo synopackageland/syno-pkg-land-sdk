@@ -2,11 +2,9 @@ package bridge
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"path"
 	"regexp"
 	"slices"
@@ -74,7 +72,6 @@ type DelegateCapability struct {
 
 var (
 	entryPath   = regexp.MustCompile(`^[A-Za-z0-9._/-]{1,255}$`)
-	methodName  = regexp.MustCompile(`^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$`)
 	envName     = regexp.MustCompile(`^[A-Z_][A-Z0-9_]{0,63}$`)
 	nodePackage = regexp.MustCompile(`^Node\.js_v[0-9]{2}$`)
 	scope       = regexp.MustCompile(`^(home|install-selected|shared:[^/\\:\x00-\x1f]{1,255})$`)
@@ -191,31 +188,8 @@ func checkEnv(env map[string]string) error {
 }
 
 func checkMethods(methods []string) error {
-	if len(methods) == 0 || len(methods) > api.MaxPermissionMethods {
-		return fmt.Errorf("methods: %d, want 1..%d", len(methods), api.MaxPermissionMethods)
-	}
-	seen := map[string]bool{}
-	policy := map[string]string{}
-	routes := make([]api.Route, 0, len(methods))
-	for _, method := range methods {
-		if !methodName.MatchString(method) || seen[method] {
-			return fmt.Errorf("method %q is invalid or listed twice", method)
-		}
-		seen[method] = true
-		policy[method] = api.AdministratorPermission
-		routes = append(routes, api.Handle(method, func(context.Context, api.Caller, json.RawMessage) (any, error) { return nil, nil }))
-	}
-	// api refuses an App policy for an SDK method; that is the one list of
-	// SDK methods, so ask it rather than copy it.
-	raw, _ := json.Marshal(map[string]any{"schema": 1, "default": api.AdministratorPermission, "methods": policy})
-	if _, err := api.NewServerWithPermissions(noAuth{}, raw, routes...); err != nil {
+	if err := api.ValidateAppMethods(methods); err != nil {
 		return fmt.Errorf("methods must be App methods, not SDK ones: %v", err)
 	}
 	return nil
-}
-
-type noAuth struct{}
-
-func (noAuth) Authenticate(*http.Request) (api.Identity, error) {
-	return api.Identity{}, api.ErrNoSession
 }
