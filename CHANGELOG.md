@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.38.6
 
 - Remove delegated WebAPI API-segment and method-part name blocklists in JSON
   and raw execution. Keep name format validation, exact API/method/version
