@@ -14,6 +14,7 @@ import (
 // package/service manager and never recovers a lost supervisor from inventory.
 type restartPolicy struct {
 	Mode           string `json:"mode"`
+	FatalExitCodes []int  `json:"fatal_exit_codes,omitempty"`
 	InitialSeconds int    `json:"initial_seconds,omitempty"`
 	MaxSeconds     int    `json:"max_seconds,omitempty"`
 	MaxAttempts    int    `json:"max_attempts,omitempty"`
@@ -29,53 +30,27 @@ func normalizeRestart(p *restartPolicy) (*restartPolicy, error) {
 		return nil, errors.New("invalid daemon restart mode: use off or on-failure")
 	}
 	if v.InitialSeconds == 0 {
-		v.InitialSeconds = 1
+		v.InitialSeconds = 2
 	}
 	if v.MaxSeconds == 0 {
-		v.MaxSeconds = 30
+		v.MaxSeconds = 300
 	}
 	if v.MaxAttempts == 0 {
-		v.MaxAttempts = 5
+		v.MaxAttempts = 8
 	}
 	if v.WindowSeconds == 0 {
-		v.WindowSeconds = 300
+		v.WindowSeconds = 600
 	}
 	if v.InitialSeconds < 1 || v.InitialSeconds > 3600 || v.MaxSeconds < v.InitialSeconds || v.MaxSeconds > 3600 || v.MaxAttempts < 1 || v.MaxAttempts > 100 || v.WindowSeconds < 1 || v.WindowSeconds > 86400 {
 		return nil, errors.New("invalid daemon restart limits: delays 1-3600s, max >= initial, attempts 1-100, window 1-86400s")
 	}
+	for _, code := range v.FatalExitCodes {
+		if code < 1 || code > 255 {
+			return nil, errors.New("fatal exit codes must be 1-255")
+		}
+	}
 	return &v, nil
 }
-
-type restartBudget struct {
-	policy   *restartPolicy
-	attempts []time.Time
-}
-
-// Reserve each automatic attempt when scheduled, in a sliding window. A full
-// window is terminal; it never arms a timer to resurrect the package later.
-func (b *restartBudget) next(now time.Time) (time.Duration, bool) {
-	p := b.policy
-	if p == nil || p.Mode != "on-failure" {
-		return 0, false
-	}
-	cutoff := now.Add(-time.Duration(p.WindowSeconds) * time.Second)
-	for len(b.attempts) > 0 && !b.attempts[0].After(cutoff) {
-		b.attempts = b.attempts[1:]
-	}
-	if len(b.attempts) >= p.MaxAttempts {
-		return 0, false
-	}
-	delay, cap := time.Duration(p.InitialSeconds)*time.Second, time.Duration(p.MaxSeconds)*time.Second
-	for i := 0; i < len(b.attempts) && delay < cap; i++ {
-		delay = min(delay*2, cap)
-	}
-	b.attempts = append(b.attempts, now)
-	return delay, true
-}
-
-// reserved is the attempts in the current window: the count the delay and the
-// limit go by, which drops as reservations expire (Restarts never does).
-func (b *restartBudget) reserved() int { return len(b.attempts) }
 
 // supervisorLog writes one supervisor line to w, after the UTC time: the line
 // lands in daemon.log beside the child's output, which has times of its own.
@@ -134,7 +109,7 @@ func (c *controller) savedReason() string {
 	r, err := c.readRecord()
 	if err == nil {
 		switch r.Reason {
-		case "DAEMON_RESTART_LIMIT", "DAEMON_CHILD_EXIT", "DAEMON_CHILD_FAILED":
+		case "DAEMON_RESTART_LIMIT", "DAEMON_CHILD_EXIT", "DAEMON_CHILD_FAILED", "DAEMON_PERMANENT_ERROR", "DAEMON_CLEANUP_REQUIRED":
 			return r.Reason
 		}
 	}

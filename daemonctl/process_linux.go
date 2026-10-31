@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -52,4 +53,35 @@ func checkPeer(conn *net.UnixConn, pid int) error {
 		return errors.New("foreign daemon supervisor")
 	}
 	return nil
+}
+
+// A surviving group member keeps a lost supervisor cleanup-required even if
+// its direct child died. Observation can refuse takeover; it never signals a
+// numeric group from inventory, including a possibly reused group identity.
+func recordedGroupAlive(group int) bool {
+	if group <= 1 {
+		return false
+	}
+	entries, err := os.ReadDir("/proc")
+	if err != nil {
+		return true
+	}
+	for _, entry := range entries {
+		if _, err := strconv.Atoi(entry.Name()); err != nil {
+			continue
+		}
+		raw, err := os.ReadFile("/proc/" + entry.Name() + "/stat")
+		if err != nil {
+			continue
+		}
+		end := strings.LastIndex(string(raw), ")")
+		if end < 0 {
+			continue
+		}
+		fields := strings.Fields(string(raw)[end+1:])
+		if len(fields) > 2 && fields[2] == strconv.Itoa(group) && fields[0] != "Z" && fields[0] != "X" {
+			return true
+		}
+	}
+	return false
 }

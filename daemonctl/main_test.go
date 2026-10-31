@@ -183,8 +183,14 @@ func TestImmediateExitAndEscalation(t *testing.T) {
 			control, dest, data := fixture(t, mode)
 			rc, out := runControl(control, "start", dest, data)
 			if mode == "exit" {
-				if rc != 1 {
-					t.Fatalf("false readiness: %d %s", rc, out)
+				if rc != 0 {
+					t.Fatalf("supervisor was not admitted: %d %s", rc, out)
+				}
+				if status, _ := runControl(control, "status", dest, data); status == 0 {
+					t.Fatal("early crash reported ready")
+				}
+				if rc, out = runControl(control, "stop", dest, data); rc != 0 {
+					t.Fatalf("stop retries: %d %s", rc, out)
 				}
 			} else {
 				if rc != 0 {
