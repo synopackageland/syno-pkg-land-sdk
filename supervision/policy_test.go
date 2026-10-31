@@ -2,6 +2,7 @@ package supervision
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -41,8 +42,8 @@ func TestBackoffJitterStableResetAndIntensity(t *testing.T) {
 	}
 }
 
-func TestPermanentAndCleanExits(t *testing.T) {
-	for _, exit := range []Exit{{Code: 78, Permanent: true, Reason: "invalid_config"}, {Code: 0}} {
+func TestPermanentExits(t *testing.T) {
+	for _, exit := range []Exit{{Code: 78, Permanent: true, Reason: "invalid_config"}, {Code: 0, Permanent: true}} {
 		p := New(Defaults(), nil)
 		p.Started(time.Now())
 		s := p.Exited(time.Now(), exit)
@@ -97,5 +98,69 @@ func TestStableWindowScalesWithBackoffAndKeepsShortRuns(t *testing.T) {
 	p.Started(now)
 	if s := p.Exited(now.Add(601*time.Second), Exit{Code: 1}); s.Attempts != 1 {
 		t.Fatal("long stable run did not reset", s)
+	}
+}
+
+func TestResidentUnexpectedExitsShareTheRestartBudget(t *testing.T) {
+	for _, code := range []int{0, 1, -1} {
+		t.Run(fmt.Sprint(code), func(t *testing.T) {
+			cfg := Defaults()
+			p := New(cfg, func(n time.Duration) time.Duration { return n - 1 })
+			now := time.Unix(1000, 0)
+			for attempt := 1; attempt <= cfg.Burst; attempt++ {
+				p.Started(now)
+				p.Running()
+				s := p.Exited(now, Exit{Code: code, Reason: "child_exit"})
+				if s.Attempts != attempt || s.LastExit.Code != code {
+					t.Fatal(s)
+				}
+				if attempt == cfg.Burst {
+					if s.State != Failed || !s.NextRetry.IsZero() {
+						t.Fatal(s)
+					}
+				} else {
+					if s.State != Backoff || s.NextRetry.Sub(now) != min(cfg.Initial<<(attempt-1), cfg.Max) {
+						t.Fatal(s)
+					}
+					now = s.NextRetry
+				}
+			}
+			p.Trigger()
+			p.Started(now)
+			if s := p.Exited(now, Exit{Code: code}); s.State != Backoff || s.Attempts != 1 {
+				t.Fatal(s)
+			}
+		})
+	}
+}
+
+func TestTaskCleanExitAndRequestedStop(t *testing.T) {
+	for _, mode := range []Mode{OnFailure, Off} {
+		cfg := Defaults()
+		cfg.Mode = mode
+		p := New(cfg, nil)
+		p.Started(time.Now())
+		if s := p.Exited(time.Now(), Exit{Code: 0}); s.State != Stopped || !s.NextRetry.IsZero() || s.Attempts != 0 {
+			t.Fatal(s)
+		}
+	}
+	for _, code := range []int{0, 1, -1} {
+		p := New(Defaults(), nil)
+		p.Started(time.Now())
+		p.Exited(time.Now(), Exit{Code: 1})
+		if s := p.Stop(); s.State != Stopped || !s.NextRetry.IsZero() {
+			t.Fatal(s)
+		}
+		p.Started(time.Now())
+		p.Running()
+		p.Waiting("dependency")
+		if s := p.Exited(time.Now(), Exit{Code: code}); s.State != Stopped || !s.NextRetry.IsZero() {
+			t.Fatal(s)
+		}
+		p.Trigger()
+		p.Started(time.Now())
+		if s := p.Exited(time.Now(), Exit{Code: 0}); s.State != Backoff {
+			t.Fatal(s)
+		}
 	}
 }

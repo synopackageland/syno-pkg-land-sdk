@@ -10,17 +10,25 @@ native child recovery on Compose authority/readiness supervision.
 - Retry delay is uniformly sampled from 1 second through an exponential ceiling:
   2, 4, 8, 16, 32, 64, 128, 256, then 300 seconds. The 1-second floor prevents
   immediate restart loops while full jitter spreads launches after boot
-- Eight failures within a rolling 10-minute window enter `failed`. With rapid
+- Eight unexpected exits within a rolling 10-minute window enter `failed`. With rapid
   crashes the first seven delays total at most 254 seconds, so the limit is
   reached before failures can expire from that window
 - Backoff and failure history reset only after a continuous run of at least
   60 seconds and twice the previous delay ceiling. An individual successful
   probe or brief restart never resets them
-- A clean exit stops. Missing/unexecutable binaries, permission failures,
+- Resident children default to `always`: any unrequested exit (zero, nonzero,
+  or signal) consumes the same retry budget. Requested disable, package stop and
+  dependency teardown fence the policy with `Stop()` before terminating a child
+- Tasks use `on-failure` (clean exit succeeds) or `off` (no recovery).
+  Missing/unexecutable binaries, permission failures,
   cleanup failures and configured fatal exit codes fail without retry
 - Terminal failure owns no retry timer. A user/config/package action can trigger
   another bounded series. `daemonctl` exits after persisting its terminal state;
   an explicit package start/restart re-arms it
+
+The resident default follows [systemd Restart=always](https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html#Restart=)
+and [Erlang/OTP permanent children](https://www.erlang.org/doc/apps/stdlib/supervisor.html).
+Explicit owner-requested stops do not restart; permanent failures remain terminal.
 
 Policy itself owns no process, timer or goroutine. Adapters serialize lifecycle
 actions and call it only after cleanup. `WatchNetwork` lets an existing enabled
@@ -35,7 +43,7 @@ Native daemons use the defaults when `restart` is omitted. Runtime JSON accepts:
 ```json
 {
   "restart": {
-    "mode": "on-failure",
+    "mode": "always",
     "initial_seconds": 2,
     "max_seconds": 300,
     "max_attempts": 8,
@@ -58,6 +66,8 @@ Initial child exits also enter the policy, including exits before the one-second
 process stability check. Start admits the live supervisor while it waits or
 backs off; status is successful only after the child stabilizes.
 
+`mode: always` is the native daemon default, including omitted `restart`.
+`mode: on-failure` preserves successful task completion on exit zero;
 `mode: off` disables recovery. Zero numeric fields select defaults. Custom
 delays accept 1–3600 seconds (maximum at least initial), attempts 1–100,
 window 1–86400 seconds, and fatal exit codes 1–255. Unknown fields and invalid

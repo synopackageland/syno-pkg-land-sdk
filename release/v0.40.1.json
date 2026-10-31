@@ -1,0 +1,37 @@
+{
+  "version": "0.40.1",
+  "executorVersion": "0.39.0",
+  "executorRootSDK": "v0.19.0",
+  "packages": {
+    "@synopackageland/sdk": "0.40.1",
+    "@synopackageland/app": "0.40.1",
+    "syno-pkg-land-app": "0.40.1",
+    "synopkgland_app": "0.40.1"
+  },
+  "executorDigests": {
+    "x86_64": "7e89e405f4aec4773583642c06feeb3756c4cb93f40d73be320d8918583b8cf6",
+    "aarch64": "324db61605cd425a28bba01857604227f6436d12bf0bc1d70008ece2131c5fad",
+    "armv7": "85a592283148babf28ff27ce6abd8bf76d2ddb0d0be86214123f2a470c29d25b",
+    "lifecycle": {
+      "x86_64": "c6fbb377ecd5ec7ee5b96439f22091d9fa5965dfd616d510ca9445722f436721",
+      "aarch64": "a9ca1750d4d5cff4727dc29789e6eaf0a365cb0e674f1bb796971d82f2d4fa27",
+      "armv7": "6d25fc972eba12e3ac68f8b6a95a45e9e5706ebe19ffc1ff774fc318acbeb90f"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "validation": "Resident children retry every unrequested exit, including exit zero, with the shared bounded policy. Task on-failure and off semantics are preserved. Reuses the unchanged executor/v0.39.0 inventory. Device acceptance remains separate."
+  },
+  "ui": {
+    "builtAgainst": "0.18.2",
+    "peer": ">=0.10.1 <0.19.0"
+  },
+  "node": {
+    "build": "24.22.1",
+    "compatibility": "22.23.4",
+    "minimum": "22"
+  }
+}

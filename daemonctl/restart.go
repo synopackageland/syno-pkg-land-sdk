@@ -23,11 +23,11 @@ type restartPolicy struct {
 
 func normalizeRestart(p *restartPolicy) (*restartPolicy, error) {
 	if p == nil {
-		p = &restartPolicy{Mode: "on-failure"}
+		p = &restartPolicy{Mode: "always"}
 	}
 	v := *p
-	if v.Mode != "off" && v.Mode != "on-failure" {
-		return nil, errors.New("invalid daemon restart mode: use off or on-failure")
+	if v.Mode != "off" && v.Mode != "on-failure" && v.Mode != "always" {
+		return nil, errors.New("invalid daemon restart mode: use off, on-failure or always")
 	}
 	if v.InitialSeconds == 0 {
 		v.InitialSeconds = 2
