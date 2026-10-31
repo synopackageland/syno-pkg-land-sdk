@@ -1,6 +1,18 @@
 # Changelog
 
-## Unreleased
+## 0.39.0
+
+- Restrict delegated URL downloads and Compose registry HTTP requests to public
+  networks with the reusable `outbound` transport, including DNS and redirects.
+- Bound executor admission to four active requests per verified account and
+  sixteen overall, including batches and offline grants.
+- Isolate gateway pre-auth transaction locking and bound per-client/account
+  sign-in state without evicting other live sessions.
+- Require owner-and-grant staging prefixes and job-ID suffixes for HTTP/bridge
+  moves. Producers use `OwnerStagingPrefix` and `OwnerJobSuffix`; templates ship
+  the matching producer contract. Trusted daemon producers stay explicit.
+- Publish a new executor/v0.39.0 inventory; rebuilt Apps carry the new pins.
+
 
 - Preserve `http.ErrAbortHandler` panics so aborted HTTP responses do not log
   handler panics or transfer failures; keep logging real handler panics.
