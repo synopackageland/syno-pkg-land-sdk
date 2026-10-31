@@ -8,6 +8,9 @@
   page's only row. The content is a flex column now, not a one-row grid. A
   positioned node that has content counts as drawing: render it after the
   page or teleport it.
+- `AppShell` clips only AppLayout's own `<main>`. A `<main>` inside an App's
+  page (an editor's middle column, say) no longer gets `overflow: hidden` and
+  keeps its own scroll.
 
 ## 0.38.4
 

@@ -180,7 +180,8 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
 /* Keep the UI's navigation and collapse controls; remove the duplicate brand block. */
 .app-shell-portal-brand :deep([data-ui-sidebar-brand]) { display: none; }
 .app-shell :deep(> div) { min-height: 0; }
-.app-shell :deep(main) { display: flex; flex-direction: column; overflow: hidden; }
+/* Only the layout's own main: a <main> inside an App's page keeps its scroll. */
+.app-shell :deep(> div > main) { display: flex; flex-direction: column; overflow: hidden; }
 .app-page { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .app-denied { height: 100%; overflow-y: auto; }
 .app-shell-account { display: flex; flex-direction: column; gap: var(--ui-space-1, 4px); }
