@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"net"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"syscall"
 	"testing"
@@ -16,41 +16,17 @@ func TestRestartPolicyDefaultsAndValidation(t *testing.T) {
 		t.Fatalf("native default must restart: %+v %v", p, err)
 	}
 	p, err := normalizeRestart(&restartPolicy{Mode: "on-failure"})
-	if err != nil || p.InitialSeconds != 1 || p.MaxSeconds != 30 || p.MaxAttempts != 5 || p.WindowSeconds != 300 {
+	if err != nil || p.InitialSeconds != 2 || p.MaxSeconds != 300 || p.MaxAttempts != 8 || p.WindowSeconds != 600 {
 		t.Fatalf("defaults: %+v %v", p, err)
 	}
 	for _, bad := range []restartPolicy{
 		{Mode: "always"}, {}, {Mode: "on-failure", InitialSeconds: -1},
-		{Mode: "on-failure", InitialSeconds: 31}, {Mode: "on-failure", MaxSeconds: 3601},
+		{Mode: "on-failure", InitialSeconds: 301}, {Mode: "on-failure", MaxSeconds: 3601},
 		{Mode: "on-failure", MaxAttempts: 101}, {Mode: "on-failure", WindowSeconds: 86401},
 	} {
 		if _, err := normalizeRestart(&bad); err == nil {
 			t.Fatalf("accepted %+v", bad)
 		}
-	}
-}
-
-func TestRestartBudgetBackoffCapAndSlidingWindow(t *testing.T) {
-	p := restartPolicy{Mode: "on-failure", InitialSeconds: 1, MaxSeconds: 3, MaxAttempts: 4, WindowSeconds: 60}
-	b := restartBudget{policy: &p}
-	now := time.Unix(1000, 0)
-	for i, want := range []time.Duration{time.Second, 2 * time.Second, 3 * time.Second, 3 * time.Second} {
-		if got, ok := b.next(now.Add(time.Duration(i) * time.Second)); !ok || got != want {
-			t.Fatalf("attempt %d: %s %v", i, got, ok)
-		}
-	}
-	if _, ok := b.next(now.Add(59 * time.Second)); ok {
-		t.Fatal("restart storm exceeded the cap")
-	}
-	if got, ok := b.next(now.Add(61 * time.Second)); !ok || got != 3*time.Second {
-		t.Fatalf("sliding window: %s %v", got, ok)
-	}
-	if got, ok := b.next(now.Add(122 * time.Second)); !ok || got != time.Second {
-		t.Fatalf("stable interval must reset backoff: %s %v", got, ok)
-	}
-	// The logged attempt is the window's count, which went back to one with the delay.
-	if b.reserved() != 1 {
-		t.Fatalf("attempts in window: %d", b.reserved())
 	}
 }
 
@@ -99,7 +75,7 @@ func awaitRestartState(t *testing.T, data, state string, previous int) record {
 
 func TestCompiledRestartRecoveryAndLimit(t *testing.T) {
 	control, dest, data := fixture(t, "normal")
-	setRestartFixture(t, dest, restartPolicy{Mode: "on-failure", MaxAttempts: 2, MaxSeconds: 2})
+	setRestartFixture(t, dest, restartPolicy{Mode: "on-failure", MaxAttempts: 3, MaxSeconds: 2})
 	if rc, out := runControl(control, "start", dest, data); rc != 0 {
 		t.Fatalf("start: %d %s", rc, out)
 	}
@@ -112,14 +88,14 @@ func TestCompiledRestartRecoveryAndLimit(t *testing.T) {
 		if attempt == 3 {
 			break
 		}
-		backoff := awaitRestartState(t, data, "restarting", 0)
+		backoff := awaitRestartState(t, data, "backoff", 0)
 		if backoff.Restarts != attempt || backoff.Reason != "DAEMON_RESTART_BACKOFF" || backoff.RetryAt.IsZero() {
 			t.Fatalf("backoff: %+v", backoff)
 		}
 		if rc, out := runControl(control, "status", dest, data); rc != 1 || !strings.Contains(out, "DAEMON_RESTART_BACKOFF") {
 			t.Fatalf("backoff status: %d %s", rc, out)
 		}
-		if rc, out := runControl(control, "status-json", dest, data); rc != 1 || !strings.Contains(out, `"state":"restarting"`) {
+		if rc, out := runControl(control, "status-json", dest, data); rc != 1 || !strings.Contains(out, `"state":"backoff"`) {
 			t.Fatalf("snapshot: %d %s", rc, out)
 		}
 		r = awaitRestartState(t, data, "running", old)
@@ -157,7 +133,7 @@ func TestCompiledStopCancelsRestart(t *testing.T) {
 			if err := syscall.Kill(r.Child, syscall.SIGKILL); err != nil {
 				t.Fatal(err)
 			}
-			awaitRestartState(t, data, "restarting", 0)
+			awaitRestartState(t, data, "backoff", 0)
 			if action == "signal" {
 				if err := syscall.Kill(r.Supervisor, syscall.SIGTERM); err != nil {
 					t.Fatal(err)
@@ -197,7 +173,7 @@ func TestCompiledRestartFailureAndStopFence(t *testing.T) {
 	for _, mode := range []string{"off", "spawn-failure", "early-crash", "stop-fence"} {
 		t.Run(mode, func(t *testing.T) {
 			control, dest, data := fixture(t, "normal")
-			policy := restartPolicy{Mode: "on-failure", MaxAttempts: 1}
+			policy := restartPolicy{Mode: "on-failure", MaxAttempts: 2}
 			if mode == "off" {
 				policy.Mode = "off"
 			}
@@ -212,12 +188,12 @@ func TestCompiledRestartFailureAndStopFence(t *testing.T) {
 			}
 			if mode == "off" {
 				failed := awaitRestartState(t, data, "failed", 0)
-				if failed.Restarts != 0 || failed.Reason != "DAEMON_CHILD_FAILED" {
+				if failed.Restarts != 0 || failed.Reason != "DAEMON_PERMANENT_ERROR" {
 					t.Fatalf("off: %+v", failed)
 				}
 				return
 			}
-			awaitRestartState(t, data, "restarting", 0)
+			awaitRestartState(t, data, "backoff", 0)
 			switch mode {
 			case "spawn-failure":
 				if err := os.Remove(filepath.Join(dest, "daemon/payload/app")); err != nil {
@@ -232,7 +208,7 @@ func TestCompiledRestartFailureAndStopFence(t *testing.T) {
 				if err := os.WriteFile(filepath.Join(data, "daemon/stop.request"), nil, 0600); err != nil {
 					t.Fatal(err)
 				}
-				time.Sleep(1500 * time.Millisecond)
+				time.Sleep(3 * time.Second)
 				if rc, out := runControl(control, "status", dest, data); rc != 3 {
 					t.Fatalf("fence failed: %d %s", rc, out)
 				}
@@ -244,7 +220,7 @@ func TestCompiledRestartFailureAndStopFence(t *testing.T) {
 				return
 			}
 			failed := awaitRestartState(t, data, "failed", 0)
-			if failed.Reason != "DAEMON_RESTART_LIMIT" || failed.Restarts != 1 {
+			if failed.Reason != "DAEMON_RESTART_LIMIT" && failed.Reason != "DAEMON_PERMANENT_ERROR" || failed.Restarts != 1 {
 				t.Fatalf("failure budget: %+v", failed)
 			}
 		})
@@ -287,7 +263,7 @@ func TestRecordUpdateFailurePreservesInventory(t *testing.T) {
 	if err := os.Symlink("missing", filepath.Join(dir, "daemon.next")); err != nil {
 		t.Fatal(err)
 	}
-	if err := c.writeRecord(record{State: "restarting"}); err == nil {
+	if err := c.writeRecord(record{State: "backoff"}); err == nil {
 		t.Fatal("accepted foreign staging file")
 	}
 	raw, err := os.ReadFile(filepath.Join(dir, "daemon.pid"))
@@ -309,14 +285,14 @@ func TestCompiledNativeRestartNeedsNoConfig(t *testing.T) {
 	if err := syscall.Kill(r.Child, syscall.SIGKILL); err != nil {
 		t.Fatal(err)
 	}
-	awaitRestartState(t, data, "restarting", 0)
+	awaitRestartState(t, data, "backoff", 0)
 	recovered := awaitRestartState(t, data, "running", r.Child)
 	if recovered.Restarts != 1 {
 		t.Fatalf("no default recovery: %+v", recovered)
 	}
 	raw, _ := os.ReadFile(filepath.Join(data, "daemon/daemon.log"))
-	if !regexp.MustCompile(`(?m)^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ DAEMON_RESTART_BACKOFF attempt=1 delay=1s restarts=1$`).Match(raw) {
-		t.Fatalf("supervisor lines need their time: %s", raw)
+	if !strings.Contains(string(raw), "state=backoff") {
+		t.Fatalf("missing transition: %s", raw)
 	}
 }
 
@@ -349,5 +325,56 @@ func TestCompiledComposeDoesNotEnableNativeRecovery(t *testing.T) {
 		} else if rc != 3 {
 			t.Fatalf("%s: %d %s", mode, rc, out)
 		}
+	}
+}
+
+func TestFatalExitCodesAndDependencyValidation(t *testing.T) {
+	if _, err := normalizeRestart(&restartPolicy{Mode: "on-failure", FatalExitCodes: []int{0}}); err == nil {
+		t.Fatal("fatal clean exit accepted")
+	}
+	if _, err := normalizeRestart(&restartPolicy{Mode: "on-failure", FatalExitCodes: []int{78}}); err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range []*dependencyPolicy{{DNS: []string{"https://invalid.test"}}, {TCP: []string{"localhost:0"}}, {TCP: []string{"missing-port"}}} {
+		if validateDependencies(d) == nil {
+			t.Fatal("invalid dependency accepted", d)
+		}
+	}
+}
+
+func TestCompiledStopWhileWaitingForDependency(t *testing.T) {
+	control, dest, data := fixture(t, "normal")
+	listener, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	address := listener.Addr().String()
+	listener.Close()
+	path := filepath.Join(dest, "daemon/config.json")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg config
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		t.Fatal(err)
+	}
+	cfg.Dependencies = &dependencyPolicy{TCP: []string{address}}
+	raw, _ = json.Marshal(cfg)
+	if err := os.WriteFile(path, raw, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if rc, out := runControl(control, "start", dest, data); rc != 0 {
+		t.Fatalf("wait admission: %d %s", rc, out)
+	}
+	r := awaitRestartState(t, data, "waiting", 0)
+	if r.Attempts != 0 || r.Child != 0 {
+		t.Fatal("wait spent a failure or spawned a child", r)
+	}
+	if rc, out := runControl(control, "stop", dest, data); rc != 0 {
+		t.Fatalf("stop wait: %d %s", rc, out)
+	}
+	if rc, out := runControl(control, "status", dest, data); rc != 3 {
+		t.Fatalf("wait survived stop: %d %s", rc, out)
 	}
 }

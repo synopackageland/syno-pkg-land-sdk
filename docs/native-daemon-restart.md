@@ -1,132 +1,109 @@
 # Native daemon restart policy
 
-`daemonctl` can restart its directly owned native foreground child after a
-nonzero exit or signal termination. Native daemons default to **on-failure**
-with bounded exponential backoff, without any App configuration. Compose/network
-supervision keeps its own restart policy. Recovery can repeat upstream work, so
-foreground daemons must tolerate being started again. The supervisor never changes
-UID, invokes a root service, or signals a PID from saved inventory.
+`supervision` is the Go restart contract used by `daemonctl` and provider
+supervisors. It runs as the package account, with no root service. Compose
+containers retain their orchestrator's own restart policy; daemonctl never stacks
+native child recovery on Compose authority/readiness supervision.
 
-## Configuration and defaults
+## Shared defaults
 
-The SDK accepts this optional object in the generated `daemon/config.json`:
+- Retry delay is uniformly sampled from 1 second through an exponential ceiling:
+  2, 4, 8, 16, 32, 64, 128, 256, then 300 seconds. The 1-second floor prevents
+  immediate restart loops while full jitter spreads launches after boot
+- Eight failures within a rolling 10-minute window enter `failed`. With rapid
+  crashes the first seven delays total at most 254 seconds, so the limit is
+  reached before failures can expire from that window
+- Backoff and failure history reset only after a continuous run of at least
+  60 seconds and twice the previous delay ceiling. An individual successful
+  probe or brief restart never resets them
+- A clean exit stops. Missing/unexecutable binaries, permission failures,
+  cleanup failures and configured fatal exit codes fail without retry
+- Terminal failure owns no retry timer. A user/config/package action can trigger
+  another bounded series. `daemonctl` exits after persisting its terminal state;
+  an explicit package start/restart re-arms it
+
+Policy itself owns no process, timer or goroutine. Adapters serialize lifecycle
+actions and call it only after cleanup. `WatchNetwork` lets an existing enabled
+host re-arm transient failed children on route/link/address or resolver events;
+it blocks on kernel descriptors and has no polling timer. It never authorizes
+or enables a disabled child.
+
+## Native configuration
+
+Native daemons use the defaults when `restart` is omitted. Runtime JSON accepts:
 
 ```json
 {
   "restart": {
     "mode": "on-failure",
-    "initial_seconds": 1,
-    "max_seconds": 30,
-    "max_attempts": 5,
-    "window_seconds": 300
+    "initial_seconds": 2,
+    "max_seconds": 300,
+    "max_attempts": 8,
+    "window_seconds": 600,
+    "fatal_exit_codes": [78]
+  },
+  "dependencies": {
+    "network": true,
+    "dns": ["control.example.com"],
+    "tcp": ["127.0.0.1:5000"]
   }
 }
 ```
 
-Omit `restart` to use these defaults for native daemons. Set `mode: off` to
-disable automatic restarts. `mode` is required when the object is present. Omitted or zero numeric fields use the
-defaults above. Unknown fields, fractional numbers, unsupported modes and
-out-of-range limits are rejected before starting a child. Delays accept 1–3600
-seconds, maximum delay must be at least the initial delay, attempts accept
-1–100, and the sliding window accepts 1–86400 seconds.
+Declare only actual dependencies: local services need no external network.
+`network` checks a default route; `dns` resolves the dependency's real names;
+`tcp` checks local origins. Each probe is bounded, but total dependency waiting
+has no timeout and consumes no failure attempts. Status shows `waiting`.
+Initial child exits also enter the policy, including exits before the one-second
+process stability check. Start admits the live supervisor while it waits or
+backs off; status is successful only after the child stabilizes.
 
-After an unexpected failure, delays double up to `max_seconds`. With the defaults,
-a rapid crash sequence waits 1, 2, 4, 8 and 16 seconds before exhausting its five
-automatic attempts. Each automatic attempt is reserved when scheduled; at
-most `max_attempts` reservations may fall in the preceding `window_seconds`.
-The initial manual launch does not count. Expired reservations leave the window;
-the delay depends on the remaining reservations. A full window terminates the
-supervisor with `DAEMON_RESTART_LIMIT`; it does **not** wait for a window reset
-and start again. Only an explicit package start/restart begins a new budget.
-A successful recovery does not clear the window, so a child that keeps failing
-soon after recovering still reaches the limit. Supervisor lines in `daemon.log`
-start with the UTC time; `attempt=` counts the reservations in the window and
-`restarts=` all automatic restarts of this supervisor.
+`mode: off` disables recovery. Zero numeric fields select defaults. Custom
+delays accept 1–3600 seconds (maximum at least initial), attempts 1–100,
+window 1–86400 seconds, and fatal exit codes 1–255. Unknown fields and invalid
+values are refused before launch. Fatal codes must come from the child's own
+contract; generic code 1 is not assumed permanent.
 
-A child must survive the existing one-second process stability check before it
-is reported running again. Exits during this recovery check and exec failures
-consume the same bounded budget. Exit code zero never restarts. A signal that
-the child handles by exiting zero is also clean. An externally unhandled signal
-counts as failure, including SIGKILL; this is deliberately narrower than
-systemd's special treatment of several unhandled signals as clean exits.
+## Cleanup and load control
 
-Initial package startup retains its original deadline and fail-fast behaviour;
-this policy applies only after the first successful startup. It does not mask a
-failed installation or extend the caller's startup deadline. Compose/network
-supervision rejects an enabled policy: container restart belongs to its existing
-orchestrator, and SDK readiness/authority failures must not be retried by this
-native-child policy.
+On Linux each foreground child owns a fresh process group with parent-death
+signalling. The owner observes exit with `waitid(WNOWAIT)`, kills the remaining
+group while its unreaped leader still pins the PGID, and then reaps and closes
+its command descriptors. It never signals saved process inventory. Stop uses
+a bounded TERM/KILL sequence. Cleanup failure blocks the next generation.
+Non-Linux process helpers support host fixtures only; shipped daemons target Linux.
 
-## Stop, upgrade and uninstall
+Two abstract Unix socket slots coordinate concurrent launches across package
+accounts and independent supervisors on one Linux host. They need no writable
+shared directory or root service and are released by the kernel after a crash.
+The slot is held through startup stabilization, never during backoff or normal
+process lifetime. This is load coordination, not an authorization boundary.
+A process-local semaphore supplies the host-fixture fallback.
 
-Package stop writes and syncs a package-private stop fence before asking the
-supervisor to stop. The fence and automatic launch share a lock, so a launch
-cannot pass a completed stop fence. An explicit start clears it only while
-holding the command and supervisor ownership locks. Stop during backoff or the
-recovery stability check cancels the pending attempt. Supervisor SIGTERM/SIGINT
-also stop without recovery. Uninstall uses the same stop path before running its
-separately bounded cleanup command; upgrades must keep using the existing
-stop-before-replacement lifecycle. Uninstall commands are never restarted.
+Package stop retains the existing durable fence and launch lock, lifetime lock,
+private control socket, peer identity checks and config digest. Only an explicit
+start under the command/owner locks clears the fence. A lost supervisor with a
+witnessed live child remains cleanup-required; no automatic inventory takeover
+or root work is introduced. Upgrade and uninstall still stop before replacement
+or cleanup. Uninstall commands are not restarted.
 
-The supervisor keeps its lifetime lock and private control socket across child
-generations. A lost supervisor is still cleanup-required when a witnessed child
-remains; there is no inventory-based kill or automatic takeover. Failure to
-write state or acquire a required lock fails closed.
+## Diagnostics
 
-## Package Center and App diagnostics
+`control status-json` exposes `state` (`starting`, `waiting`, `running`, `backoff`,
+`failed`, `exited`, `stopped`, `unavailable`), `attempts`, `retry_at`, `last_exit`
+(code/reason/permanent), the relative log pointer, restart count and existing
+process/config inventory. A live snapshot authenticates the supervisor; terminal
+saved state is diagnostic inventory, never readiness authority.
 
-The existing `control status <target> <var>` command remains suitable for the
-package's `start-stop-status` script. It returns 0 only when ready, 3 when
-stopped, and 1 for backoff, recovery startup, a failed child, exhausted budget,
-or unavailable supervisor. Its fixed diagnostics include
-`DAEMON_RESTART_BACKOFF`, `DAEMON_RESTART_STARTING`, `DAEMON_RESTART_LIMIT`,
-`DAEMON_CHILD_FAILED` and `DAEMON_CHILD_EXIT`. Package Center's exact text and
-refresh behaviour are not established without device testing.
+`control status` returns 0 only when ready, 3 when stopped and 1 while waiting,
+starting, backing off or failed. Fixed diagnostics include
+`DAEMON_WAITING_DEPENDENCY`, `DAEMON_RESTART_STARTING`, `DAEMON_RESTART_BACKOFF`,
+`DAEMON_RESTART_LIMIT`, `DAEMON_PERMANENT_ERROR` and `DAEMON_CHILD_EXIT`.
+One bounded log line per state transition is written to private
+`daemon/daemon.log`; raw child output is not a status API.
 
-The new `control status-json <target> <var>` action returns a bounded JSON
-snapshot and the same exit-code convention. Fields include `state`, `reason`,
-`restarts` (total reservations in this supervisor lifetime), `retry_at` (UTC;
-zero time when no attempt is pending), and the existing supervisor/child/birth/
-config-digest inventory. States are `running`, `restarting`, `starting`,
-`failed`, `exited`, `stopped` and `unavailable`. A live snapshot authenticates
-the supervisor with the existing peer check and config digest. Saved terminal
-state is diagnostic inventory, never readiness authority; a stale nonterminal
-record becomes `unavailable` when the supervisor cannot be contacted.
-
-An App backend can execute this fixed action as its package account and expose
-the bounded state/reason fields through its existing authenticated status API.
-Do not grant the browser direct access to process inventory or daemon logs.
-No App UI integration is generated by this SDK change. Lifecycle diagnostics
-are appended to the existing private `daemon/daemon.log`, alongside child
-output; recovery does not introduce another log or rotation mechanism.
-
-## DSM service integration decision
-
-DSM documents non-root [systemd user units](https://help.synology.com/developer-guide/resource_acquisition/systemd_user_unit.html)
-from DSM 7.0, installed from `conf/systemd/pkguser-*` and controlled with
-`synosystemctl` in package scripts. Native `Restart=on-failure`, `RestartSec=`
-and start rate limiting are available in systemd, and explicit systemd stops
-do not restart a service. However,
-[progressive restart delays](https://www.freedesktop.org/software/systemd/man/256/systemd.service.html#RestartSteps=)
-(`RestartSteps=` / `RestartMaxDelaySec=`) require systemd 254. Their availability
-on the supported DSM range is unverified.
-
-The current CLI native-daemon path invokes the SDK's detached `control start`
-from lifecycle scripts; it does not give systemd a foreground main process.
-Adding `Restart=` to that launcher would monitor the short-lived controller,
-not the owned daemon. Consequently this implementation keeps child recovery
-inside that existing supervisor. It does not modify DSM-generated pkgctl units
-or stack another systemd restart loop around it. Existing foreground user-unit
-services should keep using native systemd restart where their requirements fit.
-A future migration of native daemons to such units must first preserve package
-stop/release ordering, original startup deadlines, readiness, diagnostics and
-the finite retry budget; simply adding `Restart=` is insufficient.
-
-## CLI and templates
-
-Existing native-daemon configurations need no manifest, CLI or template changes:
-rebuilding with this SDK enables the default policy in `daemonctl`. Existing
-stop-before-upgrade/uninstall hooks retain their ordering. The CLI remains a thin
-generator and does not implement its own retry loop. Custom policies in the
-runtime JSON above require a generator that supports those fields; the default
-policy does not depend on custom policy support in the CLI manifest.
+Apps may expose bounded fields through an authenticated API. They must not give
+the browser direct process/log access. Runtime JSON dependency/fatal-code options
+require a generator that supports them; default native recovery requires only an
+SDK rebuild. Local fixtures establish policy/cleanup behavior, not DSM reboot
+acceptance or Package Center refresh behavior.
