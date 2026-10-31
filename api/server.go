@@ -224,6 +224,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() {
 		if p := recover(); p != nil {
+			if p == http.ErrAbortHandler {
+				panic(p)
+			}
 			log.Printf("handler panic: %v", p)
 			writeFailure(w, internalError)
 		}

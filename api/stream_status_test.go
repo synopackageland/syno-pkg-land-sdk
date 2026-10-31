@@ -1,9 +1,11 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -69,6 +71,68 @@ func TestStreamErrorsBeforeAndAfterCommit(t *testing.T) {
 				t.Fatalf("%d %q", w.Code, w.Body.String())
 			}
 		})
+	}
+}
+
+func TestStreamPanicsBeforeAndAfterCommit(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		panic any
+		abort bool
+	}{
+		{"abort", http.ErrAbortHandler, true},
+		{"real panic", "boom", false},
+	} {
+		for _, started := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/started=%t", tc.name, started), func(t *testing.T) {
+				var logs bytes.Buffer
+				output := log.Writer()
+				log.SetOutput(&logs)
+				t.Cleanup(func() { log.SetOutput(output) })
+
+				srv := newTestServer(t, &fakeAuth{admin: true}, HandleStream("demo.file", func(_ context.Context, _ Caller, w http.ResponseWriter, _ *http.Request) error {
+					if started {
+						w.Write([]byte("file"))
+					}
+					panic(tc.panic)
+				}))
+				w := httptest.NewRecorder()
+				var recovered any
+				func() {
+					defer func() { recovered = recover() }()
+					srv.ServeHTTP(w, httptest.NewRequest("GET", "/api.cgi?method=demo.file", nil))
+				}()
+				if tc.abort {
+					if recovered != http.ErrAbortHandler {
+						t.Fatalf("recovered = %v, want http.ErrAbortHandler", recovered)
+					}
+					if logs.Len() != 0 {
+						t.Fatalf("abort logged: %s", &logs)
+					}
+				} else {
+					if recovered != nil {
+						t.Fatalf("real panic escaped: %v", recovered)
+					}
+					if !strings.Contains(logs.String(), "handler panic: boom") {
+						t.Fatalf("missing panic log: %s", &logs)
+					}
+					transferFailed := strings.Contains(logs.String(), "transfer failed after response started: internal: internal error")
+					if transferFailed != started {
+						t.Fatalf("transfer failure log: started=%t logs=%s", started, &logs)
+					}
+				}
+				status, body := http.StatusOK, ""
+				if started {
+					body = "file"
+				} else if !tc.abort {
+					status = http.StatusInternalServerError
+					body = `{"error":{"code":"internal","message":"internal error"},"success":false}` + "\n"
+				}
+				if w.Code != status || w.Body.String() != body {
+					t.Fatalf("response = %d %q, want %d %q", w.Code, w.Body.String(), status, body)
+				}
+			})
+		}
 	}
 }
 

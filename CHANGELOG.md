@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Preserve `http.ErrAbortHandler` panics so aborted HTTP responses do not log
+  handler panics or transfer failures; keep logging real handler panics.
+
 ## 0.38.7
 
 - The Vue entry accepts UI 0.18 (`@synopackageland/ui` peer `>=0.10.1 <0.19.0`)
