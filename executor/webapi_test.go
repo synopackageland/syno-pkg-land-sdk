@@ -97,7 +97,7 @@ func TestWebAPIFailsClosed(t *testing.T) {
 	}{
 		{"undeclared method", "POLICY_DENIED", map[string]any{"method": "set"}, nil},
 		{"undeclared version", "POLICY_DENIED", map[string]any{"version": 5}, nil},
-		{"core denied", "POLICY_DENIED", map[string]any{"api": "SYNO.Core.User"}, nil},
+		{"undeclared API", "POLICY_DENIED", map[string]any{"api": "SYNO.Core.User"}, nil},
 		{"runner injection", "INVALID_REQUEST", map[string]any{"params": map[string]any{"runner": "root"}}, nil},
 		{"outfile injection", "INVALID_REQUEST", map[string]any{"params": map[string]any{"outfile": "/etc/passwd"}}, nil},
 		{"api injection", "INVALID_REQUEST", map[string]any{"params": map[string]any{"api": "SYNO.Core.User"}}, nil},
@@ -131,18 +131,110 @@ func TestWebAPIFailsClosed(t *testing.T) {
 		})
 	}
 }
-func TestWebAPIPolicyDenylist(t *testing.T) {
-	for _, api := range []string{"SYNO.API.Auth", "SYNO.API.Request", "SYNO.Cal.Batch", "SYNO.Entry.Request", "SYNO.Core.User", "SYNO.FileStation.List", "SYNO.Office.Permission", "SYNO.Office.Node.Owner", "SYNO.SynologyDrive.TeamFolder", "SYNO.Package.Installation"} {
-		e, _ := webSetup(t)
-		e.Policy.WebAPI["calendar"] = WebAPIProfile{Purpose: "Forbidden", APIs: map[string]map[string][]int{api: {"get": {1}}}}
-		if err := validatePolicy(e.Policy, e.Policy.Package); err == nil {
-			t.Errorf("accepted %s", api)
-		}
-	}
+func TestWebAPIOnlyPolicy(t *testing.T) {
 	e, _ := webSetup(t)
 	e.Policy.Operations = []string{"status", "delegate.create", "delegate.list", "delegate.revoke", "webapi.call"}
 	if err := validatePolicy(e.Policy, e.Policy.Package); err != nil {
 		t.Fatalf("WebAPI-only policy: %v", err)
+	}
+}
+
+func TestWebAPIApprovedNames(t *testing.T) {
+	for _, target := range []struct{ api, method string }{
+		{"SYNO.API.Auth", "login"},
+		{"SYNO.API.Request", "request"},
+		{"SYNO.Cal.Batch", "get"},
+		{"SYNO.Entry.Request", "get"},
+		{"SYNO.Core.User", "get"},
+		{"SYNO.FileStation.List", "list"},
+		{"SYNO.Office.Permission", "get_permission"},
+		{"SYNO.Office.Node.Owner", "set_owner"},
+		{"SYNO.SynologyDrive.TeamFolder", "get_sharing"},
+		{"SYNO.Package.Installation", "get"},
+		{"SYNO.MailClient.Setting.SMTP", "list"},
+		{"SYNO.MailPlusServer.Info", "get"},
+		{"SYNO.Core.TaskScheduler", "list"},
+		{"SYNO.Cal.Compound", "get"},
+		{"SYNO.MailClient.Info", "get_compound_info"},
+		{"SYNO.Cal.Event", "get_admin"},
+	} {
+		for _, mode := range []string{"json", "raw"} {
+			t.Run(target.api+"/"+target.method+"/"+mode, func(t *testing.T) {
+				e, f := webSetup(t)
+				e.Policy.WebAPI["calendar"] = WebAPIProfile{Purpose: "Approved operation", RawMaxBytes: 1024, APIs: map[string]map[string][]int{target.api: {target.method: {1}}}}
+				if err := validatePolicy(e.Policy, e.Policy.Package); err != nil {
+					t.Fatal(err)
+				}
+				if mode == "raw" {
+					e.DSM = &rawWebDSM{webDSM: f, stdout: []byte("Content-Type: application/octet-stream\r\n\r\nbody")}
+					e.RootStaging = dirStaging{t.TempDir()}
+				}
+				id := webGrant(t, e, true)
+				params := map[string]any{"api": target.api, "method": target.method, "version": 1, "response_type": mode}
+				if r := webCall(e, id, true, params); !r.OK {
+					t.Fatal(r)
+				}
+				if f.calls != 1 || f.runner != "alice" || f.api != target.api || f.method != target.method || f.version != 1 {
+					t.Fatalf("wrong runner/call: %+v", f)
+				}
+				for key, value := range map[string]any{"api": "SYNO.Other.Info", "method": "undeclared", "version": 2} {
+					original := params[key]
+					params[key] = value
+					if r := webCall(e, id, true, params); r.Code != "POLICY_DENIED" || f.calls != 1 {
+						t.Fatalf("unpinned %s: %+v, calls %d", key, r, f.calls)
+					}
+					params[key] = original
+				}
+				c := &rawStreamCommand{cmdStub: cmdStub{reply: `{"success":true}`}, stdout: []byte("body")}
+				d := &liveDSM{Command: c}
+				if mode == "raw" {
+					if err := d.WebAPIRaw(context.Background(), "alice", target.api, target.method, 1, map[string]any{}, &strings.Builder{}); err != nil {
+						t.Fatal(err)
+					}
+				} else if _, err := d.WebAPI(context.Background(), "alice", target.api, target.method, 1, map[string]any{}); err != nil {
+					t.Fatal(err)
+				}
+				if !contains(c.args, "runner=alice") || !contains(c.args, "api="+target.api) || !contains(c.args, "method="+target.method) || !contains(c.args, "version=1") {
+					t.Fatal(c.args)
+				}
+			})
+		}
+	}
+}
+
+func TestWebAPINameFormats(t *testing.T) {
+	for _, target := range []struct{ api, method string }{
+		{"SYNO", "get"},
+		{"SYNO..Info", "get"},
+		{"SYNO.1Info", "get"},
+		{"SYNO.Cal.Info;id", "get"},
+		{"syno.Cal.Info", "get"},
+		{"SYNO.Cal.Info", ""},
+		{"SYNO.Cal.Info", "Get"},
+		{"SYNO.Cal.Info", "get;id"},
+		{"SYNO.Cal.Info", strings.Repeat("a", 65)},
+	} {
+		t.Run(target.api+"/"+target.method, func(t *testing.T) {
+			e, _ := webSetup(t)
+			e.Policy.WebAPI["calendar"] = WebAPIProfile{Purpose: "Invalid name", APIs: map[string]map[string][]int{target.api: {target.method: {1}}}}
+			if err := validatePolicy(e.Policy, e.Policy.Package); err == nil {
+				t.Fatal("accepted malformed profile")
+			}
+			if e.Policy.WebAPI["calendar"].allows(target.api, target.method, 1) {
+				t.Fatal("accepted malformed target")
+			}
+			c := &rawStreamCommand{cmdStub: cmdStub{reply: `{"success":true}`}}
+			d := &liveDSM{Command: c}
+			if _, err := d.WebAPI(context.Background(), "alice", target.api, target.method, 1, map[string]any{}); err == nil {
+				t.Fatal("JSON adapter accepted malformed target")
+			}
+			if err := d.WebAPIRaw(context.Background(), "alice", target.api, target.method, 1, map[string]any{}, &strings.Builder{}); err == nil {
+				t.Fatal("raw adapter accepted malformed target")
+			}
+			if c.path != "" {
+				t.Fatal("dispatched malformed target")
+			}
+		})
 	}
 }
 func TestWebAPIReturnsDSMEnvelopeAndNeverRetries(t *testing.T) {

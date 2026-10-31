@@ -326,11 +326,11 @@ func (e *Executor) rawGrantCodeLocked(d Delegation) string {
 	return ""
 }
 
-// WebAPIRaw uses the same fixed argv and permanent restrictions as JSON, with
+// WebAPIRaw uses the same fixed argv and input validation as JSON, with
 // an explicitly streaming command instead of the bounded JSON command buffer.
 func (d *liveDSM) WebAPIRaw(ctx context.Context, runner, api, method string, version int, params map[string]any, out io.Writer) error {
 	raw, err := json.Marshal(params)
-	if err != nil || runner == "" || deniedWebAPI(api, method) || version < 1 || version > 65535 {
+	if err != nil || runner == "" || !validWebAPINames(api, method) || version < 1 || version > 65535 {
 		return errCGI
 	}
 	if _, code := webAPIParams(raw); code != "" {

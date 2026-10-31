@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Remove delegated WebAPI API-segment and method-part name blocklists in JSON
+  and raw execution. Keep name format validation, exact API/method/version
+  profiles, administrator approval/digests, account/UID/Application Privileges
+  checks, reserved parameters and raw-mode bounds. Access follows the consenting
+  user's DSM permissions. Rebuilt executor binaries have new digests; existing
+  Apps may need administrator re-approval unless an INFO-anchored executor
+  upgrade preserves their approved policy.
+
+繁中摘要：移除 JSON 與 raw WebAPI 對 API 名稱片段及 method 字詞的封鎖，改由核准的精確 profile 與授權使用者的 DSM 權限決定存取。保留名稱格式、管理員核准與 digest、帳號／UID／AppPriv、保留參數及 raw 模式限制。重建 executor 後 digest 會改變；既有 App 可能需要管理員重新核准，符合 INFO anchor 且核准政策不變的升級可沿用原核准。
+
 ## 0.38.5
 
 - A fill page (`AppShell` page `fill`) gives its height to the first child of
@@ -579,12 +591,12 @@
 ## 0.11.0 (2026-10-16)
 
 - Executor `webapi.call` runs exact, named policy profiles as a consenting user's runner, with job-bound or until-revoked grants. Profiles carry purpose text and API/method/version lists in the existing policy digest and administrator approval. Each call checks the profile pin, current account/UID, AppPriv and original client address; revoke and the integration disable switch fence admission and drain active calls.
-- Permanently deny authentication, Core/system, FileStation, account/permission/package administration and batch dispatch, including reserved runner/session/routing params. Bound JSON params to 32 KiB, replies to 48 KiB and execution/revalidation to 10 seconds. Audit selectors and results without recording payloads. Return full DSM envelopes; `WEBAPI_UNCERTAIN` is nonretryable and requires outcome reconciliation.
+- Refuse reserved runner/session/routing params. Bound JSON params to 32 KiB, replies to 48 KiB and execution/revalidation to 10 seconds. Audit selectors and results without recording payloads. Return full DSM envelopes; `WEBAPI_UNCERTAIN` is nonretryable and requires outcome reconciliation.
 - Go adds `delegate.CreateWebAPIGrant` and `JobContext.WebAPI().Call`. The protocol and generated TypeScript interface include profile grants and `webapi.call`. Node/TypeScript, Python and Rust Apps use the bridge's `webapi.grant/grants/revoke/call` services with capability `webapi:true`. The approval panel shows supplied profile purposes and exact API versions.
 - DSM 7.3.2 verified Calendar own-event CRUD and cross-user denial through a real executor socket from the package account with no session, plus grant ownership and revocation. Runner probes also verified MailPlus reads and Drive metadata; Office streaming exports are excluded from this JSON operation. Other package APIs require their own compatibility probe.
 - All three executor digests change; lifecycle digests are unchanged. Existing policies retain approval through the INFO anchor. Adding/changing profiles changes policy and requires administrator approval and user profile consent. CLI 0.11.0 adds manifest profiles and the digest table; downstream apps upgrade backend/frontend together.
 
-繁中摘要：新增以使用者授權身分在背景呼叫 DSM JSON WebAPI 的具名 profile；用途、API／method／version 清單納入管理員核准與 digest，每次重驗帳號、AppPriv、原始 IP 與授權。支援限時或撤銷前有效、撤銷及全域整合停用；永久阻擋登入、Core、FileStation、權限／套件管理與批次轉送，限制參數／回覆大小與逾時並記錄稽核。不自動重試，結果不確定回 WEBAPI_UNCERTAIN。Go 與多語言 bridge 介面、協定／文件同步。已驗證套件帳號無 session 背景執行 Calendar 與跨使用者拒絕；Office 串流匯出不在首版 JSON 範圍。三架構 executor digest 更新，lifecycle 不變；新增／修改 profile 須重核准，搭配 CLI 0.11.0。
+繁中摘要：新增以使用者授權身分在背景呼叫 DSM JSON WebAPI 的具名 profile；用途、API／method／version 清單納入管理員核准與 digest，每次重驗帳號、AppPriv、原始 IP 與授權。支援限時或撤銷前有效、撤銷及全域整合停用；拒絕 runner／session／routing 保留參數，限制參數／回覆大小與逾時並記錄稽核。不自動重試，結果不確定回 WEBAPI_UNCERTAIN。Go 與多語言 bridge 介面、協定／文件同步。已驗證套件帳號無 session 背景執行 Calendar 與跨使用者拒絕；Office 串流匯出不在首版 JSON 範圍。三架構 executor digest 更新，lifecycle 不變；新增／修改 profile 須重核准，搭配 CLI 0.11.0。
 
 ## 0.10.12 (2026-10-15)
 
