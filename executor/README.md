@@ -614,9 +614,8 @@ and profile pin on every call. A call carrying live auth must belong to that
 same user. It then runs the fixed synowebapi executable with `runner=<owner>`;
 no password or session is stored. File Station privileges are independent.
 
-Authentication, system/Core, File Station, account, group, permission, owner,
-sharing, package and administration namespaces, API/Entry dispatch indirection,
-and authentication/permission methods are permanently refused. Reserved routing,
+API and method names must match their protocol formats. The approved profile
+and the consenting user's DSM permissions govern access. Reserved routing,
 authentication and runner params cannot be supplied. Exact API/method/version
 matches only; no wildcard profiles. Maximum: 32 profiles, 256 version entries,
 1024-byte purpose, 32 KiB encoded params, 48 KiB JSON reply, and a 10-second call
@@ -630,7 +629,7 @@ The result is the **full DSM envelope**: protocol `ok:true` can contain DSM
 admission; a transport failure can also hide a completed mutation. Never retry
 mutations automatically. Reconcile through the App's own operation journal and
 an approved read API, or offer an explicit manual recovery action. Binary,
-streaming, compound and session-dependent APIs are outside this operation.
+streaming and session-dependent APIs are outside this JSON operation.
 
 DSM 7.3.2 probes on 2026-10-16 verified Calendar v5/v6 (including cross-user
 9007 denials), MailPlus Mailbox v7/Thread v10/Message v10, and Drive Files list v2 /

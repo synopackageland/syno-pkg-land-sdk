@@ -25,27 +25,12 @@ var webAPIName = regexp.MustCompile(`^SYNO\.[A-Za-z][A-Za-z0-9]*(\.[A-Za-z][A-Za
 var webAPIMethod = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
 var webAPIParam = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,63}$`)
 
-// Neither a manifest nor a grant can enable authentication, dispatch/batch
-// indirection, system administration, or File Station through this operation.
-func deniedWebAPI(api, method string) bool {
-	if !webAPIName.MatchString(api) || !webAPIMethod.MatchString(method) {
-		return true
-	}
-	for _, part := range strings.Split(strings.ToLower(api), ".")[1:] {
-		if contains([]string{"api", "entry", "core", "auth", "authentication", "filestation", "package", "packagemanager", "packagemanagement", "user", "users", "group", "groups", "permission", "permissions", "privilege", "privileges", "owner", "sharing", "admin", "setting", "settings", "teamfolder", "mailplusserver", "directoryserver", "taskscheduler", "eventscheduler", "request", "batch", "compound"}, part) {
-			return true
-		}
-	}
-	for _, part := range strings.Split(method, "_") {
-		if contains([]string{"auth", "login", "logout", "sudo", "permission", "permissions", "privilege", "privileges", "share", "sharing", "owner", "admin"}, part) {
-			return true
-		}
-	}
-	return false
+func validWebAPINames(api, method string) bool {
+	return webAPIName.MatchString(api) && webAPIMethod.MatchString(method)
 }
 func profileDigest(p WebAPIProfile) string { b, _ := json.Marshal(p); return hashBytes(b) }
 func (p WebAPIProfile) allows(api, method string, version int) bool {
-	if deniedWebAPI(api, method) {
+	if !validWebAPINames(api, method) {
 		return false
 	}
 	for _, v := range p.APIs[api][method] {
@@ -75,7 +60,7 @@ func validWebAPIProfiles(p Policy) bool {
 				return false
 			}
 			for method, versions := range methods {
-				if deniedWebAPI(api, method) || len(versions) == 0 {
+				if !validWebAPINames(api, method) || len(versions) == 0 {
 					return false
 				}
 				seen := map[int]bool{}
@@ -318,14 +303,14 @@ func (e *Executor) callWebAPI(ctx context.Context, r Request) Response {
 }
 
 // WebAPI is deliberately separate from files.*' fixed userCalls map. The
-// executor admits the approved profile first; this adapter repeats the permanent
-// denylist and reserved-parameter checks before constructing fixed argv.
+// executor admits the approved profile first; this adapter repeats the name
+// format and reserved-parameter checks before constructing fixed argv.
 func (d *liveDSM) WebAPI(ctx context.Context, runner, api, method string, version int, params map[string]any) (json.RawMessage, error) {
 	raw, err := json.Marshal(params)
 	if err != nil {
 		return nil, err
 	}
-	if runner == "" || deniedWebAPI(api, method) || version < 1 || version > 65535 {
+	if runner == "" || !validWebAPINames(api, method) || version < 1 || version > 65535 {
 		return nil, errors.New("WebAPI denied")
 	}
 	if _, code := webAPIParams(raw); code != "" {

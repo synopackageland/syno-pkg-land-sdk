@@ -326,7 +326,7 @@ until-revoked lifetime, and fixes ops to [webapi.call]. `webapi.call` uses the
 protocol params; the executor verifies that the grant belongs to the caller.
 `webapi.grants` lists the caller's grants and `webapi.revoke` takes delegation_id.
 Go background workers use delegate.JobContext.WebAPI().Call without credentials.
-See executor/README.md for denylist, bounds, audit and uncertain mutation rules.
+See executor/README.md for profile checks, bounds, audit and uncertain mutation rules.
 
 ## Negotiated request batches
 

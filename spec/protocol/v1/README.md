@@ -473,8 +473,8 @@ or `lifetime:"until-revoked"`; all other grant rules remain unchanged. Mixing
 file and WebAPI operations MUST be refused. Revoke and the integration disable
 switch MUST fence WebAPI admission and drain admitted calls before acknowledging.
 
-Core, Auth, API/Entry dispatch, FileStation and administrative namespaces/methods
-MUST be refused even if declared (executor/README.md lists the permanent denylist).
+API and method names MUST match their protocol formats. Access MUST be limited
+to the approved profile and the consenting user's DSM permissions.
 Routing, runner, authentication and identity arguments MUST be refused. The
 encoded params object MUST be at most 32 KiB, the JSON DSM envelope at most
 48 KiB, and the call deadline at most 10 seconds including account revalidation.
