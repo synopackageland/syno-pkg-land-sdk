@@ -3,7 +3,7 @@ import { type Context } from './context.js';
 /** The channel protocol version this SDK speaks. */
 export declare const VERSION = 1;
 /** The SDK's name in hello: node/<package version>. */
-export declare const SDK = "node/0.38.6";
+export declare const SDK = "node/0.38.7";
 /**
  * A method's implementation. params is the request's params as the browser
  * sent them, not checked against P. The result is the data the browser gets,

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.38.7
+
+- The Vue entry accepts UI 0.18 (`@synopackageland/ui` peer `>=0.10.1 <0.19.0`)
+  and is tested against UI 0.18.2.
+- The shared-folder notice that tells an administrator to grant access, or to
+  pick a share again, has no close button: UI 0.17.13 made `Callout`
+  dismissible by default, and the notice stays until the folder is fixed.
+- Align SDK/App versions at 0.38.7; reuse the unchanged executor/v0.38.6 inventory.
+
+繁中摘要：Vue 入口接受 UI 0.18（peer `>=0.10.1 <0.19.0`），以 UI 0.18.2 測試；共用資料夾待處理提示不再能關閉。executor 沿用 executor/v0.38.6。
+
 ## 0.38.6
 
 - Remove delegated WebAPI API-segment and method-part name blocklists in JSON
