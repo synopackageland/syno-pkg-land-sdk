@@ -39,18 +39,17 @@ test('a stopped package says so and the dialog closes by itself once it runs',as
 // stopped for a minute, the checks back off to 15 s; a start step
 // of 15.5 s then ends, and the Gate closes within 20 s of the start, whenever
 // the start falls between two checks.
-test('after a start the dialog closes within 20 s, by itself',async()=>{
+// Each phase has its own Vue app, fake timers and test deadline. The whole
+// phase sweep must not share a five-second wall-clock test budget.
+test.each(Array.from({length:32},(_,step)=>50_000+step*500))('after a start the dialog closes within 20 s, by itself (phase %i ms)',async(start)=>{
  vi.useFakeTimers({toFake:['setTimeout','Date']})
- for(let start=50_000;start<66_000;start+=500){
-  const begin=Date.now(),up=start+15_500
-  const status=vi.fn(async()=>{const at=Date.now()-begin;if(at<start)throw {code:'APP_STOPPED'};if(at<up)throw {code:'APP_STARTING'};return reply('ready')})
-  mount({canManage:()=>true,status,request:vi.fn(),revoke:vi.fn()})
-  await vi.advanceTimersByTimeAsync(up);await settle()
-  let waited=up-start
-  while(dialog()&&waited<40_000){await vi.advanceTimersByTimeAsync(250);await settle();waited+=250}
-  expect(waited,`start ${start}`).toBeLessThanOrEqual(20_000)
-  cleanup.splice(0).forEach(fn=>fn())
- }
+ const begin=Date.now(),up=start+15_500
+ const status=vi.fn(async()=>{const at=Date.now()-begin;if(at<start)throw {code:'APP_STOPPED'};if(at<up)throw {code:'APP_STARTING'};return reply('ready')})
+ mount({canManage:()=>true,status,request:vi.fn(),revoke:vi.fn()})
+ await vi.advanceTimersByTimeAsync(up);await settle()
+ let waited=up-start
+ while(dialog()&&waited<40_000){await vi.advanceTimersByTimeAsync(250);await settle();waited+=250}
+ expect(waited,`start ${start}`).toBeLessThanOrEqual(20_000)
 })
 test('a starting package reads as starting',async()=>{
  vi.useFakeTimers({toFake:['setTimeout']})

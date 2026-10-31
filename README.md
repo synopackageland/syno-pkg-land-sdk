@@ -32,7 +32,7 @@ syno-pkg-land-app = { git = "https://github.com/synopackageland/syno-pkg-land-sd
 
 The `go.mod` line is the only source of the SDK version. The CLI builds the executor
 from `github.com/synopackageland/syno-pkg-land-sdk/executor` at the immutable
-release declared by the SDK executor manifest. SDK 0.38.7 uses executor/v0.38.6
+release declared by the SDK executor manifest. SDK 0.39.0 uses executor/v0.39.0
 and its six verified payload digests. The manifest ships in both the Go module
 and npm package. Use CLI 0.41.1 and templates 0.35.1 with this SDK; CLI 0.40.0
 builds the Hyper Backup control from `appbackup`.
