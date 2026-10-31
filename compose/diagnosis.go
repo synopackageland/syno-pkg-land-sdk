@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/outbound"
 	"io"
 	"maps"
 	"net"
@@ -123,7 +124,7 @@ func checkRegistriesWithMirrors(ctx context.Context, project, phase string, tran
 	ctx, cancel := context.WithTimeout(ctx, registryCheckBudget)
 	defer cancel()
 	if transport == nil {
-		transport = http.DefaultTransport.(*http.Transport).Clone()
+		transport = outbound.NewTransport(registryRequestBudget)
 	}
 	if tr, ok := transport.(*http.Transport); ok {
 		tr = tr.Clone()

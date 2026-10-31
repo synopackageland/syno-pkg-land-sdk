@@ -26,6 +26,7 @@ func retryJob(t *testing.T, s *Service, expires time.Time) string {
 	t.Helper()
 	web := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("download")) }))
 	t.Cleanup(web.Close)
+	s.HTTP = web.Client()
 	data, _ := json.Marshal(DownloadInput{URL: web.URL, Dest: "/home", Name: "file"})
 	job, err := s.Store.SubmitDelegated(context.Background(), background.SubmitRequest{Key: "retry", Name: "file", Data: data, Submitter: background.Submitter{User: "alice", UID: "1205"}}, func(string) (background.DelegationBinding, error) {
 		return background.DelegationBinding{DelegationID: "grant", ExpiresAt: expires}, nil

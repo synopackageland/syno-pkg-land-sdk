@@ -168,3 +168,5 @@ See [Compose packages](docs/compose.md) for schema-2 planning, identity gateway 
 [Syno Package Land API 描述 v1](spec/api/v1/README.md) defines authenticated discovery, explicit task-level commands, fixed workflow adapters, and the public JSON Schema. `api.WithDescription` serves the private build artifact using DSM authentication; `api.DescribeRoutes` exports the actual registry to the build tool.
 
 See [runtime storage and NAS idle periods](docs/idle-storage.md) for volatile worker liveness and durable job/approval state.
+
+For public-network URL downloads and registry access, see [outbound HTTP policy](docs/outbound-http.md).

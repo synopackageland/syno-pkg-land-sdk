@@ -6,6 +6,8 @@ import (
 	"github.com/synopackageland/syno-pkg-land-sdk/api"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -71,6 +73,15 @@ func TestOperationRoutesForwardOwnerSessionAndRejectForgedIdentity(t *testing.T)
 
 func TestMoveRouteCannotReserveOtherOwnersMirror(t *testing.T) {
 	s, in := stagedService(t)
+	in.JobID += OwnerJobSuffix("alice", in.DelegationID)
+	old := filepath.Join(s.StagingDir, in.Staging)
+	in.Staging = OwnerStagingPrefix("alice", in.DelegationID) + "file"
+	if err := os.MkdirAll(filepath.Dir(filepath.Join(s.StagingDir, in.Staging)), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(old, filepath.Join(s.StagingDir, in.Staging)); err != nil {
+		t.Fatal(err)
+	}
 	raw, _ := json.Marshal(in)
 	calls := 0
 	s.Client = fakeExecutor(func(_ context.Context, op string, auth map[string]string, _ any, out any) error {
@@ -82,7 +93,8 @@ func TestMoveRouteCannotReserveOtherOwnersMirror(t *testing.T) {
 			return json.Unmarshal([]byte(`{"delegations":[{"delegation_id":"grant","subject":{"username":"alice","uid":1205}}]}`), out)
 		case "files.moveFromStaging":
 			calls++
-			return json.Unmarshal([]byte(`{"job_id":"export-1","state":"queued"}`), out)
+			raw, _ := json.Marshal(map[string]string{"job_id": in.JobID, "state": "queued"})
+			return json.Unmarshal(raw, out)
 		default:
 			t.Fatal(op)
 			return nil

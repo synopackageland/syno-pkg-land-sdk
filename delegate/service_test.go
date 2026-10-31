@@ -102,6 +102,7 @@ func TestDownloadJobsFinishCancelOwnerAndRecovery(t *testing.T) {
 	s := service(t, c)
 	web := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("download")) }))
 	defer web.Close()
+	s.HTTP = web.Client()
 	submit := func(key string) string {
 		out := rpc(t, s, "alice", "delegate.jobs.submit", `{"key":"`+key+`","url":"`+web.URL+`/file","dest":"/home/Downloads","name":"file.txt"}`)
 		if out["success"] != true {
@@ -171,6 +172,7 @@ func TestDownloadLimitTimeoutAndStagingCleanup(t *testing.T) {
 		w.WriteHeader(200)
 	}))
 	defer web.Close()
+	s.HTTP = web.Client()
 	for _, p := range []string{"/big", "/slow"} {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
 		e := s.download(ctx, DownloadInput{URL: web.URL + p, Dest: "/home", Name: "file"}, JobContext{Client: c, JobID: "j", DelegationID: "d", StagingDir: s.StagingDir})
@@ -259,6 +261,7 @@ func TestRunningJobCancellationStopsDownloadAndRevokes(t *testing.T) {
 	web := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { close(started); <-r.Context().Done() }))
 	defer web.Close()
 	s := service(t, c)
+	s.HTTP = web.Client()
 	out := rpc(t, s, "alice", "delegate.jobs.submit", `{"key":"cancel-running","url":"`+web.URL+`","dest":"/home","name":"file"}`)
 	if out["success"] != true {
 		t.Fatal(out)

@@ -1,6 +1,8 @@
 package delegate
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"github.com/synopackageland/syno-pkg-land-sdk/background"
 	"os"
 	"path"
@@ -141,4 +143,22 @@ func removeEmptyFolders(stagingDir, relative string) {
 			return
 		}
 	}
+}
+
+func ownerNamespace(user, grant string) string {
+	sum := sha256.Sum256([]byte(user + "\x00" + grant))
+	return hex.EncodeToString(sum[:])
+}
+
+// OwnerStagingPrefix names a producer namespace for an authenticated account
+// and its grant. A recreated account cannot reuse the old grant. The prefix
+// is mandatory on HTTP/bridge admission; the trusted daemon facade is separate.
+func OwnerStagingPrefix(user, grant string) string {
+	return "owners/" + ownerNamespace(user, grant) + "/"
+}
+
+// OwnerJobSuffix binds an HTTP/bridge producer job ID to its authenticated
+// account and grant. Append it to a producer-local ID of at most 95 bytes.
+func OwnerJobSuffix(user, grant string) string {
+	return "-" + ownerNamespace(user, grant)[:32]
 }

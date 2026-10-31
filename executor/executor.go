@@ -202,6 +202,9 @@ type Executor struct {
 	ExecutorDigest, PolicyDigest string
 	legacyCalls                  map[string][]chan struct{}
 	copySlot                     chan struct{}
+	admissionMu                  sync.Mutex
+	activeRequests               int
+	ownerRequests                map[requestOwner]int
 	commitMu                     sync.Mutex // Durable admission/revoke/disable and bounded publish only.
 	async                        *operationRuntime
 	taskMu                       sync.Mutex
@@ -377,7 +380,13 @@ func (e *Executor) Connection(parent context.Context, c net.Conn, uid int, peer 
 		}
 		ctx, cancel := context.WithTimeout(parent, bound)
 		defer cancel()
-		out = e.handlePeer(ctx, req, got, uid)
+		admitted, release, code := e.admitRequest(ctx, req)
+		if code != "" {
+			out = deny(code)
+		} else {
+			defer release()
+			out = e.handlePeer(admitted, req, got, uid)
+		}
 	}
 	c.SetWriteDeadline(time.Now().Add(5 * time.Second))
 	json.NewEncoder(c).Encode(out)
