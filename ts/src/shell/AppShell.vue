@@ -194,7 +194,12 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
 .app-page-fill { display: flex; flex-direction: column; overflow: hidden; }
 .app-page-fill > :deep([data-page-content-body]) { display: flex; flex: 1 1 auto; flex-direction: column; width: 100%; min-height: 0; }
 .app-page-fill .app-notices { flex: 0 0 auto; }
-.app-page-fill .app-page-content { display: grid; flex: 1 1 auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); min-height: 0; }
+.app-page-fill .app-page-content { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; min-height: 0; }
+/* The first child that draws something takes the height; other nodes in the
+   slot (an empty or hidden anchor, a toast host) keep their own size. */
+.app-page-fill .app-page-content > :deep(*) { flex: none; min-width: 0; }
+.app-page-fill .app-page-content > :deep(:not(:empty, [hidden])) { flex: 1 1 0%; min-height: 0; }
+.app-page-fill .app-page-content > :deep(:not(:empty, [hidden]) ~ *) { flex: none; }
 /* Notices share the header's padding and scroll with the page; PageContent
    spaces them from the header and the content. */
 .app-notices { display: flex; flex-direction: column; gap: var(--ui-space-2, 8px); }
