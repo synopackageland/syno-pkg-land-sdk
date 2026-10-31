@@ -14,25 +14,26 @@ SDK for DSM packages built with [synopkgland](https://github.com/synopackageland
 | `node/` | npm package `@synopackageland/app`: the Node App SDK for the bridge, TypeScript with ESM and `.d.ts`, Node 22 or later, no runtime dependencies ([node/README.md](node/README.md)) |
 | `python/` | Package `synopkgland_app`: the Python App SDK for the bridge, standard library only, Python 3.8 or later ([python/README.md](python/README.md)) |
 | `testdata/golden/` | `api.Server` replies every bridge App must reproduce byte for byte (repository check, not published) |
+| `supervision/` | Shared bounded restart policy, dependency waits and Linux process-group ownership |
 | `conformance/` | Runs the vectors against the executor over a Unix socket (repository check, not published) |
 | `scripts/` | `gate.sh` (local gate), `executor-digests.sh` (reproducible SDK payload inventory) |
 
 An app depends on the SDK through `backend/go.mod`:
 
 ```
-require github.com/synopackageland/syno-pkg-land-sdk v0.38.7
+require github.com/synopackageland/syno-pkg-land-sdk v0.39.0
 ```
 
 A Rust App depends on `syno-pkg-land-app` (`rust/app/`) and runs behind the
 Go runtime:
 
 ```
-syno-pkg-land-app = { git = "https://github.com/synopackageland/syno-pkg-land-sdk", tag = "v0.38.7" }
+syno-pkg-land-app = { git = "https://github.com/synopackageland/syno-pkg-land-sdk", tag = "v0.39.0" }
 ```
 
 The `go.mod` line is the only source of the SDK version. The CLI builds the executor
 from `github.com/synopackageland/syno-pkg-land-sdk/executor` at the immutable
-release declared by the SDK executor manifest. SDK 0.38.7 uses executor/v0.38.6
+release declared by the SDK executor manifest. SDK 0.39.0 uses executor/v0.38.6
 and its six verified payload digests. The manifest ships in both the Go module
 and npm package. Use CLI 0.41.1 and templates 0.35.1 with this SDK; CLI 0.40.0
 builds the Hyper Backup control from `appbackup`.
