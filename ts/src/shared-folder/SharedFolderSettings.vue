@@ -49,7 +49,7 @@ onBeforeUnmount(()=>{disposed=true})
    </div>
   </SettingsRow>
   <div class="sf-notices">
-  <Callout v-for="folder in attention" :key="folder.key" tone="warning" data-shared-folder-notice>
+  <Callout v-for="folder in attention" :key="folder.key" tone="warning" :dismissible="false" data-shared-folder-notice>
    <span role="status">
     <template v-if="folder.state==='pending'">{{ m.pendingNote }} {{ canGrant?'':fill(m.askAdmin,text(folder)) }} {{ fill(m.steps,text(folder)) }}</template>
     <template v-else-if="folder.state==='missing'">{{ fill(m.missingHint,text(folder)) }}</template>

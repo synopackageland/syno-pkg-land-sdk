@@ -1,0 +1,38 @@
+{
+  "version": "0.38.7",
+  "executorVersion": "0.38.6",
+  "executorRootSDK": "v0.19.0",
+  "packages": {
+    "@synopackageland/sdk": "0.38.7",
+    "@synopackageland/app": "0.38.7",
+    "syno-pkg-land-app": "0.38.7",
+    "synopkgland_app": "0.38.7"
+  },
+  "executorDigests": {
+    "x86_64": "053a72c874fb1a622114c7a6514623babcb26de5d05fd8a802419dac025d9e46",
+    "aarch64": "c9f69d160ba3bca74ec222407f7189bd4ddcd8dfc34d190c9a7310be8ba4ccd9",
+    "armv7": "1e63154dcc013e4608a9225ab6f0f70d6f19b6ddfcf75b32432299b599862a75",
+    "lifecycle": {
+      "x86_64": "c6fbb377ecd5ec7ee5b96439f22091d9fa5965dfd616d510ca9445722f436721",
+      "aarch64": "a9ca1750d4d5cff4727dc29789e6eaf0a365cb0e674f1bb796971d82f2d4fa27",
+      "armv7": "6d25fc972eba12e3ac68f8b6a95a45e9e5706ebe19ffc1ff774fc318acbeb90f"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "UI range only (TypeScript package): peer @synopackageland/ui widened to >=0.10.1 <0.19.0 and tested against UI 0.18.2; the shared-folder action notice is no longer closable (UI 0.17.13 made Callout dismissible by default). Reuses the unchanged executor/v0.38.6 payload inventory. Released with build, internal-content, package and affected tests only by user authorization; no full gate, NAS acceptance or Rust crate publication."
+  },
+  "ui": {
+    "builtAgainst": "0.18.2",
+    "peer": ">=0.10.1 <0.19.0"
+  },
+  "node": {
+    "build": "24.22.1",
+    "compatibility": "22.23.4",
+    "minimum": "22"
+  }
+}
