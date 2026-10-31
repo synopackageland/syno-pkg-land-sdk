@@ -20,6 +20,10 @@ func Wait(ctx context.Context, d time.Duration) error {
 // Dependency waits without a total deadline. Each probe must honor its context.
 // Transient absence is a waiting state and does not spend a restart attempt.
 func Dependency(ctx context.Context, probe func(context.Context) error, waiting func()) error {
+	if waiting != nil && ctx.Err() == nil {
+		waiting()
+		waiting = nil
+	}
 	for {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -29,10 +33,6 @@ func Dependency(ctx context.Context, probe func(context.Context) error, waiting 
 		cancel()
 		if err == nil {
 			return nil
-		}
-		if waiting != nil {
-			waiting()
-			waiting = nil
 		}
 		if err := Wait(ctx, 2*time.Second); err != nil {
 			return err

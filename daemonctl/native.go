@@ -187,12 +187,16 @@ func (c *controller) superviseNative(ready *os.File, signals <-chan os.Signal) e
 			_, statErr := os.Stat(c.executable())
 			err := statErr
 			if err == nil {
-				err = supervision.Dependency(ctx, c.dependencies, func() {
-					select {
-					case waiting <- struct{}{}:
-					case <-ctx.Done():
+				var announce func()
+				if c.Dependencies != nil {
+					announce = func() {
+						select {
+						case waiting <- struct{}{}:
+						case <-ctx.Done():
+						}
 					}
-				})
+				}
+				err = supervision.Dependency(ctx, c.dependencies, announce)
 			}
 			var lease func()
 			var proc *supervision.Process

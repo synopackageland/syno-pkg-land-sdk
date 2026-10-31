@@ -93,3 +93,26 @@ func TestConcurrencyCapAndCancellation(t *testing.T) {
 		b()
 	})
 }
+
+func TestDependencyAnnouncesBeforeAStalledFirstProbe(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		waiting := make(chan struct{})
+		done := make(chan error, 1)
+		go func() {
+			done <- Dependency(ctx, func(ctx context.Context) error { <-ctx.Done(); return ctx.Err() }, func() { close(waiting) })
+		}()
+		synctest.Wait()
+		select {
+		case <-waiting:
+		default:
+			t.Fatal("first probe hid the waiting state behind its timeout")
+		}
+		cancel()
+		synctest.Wait()
+		if !errors.Is(<-done, context.Canceled) {
+			t.Fatal("stalled probe outlived stop")
+		}
+	})
+}
