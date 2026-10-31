@@ -11,6 +11,11 @@
 - `AppShell` clips only AppLayout's own `<main>`. A `<main>` inside an App's
   page (an editor's middle column, say) no longer gets `overflow: hidden` and
   keeps its own scroll.
+- `AppShell`'s sidebar account is one row again: the user, then sign out as an
+  icon button named "Sign out", beside the collapse button. 0.38.0 stacked a
+  text sign-out under a user that shrank to its content, so the footer pushed
+  both to the right and sign out wrapped onto its own line. A collapsed
+  sidebar stacks the user, sign out and the collapse button.
 
 ## 0.38.4
 

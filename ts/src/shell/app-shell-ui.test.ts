@@ -171,9 +171,24 @@ test.each([
   app.mount(root);await nextTick();await nextTick()
   const footer=root.querySelector('[data-ui-sidebar-footer]')!
   expect(footer.textContent).toContain('alice')
-  const button=Array.from(footer.querySelectorAll('button')).find(b=>b.textContent?.includes('Sign out'))
+  const button=footer.querySelector<HTMLButtonElement>('button[aria-label="Sign out"]') ?? undefined
   expect(button!==undefined).toBe(shown)
   button?.click()
   expect(requested).toHaveBeenCalledTimes(shown?1:0)
+ }finally{app.unmount();root.remove();vi.restoreAllMocks()}
+})
+
+// The account is one row: the user, then sign out as an icon with its name, beside the collapse button.
+test('the sidebar account keeps the user and sign out on one row',async()=>{
+ vi.spyOn(HTMLElement.prototype,'getBoundingClientRect').mockReturnValue({width:1400} as DOMRect)
+ const root=document.createElement('div');document.body.append(root)
+ const hostAdapter={platform:()=>({host:'dsm'}),signOut:()=>({status:'requested'} as const)}
+ const app=createApp({render:()=>h(AppShell,{locale:'en',modelValue:'home',pages:[{id:'home',title:'Home'}],
+  ctx:{fullPage:true,displayName:'My App',user:{name:'alice',isAdmin:true},host:hostAdapter as never}})})
+ try{
+  app.mount(root);await nextTick();await nextTick()
+  const account=root.querySelector('[data-ui-sidebar-footer] .app-shell-account')!
+  expect(Array.from(account.children).map(c=>c.matches('[data-ui-sidebar-user]')?'user':c.getAttribute('aria-label'))).toEqual(['user','Sign out'])
+  expect(account.querySelector('button')?.textContent?.trim()).toBe('')
  }finally{app.unmount();root.remove();vi.restoreAllMocks()}
 })

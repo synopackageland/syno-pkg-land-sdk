@@ -4,7 +4,8 @@
 // leases and job polling keep running while the user moves between pages; a
 // page's own component is rendered only while it is the current page.
 import {computed, provide, ref, useTemplateRef, watch, watchEffect, type FunctionalComponent} from 'vue'
-import {AppLayout, AppRoot, AppSidebar, AppSidebarUser, Button, Callout, ConfigProvider, LoadingArea, PageContent, PageHeader, ensureDeviceViewport, type WideLayout} from '@synopackageland/ui'
+import {LogOut} from '@lucide/vue'
+import {AppLayout, AppRoot, AppSidebar, AppSidebarUser, Callout, IconButton, ConfigProvider, LoadingArea, PageContent, PageHeader, ensureDeviceViewport, type WideLayout} from '@synopackageland/ui'
 import {isFullPage, type ShellContext} from '../context'
 import {appRefusal} from '../authorization/refusal'
 import {shellCopy} from './i18n'
@@ -153,7 +154,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
       <AppSidebar :model-value="modelValue" :groups="groups" @update:model-value="emit('update:modelValue', $event)" />
     </template>
     <template v-if="slots['sidebar-footer'] || user" #sidebar-footer>
-      <slot name="sidebar-footer"><div v-if="user" class="app-shell-account"><AppSidebarUser :name="user.name" :detail="user.isAdmin ? copy.administrator : copy.dsmUser" /><Button v-if="canSignOut" class="app-shell-sign-out" variant="ghost" size="sm" @click="signOut">{{ copy.signOut }}</Button></div></slot>
+      <slot name="sidebar-footer"><div v-if="user" class="app-shell-account"><AppSidebarUser :name="user.name" :detail="user.isAdmin ? copy.administrator : copy.dsmUser" /><IconButton v-if="canSignOut" class="app-shell-sign-out" variant="ghost" :label="copy.signOut" @click="signOut"><LogOut :size="16" aria-hidden="true" /></IconButton></div></slot>
     </template>
     <template v-if="slots.toolbar" #toolbar><slot name="toolbar" :page="modelValue" /></template>
     <PageContent ref="scroller" :class="['app-page', {'app-page-fill': page?.fill}]" :width="pageWidth" :surface="contentSurface">
@@ -184,8 +185,11 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
 .app-shell :deep(> div > main) { display: flex; flex-direction: column; overflow: hidden; }
 .app-page { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .app-denied { height: 100%; overflow-y: auto; }
-.app-shell-account { display: flex; flex-direction: column; gap: var(--ui-space-1, 4px); }
-.app-shell-sign-out { align-self: flex-start; }
+/* The account is one row beside the collapse button, as wide as the footer
+   leaves: the user (its name truncates), then sign out. A collapsed sidebar
+   stacks them, as the footer stacks the collapse button. */
+.app-shell-account { display: flex; flex: 1 1 auto; align-items: center; gap: var(--ui-space-1, 4px); min-width: 0; }
+.app-shell[data-ui-sidebar-collapsed] .app-shell-account { flex: 0 0 auto; flex-direction: column; }
 /* Lays a page's own actions and notes out as the header's own items. */
 .app-page-actions, .app-page-info { display: contents; }
 /* A fill page: the body takes the height under the header and notices, its
