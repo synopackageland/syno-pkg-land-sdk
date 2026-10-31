@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.40.1
+
+- Restart resident children after every unrequested exit, including exit zero
+  and signals, with the shared jitter, backoff and restart intensity limit
+- Default native daemon supervision to `always`; retain explicit `on-failure`
+  and `off` task semantics and terminal permanent errors
+- Fence requested stops against late exit and readiness events until an explicit trigger
+
 ## 0.40.0
 
 - Add one Go supervision policy for package daemons and provider children: full

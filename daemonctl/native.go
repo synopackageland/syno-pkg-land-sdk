@@ -97,6 +97,7 @@ func (c *controller) superviseNative(ready *os.File, signals <-chan os.Signal) e
 	}
 	cfg := supervision.Defaults()
 	if c.Restart != nil {
+		cfg.Mode = supervision.Mode(c.Restart.Mode)
 		cfg.Initial = time.Duration(c.Restart.InitialSeconds) * time.Second
 		cfg.Max = time.Duration(c.Restart.MaxSeconds) * time.Second
 		cfg.Burst = c.Restart.MaxAttempts
@@ -288,6 +289,7 @@ func (c *controller) superviseNative(ready *os.File, signals <-chan os.Signal) e
 	for {
 		select {
 		case <-signals:
+			p.Stop()
 			clean = true
 			cancel()
 			return nil
@@ -295,6 +297,7 @@ func (c *controller) superviseNative(ready *os.File, signals <-chan os.Signal) e
 		}
 		select {
 		case <-signals:
+			p.Stop()
 			clean = true
 			cancel()
 			return nil

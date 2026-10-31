@@ -12,7 +12,7 @@ import (
 )
 
 func TestRestartPolicyDefaultsAndValidation(t *testing.T) {
-	if p, err := normalizeRestart(nil); err != nil || p == nil || p.Mode != "on-failure" {
+	if p, err := normalizeRestart(nil); err != nil || p == nil || p.Mode != "always" {
 		t.Fatalf("native default must restart: %+v %v", p, err)
 	}
 	p, err := normalizeRestart(&restartPolicy{Mode: "on-failure"})
@@ -20,7 +20,7 @@ func TestRestartPolicyDefaultsAndValidation(t *testing.T) {
 		t.Fatalf("defaults: %+v %v", p, err)
 	}
 	for _, bad := range []restartPolicy{
-		{Mode: "always"}, {}, {Mode: "on-failure", InitialSeconds: -1},
+		{Mode: "unknown"}, {}, {Mode: "on-failure", InitialSeconds: -1},
 		{Mode: "on-failure", InitialSeconds: 301}, {Mode: "on-failure", MaxSeconds: 3601},
 		{Mode: "on-failure", MaxAttempts: 101}, {Mode: "on-failure", WindowSeconds: 86401},
 	} {
@@ -234,7 +234,7 @@ func TestCompiledRestartConfigValidation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, restart := range []string{`{"mode":"always"}`, `{"mode":"on-failure","max_attempts":-1}`, `{"mode":"on-failure","extra":true}`, `{"mode":"on-failure","max_attempts":1.5}`} {
+	for _, restart := range []string{`{"mode":"unknown"}`, `{"mode":"on-failure","max_attempts":-1}`, `{"mode":"on-failure","extra":true}`, `{"mode":"on-failure","max_attempts":1.5}`} {
 		var cfg map[string]json.RawMessage
 		json.Unmarshal(base, &cfg)
 		cfg["restart"] = json.RawMessage(restart)
@@ -376,5 +376,28 @@ func TestCompiledStopWhileWaitingForDependency(t *testing.T) {
 	}
 	if rc, out := runControl(control, "status", dest, data); rc != 3 {
 		t.Fatalf("wait survived stop: %d %s", rc, out)
+	}
+}
+
+// External TERM is a clean child exit, but it is not a package stop request.
+func TestCompiledResidentCleanExitRestartsUntilPackageStop(t *testing.T) {
+	control, dest, data := fixture(t, "normal")
+	if rc, out := runControl(control, "start", dest, data); rc != 0 {
+		t.Fatalf("start: %d %s", rc, out)
+	}
+	first := awaitRestartState(t, data, "running", 0)
+	if err := syscall.Kill(first.Child, syscall.SIGTERM); err != nil {
+		t.Fatal(err)
+	}
+	backoff := awaitRestartState(t, data, "backoff", 0)
+	if backoff.LastExit == nil || backoff.LastExit.Code != 0 || backoff.Attempts != 1 || backoff.RetryAt.IsZero() {
+		t.Fatal(backoff)
+	}
+	awaitRestartState(t, data, "running", first.Child)
+	if rc, out := runControl(control, "stop", dest, data); rc != 0 {
+		t.Fatalf("stop: %d %s", rc, out)
+	}
+	if rc, out := runControl(control, "status-json", dest, data); rc != 3 || !strings.Contains(out, `"state":"stopped"`) {
+		t.Fatalf("requested stop: %d %s", rc, out)
 	}
 }

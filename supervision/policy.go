@@ -25,16 +25,30 @@ const (
 	Stopped  State = "stopped"
 )
 
+// Mode distinguishes resident children from tasks that may finish successfully.
+type Mode string
+
+const (
+	Always    Mode = "always"
+	OnFailure Mode = "on-failure"
+	Off       Mode = "off"
+)
+
 type Config struct {
+	// Mode defaults to Always for resident children; tasks use OnFailure or Off.
+	Mode                              Mode
 	Initial, Max, Min, Stable, Window time.Duration
 	Burst                             int
 }
 
 func Defaults() Config {
-	return Config{Initial: 2 * time.Second, Max: 5 * time.Minute, Min: time.Second, Stable: time.Minute, Window: 10 * time.Minute, Burst: 8}
+	return Config{Mode: Always, Initial: 2 * time.Second, Max: 5 * time.Minute, Min: time.Second, Stable: time.Minute, Window: 10 * time.Minute, Burst: 8}
 }
 func (c Config) Normalize() Config {
 	d := Defaults()
+	if c.Mode == "" {
+		c.Mode = d.Mode
+	}
 	if c.Initial <= 0 {
 		c.Initial = d.Initial
 	}
@@ -136,7 +150,7 @@ func (p *Policy) Trigger() {
 func (p *Policy) Started(now time.Time) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if p.snapshot.State == Failed {
+	if p.snapshot.State == Failed || p.snapshot.State == Stopped {
 		return
 	}
 	p.started = now
@@ -146,7 +160,7 @@ func (p *Policy) Started(now time.Time) {
 func (p *Policy) Running() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if p.snapshot.State != Failed {
+	if p.snapshot.State != Failed && p.snapshot.State != Stopped {
 		p.snapshot.State = Running
 		p.snapshot.Reason = ""
 	}
@@ -154,7 +168,7 @@ func (p *Policy) Running() {
 func (p *Policy) Waiting(reason string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if p.snapshot.State != Failed {
+	if p.snapshot.State != Failed && p.snapshot.State != Stopped {
 		p.snapshot.State = Waiting
 		p.snapshot.Reason = reason
 		p.snapshot.NextRetry = time.Time{}
@@ -178,8 +192,12 @@ func (p *Policy) Exited(now time.Time, exit Exit) Snapshot {
 		p.snapshot.State = Failed
 		return p.snapshotCopy()
 	}
-	if exit.Code == 0 {
+	if exit.Code == 0 && p.cfg.Mode != Always {
 		p.snapshot.State = Stopped
+		return p.snapshotCopy()
+	}
+	if p.cfg.Mode == Off {
+		p.snapshot.State = Failed
 		return p.snapshotCopy()
 	}
 	cutoff := now.Add(-p.cfg.Window)
@@ -207,5 +225,16 @@ func (p *Policy) Exited(now time.Time, exit Exit) Snapshot {
 	}
 	p.snapshot.State = Backoff
 	p.snapshot.NextRetry = now.Add(delay)
+	return p.snapshotCopy()
+}
+
+// Stop fences requested teardown before signaling the child or canceling waits.
+// Late exit/readiness events cannot re-arm the policy; Trigger starts a new series.
+func (p *Policy) Stop() Snapshot {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.snapshot.State = Stopped
+	p.snapshot.NextRetry = time.Time{}
+	p.snapshot.Reason = "stop_requested"
 	return p.snapshotCopy()
 }
