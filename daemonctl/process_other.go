@@ -12,3 +12,5 @@ func childAttributes() *syscall.SysProcAttr     { return &syscall.SysProcAttr{} 
 func processBirth(int) string                   { return "host-fixture" }
 func recordedChildAlive(pid int, _ string) bool { return syscall.Kill(pid, 0) == nil }
 func checkPeer(*net.UnixConn, int) error        { return nil }
+
+func recordedGroupAlive(int) bool { return false }

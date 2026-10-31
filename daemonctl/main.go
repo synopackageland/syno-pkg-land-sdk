@@ -279,7 +279,7 @@ func (c *controller) readRecord() (record, error) {
 	}
 	defer f.Close()
 	err = json.NewDecoder(io.LimitReader(f, 4096)).Decode(&r)
-	if err == nil && (r.Supervisor < 1 || r.Child < 1 || r.Digest != c.digest) {
+	if err == nil && (r.Supervisor < 1 || r.Child < 0 || (r.Child == 0 && r.State != "starting" && r.State != "waiting" && r.State != "backoff" && r.State != "failed") || r.Digest != c.digest) {
 		err = errors.New("daemon inventory mismatch")
 	}
 	return r, err
@@ -353,7 +353,7 @@ func (c *controller) retired() error {
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	if err == nil && recordedChildAlive(r.Child, r.Birth) {
+	if err == nil && (recordedChildAlive(r.Child, r.Birth) || recordedGroupAlive(r.Child)) {
 		return errors.New("daemon cleanup-required: live child without supervisor")
 	}
 	if err != nil {

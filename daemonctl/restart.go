@@ -109,7 +109,7 @@ func (c *controller) savedReason() string {
 	r, err := c.readRecord()
 	if err == nil {
 		switch r.Reason {
-		case "DAEMON_RESTART_LIMIT", "DAEMON_CHILD_EXIT", "DAEMON_CHILD_FAILED", "DAEMON_PERMANENT_ERROR":
+		case "DAEMON_RESTART_LIMIT", "DAEMON_CHILD_EXIT", "DAEMON_CHILD_FAILED", "DAEMON_PERMANENT_ERROR", "DAEMON_CLEANUP_REQUIRED":
 			return r.Reason
 		}
 	}

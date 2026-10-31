@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -338,5 +339,42 @@ func TestFatalExitCodesAndDependencyValidation(t *testing.T) {
 		if validateDependencies(d) == nil {
 			t.Fatal("invalid dependency accepted", d)
 		}
+	}
+}
+
+func TestCompiledStopWhileWaitingForDependency(t *testing.T) {
+	control, dest, data := fixture(t, "normal")
+	listener, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	address := listener.Addr().String()
+	listener.Close()
+	path := filepath.Join(dest, "daemon/config.json")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg config
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		t.Fatal(err)
+	}
+	cfg.Dependencies = &dependencyPolicy{TCP: []string{address}}
+	raw, _ = json.Marshal(cfg)
+	if err := os.WriteFile(path, raw, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if rc, out := runControl(control, "start", dest, data); rc != 0 {
+		t.Fatalf("wait admission: %d %s", rc, out)
+	}
+	r := awaitRestartState(t, data, "waiting", 0)
+	if r.Attempts != 0 || r.Child != 0 {
+		t.Fatal("wait spent a failure or spawned a child", r)
+	}
+	if rc, out := runControl(control, "stop", dest, data); rc != 0 {
+		t.Fatalf("stop wait: %d %s", rc, out)
+	}
+	if rc, out := runControl(control, "status", dest, data); rc != 3 {
+		t.Fatalf("wait survived stop: %d %s", rc, out)
 	}
 }

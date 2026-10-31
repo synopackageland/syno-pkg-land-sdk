@@ -120,7 +120,13 @@ func (c *controller) superviseNative(ready *os.File, signals <-chan os.Signal) e
 			if err == nil && tempDir != "" {
 				_ = os.RemoveAll(tempDir)
 			}
-			if clean && err == nil {
+			if err != nil {
+				r.State = "failed"
+				r.Reason = "DAEMON_CLEANUP_REQUIRED"
+				r.RetryAt = time.Time{}
+				r.LastExit = &supervision.Exit{Code: -1, Reason: "cleanup_required", Permanent: true}
+				_ = c.writeRecord(r)
+			} else if clean {
 				_ = os.Remove(filepath.Join(c.dir, "daemon.pid"))
 			}
 		} else if clean {
@@ -171,10 +177,12 @@ func (c *controller) superviseNative(ready *os.File, signals <-chan os.Signal) e
 	launched := make(chan launchResult, 1)
 	waiting := make(chan struct{}, 1)
 	launching := false
-	launch := func() {
-		launching = true
+	launch := func() error {
 		p.Started(time.Now())
-		_ = persist(p.Snapshot())
+		if err := persist(p.Snapshot()); err != nil {
+			return err
+		}
+		launching = true
 		go func() {
 			_, statErr := os.Stat(c.executable())
 			err := statErr
@@ -190,7 +198,12 @@ func (c *controller) superviseNative(ready *os.File, signals <-chan os.Signal) e
 			var proc *supervision.Process
 			var temp string
 			if err == nil {
-				lease, err = supervision.AcquireStart(ctx)
+				lease, err = supervision.AcquireStart(ctx, func() {
+					select {
+					case waiting <- struct{}{}:
+					case <-ctx.Done():
+					}
+				})
 			}
 			if err == nil {
 				var lock *os.File
@@ -214,20 +227,24 @@ func (c *controller) superviseNative(ready *os.File, signals <-chan os.Signal) e
 			}
 			launched <- launchResult{proc, lease, err, temp}
 		}()
+		return nil
 	}
-	// On cancellation join an in-flight launch before returning or releasing owner.lock.
+	// Join an in-flight launch before releasing the ownership lock. Transfer
+	// its child into the normal cleanup defer so even a failed stop retains
+	// witnessed inventory and cannot permit a second instance.
 	defer func() {
 		cancel()
 		if launching {
 			result := <-launched
+			lease = result.release
 			if result.p != nil {
-				_ = result.p.Stop(time.Duration(c.Timeouts.Stop) * time.Second / 2)
-			}
-			if result.temp != "" {
+				child = result.p
+				tempDir = result.temp
+				r.Child = child.PID()
+				r.Birth = processBirth(r.Child)
+				_ = c.writeRecord(r)
+			} else if result.temp != "" {
 				_ = os.RemoveAll(result.temp)
-			}
-			if result.release != nil {
-				result.release()
 			}
 		}
 	}()
@@ -261,7 +278,9 @@ func (c *controller) superviseNative(ready *os.File, signals <-chan os.Signal) e
 		timerC = timer.C
 		return true, nil
 	}
-	launch()
+	if err := launch(); err != nil {
+		return err
+	}
 	for {
 		select {
 		case <-signals:
@@ -309,7 +328,9 @@ func (c *controller) superviseNative(ready *os.File, signals <-chan os.Signal) e
 		case <-timerC:
 			timerC = nil
 			if child == nil {
-				launch()
+				if err := launch(); err != nil {
+					return err
+				}
 				continue
 			}
 			if !child.Alive() {
