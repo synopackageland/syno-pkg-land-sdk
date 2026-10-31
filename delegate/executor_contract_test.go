@@ -488,13 +488,14 @@ func (f *contractFixture) grant(t *testing.T) string {
 }
 func (f *contractFixture) stage(t *testing.T, grant, job string) MoveParams {
 	t.Helper()
-	if err := os.MkdirAll(f.s.StagingDir, 0700); err != nil {
+	source := OwnerStagingPrefix("alice", grant) + job
+	if err := os.MkdirAll(filepath.Dir(filepath.Join(f.s.StagingDir, source)), 0700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(f.s.StagingDir, job), []byte("abc"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(f.s.StagingDir, source), []byte("abc"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	return MoveParams{DelegationID: grant, JobID: job, Staging: job, Name: "a", Size: 3}
+	return MoveParams{DelegationID: grant, JobID: job + OwnerJobSuffix("alice", grant), Staging: source, Name: "a", Size: 3}
 }
 func (f *contractFixture) wait(t *testing.T, in MoveParams, state string) OperationResult {
 	t.Helper()

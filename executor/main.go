@@ -572,7 +572,7 @@ func openService(parent context.Context, e *Executor, uid, gid int, sock string)
 	var mu sync.Mutex
 	connections := map[*net.UnixConn]bool{}
 	done := make(chan struct{})
-	slots := make(chan struct{}, 16)
+	slots := make(chan struct{}, maxPendingConnections)
 	go func() {
 		defer close(done)
 		for {
