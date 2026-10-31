@@ -1,0 +1,38 @@
+{
+  "version": "0.38.6",
+  "executorVersion": "0.38.6",
+  "executorRootSDK": "v0.19.0",
+  "packages": {
+    "@synopackageland/sdk": "0.38.6",
+    "@synopackageland/app": "0.38.6",
+    "syno-pkg-land-app": "0.38.6",
+    "synopkgland_app": "0.38.6"
+  },
+  "executorDigests": {
+    "x86_64": "053a72c874fb1a622114c7a6514623babcb26de5d05fd8a802419dac025d9e46",
+    "aarch64": "c9f69d160ba3bca74ec222407f7189bd4ddcd8dfc34d190c9a7310be8ba4ccd9",
+    "armv7": "1e63154dcc013e4608a9225ab6f0f70d6f19b6ddfcf75b32432299b599862a75",
+    "lifecycle": {
+      "x86_64": "c6fbb377ecd5ec7ee5b96439f22091d9fa5965dfd616d510ca9445722f436721",
+      "aarch64": "a9ca1750d4d5cff4727dc29789e6eaf0a365cb0e674f1bb796971d82f2d4fa27",
+      "armv7": "6d25fc972eba12e3ac68f8b6a95a45e9e5706ebe19ffc1ff774fc318acbeb90f"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": false,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Delegated WebAPI API-segment and method-part name blocklists removed; name format validation kept (#74). New executor/v0.38.6; executor digests from scripts/executor-digests.sh (lifecycle unchanged). Released with build, internal-content, package and affected tests only by user authorization; no full gate, NAS acceptance or Rust crate publication."
+  },
+  "ui": {
+    "builtAgainst": "0.17.0",
+    "peer": ">=0.10.1 <0.18.0"
+  },
+  "node": {
+    "build": "24.22.1",
+    "compatibility": "22.23.4",
+    "minimum": "22"
+  }
+}

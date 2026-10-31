@@ -1,11 +1,11 @@
 {
   "formatVersion": 1,
-  "sdkVersion": "0.38.5",
-  "executorVersion": "0.38.3",
+  "sdkVersion": "0.38.6",
+  "executorVersion": "0.38.6",
   "executorDigests": {
-    "x86_64": "36c4f39754b946773011a632308ea357c2269585aa8000c7f4989a3b43cc6235",
-    "aarch64": "11c81787763007be62839b27e9ebfab734f6a4f1b866e41de1fd143e1af32b8e",
-    "armv7": "e2d97ba0d8b47c39f5fbce36118803d17ff0faf31ea686a3225fa0296e3c6f32",
+    "x86_64": "053a72c874fb1a622114c7a6514623babcb26de5d05fd8a802419dac025d9e46",
+    "aarch64": "c9f69d160ba3bca74ec222407f7189bd4ddcd8dfc34d190c9a7310be8ba4ccd9",
+    "armv7": "1e63154dcc013e4608a9225ab6f0f70d6f19b6ddfcf75b32432299b599862a75",
     "lifecycle": {
       "x86_64": "c6fbb377ecd5ec7ee5b96439f22091d9fa5965dfd616d510ca9445722f436721",
       "aarch64": "a9ca1750d4d5cff4727dc29789e6eaf0a365cb0e674f1bb796971d82f2d4fa27",
