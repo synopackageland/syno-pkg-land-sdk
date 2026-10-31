@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.38.5
 
 - A fill page (`AppShell` page `fill`) gives its height to the first child of
   the content that draws something; an empty or `hidden` node anywhere in the
@@ -16,6 +16,7 @@
   text sign-out under a user that shrank to its content, so the footer pushed
   both to the right and sign out wrapped onto its own line. A collapsed
   sidebar stacks the user, sign out and the collapse button.
+- Align SDK/App versions at 0.38.5; reuse the unchanged executor/v0.38.3 inventory.
 
 ## 0.38.4
 
