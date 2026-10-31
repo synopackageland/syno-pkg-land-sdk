@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- A fill page (`AppShell` page `fill`) gives its height to the first child of
+  the content that draws something; an empty or `hidden` node anywhere in the
+  slot (a toast host, an anchor) keeps its own size instead of taking the
+  page's only row. The content is a flex column now, not a one-row grid. A
+  positioned node that has content counts as drawing: render it after the
+  page or teleport it.
+
 ## 0.38.4
 
 - Fix packaged Python, Node/TypeScript and Rust bridge startup with real App
