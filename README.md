@@ -21,22 +21,24 @@ SDK for DSM packages built with [synopkgland](https://github.com/synopackageland
 An app depends on the SDK through `backend/go.mod`:
 
 ```
-require github.com/synopackageland/syno-pkg-land-sdk v0.39.0
+require github.com/synopackageland/syno-pkg-land-sdk v0.40.0
 ```
 
 A Rust App depends on `syno-pkg-land-app` (`rust/app/`) and runs behind the
 Go runtime:
 
 ```
-syno-pkg-land-app = { git = "https://github.com/synopackageland/syno-pkg-land-sdk", tag = "v0.39.0" }
+syno-pkg-land-app = { git = "https://github.com/synopackageland/syno-pkg-land-sdk", tag = "v0.40.0" }
 ```
 
 The `go.mod` line is the only source of the SDK version. The CLI builds the executor
 from `github.com/synopackageland/syno-pkg-land-sdk/executor` at the immutable
-release declared by the SDK executor manifest. SDK 0.39.0 uses executor/v0.38.6
+release declared by the SDK executor manifest. SDK 0.40.0 uses executor/v0.39.0
 and its six verified payload digests. The manifest ships in both the Go module
-and npm package. Use CLI 0.41.1 and templates 0.35.1 with this SDK; CLI 0.40.0
-builds the Hyper Backup control from `appbackup`.
+and npm package. Use a CLI that supports executor manifest format 1 and
+templates that produce the owner-and-grant staging/job namespaces required by
+`delegate.OwnerStagingPrefix` and `delegate.OwnerJobSuffix`. The CLI builds the
+Hyper Backup control from `appbackup`.
 
 Apps build their API server with
 `api.NewServerWithPermissions(auth, permissionsJSON, routes...)`; it refuses
@@ -169,3 +171,5 @@ See [Compose packages](docs/compose.md) for schema-2 planning, identity gateway 
 [Syno Package Land API 描述 v1](spec/api/v1/README.md) defines authenticated discovery, explicit task-level commands, fixed workflow adapters, and the public JSON Schema. `api.WithDescription` serves the private build artifact using DSM authentication; `api.DescribeRoutes` exports the actual registry to the build tool.
 
 See [runtime storage and NAS idle periods](docs/idle-storage.md) for volatile worker liveness and durable job/approval state.
+
+For public-network URL downloads and registry access, see [outbound HTTP policy](docs/outbound-http.md).

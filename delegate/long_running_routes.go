@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"github.com/synopackageland/syno-pkg-land-sdk/api"
 	"net/http"
+	"strings"
 )
 
 // The immutable SDK role map is assembled by W1. No route accepts a caller
@@ -61,6 +62,9 @@ func (s *Service) longRunningRoutes() []api.Route {
 				}
 				if err = validateMove(in); err != nil {
 					return nil, err
+				}
+				if !strings.HasPrefix(in.Staging, OwnerStagingPrefix(caller.User(), in.DelegationID)) || !strings.HasSuffix(in.JobID, OwnerJobSuffix(caller.User(), in.DelegationID)) {
+					return nil, fail(CodeInvalidRequest)
 				}
 				if err = s.verifyOperationOwner(ctx, caller, auth, in.DelegationID); err != nil {
 					return nil, err

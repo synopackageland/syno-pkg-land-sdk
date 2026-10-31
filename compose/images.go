@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/outbound"
 	"io"
 	"net/http"
 	"net/url"
@@ -138,7 +139,7 @@ func (r RegistryResolver) Resolve(ctx context.Context, image, arch string) (Imag
 	}
 	client := r.client
 	if client == nil {
-		client = &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		client = &http.Client{Transport: outbound.NewTransport(30 * time.Second), Timeout: 30 * time.Second, CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) > 5 {
 				return fmt.Errorf("too many registry redirects")
 			}

@@ -1,11 +1,6 @@
 # Changelog
 
-## Unreleased
-
-- Preserve `http.ErrAbortHandler` panics so aborted HTTP responses do not log
-  handler panics or transfer failures; keep logging real handler panics.
-
-## 0.39.0
+## 0.40.0
 
 - Add one Go supervision policy for package daemons and provider children: full
   jitter, stable-run reset, restart intensity limits and explicit re-arming
@@ -13,10 +8,28 @@
   and support actual network/DNS/local-origin dependencies without a total wait timeout
 - Clean owned Linux process groups before reaping; coordinate two concurrent
   starts across package accounts with kernel-owned slots
-- Reuse the unchanged executor/v0.38.6 payload inventory
+- Include the public-network outbound transport, caller admission and owner-bound
+  staging security fixes from SDK 0.39.0; reuse its executor/v0.39.0 inventory
 - Device acceptance must check waiting/backoff/failed, explicit Retry in consuming
   Apps, saved provider recovery after boot, disabled-provider footprint and group
   cleanup during stop. Local fixtures do not establish a real DSM reboot result
+
+## 0.39.0
+
+- Restrict delegated URL downloads and Compose registry HTTP requests to public
+  networks with the reusable `outbound` transport, including DNS and redirects.
+- Bound executor admission to four active requests per verified account and
+  sixteen overall, including batches and offline grants.
+- Isolate gateway pre-auth transaction locking and bound per-client/account
+  sign-in state without evicting other live sessions.
+- Require owner-and-grant staging prefixes and job-ID suffixes for HTTP/bridge
+  moves. Producers use `OwnerStagingPrefix` and `OwnerJobSuffix`; templates ship
+  the matching producer contract. Trusted daemon producers stay explicit.
+- Publish a new executor/v0.39.0 inventory; rebuilt Apps carry the new pins.
+
+
+- Preserve `http.ErrAbortHandler` panics so aborted HTTP responses do not log
+  handler panics or transfer failures; keep logging real handler panics.
 
 ## 0.38.7
 

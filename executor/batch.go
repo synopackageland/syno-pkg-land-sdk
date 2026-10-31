@@ -63,12 +63,13 @@ func (e *Executor) batchConnection(parent context.Context, c net.Conn, reader *b
 		answer(deny("EXECUTOR_STARTING"))
 		return
 	}
-	s, code := e.verified(ctx, req.Auth)
+	admitted, release, code := e.admitRequest(ctx, req)
 	if code != "" {
 		answer(deny(code))
 		return
 	}
-	ctx = context.WithValue(ctx, batchVerifiedKey{}, batchVerified{s, req.Auth})
+	defer release()
+	ctx = admitted
 	if !answer(success(map[string]any{"v": 1})) {
 		return
 	}

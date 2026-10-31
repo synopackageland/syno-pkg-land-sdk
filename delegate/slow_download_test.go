@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/synopackageland/syno-pkg-land-sdk/background"
-	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 )
 
 func TestDownloadBudgetsAllowSlowBackgroundWork(t *testing.T) {
@@ -22,9 +21,6 @@ func TestDownloadBudgetsAllowSlowBackgroundWork(t *testing.T) {
 	}
 	if DownloadTimeout > background.JobTimeout {
 		t.Fatal("download exceeds the default job budget")
-	}
-	if client.Transport.(*http.Transport).ResponseHeaderTimeout != runtimebudget.Operation {
-		t.Fatal("download header wait must tolerate slow NAS work")
 	}
 }
 

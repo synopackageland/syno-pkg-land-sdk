@@ -141,6 +141,7 @@ type FrontConfig struct {
 }
 
 type txn struct {
+	ip       string
 	oidc     bool
 	req      AuthRequest
 	returnTo string
@@ -163,9 +164,12 @@ type Front struct {
 	proxy    *httputil.ReverseProxy
 	cookie   string
 
-	mu       sync.Mutex
-	txns     map[string]txn
-	sessions map[string]session
+	mu           sync.Mutex // Authenticated sessions only
+	txnMu        sync.Mutex // Unauthenticated transactions never take mu
+	txns         map[string]txn
+	txnClients   map[string]int
+	nextTxnSweep time.Time
+	sessions     map[string]session
 }
 
 type ctxKey int
@@ -484,10 +488,12 @@ func (f *Front) bounce(w http.ResponseWriter, r *http.Request, t txn, origin str
 	}
 	id := randomID(24)
 	t.origin, t.browser, t.expires = origin, f.browserID(w, r), f.cfg.Now().Add(TxnTTL)
-	f.mu.Lock()
-	f.sweep()
-	f.txns[id] = t
-	f.mu.Unlock()
+	t.ip = remoteIP(r)
+	if !f.addTxn(id, t) {
+		w.Header().Set("Retry-After", "30")
+		http.Error(w, "too many sign-in requests", http.StatusTooManyRequests)
+		return
+	}
 	q := url.Values{"txn": {id}, "return": {origin + ReturnPath}}
 	if index >= 0 {
 		q.Set("resume", externalResume(id, index, external))
@@ -543,10 +549,11 @@ func (f *Front) dsmReturn(w http.ResponseWriter, r *http.Request, origin string)
 		f.cfg.SignedIn(a.Subject)
 	}
 	id := randomID(32)
-	f.mu.Lock()
-	f.sweep()
-	f.sessions[id] = session{subject: a.Subject, ip: remoteIP(r), expires: f.cfg.Now().Add(f.cfg.SessionTTL)}
-	f.mu.Unlock()
+	if !f.addSession(id, session{subject: a.Subject, ip: remoteIP(r), expires: f.cfg.Now().Add(f.cfg.SessionTTL)}) {
+		w.Header().Set("Retry-After", "30")
+		http.Error(w, "too many sign-in sessions", http.StatusTooManyRequests)
+		return
+	}
 	setCookie(w, r, f.cookie, id)
 	if t.oidc {
 		http.Redirect(w, r, f.cfg.Provider.Complete(t.req, a.Subject), http.StatusFound)
@@ -559,13 +566,13 @@ func (f *Front) dsmReturn(w http.ResponseWriter, r *http.Request, origin string)
 // started it, so a stray or hostile request cannot burn someone's sign-in.
 func (f *Front) takeTxn(r *http.Request, id, origin string) (txn, bool) {
 	browser, err := r.Cookie(f.cookie + "_b")
-	f.mu.Lock()
-	defer f.mu.Unlock()
+	f.txnMu.Lock()
+	defer f.txnMu.Unlock()
 	t, ok := f.txns[id]
 	if !ok || err != nil || browser.Value != t.browser || t.origin != origin {
 		return txn{}, false
 	}
-	delete(f.txns, id)
+	f.deleteTxn(id, t)
 	return t, !f.cfg.Now().After(t.expires)
 }
 
@@ -645,22 +652,6 @@ func (f *Front) RevokeUID(uid int) {
 	f.mu.Unlock()
 	if f.cfg.Provider != nil {
 		f.cfg.Provider.RevokeUID(uid)
-	}
-}
-
-// sweep drops expired transactions and sessions and, past maxPending,
-// arbitrary live ones; callers hold mu.
-func (f *Front) sweep() {
-	now := f.cfg.Now()
-	for k, t := range f.txns {
-		if now.After(t.expires) || len(f.txns) >= maxPending {
-			delete(f.txns, k)
-		}
-	}
-	for k, s := range f.sessions {
-		if now.After(s.expires) || len(f.sessions) >= maxPending {
-			delete(f.sessions, k)
-		}
 	}
 }
 

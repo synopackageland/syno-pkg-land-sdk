@@ -8,9 +8,9 @@ import (
 	"github.com/synopackageland/syno-pkg-land-sdk/api"
 	"github.com/synopackageland/syno-pkg-land-sdk/background"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
+	"github.com/synopackageland/syno-pkg-land-sdk/outbound"
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"sync"
@@ -22,7 +22,7 @@ import (
 const DownloadTimeout = background.JobTimeout
 
 func downloadClient() *http.Client {
-	return &http.Client{Timeout: DownloadTimeout, Transport: &http.Transport{Proxy: nil, DisableKeepAlives: true, DialContext: (&net.Dialer{Timeout: 5 * time.Second}).DialContext, ResponseHeaderTimeout: runtimebudget.Operation, MaxResponseHeaderBytes: 32 << 10, DisableCompression: true}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	return &http.Client{Timeout: DownloadTimeout, Transport: outbound.NewTransport(runtimebudget.Operation), CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 }
 func (s *Service) download(parent context.Context, in DownloadInput, job JobContext) error {
 	if !validDownload(in) {
