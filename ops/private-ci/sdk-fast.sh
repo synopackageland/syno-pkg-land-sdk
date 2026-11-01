@@ -18,7 +18,10 @@ if want rust || want go-root; then
   export SYNOPKGLAND_RUST_APP_EXAMPLES="$PWD/rust/target/debug/examples"
 fi
 if want go-root || want node; then
-  (cd node && npm ci --no-audit --no-fund && npm run build)
+  (cd node && npm ci --no-audit --no-fund)
+  node scripts/node-dist.mjs
+  node --test scripts/node-dist.test.mjs
+  (cd node && npm run build)
 fi
 for pair in go-root:. go-executor:executor go-conformance:conformance; do
   want "${pair%%:*}" || continue

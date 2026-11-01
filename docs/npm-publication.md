@@ -1,5 +1,17 @@
 # Preparing npm releases
 
+After updating the matching Node/frontend package metadata, lockfiles and Rust
+crate version, run `npm --prefix node ci` and `node scripts/sdk-version.mjs`.
+The version generator updates the Node and Python version sources and rebuilds
+the committed `node/dist` payload, including inferred declaration literals.
+Commit those generated files with the metadata. Do not hand-edit build output.
+`--source-only` is for npm build/test hooks; it does not prepare a release.
+Both fast gates compare the complete Node payload with a fresh temporary build
+before rebuilding it, so they reject stale, missing and obsolete output files.
+Python ships source directly; its generated `_version.py` is covered by
+`sdk-version.mjs --check`. Rust uses Cargo's package version at compile time and
+the frontend's build output is not committed to the Go module.
+
 Build and gate the package before packing it. Prepare the gated archive in a new
 private staging directory using `python3 scripts/prepare-npm-publish.py ARCHIVE DESTINATION`.
 The command rejects unsafe archive members and local dependency references,

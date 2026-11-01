@@ -28,10 +28,10 @@
   },
   "scripts": {
     "prepack": "npm run build",
-    "build": "node ../scripts/sdk-version.mjs && rm -rf dist && tsc -p tsconfig.build.json",
+    "build": "node ../scripts/sdk-version.mjs --source-only && rm -rf dist && tsc -p tsconfig.build.json",
     "generate": "node scripts/generate.mjs",
-    "typecheck": "node ../scripts/sdk-version.mjs && tsc --noEmit",
-    "test": "node ../scripts/sdk-version.mjs && rm -rf build && tsc && node --test --test-reporter=spec build/test/*.test.js"
+    "typecheck": "node ../scripts/sdk-version.mjs --source-only && tsc --noEmit",
+    "test": "node ../scripts/sdk-version.mjs --source-only && rm -rf build && tsc && node --test --test-reporter=spec build/test/*.test.js"
   },
   "devDependencies": {
     "@types/node": "18.19.130",
