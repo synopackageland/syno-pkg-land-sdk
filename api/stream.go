@@ -58,6 +58,7 @@ func streamStatus(code string) int {
 
 func writeStreamError(w http.ResponseWriter, err error) {
 	e := asError(err)
+	noteCode(w, e.Code)
 	// Prepared file headers must not turn a JSON refusal into a saved attachment.
 	for _, name := range []string{"Content-Disposition", "Content-Encoding", "Content-Range", "Accept-Ranges"} {
 		w.Header().Del(name)

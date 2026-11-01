@@ -102,6 +102,7 @@ func (s *Server) serveIntegration(w http.ResponseWriter, r *http.Request) bool {
 			return true
 		}
 	}
+	noteMethod(r, method)
 	ctx := context.WithValue(r.Context(), integrationKey{}, integrationScope{s.auth, s.entry})
 	s.routes[method].httpHandler.ServeHTTP(w, r.WithContext(ctx))
 	return true

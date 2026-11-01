@@ -79,6 +79,8 @@ func (g *EntryGate) Authenticate(r *http.Request) (api.Identity, error) {
 	if err != nil || id.Admin {
 		return id, err
 	}
+	// The account is verified; an observer may record who the entry refused.
+	api.ObserveIdentity(r, id)
 	if g.mode == EntryAdminOnly {
 		return api.Identity{}, api.ErrAdminRequired
 	}
