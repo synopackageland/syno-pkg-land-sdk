@@ -14,6 +14,20 @@ import (
 	"time"
 )
 
+func TestServeIngressBindsPrefixToSocketPackage(t *testing.T) {
+	t.Setenv("GATEWAY_INTERFACE", "")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	for _, prefix := range []string{"/synopkgland/NamespaceFixture/", "/old-alias/", "/synopkgland/OtherApp/", "/synopkgland/namespacefixture/", "/synopkgland/%4eamespaceFixture/", "/synopkgland/NamespaceFixture/child/", "/synopkgland/NamespaceFixture", "/synopkgland/NamespaceFixture/?x=1"} {
+		t.Setenv(IngressSocketEnv, "/tmp/synopkgland-ingress-NamespaceFixture.sock")
+		t.Setenv(IngressPathEnv, prefix)
+		err := ServeIngress(ctx, http.NotFoundHandler())
+		if want := prefix == "/synopkgland/NamespaceFixture/"; (err == nil) != want {
+			t.Errorf("prefix %q: got %v, want accepted=%v", prefix, err, want)
+		}
+	}
+}
+
 // The ingress handler strips the declared path, takes the client address
 // from nginx and gives raw HTTP routes the stream deadline.
 func TestIngressHandlerPathAddressAndDeadlines(t *testing.T) {
@@ -26,15 +40,15 @@ func TestIngressHandlerPathAddressAndDeadlines(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h := ingressHandler(srv, "/app-api/", ingressOptions{request: 10 * time.Second, stream: time.Hour})
+	h := ingressHandler(srv, "/synopkgland/App/", ingressOptions{request: 10 * time.Second, stream: time.Hour})
 	for _, tc := range []struct {
 		path, addr string
 		status     int
 	}{
-		{"/app-api/proxy/file", "192.0.2.7", 200},
-		{"/app-api/proxy/file", "::ffff:192.0.2.8", 200},
-		{"/app-api/proxy/file", "", 400},
-		{"/app-api/proxy/file", "fe80::1%eth0", 400},
+		{"/synopkgland/App/proxy/file", "192.0.2.7", 200},
+		{"/synopkgland/App/proxy/file", "::ffff:192.0.2.8", 200},
+		{"/synopkgland/App/proxy/file", "", 400},
+		{"/synopkgland/App/proxy/file", "fe80::1%eth0", 400},
 		{"/other/proxy/file", "192.0.2.7", 404},
 	} {
 		r := httptest.NewRequest(http.MethodGet, "http://nas.local"+tc.path, nil)
@@ -57,8 +71,8 @@ func TestIngressHandlerPathAddressAndDeadlines(t *testing.T) {
 	h = ingressHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		deadline, _ := r.Context().Deadline()
 		left = time.Until(deadline)
-	}), "/app-api/", ingressOptions{request: 10 * time.Second, stream: time.Hour})
-	r := httptest.NewRequest(http.MethodPost, "http://nas.local/app-api/", strings.NewReader("{}"))
+	}), "/synopkgland/App/", ingressOptions{request: 10 * time.Second, stream: time.Hour})
+	r := httptest.NewRequest(http.MethodPost, "http://nas.local/synopkgland/App/", strings.NewReader("{}"))
 	r.Header.Set("X-Real-IP", "192.0.2.7")
 	h.ServeHTTP(httptest.NewRecorder(), r)
 	if left <= 0 || left > 10*time.Second {
@@ -69,13 +83,13 @@ func TestIngressHandlerPathAddressAndDeadlines(t *testing.T) {
 func TestServeIngressRefusesCGIAndForeignSockets(t *testing.T) {
 	ok := http.NotFoundHandler()
 	t.Setenv(IngressSocketEnv, "/tmp/synopkgland-ingress-App.sock")
-	t.Setenv(IngressPathEnv, "/app-api/")
+	t.Setenv(IngressPathEnv, "/synopkgland/App/")
 	t.Setenv("GATEWAY_INTERFACE", "CGI/1.1")
 	if err := ServeIngress(context.Background(), ok); err == nil {
 		t.Fatal("served under CGI")
 	}
 	os.Unsetenv("GATEWAY_INTERFACE")
-	for _, env := range [][2]string{{"/tmp/other.sock", "/app-api/"}, {"/tmp/synopkgland-ingress-App.sock", "/App-API/"}, {"/tmp/synopkgland-ingress-App.sock", "app-api"}} {
+	for _, env := range [][2]string{{"/tmp/other.sock", "/synopkgland/App/"}, {"/tmp/synopkgland-ingress-App.sock", "/App-API/"}, {"/tmp/synopkgland-ingress-App.sock", "app-api"}} {
 		t.Setenv(IngressSocketEnv, env[0])
 		t.Setenv(IngressPathEnv, env[1])
 		if err := ServeIngress(context.Background(), ok); err == nil {

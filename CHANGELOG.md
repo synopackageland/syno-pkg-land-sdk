@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Bind backend daemon ingress to `/synopkgland/<package>/`, with the exact
+  package ID from the CLI-provided Unix socket, before opening the listener
+
 ## 0.40.1
 
 - Restart resident children after every unrequested exit, including exit zero
