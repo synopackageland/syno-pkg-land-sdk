@@ -1,6 +1,6 @@
 {
   "name": "@synopackageland/app",
-  "version": "0.41.1",
+  "version": "0.41.2",
   "description": "Node SDK for Synology Package Land Apps: the backend methods behind the synopkgland Go runtime (channel spec/bridge/v1)",
   "license": "MIT",
   "homepage": "https://github.com/synopackageland/syno-pkg-land-sdk/tree/main/node#readme",

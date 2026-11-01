@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.41.2
+
+- Correct the committed Node SDK payload so Apps copied from the Go module
+  report the matching SDK release at runtime and in declaration literals.
+- Regenerate Node build output with version sources and reject committed
+  payload drift before either fast gate can rebuild it.
+- Reuse the unchanged executor/v0.39.0 inventory.
+
 ## 0.41.1
 
 - The Vue entry accepts UI 0.19 (`@synopackageland/ui` peer `>=0.10.1 <0.20.0`)
