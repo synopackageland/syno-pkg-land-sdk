@@ -73,7 +73,11 @@ else
 fi
 # They also run the Node App SDK's hello example and golden App, which import node/dist.
 if want go-root || want node; then
-	(cd "$root/node" && npm ci --no-audit --no-fund --loglevel=error && npm run build)
+	(cd "$root/node" && npm ci --no-audit --no-fund --loglevel=error)
+	# Compare before any build can overwrite stale committed module payloads.
+	node "$root/scripts/node-dist.mjs"
+	node --test "$root/scripts/node-dist.test.mjs"
+	(cd "$root/node" && npm run build)
 fi
 for module in . executor conformance; do
 	want "go-${module/#./root}" || continue

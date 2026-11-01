@@ -1,6 +1,6 @@
 {
   "name": "@synopackageland/app",
-  "version": "0.41.1",
+  "version": "0.41.2",
   "description": "Node SDK for Synology Package Land Apps: the backend methods behind the synopkgland Go runtime (channel spec/bridge/v1)",
   "license": "MIT",
   "homepage": "https://github.com/synopackageland/syno-pkg-land-sdk/tree/main/node#readme",
@@ -28,10 +28,10 @@
   },
   "scripts": {
     "prepack": "npm run build",
-    "build": "node ../scripts/sdk-version.mjs && rm -rf dist && tsc -p tsconfig.build.json",
+    "build": "node ../scripts/sdk-version.mjs --source-only && rm -rf dist && tsc -p tsconfig.build.json",
     "generate": "node scripts/generate.mjs",
-    "typecheck": "node ../scripts/sdk-version.mjs && tsc --noEmit",
-    "test": "node ../scripts/sdk-version.mjs && rm -rf build && tsc && node --test --test-reporter=spec build/test/*.test.js"
+    "typecheck": "node ../scripts/sdk-version.mjs --source-only && tsc --noEmit",
+    "test": "node ../scripts/sdk-version.mjs --source-only && rm -rf build && tsc && node --test --test-reporter=spec build/test/*.test.js"
   },
   "devDependencies": {
     "@types/node": "18.19.130",

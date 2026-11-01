@@ -16,7 +16,7 @@ test('build metadata generates both adapters and refuses stale or mixed versions
       for (const name of ['node', 'ts']) writeFileSync(join(work, name, 'package.json'), JSON.stringify({ version }))
       writeFileSync(join(work, 'rust/app/Cargo.toml'), `[package]\nname = "syno-pkg-land-app"\nversion = "${version}"\n`)
     }
-    const run = (...args) => spawnSync(process.execPath, [join(work, 'scripts/sdk-version.mjs'), ...args], { encoding: 'utf8' })
+    const run = (...args) => spawnSync(process.execPath, [join(work, 'scripts/sdk-version.mjs'), '--source-only', ...args], { encoding: 'utf8' })
     setVersion('7.8.9')
     assert.equal(run().status, 0)
     assert.match(readFileSync(join(work, 'node/src/sdk-version.ts'), 'utf8'), /7\.8\.9/)
