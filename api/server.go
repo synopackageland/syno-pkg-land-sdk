@@ -263,6 +263,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Calls != nil {
+		noteBatch(r)
 		s.serveBatch(w, r, req.Calls)
 		return
 	}
@@ -330,11 +331,15 @@ func PrepareTransferRequest(w http.ResponseWriter, r *http.Request) *Error {
 // permissions, including public routes. Without an entry floor public routes
 // retain their anonymous Caller. Unknown methods authenticate before discovery.
 func (s *Server) authorize(r *http.Request, method string) (Caller, Route, *Error) {
+	noteMethod(r, method)
 	route, known := s.routes[method]
 	if known && route.policy == policyPublic && (s.entry == "" || route.ceremony) {
 		return Caller{}, route, nil
 	}
 	identity, err := authenticateEntry(s.auth, s.entry, r)
+	if err == nil {
+		noteCaller(r, identity)
+	}
 	if r.Context().Err() != nil {
 		return Caller{}, Route{}, asError(r.Context().Err())
 	}
@@ -495,6 +500,7 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 
 func writeError(w http.ResponseWriter, err error) {
 	e := asError(err)
+	noteCode(w, e.Code)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"success": false,
 		"error":   BatchError{Code: e.Code, Message: e.Message, Details: errorDetails(err)},

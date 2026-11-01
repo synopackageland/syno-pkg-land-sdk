@@ -314,3 +314,33 @@ func TestAdminOnlyEntryFloorsSDKRoutesAtAdministrators(t *testing.T) {
 		}
 	}
 }
+
+// An observed request learns which verified account the gate refused; the
+// refusal itself is unchanged.
+func TestEntryGateReportsTheRefusedAccountToAnObserver(t *testing.T) {
+	for _, c := range []struct {
+		mode string
+		err  error
+	}{{EntryAdminOnly, api.ErrAdminRequired}, {EntryAppPrivilege, api.ErrAppPrivilegeDenied}} {
+		gate, _ := newTestGate(t, c.mode, ordinary("bob"), &lookup{allowed: false})
+		route := api.Handle("demo.read", func(context.Context, api.Caller, json.RawMessage) (any, error) { return "ok", nil })
+		srv, err := api.NewServerWithPermissions(gate, []byte(`{"schema":1,"default":"administrators","methods":{"demo.read":"authenticated"}}`), route)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got api.Outcome
+		h := api.WithObserver(srv, func(_ *http.Request, o api.Outcome) { got = o })
+		req := httptest.NewRequest(http.MethodPost, "http://nas.local/api.cgi", strings.NewReader(`{"method":"demo.read","params":{}}`))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Origin", "http://nas.local")
+		req.RemoteAddr = "192.0.2.4:1234"
+		h.ServeHTTP(httptest.NewRecorder(), req)
+		want := "admin_required"
+		if errors.Is(c.err, api.ErrAppPrivilegeDenied) {
+			want = "app_privilege_denied"
+		}
+		if got.User != "bob" || got.Code != want || got.Admin {
+			t.Fatalf("%s: %+v", c.mode, got)
+		}
+	}
+}

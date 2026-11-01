@@ -54,6 +54,35 @@ ingress. Use a deployment transport that already supports upgrades. No DSM
 WebSocket deployment acceptance is claimed. Streams retain the server request
 deadline; account revocation after an upgrade is the App's responsibility.
 
+## Observing request outcomes
+
+The CGI root may be wrapped only by SDK handlers. To audit what the SDK decided
+about each request, including refusals before any App route, wrap the server
+with `api.WithObserver`:
+
+```go
+handler := api.WithObserver(srv, func(r *http.Request, o api.Outcome) {
+	// o.Method or o.Batch, o.User, o.Admin, o.Code, o.Status, o.Duration
+})
+cgi.Serve(api.WithRequestDeadline(handler, deadline))
+```
+
+`observe` runs once per request, after the response is written; it cannot
+change the response, and a panic in it is logged and dropped. `Outcome.Code`
+is the SDK's or the route's refusal code (`session_required`,
+`admin_required`, `app_privilege_denied`, `unknown_method`, a route error)
+and empty on success or when a raw handler answered itself; `Status` is the
+HTTP status written. `Outcome.User` is the account an authenticator verified,
+also when an entry rule then refused it: `dsm.EntryGate` reports it through
+`api.ObserveIdentity`, which other authenticators may call the same way. It
+grants nothing; admission is only what `Authenticate` returns. `Admin` is
+true only for a request admitted as an administrator.
+
+Python, Node.js and Rust Apps run under the SDK's own CGI, so this is a Go
+App API. The CLI route audit accepts `api.WithObserver` at the CGI root like
+`api.WithRequestDeadline`; its `observe` function is App code and must not
+serve HTTP itself.
+
 ## Integration callbacks
 
 Some callers cannot hold a DSM session: Chat button and slash-command

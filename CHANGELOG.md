@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Add `api.WithObserver(next, observe)`: after each request it reports the
+  SDK's `api.Outcome` (method or batch methods, verified account, admission,
+  error code, HTTP status, duration), also for refusals before any route
+  (`session_required`, `admin_required`, `app_privilege_denied`,
+  `unknown_method`). Apps use it to audit their CGI root without their own
+  HTTP middleware; the matching CLI release accepts it at the CGI root.
+- Add `api.ObserveIdentity`; `dsm.EntryGate` uses it so an observer learns
+  which verified account an entry rule refused. Admission is unchanged.
+
 ## 0.41.2
 
 - Correct the committed Node SDK payload so Apps copied from the Go module
