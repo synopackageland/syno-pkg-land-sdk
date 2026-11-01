@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.42.0
+
 - Add `api.WithObserver(next, observe)`: after each request it reports the
   SDK's `api.Outcome` (method or batch methods, verified account, admission,
   error code, HTTP status, duration), also for refusals before any route
@@ -10,6 +12,7 @@
   HTTP middleware; the matching CLI release accepts it at the CGI root.
 - Add `api.ObserveIdentity`; `dsm.EntryGate` uses it so an observer learns
   which verified account an entry rule refused. Admission is unchanged.
+- Reuse the unchanged executor/v0.39.0 inventory.
 
 ## 0.41.2
 
