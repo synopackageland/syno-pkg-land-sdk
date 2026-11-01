@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.41.1
+
+- The Vue entry accepts UI 0.19 (`@synopackageland/ui` peer `>=0.10.1 <0.20.0`)
+  and is tested against UI 0.19.0.
+
 ## 0.41.0
 
 - Bind backend daemon ingress to `/synopkgland/<package>/`, with the exact
