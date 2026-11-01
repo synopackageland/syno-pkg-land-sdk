@@ -146,16 +146,18 @@ route audit rejects it. The CLI audit requires a literal method declared
 ## Backend daemon ingress
 
 A resident daemon serves the same routes as the CGI without a process per
-request. Declare the backend itself as the daemon (CLI 0.40.0 or later):
+request. Declare the backend itself as the daemon with the matching CLI/SDK
+package namespace contract:
 
 ```yaml
+package: SampleApp
 daemon:
   backend: true
   args: [serve]
-  ingress: {path: /sample-api/}
+  ingress: {path: /synopkgland/SampleApp/}
 ```
 
-DSM's nginx proxies `/sample-api/` to the CLI's ingress socket. In the
+DSM's nginx proxies `/synopkgland/SampleApp/` to the CLI's ingress socket. In the
 backend's `serve` mode, build the same server as for CGI and serve it:
 
 ```go
@@ -166,7 +168,10 @@ err := api.ServeIngress(ctx, srv)
 ```
 
 `ServeIngress` refuses under CGI and outside the CLI's ingress environment.
-It removes the ingress prefix from the path (`/sample-api/proxy/x` reaches the
+The path must be exactly `/synopkgland/<package>/`, using the same case-sensitive
+package ID as `SYNOPKGLAND_INGRESS_SOCKET`. Encoded names, additional path
+segments and other package names are refused.
+It removes the ingress prefix from the path (`/synopkgland/SampleApp/proxy/x` reaches the
 server as `/proxy/x`), sets the client address from nginx's `X-Real-IP` and
 applies the request deadline to JSON and transfer calls and the longer stream
 deadline to `api.HandleHTTP` routes. Do not wrap the handler in

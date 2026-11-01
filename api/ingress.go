@@ -23,8 +23,7 @@ const (
 const DefaultIngressStreamTimeout = time.Hour
 
 var (
-	ingressSocket = regexp.MustCompile(`^/tmp/synopkgland-ingress-[A-Za-z][A-Za-z0-9]{1,63}\.sock$`)
-	ingressPath   = regexp.MustCompile(`^/[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?/$`)
+	ingressSocket = regexp.MustCompile(`^/tmp/synopkgland-ingress-([A-Za-z][A-Za-z0-9]{1,63})\.sock$`)
 )
 
 type ingressOptions struct {
@@ -46,7 +45,7 @@ func IngressTimeouts(request, stream time.Duration) IngressOption {
 // handler sees the same browser requests as the CGI: the SDK still checks
 // origin, App entry, DSM session and route permission for each one.
 //
-// The request path loses the ingress prefix ("/<name>/rpc" arrives as
+// The request path loses the ingress prefix ("/synopkgland/<package>/rpc" arrives as
 // "/rpc"), so api.HandleHTTP prefixes match as under CGI. The client address
 // is nginx's X-Real-IP, which nginx sets from the TCP peer; the socket is
 // mode 0666 because nginx runs as another account, so another local account
@@ -67,8 +66,9 @@ func ServeIngress(ctx context.Context, h http.Handler, opts ...IngressOption) er
 		return errors.New("api: ingress timeouts must be positive")
 	}
 	socket, prefix := os.Getenv(IngressSocketEnv), os.Getenv(IngressPathEnv)
-	if !ingressSocket.MatchString(socket) || !ingressPath.MatchString(prefix) {
-		return fmt.Errorf("api: %s and %s must name the CLI's daemon ingress", IngressSocketEnv, IngressPathEnv)
+	match := ingressSocket.FindStringSubmatch(socket)
+	if len(match) != 2 || prefix != "/synopkgland/"+match[1]+"/" {
+		return fmt.Errorf("api: %s and %s must name the same package's /synopkgland/<package>/ ingress", IngressSocketEnv, IngressPathEnv)
 	}
 	return serveIngress(ctx, socket, ingressHandler(h, prefix, o))
 }
