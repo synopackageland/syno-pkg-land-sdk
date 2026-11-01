@@ -2,8 +2,12 @@
 
 ## Unreleased
 
+## 0.41.0
+
 - Bind backend daemon ingress to `/synopkgland/<package>/`, with the exact
   package ID from the CLI-provided Unix socket, before opening the listener
+- Require the fixed package namespace; arbitrary top-level ingress aliases are rejected
+- Reuse the unchanged executor/v0.39.0 inventory
 
 ## 0.40.1
 
