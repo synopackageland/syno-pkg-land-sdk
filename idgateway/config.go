@@ -26,7 +26,7 @@ import (
 	"time"
 )
 
-// Listen are the gateway's public ports on all interfaces; zero disables one.
+// Listen are the gateway's dedicated public ports; path ingress leaves both zero.
 type Listen struct {
 	HTTP  int `json:"http"`
 	HTTPS int `json:"https"`
@@ -83,8 +83,10 @@ type Config struct {
 	PublicOrigin string          `json:"public_origin,omitempty"`
 	// LaunchPath is a fixed local App URL, including an optional query/fragment.
 	LaunchPath string `json:"launch_path,omitempty"`
-	// NativeIngress delegates the public HTTPS listener to DSM's resource worker.
-	// The CLI generates it automatically for a supported target, never from App input.
+	// IngressPath is the fixed package namespace in DSM's own server.
+	IngressPath string `json:"ingress_path,omitempty"`
+	// NativeIngress delegates public HTTP handling to DSM's resource worker.
+	// The CLI generates it automatically for a supported target.
 	NativeIngress    bool                       `json:"native_ingress,omitempty"`
 	OperationSeconds int                        `json:"operation_seconds,omitempty"`
 	StopSeconds      int                        `json:"stop_seconds,omitempty"`
@@ -157,6 +159,12 @@ func LoadConfig(path string) (Config, error) {
 }
 
 func (c Config) validate() error {
+	if err := validateIngressPath(c.Package, c.IngressPath); err != nil {
+		return err
+	}
+	if c.IngressPath != "" && !c.NativeIngress {
+		return errors.New("ingress_path requires native_ingress")
+	}
 	if err := c.checkEntryPolicy(); err != nil {
 		return err
 	}
@@ -189,7 +197,7 @@ func (c Config) validate() error {
 		return fmt.Errorf("package %q is not a package name", c.Package)
 	case !filepath.IsAbs(c.StateDir):
 		return errors.New("state_dir must be absolute")
-	case c.Listen.HTTP == 0 && c.Listen.HTTPS == 0:
+	case c.IngressPath == "" && c.Listen.HTTP == 0 && c.Listen.HTTPS == 0:
 		return errors.New("listen needs an http or https port")
 	case !validPort(c.Listen.HTTP, true) || !validPort(c.Listen.HTTPS, true):
 		return errors.New("listen ports must be 1-65535")
@@ -362,7 +370,8 @@ func Build(cfg Config, ports DSMPorts) (*Gateway, error) {
 	gw := &Gateway{Secrets: map[string]string{}, Deletions: cfg.Deletions()}
 	external := NewExternalReader(cfg)
 	front := FrontConfig{
-		External: external.Read, ExternalFresh: external.Fresh, SingleOrigin: cfg.External != nil && cfg.External.SingleOrigin,
+		IngressPath: cfg.IngressPath,
+		External:    external.Read, ExternalFresh: external.Fresh, SingleOrigin: cfg.External != nil && cfg.External.SingleOrigin,
 		Ready: cfg.Ready, ComposeIngress: cfg.ComposeIngress, Mode: cfg.Mode, Entry: cfg.Entry, Access: cfg.Access, UpstreamAccess: cfg.UpstreamAccess, Groups: cfg.Groups, Membership: NewDirectory(), ComposeBlocked: cfg.ComposeBlocked, MaxUploadBytes: cfg.MaxUploadBytes, ResponseHeaderTimeout: time.Duration(cfg.ResponseHeaderTimeoutSeconds) * time.Second, Upstream: cfg.Upstream, Key: key, AuthorizeCGI: cfg.AuthorizeCGI, DSMPorts: ports,
 		Package: cfg.Package, EmailDomain: cfg.EmailDomain, Passthrough: cfg.Passthrough, Redirects: cfg.Redirects, OptionalPassthrough: cfg.OptionalPassthrough, StateDir: cfg.StateDir,
 		UpstreamAuthPaths: cfg.UpstreamAuthPaths,
@@ -427,7 +436,7 @@ func (c Config) provider(secrets map[string]string) (*Provider, error) {
 		}
 		secrets[cc.ID] = secret
 		sum := sha256.Sum256([]byte(secret))
-		clients = append(clients, Client{ID: cc.ID, SecretSHA256: sum[:], RedirectPaths: cc.RedirectPaths,
+		clients = append(clients, Client{ID: cc.ID, SecretSHA256: sum[:], RedirectPaths: ingressPaths(c.IngressPath, cc.RedirectPaths),
 			NativeRedirects: cc.NativeRedirects, RequirePKCE: cc.RequirePKCE, Roles: cc.Roles})
 	}
 	return NewProvider(c.Issuer(), c.EmailDomain, signing, clients, time.Now)

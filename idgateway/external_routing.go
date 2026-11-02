@@ -39,6 +39,9 @@ func withExternal(r *http.Request, e External) *http.Request {
 	return r.WithContext(context.WithValue(r.Context(), externalSnapshotKey{}, e))
 }
 func (f *Front) external(r *http.Request) External {
+	if f.cfg.IngressPath != "" {
+		return External{}
+	}
 	return requestExternal(r, f.cfg.External, f.cfg.ExternalFresh)
 }
 
@@ -54,7 +57,7 @@ func (f *Front) canonicalNavigation(r *http.Request, origin string) string {
 	external := f.external(r)
 	if len(external.Accept) == 0 || external.Index(origin) >= 0 || r.Method != http.MethodGet && r.Method != http.MethodHead || isUpgrade(r) ||
 		r.Header.Get("Sec-Fetch-Mode") != "navigate" || r.Header.Get("Sec-Fetch-Dest") != "document" ||
-		r.URL.Path == "/_sso" || strings.HasPrefix(r.URL.Path, "/_sso/") || r.URL.Path == PingPath {
+		r.URL.Path == f.route("/_sso") || strings.HasPrefix(r.URL.Path, f.route("/_sso/")) || r.URL.Path == f.route(PingPath) {
 		return ""
 	}
 	return external.Primary + r.URL.RequestURI()

@@ -50,7 +50,10 @@ func (f *Front) serveBrowser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", 405)
 		return
 	}
-	cfg, _ := json.Marshal(f.cfg.Browser)
+	cfg, _ := json.Marshal(struct {
+		*BrowserConfig
+		IngressPath string `json:"ingress_path,omitempty"`
+	}{f.cfg.Browser, f.cfg.IngressPath})
 	w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -79,7 +82,7 @@ func (f *Front) injectBrowser(res *http.Response) error {
 		return errors.New("OIDC browser HTML has no head element")
 	}
 	at += len("<head>")
-	tag := []byte(`<script src="/_sso/browser.js"></script>`)
+	tag := []byte(`<script src="` + f.route("/_sso/browser.js") + `"></script>`)
 	out := make([]byte, 0, len(raw)+len(tag))
 	out = append(out, raw[:at]...)
 	out = append(out, tag...)

@@ -15,6 +15,7 @@ import (
 // name an index plus both durable revisions, not a caller-supplied hostname.
 type resumeToken struct {
 	Txn         string
+	Path        bool
 	Public      bool
 	Port, Index int
 	R1, R2      uint64
@@ -31,6 +32,10 @@ func parseResume(raw string) (resumeToken, bool) {
 	}
 	token := resumeToken{Txn: parts[0]}
 	if len(parts) == 2 {
+		if parts[1] == "p" {
+			token.Path = true
+			return token, true
+		}
 		port, err := strconv.Atoi(parts[1])
 		if err != nil || !validPort(port, false) || strconv.Itoa(port) != parts[1] {
 			return resumeToken{}, false
@@ -71,6 +76,9 @@ func localAppOrigin(r *http.Request, port int) string {
 	return scheme + "://" + net.JoinHostPort(hostname(r.Host), strconv.Itoa(port))
 }
 func (h *AuthorizeCGI) localOrigin(r *http.Request) string {
+	if h.IngressPath != "" {
+		return requestOrigin(r)
+	}
 	if h.AppHTTPSPort != 0 {
 		return "https://" + net.JoinHostPort(hostname(r.Host), strconv.Itoa(h.AppHTTPSPort))
 	}
@@ -101,7 +109,7 @@ func (h *AuthorizeCGI) prepareResume(w http.ResponseWriter, r *http.Request, e E
 	}
 	fallback := func() (*http.Request, bool) {
 		if origin := h.localOrigin(r); origin != "" && validRequestAuthority(r) {
-			http.Redirect(w, r, origin+"/", http.StatusFound)
+			http.Redirect(w, r, origin+ingressRoute(h.IngressPath, "/"), http.StatusFound)
 		} else {
 			http.Error(w, "invalid sign-in resume", 400)
 		}
@@ -115,7 +123,9 @@ func (h *AuthorizeCGI) prepareResume(w http.ResponseWriter, r *http.Request, e E
 		return fallback()
 	}
 	origin := ""
-	if token.Public {
+	if token.Path && h.IngressPath != "" {
+		origin = requestOrigin(r)
+	} else if token.Public {
 		origin = token.origin(e)
 	} else if slices.Contains(h.AppPorts, token.Port) {
 		origin = localAppOrigin(r, token.Port)
@@ -126,18 +136,19 @@ func (h *AuthorizeCGI) prepareResume(w http.ResponseWriter, r *http.Request, e E
 	if txn, exists := query["txn"]; exists && (len(txn) != 1 || txn[0] != token.Txn) {
 		return fallback()
 	}
-	if ret, exists := query["return"]; exists && (len(ret) != 1 || ret[0] != origin+ReturnPath) {
+	if ret, exists := query["return"]; exists && (len(ret) != 1 || ret[0] != origin+ingressRoute(h.IngressPath, ReturnPath)) {
 		return fallback()
 	}
 	clone := r.Clone(r.Context())
 	u := *r.URL
 	clone.URL = &u
 	query.Set("txn", token.Txn)
-	query.Set("return", origin+ReturnPath)
+	query.Set("return", origin+ingressRoute(h.IngressPath, ReturnPath))
 	clone.URL.RawQuery = query.Encode()
 	return clone, true
 }
 
-func validReturnPath(ret *url.URL) bool {
-	return ret.User == nil && ret.Path == ReturnPath && ret.RawPath == "" && ret.RawQuery == "" && !ret.ForceQuery && ret.Fragment == "" && ret.Opaque == ""
+func validReturnPath(ret *url.URL) bool { return validReturnPathAt(ret, "") }
+func validReturnPathAt(ret *url.URL, prefix string) bool {
+	return ret.User == nil && ret.Path == ingressRoute(prefix, ReturnPath) && ret.RawPath == "" && ret.RawQuery == "" && !ret.ForceQuery && ret.Fragment == "" && ret.Opaque == ""
 }

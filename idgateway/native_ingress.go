@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -90,7 +91,17 @@ func nativeIngressHandler(cfg Config, next http.Handler) http.Handler {
 			http.Error(w, "authenticated DSM ingress required", http.StatusForbidden)
 			return
 		}
-		if r.URL.Path == PingPath {
+		if cfg.IngressPath != "" {
+			if !cleanPath(r.URL.Path) {
+				http.Error(w, "invalid path", 400)
+				return
+			}
+			if !strings.HasPrefix(r.URL.Path, cfg.IngressPath) {
+				http.NotFound(w, r)
+				return
+			}
+		}
+		if r.URL.Path == ingressRoute(cfg.IngressPath, PingPath) {
 			servePackagePing(w, r, cfg.Package)
 			return
 		}
@@ -104,7 +115,7 @@ func nativeIngressHandler(cfg Config, next http.Handler) http.Handler {
 		}
 		snapshot := requestExternal(r, external, fresh)
 		public := snapshot.Index(requestOrigin(r)) >= 0
-		if err != nil || !validRequestAuthority(r) || !public && port != strconv.Itoa(nativePublicPort(cfg)) {
+		if err != nil || !validRequestAuthority(r) || cfg.IngressPath == "" && !public && port != strconv.Itoa(nativePublicPort(cfg)) {
 			http.Error(w, "invalid ingress authority", http.StatusBadRequest)
 			return
 		}
@@ -114,6 +125,17 @@ func nativeIngressHandler(cfg Config, next http.Handler) http.Handler {
 			return
 		}
 		request := withExternal(r.Clone(r.Context()), snapshot)
+		if cfg.IngressPath != "" {
+			scheme := r.Header.Values("X-Synopkgland-Scheme")
+			if len(scheme) != 1 || scheme[0] != "http" && scheme[0] != "https" {
+				http.Error(w, "invalid ingress scheme", 400)
+				return
+			}
+			if scheme[0] == "http" {
+				request.TLS = nil
+			}
+			request.Header.Del("X-Synopkgland-Scheme")
+		}
 		request.RemoteAddr = net.JoinHostPort(values[0], "0")
 		request.Header.Del(nativeClientIPHeader)
 		next.ServeHTTP(w, request)
