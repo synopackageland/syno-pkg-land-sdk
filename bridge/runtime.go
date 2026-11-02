@@ -44,6 +44,8 @@ type Config struct {
 	// ManifestDigest and PermissionsDigest are the SHA-256 (hex) of the files
 	// the build validated. Empty skips the check: development builds only.
 	ManifestDigest, PermissionsDigest string
+	// OperationsDigest pins the generated full registry when ctl.registry is enabled.
+	OperationsDigest string
 	// Auth verifies the DSM session; nil is dsm.NewAuthenticator().
 	Auth api.Authenticator
 	// ScriptName is the CGI's SCRIPT_NAME; the identity capability derives
@@ -100,6 +102,15 @@ func NewRuntime(cfg Config) (http.Handler, error) {
 	}
 	if auth, err = dsm.NewEntryGate(auth, m.Access, cfg.PackageID, cfg.DataDir); err != nil {
 		return nil, err
+	}
+	if cfg.OperationsDigest != "" {
+		operations, err := readBound(filepath.Join(cfg.AppDir, "synopkgland-operations.json"), cfg.OperationsDigest, api.MaxRequestBytes)
+		if err != nil {
+			return nil, err
+		}
+		if err = api.ValidateOperationRegistry(operations, permissions, routes...); err != nil {
+			return nil, err
+		}
 	}
 	srv, err := api.NewServerWithPermissions(auth, permissions, routes...)
 	if err != nil {

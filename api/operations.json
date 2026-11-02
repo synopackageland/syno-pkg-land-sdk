@@ -1,0 +1,803 @@
+{
+  "format": "synopkgland.api",
+  "version": 2,
+  "operations": {
+    "nas.session.status": {
+      "summary": "Read nas session status",
+      "ai": "hidden",
+      "cli": [
+        "nas",
+        "session",
+        "status"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "nas.session.status"
+      }
+    },
+    "nas.files.shares": {
+      "summary": "Read nas files shares",
+      "ai": "hidden",
+      "cli": [
+        "nas",
+        "files",
+        "shares"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "nas.files.shares"
+      }
+    },
+    "nas.files.list": {
+      "summary": "Read nas files list",
+      "ai": "hidden",
+      "cli": [
+        "nas",
+        "files",
+        "list"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "nas.files.list"
+      }
+    },
+    "nas.files.info": {
+      "summary": "Read nas files info",
+      "ai": "hidden",
+      "cli": [
+        "nas",
+        "files",
+        "info"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "nas.files.info"
+      }
+    },
+    "nas.files.create_folder": {
+      "summary": "Manage nas files create folder",
+      "ai": "hidden",
+      "cli": [
+        "nas",
+        "files",
+        "create-folder"
+      ],
+      "effect": "destructive",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "nas.files.create_folder"
+      }
+    },
+    "nas.files.download": {
+      "summary": "Read nas files download",
+      "ai": "hidden",
+      "cli": [
+        "nas",
+        "files",
+        "download"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "nas.files.download"
+      }
+    },
+    "nas.files.upload": {
+      "summary": "Manage nas files upload",
+      "ai": "hidden",
+      "cli": [
+        "nas",
+        "files",
+        "upload"
+      ],
+      "effect": "destructive",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "nas.files.upload"
+      }
+    },
+    "bg.status": {
+      "summary": "Read bg status",
+      "ai": "hidden",
+      "cli": [
+        "bg",
+        "status"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "bg.status"
+      }
+    },
+    "bg.browse": {
+      "summary": "Read bg browse",
+      "ai": "hidden",
+      "cli": [
+        "bg",
+        "browse"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "bg.browse"
+      }
+    },
+    "bg.jobs.submit": {
+      "summary": "Manage bg jobs submit",
+      "ai": "hidden",
+      "cli": [
+        "bg",
+        "jobs",
+        "submit"
+      ],
+      "effect": "destructive",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "bg.jobs.submit"
+      }
+    },
+    "bg.jobs.list": {
+      "summary": "Read bg jobs list",
+      "ai": "hidden",
+      "cli": [
+        "bg",
+        "jobs",
+        "list"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "bg.jobs.list"
+      }
+    },
+    "bg.jobs.get": {
+      "summary": "Read bg jobs get",
+      "ai": "hidden",
+      "cli": [
+        "bg",
+        "jobs",
+        "get"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "bg.jobs.get"
+      }
+    },
+    "bg.jobs.cancel": {
+      "summary": "Manage bg jobs cancel",
+      "ai": "hidden",
+      "cli": [
+        "bg",
+        "jobs",
+        "cancel"
+      ],
+      "effect": "destructive",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "bg.jobs.cancel"
+      }
+    },
+    "bg.jobs.pause": {
+      "summary": "Manage bg jobs pause",
+      "ai": "hidden",
+      "cli": [
+        "bg",
+        "jobs",
+        "pause"
+      ],
+      "effect": "destructive",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "bg.jobs.pause"
+      }
+    },
+    "bg.jobs.resume": {
+      "summary": "Manage bg jobs resume",
+      "ai": "hidden",
+      "cli": [
+        "bg",
+        "jobs",
+        "resume"
+      ],
+      "effect": "destructive",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "bg.jobs.resume"
+      }
+    },
+    "bg.jobs.result": {
+      "summary": "Read bg jobs result",
+      "ai": "hidden",
+      "cli": [
+        "bg",
+        "jobs",
+        "result"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "bg.jobs.result"
+      }
+    },
+    "bg.schedules.list": {
+      "summary": "Read bg schedules list",
+      "ai": "hidden",
+      "cli": [
+        "bg",
+        "schedules",
+        "list"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "bg.schedules.list"
+      }
+    },
+    "bg.schedules.create": {
+      "summary": "Manage bg schedules create",
+      "ai": "hidden",
+      "cli": [
+        "bg",
+        "schedules",
+        "create"
+      ],
+      "effect": "destructive",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "bg.schedules.create"
+      }
+    },
+    "bg.schedules.disable": {
+      "summary": "Manage bg schedules disable",
+      "ai": "hidden",
+      "cli": [
+        "bg",
+        "schedules",
+        "disable"
+      ],
+      "effect": "destructive",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "bg.schedules.disable"
+      }
+    },
+    "bg.schedules.delete": {
+      "summary": "Manage bg schedules delete",
+      "ai": "hidden",
+      "cli": [
+        "bg",
+        "schedules",
+        "delete"
+      ],
+      "effect": "destructive",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "bg.schedules.delete"
+      }
+    },
+    "bg.jobs.purge": {
+      "summary": "Manage bg jobs purge",
+      "ai": "hidden",
+      "cli": [
+        "bg",
+        "jobs",
+        "purge"
+      ],
+      "effect": "destructive",
+      "permission": "administrators",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "bg.jobs.purge"
+      }
+    },
+    "bg.schedules.enable": {
+      "summary": "Manage bg schedules enable",
+      "ai": "hidden",
+      "cli": [
+        "bg",
+        "schedules",
+        "enable"
+      ],
+      "effect": "destructive",
+      "permission": "administrators",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "bg.schedules.enable"
+      }
+    },
+    "portal.status": {
+      "summary": "Read portal status",
+      "ai": "hidden",
+      "cli": [
+        "portal",
+        "status"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "portal.status"
+      }
+    },
+    "portal.register": {
+      "summary": "Manage portal register",
+      "ai": "hidden",
+      "cli": [
+        "portal",
+        "register"
+      ],
+      "effect": "destructive",
+      "permission": "administrators",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "portal.register"
+      }
+    },
+    "portal.unregister": {
+      "summary": "Manage portal unregister",
+      "ai": "hidden",
+      "cli": [
+        "portal",
+        "unregister"
+      ],
+      "effect": "destructive",
+      "permission": "administrators",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "portal.unregister"
+      }
+    },
+    "executor.status": {
+      "summary": "Read executor status",
+      "ai": "hidden",
+      "cli": [
+        "executor",
+        "status"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "executor.status"
+      }
+    },
+    "executor.control": {
+      "summary": "Manage executor control",
+      "ai": "hidden",
+      "cli": [
+        "executor",
+        "control"
+      ],
+      "effect": "destructive",
+      "permission": "administrators",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "executor.control"
+      }
+    },
+    "root.run": {
+      "summary": "Manage root run",
+      "ai": "hidden",
+      "cli": [
+        "root",
+        "run"
+      ],
+      "effect": "destructive",
+      "permission": "administrators",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "root.run"
+      }
+    },
+    "delegate.destination": {
+      "summary": "Read delegate destination",
+      "ai": "hidden",
+      "cli": [
+        "delegate",
+        "destination"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "delegate.destination"
+      }
+    },
+    "delegate.status": {
+      "summary": "Read delegate status",
+      "ai": "hidden",
+      "cli": [
+        "delegate",
+        "status"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "delegate.status"
+      }
+    },
+    "delegate.create": {
+      "summary": "Manage delegate create",
+      "ai": "hidden",
+      "cli": [
+        "delegate",
+        "create"
+      ],
+      "effect": "destructive",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "delegate.create"
+      }
+    },
+    "delegate.list": {
+      "summary": "Read delegate list",
+      "ai": "hidden",
+      "cli": [
+        "delegate",
+        "list"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "delegate.list"
+      }
+    },
+    "delegate.revoke": {
+      "summary": "Manage delegate revoke",
+      "ai": "hidden",
+      "cli": [
+        "delegate",
+        "revoke"
+      ],
+      "effect": "destructive",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "delegate.revoke"
+      }
+    },
+    "delegate.jobs.submit": {
+      "summary": "Manage delegate jobs submit",
+      "ai": "hidden",
+      "cli": [
+        "delegate",
+        "jobs",
+        "submit"
+      ],
+      "effect": "destructive",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "delegate.jobs.submit"
+      }
+    },
+    "delegate.jobs.list": {
+      "summary": "Read delegate jobs list",
+      "ai": "hidden",
+      "cli": [
+        "delegate",
+        "jobs",
+        "list"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "delegate.jobs.list"
+      }
+    },
+    "delegate.jobs.cancel": {
+      "summary": "Manage delegate jobs cancel",
+      "ai": "hidden",
+      "cli": [
+        "delegate",
+        "jobs",
+        "cancel"
+      ],
+      "effect": "destructive",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "delegate.jobs.cancel"
+      }
+    },
+    "delegate.select_destination": {
+      "summary": "Manage delegate select destination",
+      "ai": "hidden",
+      "cli": [
+        "delegate",
+        "select-destination"
+      ],
+      "effect": "destructive",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "delegate.select_destination"
+      }
+    },
+    "delegate.move_from_staging": {
+      "summary": "Manage delegate move from staging",
+      "ai": "hidden",
+      "cli": [
+        "delegate",
+        "move-from-staging"
+      ],
+      "effect": "destructive",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "delegate.move_from_staging"
+      }
+    },
+    "delegate.operations.get": {
+      "summary": "Read delegate operations get",
+      "ai": "hidden",
+      "cli": [
+        "delegate",
+        "operations",
+        "get"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "delegate.operations.get"
+      }
+    },
+    "delegate.operations.list": {
+      "summary": "Read delegate operations list",
+      "ai": "hidden",
+      "cli": [
+        "delegate",
+        "operations",
+        "list"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "delegate.operations.list"
+      }
+    },
+    "delegate.operations.cancel": {
+      "summary": "Manage delegate operations cancel",
+      "ai": "hidden",
+      "cli": [
+        "delegate",
+        "operations",
+        "cancel"
+      ],
+      "effect": "destructive",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "delegate.operations.cancel"
+      }
+    },
+    "delegate.disable": {
+      "summary": "Manage delegate disable",
+      "ai": "hidden",
+      "cli": [
+        "delegate",
+        "disable"
+      ],
+      "effect": "destructive",
+      "permission": "administrators",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "delegate.disable"
+      }
+    },
+    "delegate.enable": {
+      "summary": "Manage delegate enable",
+      "ai": "hidden",
+      "cli": [
+        "delegate",
+        "enable"
+      ],
+      "effect": "destructive",
+      "permission": "administrators",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "delegate.enable"
+      }
+    },
+    "delegate.audit": {
+      "summary": "Read delegate audit",
+      "ai": "hidden",
+      "cli": [
+        "delegate",
+        "audit"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "delegate.audit"
+      }
+    },
+    "delegate.example.export": {
+      "summary": "Manage delegate example export",
+      "ai": "hidden",
+      "cli": [
+        "delegate",
+        "example",
+        "export"
+      ],
+      "effect": "destructive",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "delegate.example.export"
+      }
+    },
+    "sharedfolder.status": {
+      "summary": "Read sharedfolder status",
+      "ai": "hidden",
+      "cli": [
+        "sharedfolder",
+        "status"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "sharedfolder.status"
+      }
+    },
+    "gateway.passthrough.status": {
+      "summary": "Read gateway passthrough status",
+      "ai": "hidden",
+      "cli": [
+        "gateway",
+        "passthrough",
+        "status"
+      ],
+      "effect": "read",
+      "permission": "administrators",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "gateway.passthrough.status"
+      }
+    },
+    "gateway.passthrough.set": {
+      "summary": "Manage gateway passthrough set",
+      "ai": "hidden",
+      "cli": [
+        "gateway",
+        "passthrough",
+        "set"
+      ],
+      "effect": "destructive",
+      "permission": "administrators",
+      "paramsSchema": {},
+      "resultSchema": {},
+      "flow": {
+        "type": "invoke",
+        "method": "gateway.passthrough.set"
+      }
+    }
+  }
+}
