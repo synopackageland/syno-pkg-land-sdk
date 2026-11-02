@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.46.2
+
+- Use the supplied DSM window WebAPI channel for File Station JSON requests in NAS browsing and executor scope selection, retaining admission, validation, cancellation, deadlines and mutation uncertainty
+- Retain standalone token fallback and binary upload/download transports; never fall back to fetch after a window channel refusal
+- Check the optional Context.webApi signature and readDsmPorts channel preference; reuse the unchanged executor/v0.39.0 inventory
+
 ## 0.46.1
 
 - Bring the gateway command-dispatch fix to the 0.46 release line: explicit commands take priority over inherited CGI environment variables, preventing Package Center and WebAPI upgrade hooks from loading the installed CGI policy.

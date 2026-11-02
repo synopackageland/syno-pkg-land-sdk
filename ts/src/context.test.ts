@@ -7,6 +7,11 @@ function ctx(fields:Partial<Context>,platform:Partial<HostPlatformSnapshot>={hos
  return {call:async()=>undefined as never,reopen:()=>()=>{},locale:'en',host,...fields}
 }
 
+test('the context declares the DSM session WebAPI contract and allows a standalone host without it',()=>{
+ expectTypeOf<Context['webApi']>().toEqualTypeOf<((api:string,method:string,version:number,params:Record<string,unknown>)=>Promise<unknown>)|undefined>()
+ expect(ctx({}).webApi).toBeUndefined()
+})
+
 // The CLI's DSM window passes them; a full page has no title bar to name the App.
 test('the context carries the launch layout and the brand from the DSM window',()=>{
  expectTypeOf<Context['fullPage']>().toEqualTypeOf<boolean|undefined>()

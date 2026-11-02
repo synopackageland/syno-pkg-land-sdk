@@ -1,12 +1,12 @@
 import {createDsmSession} from './session.js'
-import {clientTimeout} from '../context'
+import {clientTimeout,type Context} from '../context'
 import type {ListOptions} from '../nas/contract'
 
 // Destination URLs and API names are never consumer-controlled. An App URL,
 // OIDC token or a backend session is not a DSM WebAPI credential.
 export const DSM_FILE_ENDPOINT='/webapi/entry.cgi'
 export const MAX_UPLOAD_BYTES=16*1024**3
-export interface DsmFileOptions {token?:()=>string|undefined;timeout?:number}
+export interface DsmFileOptions {token?:()=>string|undefined;timeout?:number;webApi?:Context['webApi']}
 export interface DsmFileEntry {name:string;path:string;isdir:boolean;additional?:{size?:number}}
 export interface DsmFilePage {files?:DsmFileEntry[];shares?:DsmFileEntry[];offset:number;total:number}
 function checkedEntry(value:unknown):DsmFileEntry{
@@ -56,36 +56,56 @@ export function createDsmFileStation(options:DsmFileOptions={}){
   return value
  }
  async function send(api:string,method:string,version:number,params:Record<string,string>,signal:AbortSignal,mutation=false,upload?:File):Promise<unknown>{
-  const credential=await token(signal)
+  if(signal.aborted)throw {code:'canceled'}
   const controller=new AbortController()
-  const body=upload?new FormData():new URLSearchParams()
-  for(const [k,v] of Object.entries({api,method,version:String(version),...params,SynoToken:credential}))body.append(k,v)
-  if(upload)(body as FormData).append('file',upload)
   let sent=false,timeout=false
   const abort=()=>controller.abort()
   signal.addEventListener('abort',abort,{once:true})
   if(signal.aborted)controller.abort()
   const timer=setTimeout(()=>{timeout=true;controller.abort()},options.timeout??(upload?20*60*1000:clientTimeout()))
+  let stopped=()=>{}
   try{
-   if(controller.signal.aborted)throw {code:'canceled'}
-   sent=true
-   const res=await fetch(DSM_FILE_ENDPOINT,{method:'POST',body,credentials:'same-origin',mode:'same-origin',redirect:'error',cache:'no-store',signal:controller.signal,headers:{'X-SYNO-TOKEN':credential}})
-   if(!res.ok)throw Error()
-   const reply=await metadata(res)
-   if(reply?.success===false){fileError(reply.error?.code)}
-   if(reply?.success!==true)throw Error()
+   const request=async()=>{
+    if(controller.signal.aborted)throw {code:'canceled'}
+    // JSON calls use the window's session channel. Multipart uploads still
+    // need fetch; hosts without a DSM window use the existing token transport.
+    if(options.webApi&&!upload){
+     sent=true
+     try{return await options.webApi(api,method,version,params)}
+     catch(e){const code=/^dsm_(\d+)$/.exec(String((e as {code?:unknown})?.code));if(code)fileError(code[1]);throw e}
+    }
+    const credential=await token(controller.signal)
+    if(controller.signal.aborted)throw {code:'canceled'}
+    const body=upload?new FormData():new URLSearchParams()
+    for(const [k,v] of Object.entries({api,method,version:String(version),...params,SynoToken:credential}))body.append(k,v)
+    if(upload)(body as FormData).append('file',upload)
+    sent=true
+    const res=await fetch(DSM_FILE_ENDPOINT,{method:'POST',body,credentials:'same-origin',mode:'same-origin',redirect:'error',cache:'no-store',signal:controller.signal,headers:{'X-SYNO-TOKEN':credential}})
+    if(!res.ok)throw Error()
+    const reply=await metadata(res)
+    if(reply?.success===false){fileError(reply.error?.code)}
+    if(reply?.success!==true)throw Error()
+    return reply.data
+   }
+   const canceled=new Promise<never>((_,reject)=>{
+    stopped=()=>reject({code:timeout?'timeout':'canceled'})
+    controller.signal.addEventListener('abort',stopped,{once:true})
+    if(controller.signal.aborted)stopped()
+   })
+   const data=await Promise.race([request(),canceled]) as {error?:unknown;errors?:unknown[]}|undefined
    // DSM can return errors inside a success envelope; never acknowledge them.
-   if(reply.data?.error||Array.isArray(reply.data?.errors)&&reply.data.errors.length)throw {code:'denied'}
-   return reply.data
+   if(data?.error||Array.isArray(data?.errors)&&data.errors.length)throw {code:'denied'}
+   return data
   }catch(e){
    const code=(e as {code?:unknown})?.code
    // DOMException also has a numeric code (AbortError is 20); only DSM's
    // known refusal numbers are DSM errors. An aborted dispatched upload
    // remains uncertain rather than becoming a generic unavailable reply.
    if(typeof code==='number'&&[106,107,119,105,403,407,408,414,1805,400].includes(code))fileError(code)
-   if(typeof code==='string'&&['session_required','dsm_session_required','denied','not_found','conflict','invalid-request','unavailable','commit-uncertain','canceled','timeout'].includes(code))throw {code}
+   if(typeof code==='string'&&['canceled','timeout'].includes(code))throw {code:mutation&&sent?'commit-uncertain':code}
+   if(typeof code==='string'&&['session_required','dsm_session_required','denied','not_found','conflict','invalid-request','unavailable','commit-uncertain'].includes(code))throw {code}
    throw {code:mutation&&sent?'commit-uncertain':timeout?'timeout':signal.aborted?'canceled':'unavailable'}
-  }finally{clearTimeout(timer);signal.removeEventListener('abort',abort)}
+  }finally{clearTimeout(timer);signal.removeEventListener('abort',abort);controller.signal.removeEventListener('abort',stopped)}
  }
  async function page(path:string|undefined,offset:number,options:ListOptions,signal:AbortSignal){
   if(path!==undefined)filePath(path)

@@ -15,7 +15,7 @@ const confirmCopy={password_rejected:'passwordRejected',password_required:'passw
 // How long a requested scope is read back for, and how often.
 export const SCOPE_READBACK_MS=60000,SCOPE_READBACK_POLL_MS=1000
 // initial: a status the caller has just read, which the first load starts from.
-export function useScopeApproval(props:{readonly admin:boolean;readonly locale?:string;readonly ctx?:Pick<Context,'call'>;readonly initial?:CapabilityStatus},confirmed:()=>void|Promise<void>){
+export function useScopeApproval(props:{readonly admin:boolean;readonly locale?:string;readonly ctx?:Pick<Context,'call'|'webApi'>;readonly initial?:CapabilityStatus},confirmed:()=>void|Promise<void>){
  const setup=useExecutorSetup(),copy=computed(()=>delegateCopy(props.locale))
  const status=ref<CapabilityStatus>(),password=ref(''),busy=ref(false),confirming=ref(false),error=ref(false)
  // Why the last approval failed: a refused password, or the executor's
@@ -27,7 +27,7 @@ export function useScopeApproval(props:{readonly admin:boolean;readonly locale?:
  const passwordError=computed(()=>missing.value?copy.value.passwordRequired:failure.value&&'confirm' in failure.value?copy.value[confirmCopy[failure.value.confirm]]:'')
  watch(password,()=>{missing.value=false})
  const scope=ref<ScopeDetail>(),chosen=ref(''),shares=ref<Array<{label:string;value:string}>>([])
- const dsmFiles=createDsmFileStation()
+ const dsmFiles=createDsmFileStation({webApi:props.ctx?.webApi})
  const dynamic=computed(()=>scope.value?.scope_mode==='install-selected')
  // Only an executor that reports a file scope is spoken of as file access; a
  // root-ops App's executor gets the neutral copy.

@@ -25,6 +25,29 @@ Nothing is persisted. Recovery failure leaves the backend's existing
 both the cookie and token. The CLI embeds this factory from the selected SDK
 into every generated native window, including Go-only Apps.
 
+## DSM WebAPI
+
+Every CLI-generated DSM window provides
+`ctx.webApi(api, method, version, params)`, using the existing window channel
+and SDK session recovery in the signed-in user's own session. It resolves DSM
+data and rejects DSM refusals as `{code: "dsm_<n>"}`. DSM enforces that user's
+permissions. The field remains optional in `Context` for standalone dev servers,
+custom hosts and windows built by older CLIs.
+
+```ts
+if (!ctx.webApi) throw new Error('DSM window required')
+const data = await ctx.webApi('SYNO.Core.Service.PortInfo', 'load', 1, {})
+```
+
+`readDsmPorts(ctx)` already prefers this channel and returns `[]` on refusal,
+unavailable data or its five-second deadline. It uses a same-origin token
+request only without a window channel. `createNasProvider(ctx)` and executor
+scope selection also use `ctx.webApi` for File Station JSON calls, retaining
+App admission, validation, cancellation and deadlines. A channel refusal never
+retries through fetch. Direct `createDsmFileStation({webApi: ctx.webApi})` callers
+can use the same transport. Multipart uploads and form downloads use their
+existing binary transfer transport.
+
 ## File Station
 
 `openFolderInFileStation(path)` opens DSM's File Station at a folder;

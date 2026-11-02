@@ -12,7 +12,7 @@ import ExecutorConsent from './ExecutorConsent.vue'
 // purpose: the App's own sentence for what it needs system privileges for.
 // title replaces the section title; an empty string drops it where a window or dialog already names it.
 // layout page centres the approval as a card in place of the App's pages.
-const props=defineProps<{admin:boolean;locale?:string;ctx?:Pick<Context,'call'>;initial?:CapabilityStatus;purpose?:string;title?:string;layout?:'page'|'inline'}>()
+const props=defineProps<{admin:boolean;locale?:string;ctx?:Pick<Context,'call'|'webApi'>;initial?:CapabilityStatus;purpose?:string;title?:string;layout?:'page'|'inline'}>()
 const emit=defineEmits<{confirmed:[]}>()
 const copy=computed(()=>delegateCopy(props.locale))
 const {status,password,busy,confirming,error,failure,passwordError,scope,chosen,options,dynamic,files,webapiProfiles,canConfirm,needsScope,refresh,submit,explain}=useScopeApproval(props,()=>emit('confirmed'))

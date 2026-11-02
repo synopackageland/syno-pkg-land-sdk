@@ -58,6 +58,50 @@ test('App admission refusal makes zero DSM requests',async()=>{
  expect(fetch).not.toHaveBeenCalled()
  p.dispose()
 })
+test('NAS JSON requests use ctx.webApi after App admission without reading a token or fetching',async()=>{
+ const {fetch,ctx}=browser(),token=vi.fn(()=>{throw Error('window channel owns the session')})
+ const webApi=vi.fn(async(_api:string,method:string)=>method==='list_share'?{shares:[{name:'team',path:'/team',isdir:true}],offset:0,total:1}:method==='getinfo'?{files:[{name:'a',path:'/team/a',isdir:false,additional:{size:1}}]}:method==='list'?{files:[],offset:0,total:0}:{})
+ const p=createNasProvider({...ctx,files:{token},webApi})
+ expect((await p.shares(0,signal())).entries[0]?.path).toBe('/team')
+ await p.list('/team',{},signal())
+ expect((await p.info('/team/a',signal())).bytes).toBe(1)
+ await p.createFolder('/team','new',signal())
+ expect(webApi.mock.calls.map(([api,method])=>[api,method])).toEqual([
+  ['SYNO.FileStation.List','list_share'],['SYNO.FileStation.List','list'],
+  ['SYNO.FileStation.List','getinfo'],['SYNO.FileStation.CreateFolder','create'],
+ ])
+ expect(ctx.call).toHaveBeenCalledTimes(4)
+ expect(fetch).not.toHaveBeenCalled();expect(token).not.toHaveBeenCalled()
+ p.dispose()
+})
+test('window WebAPI refusals retain File Station errors without a token fallback',async()=>{
+ const fetch=vi.fn();vi.stubGlobal('fetch',fetch)
+ for(const [code,expected] of [[105,'denied'],[119,'session_required']] as const){
+  const webApi=vi.fn(async()=>{throw {code:`dsm_${code}`}})
+  const files=createDsmFileStation({webApi})
+  await expect(files.shares(0,signal())).rejects.toEqual({code:expected})
+  expect(webApi).toHaveBeenCalledOnce()
+ }
+ expect(fetch).not.toHaveBeenCalled()
+})
+test('pending window requests honor cancellation and deadlines without replaying mutations',async()=>{
+ vi.useFakeTimers()
+ try{
+  const webApi=vi.fn(()=>new Promise<never>(()=>{}))
+  const files=createDsmFileStation({webApi,timeout:1000})
+  const read=files.shares(0,signal()).catch(e=>e)
+  await vi.advanceTimersByTimeAsync(1000)
+  expect(await read).toEqual({code:'timeout'})
+  const controller=new AbortController()
+  const write=files.createFolder('/team','new',controller.signal).catch(e=>e)
+  controller.abort()
+  expect(await write).toEqual({code:'commit-uncertain'})
+  expect(webApi).toHaveBeenCalledTimes(2)
+  const aborted=new AbortController();aborted.abort()
+  await expect(files.shares(0,aborted.signal)).rejects.toEqual({code:'canceled'})
+  expect(webApi).toHaveBeenCalledTimes(2)
+ }finally{vi.useRealTimers()}
+})
 test('upload is a DSM multipart request, never an App URL or an octet-stream relay',async()=>{
  const {fetch,ctx}=browser(),t=createFileTransfers(ctx.files),file=new File(['a'],'a')
  await t.upload('/team',file,signal())

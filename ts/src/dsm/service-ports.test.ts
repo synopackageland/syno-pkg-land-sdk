@@ -14,13 +14,19 @@ const port_info = [
 test('the session channel returns localized names, single ports and unexpanded TCP/UDP ranges', async () => {
  const webApi = vi.fn(async () => ({port_info}))
  const fetch = vi.fn(); vi.stubGlobal('fetch', fetch)
- const result = await readDsmPorts({webApi})
+ const result = await readDsmPorts({webApi,files})
  expect(webApi).toHaveBeenCalledWith('SYNO.Core.Service.PortInfo', 'load', 1, {})
  expect(fetch).not.toHaveBeenCalled()
  expect(result.map(p => p.id)).toEqual(['http','ntp','mixed','ftp'])
  expect(result[0]).toEqual({id:'http',name:'HTTP',desc:'Web Station',ports:[80],protocol:'tcp',ranges:[{first:80,last:80}]})
  expect(result[2]?.ranges).toEqual([{first:137,last:139},{first:445,last:445}])
  expect(result[3]?.ports).toEqual([21])
+})
+
+test('a window refusal never falls back to a second token request', async () => {
+ const fetch = vi.fn(); vi.stubGlobal('fetch',fetch)
+ expect(await readDsmPorts({files,webApi:async()=>{throw {code:'dsm_105'}}})).toEqual([])
+ expect(fetch).not.toHaveBeenCalled()
 })
 
 test('older windows use same-origin POST with the fresh session token', async () => {
