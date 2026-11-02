@@ -95,7 +95,7 @@ func authorizeHandler(path string) (http.Handler, error) {
 	if cfg.NativeIngress && httpsPort == 0 {
 		httpsPort = cfg.Listen.HTTP
 	}
-	return &idgateway.AuthorizeCGI{External: external.Read, AppHTTPSPort: httpsPort, LoginApp: loginApp, Available: func() bool { return idgateway.GatewayAvailable(cfg) }, Key: key, AppPorts: ports, Verifier: access, Accounts: idgateway.NewDirectory(), Now: time.Now}, nil
+	return &idgateway.AuthorizeCGI{IngressPath: cfg.IngressPath, External: external.Read, AppHTTPSPort: httpsPort, LoginApp: loginApp, Available: func() bool { return idgateway.GatewayAvailable(cfg) }, Key: key, AppPorts: ports, Verifier: access, Accounts: idgateway.NewDirectory(), Now: time.Now}, nil
 }
 
 const usage = "usage: gateway run [--config <path>] [-- <app> <args>...] | gateway exec -- <app> <args>... | gateway account status|purge"

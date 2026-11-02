@@ -64,7 +64,7 @@ func (b *BrowserRedirectConfig) validate() error {
 }
 
 func (f *Front) browserAuthority(r *http.Request) bool {
-	if f.external(r).Index(requestOrigin(r)) >= 0 {
+	if f.cfg.IngressPath != "" || f.external(r).Index(requestOrigin(r)) >= 0 {
 		return true
 	}
 	b := f.cfg.BrowserRedirect
@@ -115,7 +115,7 @@ func (f *Front) rewriteBrowserHTML(res *http.Response, origin string) error {
 	if len(raw) > maxRewriteBody {
 		return errors.New("OIDC redirect HTML exceeds rewrite limit")
 	}
-	from, to := f.cfg.Issuer+"/authorize", origin+"/_sso/authorize"
+	from, to := f.cfg.Issuer+"/authorize", origin+f.route("/_sso/authorize")
 	// Encodings in ordinary HTML/JS strings and encodeURIComponent / Python
 	// quote. Match the exact endpoint boundary, never a lookalike path or host.
 	encoders := []func(string) string{

@@ -76,6 +76,7 @@ type Names interface {
 
 // FrontConfig configures the gateway on the app's ports.
 type FrontConfig struct {
+	IngressPath string
 	// External resolves the current public-origin policy; nil preserves local
 	// behavior. ExternalFresh, when set, rechecks it for requests on a public
 	// origin; see ExternalReader.Fresh.
@@ -270,6 +271,10 @@ func NewFront(cfg FrontConfig) (*Front, error) {
 		cfg.Now = time.Now
 	}
 	cfg.Roles = cfg.Roles.orDefault()
+	if err := validateIngressPath(cfg.Package, cfg.IngressPath); err != nil {
+		return nil, err
+	}
+	cfg = scopeFront(cfg)
 	f := &Front{cfg: cfg, upstream: up, cookie: "synopkgland_sso_" + cfg.Package, txns: map[string]txn{}, sessions: map[string]session{}}
 	if cfg.Provider != nil && cfg.Entry != "" {
 		cfg.Provider.admit = f.admitClient
@@ -313,7 +318,14 @@ func NewFront(cfg FrontConfig) (*Front, error) {
 }
 
 func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == PingPath {
+	if f.cfg.IngressPath != "" {
+		if !strings.HasPrefix(r.URL.Path, f.cfg.IngressPath) {
+			http.NotFound(w, r)
+			return
+		}
+		r = r.WithContext(context.WithValue(r.Context(), ingressPathKey{}, f.cfg.IngressPath))
+	}
+	if r.URL.Path == f.route(PingPath) {
 		servePackagePing(w, r, f.cfg.Package)
 		return
 	}
@@ -367,7 +379,7 @@ func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	browserEvidence := !upstreamAuth && (!(optional || f.passthrough(r.URL.Path)) || r.Header.Get("Origin") != "" || r.Header.Get("Referer") != "" || isUpgrade(r))
 	// Public App routes own authentication, CSRF and native-client/WebSocket
 	// policy. Reserved issuer routes keep the gateway's existing protections.
-	if f.providerOnly() && r.URL.Path != "/_sso" && !strings.HasPrefix(r.URL.Path, "/_sso/") {
+	if f.providerOnly() && r.URL.Path != f.route("/_sso") && !strings.HasPrefix(r.URL.Path, f.route("/_sso/")) {
 		browserEvidence = false
 	}
 	if browserEvidence && (!safeProxyMethod(r.Method) || isUpgrade(r)) && !sameBrowserOrigin(r, origin) {
@@ -380,19 +392,19 @@ func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	r = r.WithContext(context.WithValue(r.Context(), originKey, origin))
 	switch {
-	case r.URL.Path == "/_sso/browser.js" && f.cfg.Browser != nil:
+	case r.URL.Path == f.route("/_sso/browser.js") && f.cfg.Browser != nil:
 		f.serveBrowser(w, r)
 		return
-	case r.URL.Path == "/_sso/authorize" && f.cfg.Mode == ModeOIDC:
+	case r.URL.Path == f.route("/_sso/authorize") && f.cfg.Mode == ModeOIDC:
 		f.authorize(w, r, origin)
 		return
-	case r.URL.Path == ReturnPath:
+	case r.URL.Path == f.route(ReturnPath):
 		f.dsmReturn(w, r, origin)
 		return
-	case r.URL.Path == "/_sso/logout" && f.cfg.Mode != ModeOIDC:
+	case r.URL.Path == f.route("/_sso/logout") && f.cfg.Mode != ModeOIDC:
 		f.logout(w, r, origin)
 		return
-	case r.URL.Path == "/_sso" || strings.HasPrefix(r.URL.Path, "/_sso/"):
+	case r.URL.Path == f.route("/_sso") || strings.HasPrefix(r.URL.Path, f.route("/_sso/")):
 		http.NotFound(w, r)
 		return
 	}
@@ -494,14 +506,19 @@ func (f *Front) bounce(w http.ResponseWriter, r *http.Request, t txn, origin str
 		http.Error(w, "too many sign-in requests", http.StatusTooManyRequests)
 		return
 	}
-	q := url.Values{"txn": {id}, "return": {origin + ReturnPath}}
-	if index >= 0 {
+	q := url.Values{"txn": {id}, "return": {origin + f.route(ReturnPath)}}
+	if f.cfg.IngressPath != "" {
+		q.Set("resume", id+":p")
+	} else if index >= 0 {
 		q.Set("resume", externalResume(id, index, external))
 	}
 	http.Redirect(w, r, dsmOrigin+f.cfg.AuthorizeCGI+"?"+q.Encode(), http.StatusFound)
 }
 
 func (f *Front) dsmOrigin(r *http.Request) string {
+	if f.cfg.IngressPath != "" {
+		return requestOrigin(r)
+	}
 	if r.TLS != nil {
 		return "https://" + net.JoinHostPort(hostname(r.Host), strconv.Itoa(f.cfg.DSMPorts.HTTPS))
 	}
@@ -596,7 +613,7 @@ func (f *Front) denied(w http.ResponseWriter, r *http.Request, t txn, code strin
 		http.Redirect(w, r, f.cfg.Provider.Fail(t.req, code), http.StatusFound)
 		return
 	}
-	retry := "/"
+	retry := f.route("/")
 	if !t.oidc {
 		retry = localTarget(t.returnTo)
 	}
@@ -614,7 +631,7 @@ func (f *Front) logout(w http.ResponseWriter, r *http.Request, origin string) {
 		f.mu.Unlock()
 	}
 	setCookie(w, r, f.cookie, "")
-	http.Redirect(w, r, "/", http.StatusFound)
+	http.Redirect(w, r, f.route("/"), http.StatusFound)
 }
 
 // session returns the request's live gateway session. A session ends when it
@@ -658,7 +675,7 @@ func (f *Front) RevokeUID(uid int) {
 // setCookie sets a gateway cookie, or clears it when value is empty. It is
 // Secure on TLS listeners only: the gateway also serves plain http.
 func setCookie(w http.ResponseWriter, r *http.Request, name, value string) {
-	c := &http.Cookie{Name: name, Value: value, Path: "/", HttpOnly: true, Secure: r.TLS != nil, SameSite: http.SameSiteLaxMode}
+	c := &http.Cookie{Name: name, Value: value, Path: requestCookiePath(r), HttpOnly: true, Secure: r.TLS != nil, SameSite: http.SameSiteLaxMode}
 	if value == "" {
 		c.MaxAge = -1
 	}
@@ -787,7 +804,18 @@ func (f *Front) modifyResponse(res *http.Response) error {
 	for _, value := range cookies {
 		name, _, ok := strings.Cut(value, "=")
 		if ok && !f.reservedCookie(strings.TrimSpace(name)) {
-			res.Header.Add("Set-Cookie", value)
+			if f.cfg.IngressPath != "" {
+				cookieRes := http.Response{Header: http.Header{"Set-Cookie": {value}}}
+				for _, c := range cookieRes.Cookies() {
+					c.Domain = ""
+					if !strings.HasPrefix(c.Path, f.cfg.IngressPath) {
+						c.Path = f.cfg.IngressPath
+					}
+					res.Header.Add("Set-Cookie", c.String())
+				}
+			} else {
+				res.Header.Add("Set-Cookie", value)
+			}
 		}
 	}
 	if f.upstreamAuthenticated(res.Request) {
@@ -815,7 +843,7 @@ func (f *Front) publicURL(loc, origin string) string {
 	if f.cfg.Mode == ModeOIDC {
 		authorize := f.cfg.Issuer + "/authorize"
 		if rest, ok := strings.CutPrefix(loc, authorize); ok && (rest == "" || rest[0] == '?') {
-			return origin + "/_sso/authorize" + rest
+			return origin + f.route("/_sso/authorize") + rest
 		}
 	}
 	if u, err := url.Parse(loc); err == nil && u.Scheme == f.upstream.Scheme && u.Host == f.upstream.Host {

@@ -1,20 +1,20 @@
 'use strict';
 // Tab-local navigation state only. The upstream owns all account/session state.
-const key = 'synopkgland.oidc.browser';
+const key = 'synopkgland.oidc.browser' + (cfg.ingress_path || '');
 const ttl = 120000;
 const here = () => location.pathname + location.search + location.hash;
 const login = p => cfg.login_paths.includes(p);
 const callback = u => cfg.callback_paths.includes(u.pathname) ||
   (login(u.pathname) && cfg.completion_query && u.searchParams.has(cfg.completion_query));
 function safe(value) {
-  if (typeof value !== 'string' || value.length > 4096 || !value.startsWith('/') || value.startsWith('//') || /[\\\s]/.test(value)) return '/';
+  if (typeof value !== 'string' || value.length > 4096 || !value.startsWith('/') || value.startsWith('//') || /[\\\s]/.test(value)) return cfg.ingress_path || '/';
   try {
     const path = decodeURIComponent(value.split(/[?#]/)[0]);
-    if (path.includes('%') || path.includes('\\') || path.startsWith('//') || path.split('/').some(p => p === '.' || p === '..')) return '/';
+    if (path.includes('%') || path.includes('\\') || path.startsWith('//') || path.split('/').some(p => p === '.' || p === '..')) return cfg.ingress_path || '/';
     const u = new URL(value, location.origin);
-    if (u.origin !== location.origin || u.pathname.startsWith('/_sso') || login(u.pathname) || callback(u) || u.pathname === new URL(cfg.start, location.origin).pathname) return '/';
+    if (u.origin !== location.origin || (cfg.ingress_path && !u.pathname.startsWith(cfg.ingress_path)) || u.pathname.startsWith((cfg.ingress_path || '/') + '_sso') || login(u.pathname) || callback(u) || u.pathname === new URL(cfg.start, location.origin).pathname) return cfg.ingress_path || '/';
     return u.pathname + u.search + u.hash;
-  } catch (_) { return '/'; }
+  } catch (_) { return cfg.ingress_path || '/'; }
 }
 let state;
 function save(value) { sessionStorage.setItem(key, JSON.stringify(value)); state = value; }

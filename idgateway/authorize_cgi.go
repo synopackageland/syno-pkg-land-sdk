@@ -42,6 +42,7 @@ type Accounts interface {
 // resolves the account's uid and returns the browser to the gateway with a
 // sealed Assertion or an OAuth-style error.
 type AuthorizeCGI struct {
+	IngressPath  string
 	External     func() External
 	AppHTTPSPort int
 	// LoginApp is the CLI-generated DSM App instance used to resume a cold login.
@@ -61,6 +62,9 @@ func (h *AuthorizeCGI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Referrer-Policy", "same-origin")
 	external := h.external()
+	if h.IngressPath != "" {
+		external = External{}
+	}
 	var prepared bool
 	r, prepared = h.prepareResume(w, r, external)
 	if !prepared {
@@ -98,8 +102,11 @@ func (h *AuthorizeCGI) returnURL(r *http.Request) (*url.URL, bool) {
 
 func (h *AuthorizeCGI) returnURLWithExternal(r *http.Request, e External) (*url.URL, bool) {
 	ret, err := url.Parse(r.URL.Query().Get("return"))
-	if err != nil || (ret.Scheme != "http" && ret.Scheme != "https") || !validReturnPath(ret) {
+	if err != nil || (ret.Scheme != "http" && ret.Scheme != "https") || !validReturnPathAt(ret, h.IngressPath) {
 		return nil, false
+	}
+	if h.IngressPath != "" {
+		return ret, ret.Scheme+"://"+ret.Host == requestOrigin(r)
 	}
 	if e.Index(ret.Scheme+"://"+ret.Host) >= 0 {
 		return ret, true

@@ -213,13 +213,16 @@ func entryHandlerWithMenu(cfg Config, preflight func() error, shares func() erro
 		if cfg.NativeIngress {
 			scheme, port = "https", nativePublicPort(cfg)
 		}
-		if host == "" || port == 0 {
+		if host == "" || port == 0 && cfg.IngressPath == "" {
 			http.Error(w, "entry unavailable", 503)
 			return
 		}
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		target := scheme + "://" + net.JoinHostPort(host, strconv.Itoa(port)) + "/"
+		if cfg.IngressPath != "" {
+			target = requestOrigin(r) + cfg.IngressPath
+		}
 		// DSM's classless URL launcher forwards launchParam as query values.
 		// Reuse #37's bounded transaction/port resume without injecting a script
 		// into a server-managed OIDC consumer's HTML.
@@ -249,7 +252,7 @@ func entryHandlerWithMenu(cfg Config, preflight func() error, shares func() erro
 				return
 			}
 			token, valid := parseResume(values[0])
-			if !valid || !token.Public && token.Port != port {
+			if !valid || !token.Public && !(cfg.IngressPath != "" && token.Path) && token.Port != port {
 				if strings.Contains(values[0], ":x") {
 					http.Redirect(w, r, target, http.StatusFound)
 				} else {
@@ -275,7 +278,10 @@ func entryHandlerWithMenu(cfg Config, preflight func() error, shares func() erro
 		// reached DSM through. The host only selects among trusted addresses;
 		// LAN and unknown hosts keep the destination above. Resume above keeps
 		// the host that started the transaction.
-		decision := MenuDestination(cfg, menu(), r.Host, r.TLS != nil)
+		decision := MenuDecision{Kind: MenuBaseline}
+		if cfg.IngressPath == "" {
+			decision = MenuDestination(cfg, menu(), r.Host, r.TLS != nil)
+		}
 		if post && decision.Kind == MenuBaseline {
 			http.Error(w, "invalid entry", 400)
 			return
