@@ -18,7 +18,7 @@ import {ExecutorSetupKey,confirmFailure} from './use-executor-setup'
 import {appLifecycle,lifecycleCopy,lifecycleRetryDelay,type AppLifecycle} from './lifecycle'
 import {delegateCopy} from './copy'
 // purpose is the App's own sentence for what it needs system privileges for.
-const props=defineProps<{locale?:string;purpose?:string;ctx:Partial<Pick<Context,'executor'|'user'|'call'|'reopen'>>}>()
+const props=defineProps<{locale?:string;purpose?:string;ctx:Partial<Pick<Context,'executor'|'user'|'call'|'reopen'|'webApi'>>}>()
 const copy=computed(()=>delegateCopy(props.locale))
 const setup=inject(ExecutorSetupKey,undefined)??props.ctx.executor
 if(setup)provide(ExecutorSetupKey,setup)
@@ -26,7 +26,7 @@ const state=ref<CapabilityState|'checking'|'unknown'>('checking'),lifecycle=ref<
 const admin=computed(()=>props.ctx.user?.isAdmin===true)
 const shown=computed(()=>!lifecycle.value&&(state.value==='needs-admin-approval'||state.value==='blocked'))
 // ExecutorSettings reads the delegate's file scope through call.
-const settingsCtx=computed<Pick<Context,'call'>|undefined>(()=>setup?.call?{call:(method,params)=>setup.call!(method,params)}:props.ctx.call?props.ctx as Pick<Context,'call'>:undefined)
+const settingsCtx=computed<Pick<Context,'call'|'webApi'>|undefined>(()=>setup?.call?{webApi:props.ctx.webApi,call:(method,params)=>setup.call!(method,params)}:props.ctx.call?props.ctx as Pick<Context,'call'|'webApi'>:undefined)
 let disposed=false,stopReopen:(()=>void)|undefined,retry:ReturnType<typeof setTimeout>|undefined,attempt=0
 // undefined: the status could not be read.
 // A stopped package that turns starting starts the backoff over.

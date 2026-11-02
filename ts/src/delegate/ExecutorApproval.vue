@@ -22,8 +22,9 @@ import {ExecutorPreloadKey,ExecutorSetupKey,confirmFailure} from './use-executor
 import {delegateCopy} from './copy'
 import {appLifecycle,lifecycleCopy} from './lifecycle'
 import {useLifecycleRetry} from './use-lifecycle-retry'
-const props=defineProps<{admin:boolean;locale?:string;purpose?:string;ctx?:Pick<Context,'reopen'>&Partial<Pick<Context,'displayName'|'appIcon'|'fullPage'|'host'>>;preload?:boolean}>()
+const props=defineProps<{admin:boolean;locale?:string;purpose?:string;ctx?:Pick<Context,'reopen'>&Partial<Pick<Context,'displayName'|'appIcon'|'fullPage'|'host'|'call'|'webApi'>>;preload?:boolean}>()
 const setup=inject(ExecutorSetupKey,undefined)
+const settingsCtx=computed<Pick<Context,'call'|'webApi'>|undefined>(()=>setup?.call?{webApi:props.ctx?.webApi,call:(method,params)=>setup.call!(method,params)}:props.ctx?.call?props.ctx as Pick<Context,'call'|'webApi'>:undefined)
 const copy=computed(()=>delegateCopy(props.locale))
 const state=ref<CapabilityState|'checking'>('checking'),current=ref<CapabilityStatus>()
 // A context that tells neither its launch nor its host is taken for a window.
@@ -55,7 +56,7 @@ onBeforeUnmount(()=>{disposed=true;stopReopen?.()})
   <div v-else-if="setup&&state!=='ready'" class="executor-approval">
     <header v-if="brand" class="executor-brand"><img v-if="brand.appIcon" :src="brand.appIcon" alt="" /><span>{{ brand.displayName }}</span></header>
     <Callout v-if="lifecycle" tone="info" role="status">{{ lifecycleCopy(lifecycle,locale) }}</Callout>
-    <ExecutorSettings v-else-if="admin" :admin="true" :locale="locale" :initial="current" :purpose="purpose" title="" layout="page" @confirmed="check" />
+    <ExecutorSettings v-else-if="admin" :admin="true" :locale="locale" :ctx="settingsCtx" :initial="current" :purpose="purpose" title="" layout="page" @confirmed="check" />
     <ExecutorConsent v-else-if="state==='needs-admin-approval'" :admin="false" :locale="locale" :purpose="purpose" layout="page" />
     <Callout v-else tone="info">{{ copy.executorBlocked }}</Callout>
   </div>

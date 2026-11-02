@@ -14,7 +14,7 @@ const props=defineProps<{sdk:BackgroundSaveFacade;admin:boolean;locale:string
  picker?:{provider:NasProvider;keys:string[]
  // A folder row's label when an App has several keys; a key itself is never shown.
  labels?:Record<string,string>}
- ctx?:Pick<Context,'call'|'displayName'>
+ ctx?:Pick<Context,'call'|'displayName'|'webApi'>
  // The App's own text for a refused folder choice; undefined keeps the SDK's.
  pickerErrorText?:(error:unknown)=>string|undefined
  // Shows "Save a sample file", a demonstration for templates and sample Apps.

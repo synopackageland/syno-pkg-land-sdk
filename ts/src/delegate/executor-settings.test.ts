@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import {expect,test} from 'vitest'
+import {expect,test,vi} from 'vitest'
 import {createApp,h,nextTick} from 'vue'
 import {AppRoot} from '@synopackageland/ui'
 import ExecutorSettings from './ExecutorSettings.vue'
@@ -148,4 +148,14 @@ test('an approved executor with its scope asks for no password',async()=>{
  const ctx={async call<T>(method:string){return (method==='delegate.status'?{scope_mode:'install-selected',selection:{scope:'shared:media',root:'/media',generation:1}}:{shares:[{name:'media',path:'/media',isdir:true}],total:1,offset:0}) as T}}
  const p=await settings({state:'ready'},ctx)
  try{expect(p.root.querySelector('input[type=password]')).toBeNull()}finally{p.done()}
+})
+test('scope selection lists shares through the supplied window channel',async()=>{
+ const fetch=vi.fn();vi.stubGlobal('fetch',fetch)
+ const webApi=vi.fn(async()=>({shares:[{name:'media',path:'/media',isdir:true}],total:1,offset:0}))
+ const ctx={webApi,async call<T>(){return {scope_mode:'install-selected',selection:{scope:'shared:media',root:'/media',generation:1}} as T}}
+ const p=await settings({state:'ready'},ctx)
+ try{
+  expect(webApi).toHaveBeenCalledWith('SYNO.FileStation.List','list_share',2,expect.objectContaining({offset:'0'}))
+  expect(fetch).not.toHaveBeenCalled()
+ }finally{p.done();vi.unstubAllGlobals()}
 })

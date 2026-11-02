@@ -163,8 +163,8 @@ export interface Context {
  // DSM Application Portal, present only when dsm-package.yaml declares portal.
  portal?: PortalAccess
  // DSM's WebAPI in the signed-in user's own session (a DSM error rejects {code:
- // 'dsm_<code>'}); the window provides it where it can. Optional: an App that
- // reads it (SharedFolderSettings) offers the guided steps without it.
+ // 'dsm_<code>'}). Every CLI-generated DSM window provides it. Optional for
+ // standalone dev servers, custom hosts and windows built by older CLIs.
  webApi?: (api: string, method: string, version: number, params: Record<string, unknown>) => Promise<unknown>
  batch?: import('./client').Batch
  call<T = unknown>(method: string, params?: Record<string, unknown>, options?: CallOptions): Promise<T>
@@ -194,7 +194,7 @@ export interface Context {
 export type LaunchContext = {fullPage: boolean; host?: Pick<HostAdapter, 'platform'>} | {fullPage?: boolean; host: Pick<HostAdapter, 'platform'>}
 /** What AppShell reads: the launch, the brand, the signed-in account, the executor to approve, the UI update check, with app-root, the window to bring to the front and, on a DSM full page, how to sign out. */
 export type ShellContext = LaunchContext & Pick<Context, 'displayName' | 'appIcon' | 'user'> &
- Partial<Pick<Context, 'executor' | 'call' | 'reopen' | 'uiUpdate'>> & {host?: Partial<Pick<HostAdapter, 'activateWindow' | 'signOut'>>}
+ Partial<Pick<Context, 'executor' | 'call' | 'reopen' | 'uiUpdate' | 'webApi'>> & {host?: Partial<Pick<HostAdapter, 'activateWindow' | 'signOut'>>}
 // Older CLIs pass no fullPage: then only a DSM desktop window is not a full page.
 export function isFullPage(ctx: LaunchContext): boolean {
  if(ctx.fullPage !== undefined) return ctx.fullPage

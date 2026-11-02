@@ -24,11 +24,11 @@ function page(value:unknown,offset:number,limit:number):NasPage{
  // Paging and total stay DSM's; only the shown entries skip system folders.
  return {entries:entries.filter(e=>!systemFolders.has(e.name)),total:v.total,offset,...(next<v.total?{nextOffset:next}:{})}
 }
-export function createNasProvider(ctx:Pick<Context,'call'|'files'|'requestTimeout'>):NasProvider{
+export function createNasProvider(ctx:Pick<Context,'call'|'files'|'requestTimeout'|'webApi'>):NasProvider{
  let disposed=false
  const life=new AbortController()
  const transfers=createFileTransfers(ctx.files)
- const dsm=createDsmFileStation({token:ctx.files?.token,timeout:clientTimeout(ctx.requestTimeout)})
+ const dsm=createDsmFileStation({webApi:ctx.webApi,token:ctx.files?.token,timeout:clientTimeout(ctx.requestTimeout)})
  async function request(method:string,params:Record<string,unknown>,signal:AbortSignal,mutation=false):Promise<unknown>{
   if(disposed||signal.aborted)refuse('canceled')
   let cleanup=()=>{}
