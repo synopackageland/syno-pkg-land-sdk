@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.44.0
+
+- Accept explicit lowercase custom DSM gateway paths while keeping the package namespace default.
+- Add read-only install-time checks for DSM routes, Portal aliases and installed gateway declarations.
+- Preserve scoped DSM authentication, OIDC redirects, cookies, App privileges and WebSocket admission.
+- Reuse the unchanged executor/v0.39.0 inventory.
+
 ## Unreleased
 
 ## 0.43.1

@@ -1,7 +1,12 @@
 # Identity gateway on a DSM path
 
-`idgateway.PathIngressVersion = 1` identifies support for a gateway served at
-`/synopkgland/<package>/`. The CLI generates `native_ingress: true` and
+`idgateway.PathIngressVersion = 2` identifies support for both the default
+`/synopkgland/<package>/` and an explicit custom base such as `/my-app/` or
+`/my-app/ui/`. Custom segments use lowercase letters, digits and internal
+hyphens, with leading and trailing slashes, at most 64 characters per segment
+and 255 total. DSM/native prefixes and other packages' namespaces are reserved.
+The origin root `/` is unsupported; Apps requiring `/` cannot use ingress.
+The CLI generates `native_ingress: true` and
 `ingress_path` together. The gateway opens only its private mutually
 authenticated Unix socket; the OIDC issuer, when configured, remains on loopback.
 The CLI registers the location through DSM's resource worker. Older
@@ -25,3 +30,12 @@ The CLI owns the public manifest and capability check; see its
 Do not construct an nginx rule or edit installed gateway JSON in an application.
 An upstream without subpath support cannot be made prefix-aware merely by
 changing its gateway configuration.
+
+Before installation or upgrade, the CLI invokes the bundled gateway executable's
+read-only `ingress-check` command. `CheckIngressOwnership` checks DSM native
+entries, saved aliases, stopped SDK declarations and active nginx locations.
+An overlap or unreadable/unknown inventory fails closed with a readable install
+error. DSM's worker owns registration, upgrade replacement and uninstall cleanup;
+the checker writes no registry and never removes another owner's configuration.
+The stable menu CGI launches the selected base. Authentication, App privileges,
+relative callback/API/share policy and WebSocket admission are unchanged.

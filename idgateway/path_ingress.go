@@ -3,20 +3,50 @@ package idgateway
 import (
 	"errors"
 	"net/http"
+	"regexp"
 	"strings"
 )
 
 // PathIngressVersion is the CLI capability marker for DSM path-based gateways.
-const PathIngressVersion = 1
+const PathIngressVersion = 2
 
 type ingressPathKey struct{}
 
+// ReservedIngressPrefixes includes DSM's native routes and package portal defaults.
+// Installation also checks the NAS inventory; this list alone cannot establish availability.
+var reservedIngressPrefixes = map[string]bool{
+	"dsfile": true, "indexdb": true, "mobile": true, "oauth": true, "scripts": true,
+	"sharing": true, "ssdp": true, "synosdsjslib": true, "synohdpack": true,
+	"webapi": true, "webman": true, "calendar": true, "chatplus": true,
+	"contacts": true, "drive": true, "file": true, "photo": true, "sso": true,
+	"synologymeet": true, "synopkgland": true,
+}
+var customIngressPath = regexp.MustCompile(`^/(?:[a-z0-9]+(?:-[a-z0-9]+)*/)+$`)
+
 func validateIngressPath(pkg, prefix string) error {
-	if prefix != "" && (!namePattern.MatchString(pkg) || prefix != "/synopkgland/"+pkg+"/") {
-		return errors.New("ingress_path must be the exact /synopkgland/<package>/ namespace")
+	if prefix == "" {
+		return nil
+	}
+	if !namePattern.MatchString(pkg) {
+		return errors.New("invalid ingress package")
+	}
+	if prefix == "/synopkgland/"+pkg+"/" {
+		return nil
+	}
+	if len(prefix) > 255 || !customIngressPath.MatchString(prefix) {
+		return errors.New("ingress_path requires /synopkgland/<exact-package-ID>/ or an unreserved lowercase path with leading and trailing slashes; / is unsupported")
+	}
+	for _, segment := range strings.Split(prefix, "/") {
+		if len(segment) > 64 {
+			return errors.New("ingress_path segments must be at most 64 characters")
+		}
+	}
+	if reservedIngressPrefixes[strings.Split(prefix, "/")[1]] {
+		return errors.New("ingress_path is reserved by DSM; select an unreserved path")
 	}
 	return nil
 }
+
 func ingressRoute(prefix, path string) string {
 	if prefix == "" {
 		return path
