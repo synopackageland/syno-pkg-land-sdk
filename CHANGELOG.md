@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.46.1
+
+- Bring the gateway command-dispatch fix to the 0.46 release line: explicit commands take priority over inherited CGI environment variables, preventing Package Center and WebAPI upgrade hooks from loading the installed CGI policy.
+- Retain package-account peer IPC and the unchanged executor/v0.39.0 inventory. The gateway command regression covers installer, lifecycle, daemon, account and malformed commands while preserving argument-free CGI behavior.
+
 ## 0.46.0
 
 - Add `ipc.StartPackagePeerUnix` for nonroot package-account protocols with SO_PEERCRED callback authorization, default denial and bounded peer lifecycle
