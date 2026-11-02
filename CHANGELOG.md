@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.47.0
+
+- Validate synopkgland.api v2 operation registries, required AI classes, handler/spec equality and preview/job safety before dispatch
+- Export actual bridge routes at build time and verify generated registry digests in Python, Node and Rust runtimes
+- Provide the hidden SDK capability catalog while preserving immutable permissions and the unchanged executor/v0.39.0 inventory
+
 ## 0.46.2
 
 - Use the supplied DSM window WebAPI channel for File Station JSON requests in NAS browsing and executor scope selection, retaining admission, validation, cancellation, deadlines and mutation uncertainty
