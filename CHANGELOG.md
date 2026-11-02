@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.43.0
+
+- Add opt-in DSM package-path gateway ingress, with package-scoped policies,
+  cookies, OIDC callbacks and cold-login resume on the DSM origin.
+- Preserve the private mutually authenticated nginx-to-gateway connection and
+  existing dedicated-port behavior. Upstreams must support their native base path.
+- Reuse the unchanged executor/v0.39.0 inventory.
+
 ## 0.42.0
 
 - Add `api.WithObserver(next, observe)`: after each request it reports the
