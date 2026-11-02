@@ -152,6 +152,9 @@ func DescribeRoutes(raw []byte, routes ...Route) ([]map[string]string, error) {
 		if rule == policyIntegration {
 			permission = IntegrationPermission
 		}
+		if expectedEntryMode == "admin-only" && !r.ceremony && rule != policyIntegration {
+			permission = "administrators"
+		}
 		item := map[string]string{"method": name, "permission": permission, "kind": kind}
 		if r.httpHandler != nil && !r.integration {
 			item["prefix"] = r.httpPrefix

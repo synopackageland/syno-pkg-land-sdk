@@ -176,3 +176,30 @@ For public-network URL downloads and registry access, see [outbound HTTP policy]
 
 For credential-authorized IPC between package accounts, use
 [`ipc.StartPackagePeerUnix`](docs/package-peer-ipc.md).
+
+## Single operation registry
+
+Native Apps declare operation metadata in a `synopkgland.api` v2 JSON registry.
+The CLI generates permissions, runtime bindings, the private API descriptor,
+ctl commands, AI/MCP tools and the App reference from that one source. English
+summaries are not maintained in a second skill or document. Each operation needs
+an explicit `ai` class: read, preview, draft, human-only or hidden. Reads and
+previews cannot mutate; drafts require a non-mutating preview and human
+confirmation. Long operations use a fixed job flow.
+
+Go Apps embed the generated full registry and construct the server with
+`api.NewServerWithOperations`; `ValidateOperationRegistry` checks exact handler,
+spec and permission equality before handlers or migrations run. Only the fixed
+describe and identity ceremony routes are infrastructure exceptions. SDK-owned
+capability metadata lives in `api/operations.json` and defaults to hidden.
+
+The bridge exporter `bridge/cmd/describe` constructs its actual route set without
+starting an App. Python, Node and Rust share the existing bridge runtime: the
+CLI binds the digest of generated `synopkgland-operations.json`, and startup
+refuses altered metadata or route/spec inequality before dispatch. No new
+transport, proxy or service is introduced.
+
+Run `synopkgland ctl generate`, `synopkgland ctl generate --check` and
+`synopkgland check` before building with matching SDK/CLI/templates releases.
+OpenAPI imports use the same v2 format; every imported operation is hidden until
+reviewed per API. Wrapper-owned specs and adapters stay under `synology/`.

@@ -33,7 +33,7 @@ import (
 	"github.com/synopackageland/syno-pkg-land-sdk/dsm"
 )
 
-var packageID, manifestDigest, permissionsDigest, portalMode string
+var packageID, manifestDigest, permissionsDigest, portalMode, operationsDigest string
 
 func main() {
 	if len(os.Args) == 2 && os.Args[1] == "--worker" {
@@ -76,6 +76,7 @@ func cgiConfig(getenv func(string) string) bridge.Config {
 		PortalExecutor:    portalMode == "executor",
 		ManifestDigest:    manifestDigest,
 		PermissionsDigest: permissionsDigest,
+		OperationsDigest:  operationsDigest,
 		ScriptName:        getenv("SCRIPT_NAME"),
 	}
 }
