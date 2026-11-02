@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.46.0
+
+- Add `ipc.StartPackagePeerUnix` for nonroot package-account protocols with SO_PEERCRED callback authorization, default denial and bounded peer lifecycle
+- Verify owned 0711 directories and 0666 sockets, refuse unsafe/live paths and clean only verified stale or owned socket inodes
+- Preserve the executor peer API restrictions and reuse the unchanged executor/v0.39.0 inventory
+
 ## 0.44.1
 
 - Explicit gateway commands take priority over inherited CGI environment variables. Package Center and WebAPI upgrade hooks now run the ingress preflight instead of loading the installed package's CGI policy.
