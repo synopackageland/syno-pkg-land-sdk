@@ -141,6 +141,10 @@ func startPeerUnix(ctx context.Context, run, name string, policy PeerPolicy, h f
 }
 
 func (s *PeerServer) servePeers(ctx context.Context, l *net.UnixListener, policy PeerPolicy, h func(context.Context, net.Conn, PeerCredentials)) {
+	s.serveVerifiedPeers(ctx, l, func(p PeerCredentials) bool { return p.UID == policy.UID }, h)
+}
+
+func (s *PeerServer) serveVerifiedPeers(ctx context.Context, l *net.UnixListener, filter func(PeerCredentials) bool, h func(context.Context, net.Conn, PeerCredentials)) {
 	defer close(s.done)
 	defer s.cleanup()
 	for {
@@ -157,7 +161,7 @@ func (s *PeerServer) servePeers(ctx context.Context, l *net.UnixListener, policy
 			return
 		}
 		peer, err := peerCredentials(c)
-		if err != nil || peer.UID != policy.UID {
+		if err != nil || filter != nil && !filter(peer) {
 			c.Close()
 			continue
 		}

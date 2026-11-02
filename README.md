@@ -173,3 +173,6 @@ See [Compose packages](docs/compose.md) for schema-2 planning, identity gateway 
 See [runtime storage and NAS idle periods](docs/idle-storage.md) for volatile worker liveness and durable job/approval state.
 
 For public-network URL downloads and registry access, see [outbound HTTP policy](docs/outbound-http.md).
+
+For credential-authorized IPC between package accounts, use
+[`ipc.StartPackagePeerUnix`](docs/package-peer-ipc.md).
