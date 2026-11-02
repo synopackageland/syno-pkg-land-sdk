@@ -58,3 +58,14 @@ function merge(base:unknown,over:unknown):unknown{
 
 /** The colon between a label and its value: full-width in Chinese and Japanese. */
 export function labelSeparator(locale:string):string{return /^(zh|ja)/.test(uiLocale(locale))?'：':': '}
+
+const SENTENCE_END=/[.。！？!?…]$/
+/** One paragraph from sentences that end without a closing period, as the
+ * catalogs write them: each sentence but the last gets its full stop (。 in
+ * Chinese and Japanese, which run sentences together; `. ` elsewhere); the
+ * last keeps none. */
+export function joinSentences(parts:readonly(string|undefined|null|false)[],locale:string):string{
+ const cjk=/^(zh|ja)/.test(uiLocale(locale))
+ const sentences=parts.map(part=>(part||'').trim()).filter(Boolean)
+ return sentences.map((sentence,index)=>index===sentences.length-1?sentence.replace(/[.。]$/,''):(SENTENCE_END.test(sentence)?sentence:sentence+(cjk?'。':'.'))+(cjk?'':' ')).join('')
+}

@@ -51,7 +51,7 @@ var errGone = errors.New("bridge: the App closed the channel")
 // before it answered, or did not say hello within the start timeout. A
 // request deadline that ends first stays request_timeout, as for a Go App.
 func AppUnavailable() *api.Error {
-	return &api.Error{Code: "app_unavailable", Message: "The App is not available right now. Try again later."}
+	return &api.Error{Code: "app_unavailable", Message: "The App is not available right now. Try again later"}
 }
 
 func unavailable(cause error) error {

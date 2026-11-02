@@ -68,7 +68,8 @@ test('an App\'s own purpose replaces the generic one',async()=>{
  const p=await approval(true,access().setup,purpose)
  try{
   const lead=p.root.querySelector('[data-consent-lead]')!.textContent
-  expect(lead).toContain(purpose)
+  // One paragraph: the SDK's reason ends its sentence, the paragraph has no closing period.
+  expect(lead).toBe(`${copy.consentWhy}. ${purpose.slice(0,-1)}`)
   expect(lead).not.toContain(copy.consentPurpose)
  }finally{p.done()}
 })

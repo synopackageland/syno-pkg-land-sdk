@@ -152,15 +152,15 @@ func strict(raw json.RawMessage, out any) error {
 // The codes the services add (spec/bridge/v1/errors.json, kind service): an
 // App may pass them on, and the browser's SDK translates them.
 func limitExceeded() *api.Error {
-	return &api.Error{Code: "limit_exceeded", Message: "The file is larger than allowed."}
+	return &api.Error{Code: "limit_exceeded", Message: "The file is larger than allowed"}
 }
 
 func readFailed() *api.Error {
-	return &api.Error{Code: "read_failed", Message: "Unable to read the file. Please try again later."}
+	return &api.Error{Code: "read_failed", Message: "Unable to read the file. Please try again later"}
 }
 
 func identityUnavailable() *api.Error {
-	return &api.Error{Code: "identity_unavailable", Message: "Unable to identify this user account. Please try again later."}
+	return &api.Error{Code: "identity_unavailable", Message: "Unable to identify this user account. Please try again later"}
 }
 
 // read copies a NAS file the caller may read, through File Station with the

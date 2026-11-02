@@ -2,7 +2,7 @@
 import {computed,onBeforeUnmount,onMounted,ref} from 'vue'
 import {Badge,Button,Callout,SettingsRow,SettingsSection,Skeleton} from '@synopackageland/ui'
 import type {SharedFolderAccess,SharedFolderItem,SharedFolderStatus} from '../context'
-import {format,labelSeparator} from '../i18n'
+import {format,joinSentences,labelSeparator} from '../i18n'
 // The Shared Folders the install wizard stored, and what the package account may do in each.
 // Loading never blocks the page: the section holds one placeholder row until the backend
 // answers, shows each folder's state, and raises a callout only when a folder needs attention.
@@ -51,7 +51,7 @@ onBeforeUnmount(()=>{disposed=true})
   <div class="sf-notices">
   <Callout v-for="folder in attention" :key="folder.key" tone="warning" :dismissible="false" data-shared-folder-notice>
    <span role="status">
-    <template v-if="folder.state==='pending'">{{ m.pendingNote }} {{ canGrant?'':fill(m.askAdmin,text(folder)) }} {{ fill(m.steps,text(folder)) }}</template>
+    <template v-if="folder.state==='pending'">{{ joinSentences([m.pendingNote,!canGrant&&fill(m.askAdmin,text(folder)),fill(m.steps,text(folder))],locale??'en') }}</template>
     <template v-else-if="folder.state==='missing'">{{ fill(m.missingHint,text(folder)) }}</template>
     <template v-else>{{ fill(m.ambiguousHint,text(folder)) }}</template>
    </span>

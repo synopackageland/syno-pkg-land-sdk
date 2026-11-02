@@ -210,4 +210,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
 .app-notices { display: flex; flex-direction: column; gap: var(--ui-space-2, 8px); }
 .app-notices[hidden] { display: none; }
 .app-page-content { padding-bottom: var(--ui-space-6, 24px); }
+/* A SettingsPage's footer is the bottom of the window, as in DSM: a fill page
+   that holds one drops the space under it. */
+.app-page-fill .app-page-content:has(> [data-ui-settings-page] > [data-ui-settings-page-footer]) { padding-bottom: 0; }
 </style>

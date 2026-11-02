@@ -5,7 +5,7 @@
   "dsmUser": "DSM-Benutzer",
   "signOut": "Abmelden",
   "deniedTitle": "Kein Zugriff",
-  "deniedMessage": "Ihr DSM-Konto darf diese App nicht verwenden. Bitten Sie einen Administrator, sie in den DSM-Anwendungsberechtigungen freizugeben.",
+  "deniedMessage": "Ihr DSM-Konto darf diese App nicht verwenden. Bitten Sie einen Administrator, sie in den DSM-Anwendungsberechtigungen freizugeben",
   "notes": "Hinweise",
   "notesCount": "Hinweise ({count})",
   "loading": "Wird geladen…",

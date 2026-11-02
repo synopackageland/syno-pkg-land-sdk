@@ -84,7 +84,7 @@ func TestTheBrowserSeesAppUnavailable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if body := serve(t, srv, `{"method":"hello.greet"}`, nil); body != `{"error":{"code":"app_unavailable","message":"The App is not available right now. Try again later."},"success":false}`+"\n" {
+	if body := serve(t, srv, `{"method":"hello.greet"}`, nil); body != `{"error":{"code":"app_unavailable","message":"The App is not available right now. Try again later"},"success":false}`+"\n" {
 		t.Fatalf("body %s", body)
 	}
 }
