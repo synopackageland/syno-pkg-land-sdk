@@ -6,6 +6,12 @@
 - Verify owned 0711 directories and 0666 sockets, refuse unsafe/live paths and clean only verified stale or owned socket inodes
 - Preserve the executor peer API restrictions and reuse the unchanged executor/v0.39.0 inventory
 
+## 0.44.1
+
+- Explicit gateway commands take priority over inherited CGI environment variables. Package Center and WebAPI upgrade hooks now run the ingress preflight instead of loading the installed package's CGI policy.
+- Cover installer preflight, lifecycle exec, daemon and account command dispatch with a linked-binary regression. CGI requests without command arguments retain their existing behavior.
+- The command-dispatch defect exists since 0.19.0; the custom-ingress preflight that exposes it during upgrades was introduced in 0.44.0. Packages built with 0.43.x do not contain that preflight and do not require rebuilding for this upgrade failure.
+
 ## 0.44.0
 
 - Accept explicit lowercase custom DSM gateway paths while keeping the package namespace default.
