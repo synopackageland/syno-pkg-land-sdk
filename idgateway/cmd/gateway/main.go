@@ -101,6 +101,10 @@ func authorizeHandler(path string) (http.Handler, error) {
 const usage = "usage: gateway run [--config <path>] [-- <app> <args>...] | gateway exec -- <app> <args>... | gateway account status|purge"
 
 func run(args []string) error {
+	if len(args) == 3 && args[0] == "ingress-check" {
+		return idgateway.CheckIngressOwnership(args[1], args[2])
+	}
+
 	if len(args) > 2 && args[0] == "exec" && args[1] == "--" {
 		return syscall.Exec(args[2], args[2:], os.Environ())
 	}

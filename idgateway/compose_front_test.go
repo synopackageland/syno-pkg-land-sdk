@@ -260,7 +260,7 @@ func TestComposeWebSocketForwardsUpgradeAndBidirectionalFrames(t *testing.T) {
 		rw.Write([]byte{0x81, 2, frame[6], frame[7]})
 		rw.Flush()
 	})
-	f, _ := newFront(t, ModeNone, up, func(c *FrontConfig) { c.Access = "public" })
+	f, _ := newFront(t, ModeNone, up, func(c *FrontConfig) { c.Access = "public"; c.IngressPath = "/reader/" })
 	srv := httptest.NewServer(f)
 	defer srv.Close()
 	addr := strings.TrimPrefix(srv.URL, "http://")
@@ -270,7 +270,7 @@ func TestComposeWebSocketForwardsUpgradeAndBidirectionalFrames(t *testing.T) {
 	}
 	defer conn.Close()
 	conn.SetDeadline(time.Now().Add(3 * time.Second))
-	fmt.Fprintf(conn, "GET /socket HTTP/1.1\r\nHost: %s\r\nOrigin: %s\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n", addr, srv.URL)
+	fmt.Fprintf(conn, "GET /reader/socket HTTP/1.1\r\nHost: %s\r\nOrigin: %s\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n", addr, srv.URL)
 	br := bufio.NewReader(conn)
 	res, err := http.ReadResponse(br, nil)
 	if err != nil {

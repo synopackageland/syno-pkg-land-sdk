@@ -15,6 +15,7 @@ func TestAppPrivilegeEntryRechecksRequestsAndUpgrades(t *testing.T) {
 	membership := &changingMembership{groups: []string{"users"}}
 	up := newUpstream(t, nil)
 	f, c := newFront(t, ModeNone, up, func(cfg *FrontConfig) {
+		cfg.IngressPath = "/reader/"
 		cfg.Entry = "app-privilege"
 		cfg.Passthrough = nil
 		cfg.Membership = membership
@@ -28,14 +29,14 @@ func TestAppPrivilegeEntryRechecksRequestsAndUpgrades(t *testing.T) {
 	b := newBrowser(t, f)
 	b.cookies[f.cookie] = "ordinary-session"
 	f.sessions["ordinary-session"] = session{subject: Subject{UID: 1026, Name: "alice"}, ip: "192.0.2.7", expires: c.now().Add(time.Minute)}
-	if w := b.do("GET", "https://app.example/api"); w.Code != http.StatusOK {
+	if w := b.do("GET", "https://app.example/reader/api"); w.Code != http.StatusOK {
 		t.Fatalf("admitted user: %d %s", w.Code, w.Body)
 	}
 	if !f.upgradeAllowed(context.Background(), "ordinary-session", "192.0.2.7") {
 		t.Fatal("admitted upgrade refused")
 	}
 	allowed = false
-	if w := b.do("GET", "https://app.example/api"); w.Code != http.StatusForbidden {
+	if w := b.do("GET", "https://app.example/reader/api"); w.Code != http.StatusForbidden {
 		t.Fatalf("revoked user: %d %s", w.Code, w.Body)
 	}
 	if f.upgradeAllowed(context.Background(), "ordinary-session", "192.0.2.7") {

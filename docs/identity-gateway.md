@@ -141,3 +141,13 @@ result, including configured mirrors and cached images.
 Service workers require a certificate the browser trusts. A self-signed NAS
 certificate may prevent service-worker registration even when the app itself
 opens; the SDK does not weaken browser TLS checks.
+
+### Custom DSM ingress base
+
+`ingress_path` defaults to the package's `/synopkgland/<package>/` namespace.
+The CLI may explicitly select `/my-app/` or nested lowercase segments. SDK 0.44.0
+validates this form with the same reserved-prefix rules as the CLI; it does not
+change DSM entry, upstream authentication, OIDC callback scoping, cookies or
+WebSocket admission. Root `/` is unsupported. The CLI's install checker calls
+`CheckIngressOwnership` before DSM acquires the package-owned web-config resource.
+No App root process or global route configuration writer is added.
