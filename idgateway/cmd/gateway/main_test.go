@@ -108,6 +108,49 @@ func TestExecReplacesItselfWithTheApp(t *testing.T) {
 	}
 }
 
+// Package Center hooks inherit the WebAPI CGI environment. Exercise main in a
+// linked binary so a command cannot accidentally load the installed CGI config.
+func TestCompiledCommandsTakePriorityOverCGIEnvironment(t *testing.T) {
+	dir := t.TempDir()
+	binary := filepath.Join(dir, "gateway")
+	installedConfig := filepath.Join(dir, "installed-gateway.json")
+	build := exec.Command("go", "build", "-ldflags", "-X main.configPath="+installedConfig, "-o", binary, ".")
+	if out, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build: %v %s", err, out)
+	}
+	config := filepath.Join(dir, "gateway.json")
+	if err := os.WriteFile(config, []byte(`{"package":"Fixture","mode":"none","upstream":"http://127.0.0.1:8000","listen":{"https":18443},"authorize_cgi":"/webman/3rdparty/Fixture/sso/authorize.cgi","state_dir":`+fmt.Sprintf("%q", filepath.Join(dir, "state"))+`}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name string
+		args []string
+		code int
+		want string
+	}{
+		{"installer-preflight", []string{"ingress-check", "Fixture", "/"}, 1, "ingress"},
+		{"lifecycle-exec", []string{"exec", "--", "/bin/sh", "-c", "printf hook-executed; exit 7"}, 7, "hook-executed"},
+		{"daemon-run", []string{"run", "--config", config, "extra"}, 1, "unexpected arguments"},
+		{"account-hook", []string{"account", "status", "--config", config}, 1, "account deletions are off"},
+		{"invalid-command", []string{"unknown"}, 1, "usage: gateway"},
+		{"invalid-preflight", []string{"ingress-check"}, 1, "usage: gateway"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, gatewayInterface := range []string{"", "CGI/1.1"} {
+				t.Run(gatewayInterface, func(t *testing.T) {
+					cmd := exec.Command(binary, tc.args...)
+					cmd.Env = append(os.Environ(), "GATEWAY_INTERFACE="+gatewayInterface, "SCRIPT_NAME=/webapi/entry.cgi")
+					out, err := cmd.CombinedOutput()
+					var exit *exec.ExitError
+					if !errors.As(err, &exit) || exit.ExitCode() != tc.code || !strings.Contains(string(out), tc.want) || strings.Contains(string(out), installedConfig) {
+						t.Fatalf("command %v: %v %s", tc.args, err, out)
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestAccountCommandsNeedAnAccountSection(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "gateway.json")

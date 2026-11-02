@@ -48,7 +48,9 @@ import (
 var configPath string
 
 func main() {
-	if os.Getenv("GATEWAY_INTERFACE") != "" {
+	// Installer hooks inherit DSM WebAPI's CGI environment. Explicit commands,
+	// including invalid ones, must reach command validation before CGI dispatch.
+	if len(os.Args) == 1 && os.Getenv("GATEWAY_INTERFACE") != "" {
 		h, err := authorizeHandler(configPath)
 		if err != nil {
 			log.Fatal(err)
