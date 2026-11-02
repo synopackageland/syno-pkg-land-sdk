@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## 0.43.1
+
+- `PortalSettings`: Apply is the alias form's only button; Disable, Open
+  Control Panel and Remove entry act at once, so they are the section's tool
+  buttons in its footer. The section keeps one main action.
+- `AppShell`: a fill page holding a `SettingsPage` with a footer drops the
+  space under it, so the footer sits at the bottom of the window as in DSM.
+- SDK text in every locale ends without a closing period (`.`, `。`); periods
+  between sentences stay. The bridge and DSM session error messages
+  (`app_unavailable`, `limit_exceeded`, `read_failed`, `identity_unavailable`,
+  `credential_not_ready`) match. A test keeps the catalogs this way.
+- Add `joinSentences(parts, locale)`: sentences written without a closing
+  period read as one paragraph (`. ` between them, `。` in Chinese and
+  Japanese). `ExecutorConsent` joins its reason with the App's purpose and
+  `SharedFolderSettings` its pending note this way.
+- Reuse the unchanged executor/v0.39.0 inventory.
+
 ## 0.43.0
 
 - Add opt-in DSM package-path gateway ingress, with package-scoped policies,

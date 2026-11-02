@@ -61,6 +61,9 @@ const note=computed(()=>{
  if(s.canManage)return m.inactive
  return s.controlPanel?undefined:m.askAdmin
 })
+// Apply is the form's one main action, beside the alias it applies; Disable,
+// Control Panel and Remove act on the entry at once, so they are the section's
+// tool buttons (the UI's button policy), not part of the form.
 // link ends in a colon for the CLI's plain panel; the row's label column separates it.
 const linkLabel=m.link?.replace(/\s*[:：]\s*$/,'')
 // Enabling the entry also applies the alias: an entry without one stays inactive.
@@ -99,12 +102,7 @@ onBeforeUnmount(()=>{disposed=true})
   <Form v-if="status.canManage&&!entryPending" @submit.prevent="run(()=>portal.apply(alias))">
    <SettingsRow :label="m.alias"><Input id="portal-alias" v-model="alias" :aria-label="m.alias" maxlength="64" autocomplete="off" :disabled="busy" /></SettingsRow>
    <SettingsRow label="" field-width="full">
-    <FormActions>
-     <Button type="submit" variant="primary" :disabled="busy">{{ m.apply }}</Button>
-     <Button v-if="status.state==='active'" variant="secondary" :disabled="busy" @click="run(()=>portal.disable())">{{ m.disable }}</Button>
-     <Button variant="secondary" @click="portal.openControlPanel()">{{ m.advanced }}</Button>
-     <Button v-if="status.entry" variant="secondary" :disabled="busy" @click="remove">{{ m.unregister }}</Button>
-    </FormActions>
+    <FormActions><Button type="submit" variant="primary" :disabled="busy">{{ m.apply }}</Button></FormActions>
    </SettingsRow>
   </Form>
   <Callout v-if="error" tone="danger"><span role="alert">{{ error }}</span></Callout>
@@ -113,7 +111,12 @@ onBeforeUnmount(()=>{disposed=true})
    <Button v-if="status.entry==='unregistered'" variant="primary" :disabled="busy" @click="run(enable)">{{ m.register }}</Button>
    <Button v-else variant="primary" :disabled="busy" @click="remove">{{ m.unregister }}</Button>
   </template>
-  <template v-else-if="status&&!status.canManage&&status.controlPanel" #footer>
+  <template v-else-if="status?.canManage" #footer>
+   <Button v-if="status.state==='active'" variant="secondary" :disabled="busy" @click="run(()=>portal.disable())">{{ m.disable }}</Button>
+   <Button variant="secondary" @click="portal.openControlPanel()">{{ m.advanced }}</Button>
+   <Button v-if="status.entry" variant="secondary" :disabled="busy" @click="remove">{{ m.unregister }}</Button>
+  </template>
+  <template v-else-if="status&&status.controlPanel" #footer>
    <Button variant="secondary" @click="portal.openControlPanel()">{{ m.controlPanel }}</Button>
   </template>
  </SettingsSection>

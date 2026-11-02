@@ -52,9 +52,9 @@ test('the package entry reads a refusal and words a stopped or starting package'
 // when the package runs, so "this page updates by itself" is not true of it.
 test('an action refused while the package is stopped or starting says to try again',async()=>{
  const {lifecycleCopy}=await import('../index')
- expect(lifecycleCopy('stopped','zh-TW',{for:'action'})).toBe('此 App 已停止。請在套件中心啟動後再試一次。')
- expect(lifecycleCopy('starting','zh-TW',{for:'action'})).toBe('此 App 正在啟動，請稍候再試一次。')
- expect(lifecycleCopy('stopped','en',{for:'action'})).toBe('This app is stopped. Start it in Package Center, then try again.')
+ expect(lifecycleCopy('stopped','zh-TW',{for:'action'})).toBe('此 App 已停止。請在套件中心啟動後再試一次')
+ expect(lifecycleCopy('starting','zh-TW',{for:'action'})).toBe('此 App 正在啟動，請稍候再試一次')
+ expect(lifecycleCopy('stopped','en',{for:'action'})).toBe('This app is stopped. Start it in Package Center, then try again')
  expect(lifecycleCopy('stopped','zh-TW',{for:'page'})).toBe(delegateCopy('zh-TW').appStopped)
  for(const locale of ['en','zh-TW','zh-CN','ja','ko','de','fr','es','it'])for(const l of ['stopped','starting'] as const){
   const action=lifecycleCopy(l,locale,{for:'action'})

@@ -20,17 +20,17 @@ test('authorization checks retain every existing refusal classification',()=>{
 test('App privilege guidance names the App and the DSM steps; admin access uses an administrator',()=>{
  const privilege=appRefusal({code:'app_privilege_denied'},'en','Download Hub')!
  expect(privilege.title).toBe('No access')
- expect(privilege.message).toBe('Ask an administrator to open Control Panel > Application Privileges, select Download Hub and click Edit, then allow your account or group.')
- expect(appRefusal({code:'app_privilege_denied'},'zh-TW','下載中心')?.message).toBe('請管理員到「控制台 > 應用程式權限」，選擇「下載中心」並按「編輯」，允許你的帳號或群組使用。')
+ expect(privilege.message).toBe('Ask an administrator to open Control Panel > Application Privileges, select Download Hub and click Edit, then allow your account or group')
+ expect(appRefusal({code:'app_privilege_denied'},'zh-TW','下載中心')?.message).toBe('請管理員到「控制台 > 應用程式權限」，選擇「下載中心」並按「編輯」，允許你的帳號或群組使用')
  for(const name of [undefined,'','   ']){
   const message=appRefusal({code:'app_privilege_denied'},'en',name)!.message
   expect(message).toContain('select this app and click Edit')
   expect(message).not.toMatch(/undefined|\{package\}/)
  }
  const admin=appRefusal({code:'admin_required'},'en','Download Hub')!
- expect(admin.message).toBe('This app is only available to members of the administrators group. Open it with an administrator account.')
+ expect(admin.message).toBe('This app is only available to members of the administrators group. Open it with an administrator account')
  expect(admin.message).not.toContain('Application Privileges')
- expect(appRefusal({code:'admin_required'},'zh-TW')?.message).toBe('此 App 僅供 administrators 群組的成員使用。請使用管理員帳號開啟。')
+ expect(appRefusal({code:'admin_required'},'zh-TW')?.message).toBe('此 App 僅供 administrators 群組的成員使用。請使用管理員帳號開啟')
  for(const code of ['APP_DENIED','PERMISSION_DENIED','cross_origin','access_denied'])expect(appRefusal({code},'en')).toBeUndefined()
 })
 test('each locale contains actual recovery keys, including a body without a name',()=>{

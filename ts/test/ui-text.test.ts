@@ -73,3 +73,9 @@ test('SDK text strings nothing together with middle dots, dashes or arrows',()=>
 test('English SDK text stays within 160 characters',()=>{
  expect(catalogTexts('en').filter(({text})=>text.length>160).map(({file,text})=>`${file}: ${text}`)).toEqual([])
 })
+
+// UI copy ends without a closing period in every language (`.`, `。`); periods
+// between sentences, ellipses and abbreviations stay.
+test('SDK text ends without a closing period',()=>{
+ expect(catalogTexts().filter(({text})=>/[.。．]$/.test(text)&&!/(\.\.\.|\betc\.)$/.test(text)).map(({file,text})=>`${file}: ${text}`)).toEqual([])
+})

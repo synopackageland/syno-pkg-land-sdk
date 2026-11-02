@@ -71,7 +71,7 @@ func DSMSession(r *http.Request) (map[string]string, error) {
 // CredentialNotReady is DSMSession's refusal of a session cookie that came
 // without a SynoToken; its message is spec/bridge/v1/errors.json's en text.
 func CredentialNotReady() *Error {
-	return &Error{Code: "credential_not_ready", Message: "DSM did not give this page its sign-in token. Sign in to DSM again with your password, then open the App from the DSM desktop."}
+	return &Error{Code: "credential_not_ready", Message: "DSM did not give this page its sign-in token. Sign in to DSM again with your password, then open the App from the DSM desktop"}
 }
 
 func sessionRequired() *Error {

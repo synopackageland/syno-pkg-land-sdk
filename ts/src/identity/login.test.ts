@@ -43,7 +43,7 @@ test('a sign-in the origin guard refuses explains that the page must be opened a
   try{
    await session.start();await settle()
    fill(root,'input[autocomplete="username"]','alice');fill(root,'input[type="password"]','password');await settle();button(root,'Sign in').click();await settle()
-   expect(root.querySelector('[role="alert"]')?.textContent,code).toBe("Sign-in was refused: the browser did not show that it came from this App's page. Open the App again in a current browser.")
+   expect(root.querySelector('[role="alert"]')?.textContent,code).toBe("Sign-in was refused: the browser did not show that it came from this App's page. Open the App again in a current browser")
   }finally{app.unmount();session.dispose();root.remove()}
  }
 })

@@ -15,9 +15,9 @@ test('every locale names the Authorize button in its instructions',()=>{
 test('the credential text fits a restored session and a portal page alike',()=>{
  const dir=new URL('../../i18n/authorization/',import.meta.url)
  const body=(locale:string)=>JSON.parse(readFileSync(new URL(`${locale}.json`,dir),'utf8'))['authorization.credential.body']
- expect(body('en')).toBe("DSM's sign-in information could not be obtained. Sign in to DSM again with your password, then open {package} from the DSM desktop.")
- expect(body('zh-TW')).toBe('無法取得 DSM 的驗證資訊。請以密碼重新登入 DSM，再從 DSM 桌面開啟 {package}。')
- expect(body('zh-CN')).toBe('无法获取 DSM 的验证信息。请使用密码重新登录 DSM，再从 DSM 桌面打开 {package}。')
+ expect(body('en')).toBe("DSM's sign-in information could not be obtained. Sign in to DSM again with your password, then open {package} from the DSM desktop")
+ expect(body('zh-TW')).toBe('無法取得 DSM 的驗證資訊。請以密碼重新登入 DSM，再從 DSM 桌面開啟 {package}')
+ expect(body('zh-CN')).toBe('无法获取 DSM 的验证信息。请使用密码重新登录 DSM，再从 DSM 桌面打开 {package}')
  for(const file of readdirSync(dir)){
   const text=JSON.parse(readFileSync(new URL(file,dir),'utf8'))['authorization.credential.body']
   expect(text,file).toContain('{package}')

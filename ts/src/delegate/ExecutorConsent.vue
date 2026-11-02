@@ -9,16 +9,15 @@
 import {computed} from 'vue'
 import {ChevronRight,ShieldCheck} from '@lucide/vue'
 import {delegateCopy} from './copy'
-import {uiLocale} from '../i18n'
+import {joinSentences} from '../i18n'
 import ExecutorUpgrade from './ExecutorUpgrade.vue'
 import type {CapabilityStatus} from './executor-setup'
 import type {ExecutorSetup} from './executor-setup'
 const props=defineProps<{admin:boolean;status?:CapabilityStatus;locale?:string;files?:boolean;purpose?:string;layout?:'page'|'inline';webapiProfiles?:ExecutorSetup['webapiProfiles']}>()
 const upgrading=computed(()=>props.status?.code==='task_outdated'||!!props.status?.approval)
 const copy=computed(()=>delegateCopy(props.locale))
-// Chinese and Japanese run sentences together; the others put a space between.
-const gap=computed(()=>['zh-TW','zh-CN','ja'].includes(uiLocale(props.locale??'en'))?'':' ')
-const lead=computed(()=>[copy.value.consentWhy,props.purpose||(props.files?copy.value.consentPurposeFiles:copy.value.consentPurpose)].join(gap.value))
+// The SDK's reason and the App's purpose read as one paragraph.
+const lead=computed(()=>joinSentences([copy.value.consentWhy,props.purpose||(props.files?copy.value.consentPurposeFiles:copy.value.consentPurpose)],props.locale??'en'))
 const points=computed(()=>[copy.value.pointPassword,copy.value.pointLimited,copy.value.pointUpdate,copy.value.pointRevoke])
 </script>
 <template>

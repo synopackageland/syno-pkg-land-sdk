@@ -228,7 +228,7 @@ test('refreshing the executor settings reads the portal status again',async()=>{
 // column, then the control; the actions share one row under the alias.
 const rowOf=(node:Element)=>node.closest('[data-field-control]')!.parentElement!.parentElement!
 const rowLabel=(node:Element)=>rowOf(node).firstElementChild!.textContent!.trim()
-test('the alias and the link are settings rows, and the panel actions share one row',async()=>{
+test('the alias and the link are settings rows, Apply ends the form and the entry actions share the section footer',async()=>{
  const portal={messages:new Proxy({},{get:(_,k)=>String(k)}),status:async()=>({...active,entry:'registered'}),apply:async()=>active,disable:async()=>inactive,openControlPanel(){},mountPanel(){}} as unknown as PortalAccess
  const root=document.createElement('div');document.body.append(root)
  const app=createApp({render:()=>h(AppRoot,{},()=>h(PortalSettings,{portal}))})
@@ -238,8 +238,12 @@ test('the alias and the link are settings rows, and the panel actions share one 
   expect(rowLabel(root.querySelector('a[href="https://nas/demo/"]')!)).toBe('link')
   const button=(label:string)=>Array.from(root.querySelectorAll('button')).find(b=>b.textContent===label)!
   const row=(label:string)=>button(label).parentElement
-  expect(row('advanced')).toBe(row('apply'))
-  expect(row('unregister')).toBe(row('apply'))
+  expect(row('advanced')).toBe(row('disable'))
+  expect(row('unregister')).toBe(row('disable'))
+  expect(row('disable')!.hasAttribute('data-ui-settings-footer')).toBe(true)
+  expect(root.querySelector('form')!.contains(button('disable'))).toBe(false)
+  // One main action in the section: Apply; the entry actions are tool buttons.
+  expect(Array.from(root.querySelectorAll('button')).filter(b=>b.matches('[data-variant="primary"]')).map(b=>b.textContent)).toEqual(['apply'])
   expect(rowLabel(button('apply'))).toBe('')
   // The actions wrap only at the row's own width, not at a field's.
   expect((button('apply').closest('[data-field-control]') as HTMLElement).style.maxWidth).toBe('')
