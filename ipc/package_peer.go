@@ -30,6 +30,28 @@ type PeerAuthorizer func(context.Context, PeerCredentials) bool
 // bound frames, enforce current operation authorization and manage deadlines.
 // Close/cancellation closes retained peers; StopAccepting preserves them.
 func StartPackagePeerUnix(ctx context.Context, path string, authorize PeerAuthorizer, h func(context.Context, net.Conn, PeerCredentials)) (*PeerServer, error) {
+	return StartPackagePeerUnixWithOptions(ctx, path, authorize, h, PackagePeerOptions{})
+}
+
+// PackagePeerOptions bounds both callbacks and retained connections. Zero uses
+// the existing eight-peer limit. Larger limits require explicit opt-in by the
+// package composition; kernel peer identity and operation authority are unchanged.
+type PackagePeerOptions struct {
+	MaxConnections int
+}
+
+// StartPackagePeerUnixWithOptions is StartPackagePeerUnix with a configurable
+// retained-connection bound. MaxConnections must be zero or between 1 and 1024.
+// The same bound includes peers still being authorized; there is no overflow queue.
+func StartPackagePeerUnixWithOptions(ctx context.Context, path string, authorize PeerAuthorizer, h func(context.Context, net.Conn, PeerCredentials), options PackagePeerOptions) (*PeerServer, error) {
+	limit := options.MaxConnections
+	if limit == 0 {
+		limit = 8
+	}
+	if limit < 1 || limit > 1024 {
+		return nil, errors.New("ipc: package peer capacity must be between 1 and 1024")
+	}
+
 	if !filepath.IsAbs(path) || filepath.Clean(path) != path || filepath.Ext(path) != ".sock" ||
 		!packageName.MatchString(filepath.Base(path[:len(path)-len(".sock")])) || len(filepath.Base(path)) > 64 {
 		return nil, errors.New("ipc: package peer socket requires a clean absolute named .sock path")
@@ -37,5 +59,5 @@ func StartPackagePeerUnix(ctx context.Context, path string, authorize PeerAuthor
 	if h == nil {
 		return nil, errors.New("ipc: peer handler is required")
 	}
-	return startPackagePeerUnix(ctx, path, authorize, h)
+	return startPackagePeerUnix(ctx, path, authorize, h, limit)
 }

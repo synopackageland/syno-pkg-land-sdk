@@ -50,6 +50,13 @@ any replacement. The directory remains for reuse.
 The `PeerServer` handle has the same lifecycle as the executor peer API:
 
 - Eight slots bound authorization callbacks, handlers and retained peers together.
+  Packages retaining many streams may explicitly use
+  `StartPackagePeerUnixWithOptions(..., PackagePeerOptions{MaxConnections: 316})`.
+  Zero retains the default eight; values outside 1–1024 are refused. The chosen
+  limit still includes pending authorization and there is no overflow queue.
+  This does not increase a downstream protocol's own session/handshake limits or
+  change peer identity checks. Size the bound for retained peers plus probes;
+  the handler remains responsible for its own authenticated-session admission.
 - Connections have a five-second initial deadline; set an explicit deadline
   for longer exchanges. Authorization callbacks themselves must honor context.
 - The handler owns its connection, including after returning. Close it when done.
