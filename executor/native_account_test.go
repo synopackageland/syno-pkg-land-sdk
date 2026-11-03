@@ -38,10 +38,13 @@ func TestNativeDirectoryAccountDoesNotDependOnCoreUserExpired(t *testing.T) {
 
 func TestNativeAccountBindsNameAndUIDAndFailsClosed(t *testing.T) {
 	for _, raw := range []string{
-		`{"username":"other","uid":1200,"gid":100,"groups":[100],"expired":"normal","admin":false,"home":"/home/a"}`,
-		`{"username":"alice","uid":0,"gid":100,"groups":[100],"expired":"normal","admin":false,"home":"/home/a"}`,
-		`{"username":"alice","uid":1200,"gid":100,"groups":[],"expired":"normal","admin":false,"home":"/home/a"}`,
-		`{"username":"alice","uid":1200,"gid":100,"groups":[100],"expired":"unknown","admin":false,"home":"/home/a"}`,
+		`{"username":"other","uid":1200,"gid":100,"groups":[100],"expired":"normal","admin":false,"home":"/home/a","source":"local"}`,
+		`{"username":"alice","uid":0,"gid":100,"groups":[100],"expired":"normal","admin":false,"home":"/home/a","source":"local"}`,
+		`{"username":"alice","uid":1200,"gid":100,"groups":[],"expired":"normal","admin":false,"home":"/home/a","source":"local"}`,
+		`{"username":"alice","uid":1200,"gid":100,"groups":[100],"expired":"unknown","admin":false,"home":"/home/a","source":"local"}`,
+		`{"username":"alice","uid":1200,"gid":100,"groups":[100],"expired":"now","admin":true,"home":"/home/a","source":"domain"}`,
+		`{"username":"alice","uid":1200,"gid":100,"groups":[100],"expired":"normal","admin":false,"home":"/home/a","source":"ldap"}`,
+		`{"username":"alice","uid":1200,"gid":100,"groups":[100],"expired":"normal","admin":false,"home":"/home/a"}`,
 	} {
 		if _, err := parseNativeAccount([]byte(raw), "alice", nil); err == nil {
 			t.Fatal(raw)
@@ -50,7 +53,7 @@ func TestNativeAccountBindsNameAndUIDAndFailsClosed(t *testing.T) {
 }
 
 func TestNativeAccountNormalOutputPreservesDirectoryUID(t *testing.T) {
-	raw := []byte(`{"username":"DOMAIN\\alice","uid":2969567732,"gid":2969567745,"groups":[2969567745],"expired":"normal","admin":true,"home":"/home/alice"}`)
+	raw := []byte(`{"username":"DOMAIN\\alice","uid":2969567732,"gid":2969567745,"groups":[2969567745],"expired":"normal","admin":true,"home":"/home/alice","source":"domain"}`)
 	s, err := parseNativeAccount(raw, `DOMAIN\alice`, nil)
 	if strconv.IntSize == 32 {
 		if err == nil {

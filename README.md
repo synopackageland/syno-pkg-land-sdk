@@ -158,6 +158,9 @@ durable outbox and retry policy.
 [`App entry policy`](docs/app-entry.md) covers the centralized CGI admin gate
 and the non-blocking frontend `EntryGuard`.
 
+Use [`dsm.LookupAccount`](docs/native-account.md) for a complete single-account
+snapshot, provider source, numeric groups and distinct lookup errors.
+
 ## Identity gateway
 
 See [gateway access failures](docs/gateway-access.md) for admission errors and

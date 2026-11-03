@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add `dsm.LookupAccount` with complete local/domain account snapshots, numeric group IDs, verified source and distinct not-found/timeout/unavailable errors; retain conservative expiry admission and refuse unverified LDAP status
+- Default native account lookups to 15 seconds when the caller supplies no deadline; honor explicit per-call deadlines and cancellation
+- Rebuild all three account bridges and keep executor decoding in sync; the next batched release needs a fresh executor inventory
+
 ## 0.49.4
 
 - DSM window WebAPI: `createDsmFileStation` (and so `createNasProvider`, executor scope selection and the folder picker) passes WebAPI values, not JSON text, to `ctx.webApi`. DSM's `sendWebAPI` JSON-encodes every value itself, so a list such as `path` reached DSM 7.4 as a string and File Station answered 401: folder lists, the picker and Open in File Station failed in every CLI-generated window

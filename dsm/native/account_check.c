@@ -93,7 +93,11 @@ int main(int argc, char **argv) {
     if (argc != 2 || !argv[1][0] || strlen(argv[1]) > 1024) return 2;
     struct passwd first, reverse, last, *p = NULL;
     char a[65536], b[65536], c[65536];
-    if (getpwnam_r(argv[1], &first, a, sizeof a, &p) || !p || first.pw_uid < 1024) return 2;
+    int lookup_rc = getpwnam_r(argv[1], &first, a, sizeof a, &p);
+    // Exit 3 means NSS absence only. Transport errors and failed rechecks are
+    // unavailable (2); a timeout is identified by the calling context.
+    if (!p && (lookup_rc == 0 || lookup_rc == ENOENT || lookup_rc == ESRCH)) return 3;
+    if (lookup_rc || !p || first.pw_uid < 1024) return 2;
     uid_t uid = first.pw_uid;
     gid_t gid = first.pw_gid;
     int local = local_account(argv[1], uid);
@@ -123,7 +127,7 @@ int main(int argc, char **argv) {
     if (getpwnam_r(argv[1], &last, c, sizeof c, &p) || !p || strcmp(last.pw_name, first.pw_name) || last.pw_uid != uid || last.pw_gid != gid) return 2;
     printf("{\"username\":"); json_string(argv[1]);
     printf(",\"uid\":%lu,\"gid\":%lu,\"home\":", (unsigned long)uid, (unsigned long)gid); json_string(last.pw_dir);
-    printf(",\"admin\":%s,\"expired\":\"%s\",\"groups\":[", admin ? "true" : "false", day == -1 && expired == 0 ? "normal" : "now");
+    printf(",\"source\":\"%s\",\"admin\":%s,\"expired\":\"%s\",\"groups\":[", local ? "local" : "domain", admin ? "true" : "false", day == -1 && expired == 0 ? "normal" : "now");
     for (int i = 0; i < count; ++i) printf("%s%lu", i ? "," : "", (unsigned long)groups[i]);
     return printf("]}\n") > 0 && !ferror(stdout) ? 0 : 2;
 }
