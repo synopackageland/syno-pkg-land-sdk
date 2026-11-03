@@ -55,7 +55,11 @@ export function createDsmFileStation(options:DsmFileOptions={}){
   if(!value)throw {code:'dsm_session_required'}
   return value
  }
- async function send(api:string,method:string,version:number,params:Record<string,string>,signal:AbortSignal,mutation=false,upload?:File):Promise<unknown>{
+ // Parameters are WebAPI values (strings, numbers, booleans, lists), never
+ // JSON text: a DSM window's sendWebAPI JSON-encodes every value itself, so a
+ // pre-encoded list arrived as a string and DSM 7.4 refused it (401). Over
+ // fetch, a string is sent as is and any other value as its JSON.
+ async function send(api:string,method:string,version:number,params:Record<string,unknown>,signal:AbortSignal,mutation=false,upload?:File):Promise<unknown>{
   if(signal.aborted)throw {code:'canceled'}
   const controller=new AbortController()
   let sent=false,timeout=false
@@ -76,8 +80,9 @@ export function createDsmFileStation(options:DsmFileOptions={}){
     }
     const credential=await token(controller.signal)
     if(controller.signal.aborted)throw {code:'canceled'}
+    // DSM refuses a SynoToken in the body (119; 7.1.1 and 7.4.1 alike): it goes in X-SYNO-TOKEN only.
     const body=upload?new FormData():new URLSearchParams()
-    for(const [k,v] of Object.entries({api,method,version:String(version),...params,SynoToken:credential}))body.append(k,v)
+    for(const [k,v] of Object.entries({api,method,version,...params}))body.append(k,typeof v==='string'?v:JSON.stringify(v))
     if(upload)(body as FormData).append('file',upload)
     sent=true
     const res=await fetch(DSM_FILE_ENDPOINT,{method:'POST',body,credentials:'same-origin',mode:'same-origin',redirect:'error',cache:'no-store',signal:controller.signal,headers:{'X-SYNO-TOKEN':credential}})
@@ -111,7 +116,7 @@ export function createDsmFileStation(options:DsmFileOptions={}){
   if(path!==undefined)filePath(path)
   const limit=options.limit??100,sort=options.sortBy??'name',direction=options.sortDirection??'ASC'
   if(!Number.isSafeInteger(offset)||offset<0||offset>1000000||!Number.isSafeInteger(limit)||limit<1||limit>100||!['name','size','type','mtime'].includes(sort)||!['ASC','DESC'].includes(direction))throw {code:'invalid-request'}
-  const page=await send('SYNO.FileStation.List',path===undefined?'list_share':'list',2,{offset:String(offset),limit:String(limit),sort_by:sort,sort_direction:direction,additional:'["size"]',...(path===undefined?{}:{folder_path:path})},signal) as DsmFilePage
+  const page=await send('SYNO.FileStation.List',path===undefined?'list_share':'list',2,{offset,limit,sort_by:sort,sort_direction:direction,additional:['size'],...(path===undefined?{}:{folder_path:path})},signal) as DsmFilePage
   const entries=path===undefined?page?.shares??page?.files:page?.files
   if(!Array.isArray(entries)||entries.length>limit||!Number.isSafeInteger(page.total)||page.total<0||page.offset!==offset||offset+entries.length>page.total||!entries.length&&offset<page.total)throw {code:'unavailable'}
   entries.forEach(checkedEntry)
@@ -123,23 +128,23 @@ export function createDsmFileStation(options:DsmFileOptions={}){
   list:(path:string,options:ListOptions,signal:AbortSignal)=>page(path,options.offset??0,options,signal),
   async info(path:string,signal:AbortSignal){
    filePath(path)
-   const data=await send('SYNO.FileStation.List','getinfo',2,{path:JSON.stringify([path]),additional:'["size"]'},signal) as {files?:DsmFileEntry[]}
+   const data=await send('SYNO.FileStation.List','getinfo',2,{path:[path],additional:['size']},signal) as {files?:DsmFileEntry[]}
    if(!Array.isArray(data?.files)||data.files.length!==1||data.files[0]?.path!==path)throw {code:'not_found'}
    return checkedEntry(data.files[0])
   },
-  async createFolder(parent:string,name:string,signal:AbortSignal){filePath(parent);fileName(name);await send('SYNO.FileStation.CreateFolder','create',2,{folder_path:JSON.stringify([parent]),name:JSON.stringify([name]),force_parent:'false'},signal,true);return {created:true}},
+  async createFolder(parent:string,name:string,signal:AbortSignal){filePath(parent);fileName(name);await send('SYNO.FileStation.CreateFolder','create',2,{folder_path:[parent],name:[name],force_parent:false},signal,true);return {created:true}},
   // Display/preview only. A successful browser result never authorizes a
   // backend write or grant; the executor independently checks its subject.
   async checkPermission(path:string,signal:AbortSignal){
    filePath(path)
    const nonce=Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('')
-   const data=await send('SYNO.FileStation.CheckPermission','write',3,{path,filename:`.synopkgland-permission-probe-${nonce}`,overwrite:'false',size:'0'},signal) as {blSkip?:boolean}
+   const data=await send('SYNO.FileStation.CheckPermission','write',3,{path,filename:`.synopkgland-permission-probe-${nonce}`,overwrite:false,size:0},signal) as {blSkip?:boolean}
    if(data?.blSkip!==false)throw {code:'denied'}
   },
   async upload(parent:string,file:File,signal:AbortSignal){
    filePath(parent);fileName(file.name)
    if(!Number.isSafeInteger(file.size)||file.size<0||file.size>MAX_UPLOAD_BYTES)throw {code:'upload_size_required'}
-   await send('SYNO.FileStation.Upload','upload',2,{path:parent,create_parents:'false',overwrite:'false',size:String(file.size)},signal,true,file)
+   await send('SYNO.FileStation.Upload','upload',2,{path:parent,create_parents:false,overwrite:false,size:file.size},signal,true,file)
   },
  }
 }

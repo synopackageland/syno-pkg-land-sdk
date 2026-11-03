@@ -39,6 +39,14 @@ if (!ctx.webApi) throw new Error('DSM window required')
 const data = await ctx.webApi('SYNO.Core.Service.PortInfo', 'load', 1, {})
 ```
 
+Pass WebAPI values, not JSON text: DSM's window channel JSON-encodes every
+value itself, so `{path: ['/home/a']}` is right and
+`{path: JSON.stringify(['/home/a'])}` reaches DSM as a string (DSM 7.4 answers
+401). Where the SDK calls WebAPI itself it sends the session token in the
+`X-SYNO-TOKEN` header, never in a POST body, which DSM refuses (119, on 7.1.1 as on 7.4.1); a
+native download form, which cannot set a header, puts it in its same-origin
+query.
+
 `readDsmPorts(ctx)` already prefers this channel and returns `[]` on refusal,
 unavailable data or its five-second deadline. It uses a same-origin token
 request only without a window channel. `createNasProvider(ctx)` and executor

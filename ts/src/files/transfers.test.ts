@@ -16,15 +16,17 @@ test('upload sends multipart bytes, no overwrite and the current browser token d
   expect(request.body.get('overwrite')).toBe('false');expect(request.body.get('create_parents')).toBe('false')
   expect(request.credentials).toBe('same-origin');expect(request.mode).toBe('same-origin');expect(request.redirect).toBe('error')
  }
- expect((fetch.mock.calls[1] as any)[1].body.get('SynoToken')).toBe('renewed');t.dispose()
+ expect(new Headers((fetch.mock.calls[1] as any)[1].headers).get('X-SYNO-TOKEN')).toBe('renewed');t.dispose()
 })
-test('native download submits the DSM token in an isolated same-origin POST, never a URL',async()=>{
- let action='',method='',token='',path='',policy=''
+// DSM refuses a SynoToken in a POST body (119; 7.1.1 and 7.4.1 alike), and a form cannot set
+// X-SYNO-TOKEN: the token goes in the query of the same-origin form action.
+test('native download submits the DSM token in the query of an isolated same-origin POST',async()=>{
+ let action='',method='',token:string|null='',path='',policy=''
  const descriptor=Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype,'contentDocument')!
  vi.spyOn(HTMLIFrameElement.prototype,'contentDocument','get').mockImplementation(function(this:HTMLIFrameElement){
   const doc=descriptor.get!.call(this) as Document|null
   if(doc)vi.spyOn((doc.defaultView as any).HTMLFormElement.prototype,'submit').mockImplementation(function(this:HTMLFormElement){
-   action=this.action;method=this.method;token=(this.elements.namedItem('SynoToken') as HTMLInputElement).value
+   action=this.action;method=this.method;token=(this.elements.namedItem('SynoToken') as HTMLInputElement|null)?.value??null
    path=(this.elements.namedItem('path') as HTMLInputElement).value
    policy=doc.head.querySelector('meta')!.content
   })
@@ -32,8 +34,9 @@ test('native download submits the DSM token in an isolated same-origin POST, nev
  })
  const transfers=createFileTransfers({endpoint:'https://untrusted.invalid/relay',token:()=> 'secret'})
  await transfers.download('/home/報告.txt')
- expect(new URL(action).pathname).toBe('/webapi/entry.cgi');expect(new URL(action).search).toBe('')
- expect(action).not.toContain('secret');expect(method).toBe('post');expect(token).toBe('secret');expect(JSON.parse(path)).toEqual(['/home/報告.txt'])
+ expect(new URL(action).pathname).toBe('/webapi/entry.cgi');expect([...new URL(action).searchParams]).toEqual([['SynoToken','secret']])
+ expect(new URL(action).origin).toBe(location.origin)
+ expect(method).toBe('post');expect(token).toBeNull();expect(JSON.parse(path)).toEqual(['/home/報告.txt'])
  expect(policy).toContain("form-action 'self'")
  const frame=document.querySelector('iframe')!;expect(frame.contentDocument!.querySelector('form')).toBeNull()
  expect(frame.getAttribute('sandbox')).not.toContain('allow-scripts')

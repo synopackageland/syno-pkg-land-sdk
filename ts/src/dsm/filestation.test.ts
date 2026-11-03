@@ -45,7 +45,8 @@ test('NAS shares/list/info/create use a fixed same-origin DSM endpoint after App
  for(const [url,init] of fetch.mock.calls){
   expect(url).toBe('/webapi/entry.cgi')
   expect(init).toMatchObject({mode:'same-origin',credentials:'same-origin',redirect:'error',cache:'no-store'})
-  expect((init!.body as URLSearchParams).get('SynoToken')).toBe('browser-token')
+  expect((init!.body as URLSearchParams).has('SynoToken')).toBe(false)
+  expect(new Headers(init!.headers).get('X-SYNO-TOKEN')).toBe('browser-token')
  }
  expect(fetch.mock.calls.map(([,init])=>(init!.body as URLSearchParams).get('method'))).toEqual(['list_share','list','getinfo','create'])
  p.dispose()
@@ -110,7 +111,8 @@ test('upload is a DSM multipart request, never an App URL or an octet-stream rel
  expect(body).toBeInstanceOf(FormData)
  expect(body.get('api')).toBe('SYNO.FileStation.Upload')
  expect(body.get('file')).toBe(file)
- expect(body.get('SynoToken')).toBe('browser-token')
+ expect(body.has('SynoToken')).toBe(false)
+ expect(new Headers(fetch.mock.calls[0]![1]!.headers).get('X-SYNO-TOKEN')).toBe('browser-token')
  t.dispose()
 })
 test('portal token bootstrap is same-origin, shared by concurrent reads and never uses an App URL',async()=>{
