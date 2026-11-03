@@ -57,8 +57,11 @@ for(const [name,component,props,shown] of panels){
 
  // Stopped for a minute, then a 15.5 s start step: loaded within 20 s of the
  // start, unrefreshed, whenever the start falls between two loads.
- test(`${name}: after a start it loads within 20 s, by itself`,async()=>{
-  for(let start=50_000;start<66_000;start+=500){
+ // Each independent phase keeps its own unchanged watchdog. Grouping 32
+ // complete UI mounts into one case made host contention look like an SLA
+ // failure and let a timed-out loop contaminate later cases.
+ for(let start=50_000;start<66_000;start+=500){
+  test(`${name}: start at ${start} loads within 20 s, by itself`,async()=>{
    const up=start+15_500
    const root=await mount(component,props(packageCall({start,up},answer)))
    await vi.advanceTimersByTimeAsync(up)
@@ -66,7 +69,7 @@ for(const [name,component,props,shown] of panels){
    while(!shown(root)&&waited<40_000){await vi.advanceTimersByTimeAsync(250);waited+=250}
    expect(waited,`start ${start}`).toBeLessThanOrEqual(20_000)
    expect(text(root)).not.toContain(lifecycleCopy('starting','en'))
-   cleanup.splice(0).forEach(fn=>fn())
-  }
- })
+  })
+ }
+
 }
