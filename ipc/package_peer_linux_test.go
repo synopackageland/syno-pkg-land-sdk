@@ -324,3 +324,51 @@ func TestPackagePeerForeignOwnership(t *testing.T) {
 		t.Fatal("foreign directory admitted")
 	}
 }
+
+func TestPackagePeerConfiguredRetainedCapacity(t *testing.T) {
+	path := packagePeerPath(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	const limit = 316
+	entered := make(chan struct{}, limit)
+	s, err := StartPackagePeerUnixWithOptions(ctx, path, allowPackagePeer, func(ctx context.Context, c net.Conn, _ PeerCredentials) {
+		defer c.Close()
+		if err := c.SetDeadline(time.Time{}); err != nil {
+			return
+		}
+		entered <- struct{}{}
+		<-ctx.Done()
+	}, PackagePeerOptions{MaxConnections: limit})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	for range limit {
+		c, err := net.Dial("unix", path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer c.Close()
+		select {
+		case <-entered:
+		case <-time.After(5 * time.Second):
+			t.Fatal("configured retained capacity not available")
+		}
+	}
+	c, err := net.Dial("unix", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	c.SetReadDeadline(time.Now().Add(time.Second))
+	b := make([]byte, 1)
+	if _, err := c.Read(b); err == nil {
+		t.Fatal("overflow peer admitted")
+	} else if n, ok := err.(net.Error); ok && n.Timeout() {
+		t.Fatal("overflow peer queued without a bound")
+	}
+	cancel()
+	if err := s.Close(); !errors.Is(err, context.Canceled) {
+		t.Fatal(err)
+	}
+}

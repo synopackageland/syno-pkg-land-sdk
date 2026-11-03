@@ -21,7 +21,7 @@ func packagePeerSocket(fd int, name string) (unix.Stat_t, error) {
 	return st, err
 }
 
-func startPackagePeerUnix(ctx context.Context, path string, authorize PeerAuthorizer, h func(context.Context, net.Conn, PeerCredentials)) (*PeerServer, error) {
+func startPackagePeerUnix(ctx context.Context, path string, authorize PeerAuthorizer, h func(context.Context, net.Conn, PeerCredentials), limit int) (*PeerServer, error) {
 	if os.Geteuid() == 0 {
 		return nil, errors.New("ipc: run as the package account")
 	}
@@ -115,7 +115,7 @@ func startPackagePeerUnix(ctx context.Context, path string, authorize PeerAuthor
 		return nil, err
 	}
 	handlerCtx, cancel := context.WithCancel(ctx)
-	s := &PeerServer{listener: l, ctx: handlerCtx, cancel: cancel, done: make(chan struct{}), closed: make(chan struct{}), conns: make(map[*peerConn]struct{}), slots: make(chan struct{}, 8)}
+	s := &PeerServer{listener: l, ctx: handlerCtx, cancel: cancel, done: make(chan struct{}), closed: make(chan struct{}), conns: make(map[*peerConn]struct{}), slots: make(chan struct{}, limit)}
 	s.cleanup = func() { defer unix.Close(fd); s.err = errors.Join(s.err, cleanup()) }
 	owned = true
 	// Reuse the bounded peer lifecycle, keeping the root executor's UID policy
