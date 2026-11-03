@@ -13,6 +13,7 @@
 - Add `dsm.LookupAccount` with complete local/domain account snapshots, numeric group IDs, verified source and distinct not-found/timeout/unavailable errors; retain conservative expiry admission and refuse unverified LDAP status
 - Use the shared five-minute default for native account lookups without a caller deadline; preserve explicit per-call deadlines and cancellation
 - Rebuild all three account bridges, retain full executor decoding and refresh the six protected executor digests
+- Support optional non-root daemon NOFILE inheritance: raise the soft limit only within the inherited hard ceiling, refuse insufficient ceilings and keep low-limit status/stop available
 
 ## 0.49.4
 
