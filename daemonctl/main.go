@@ -35,6 +35,7 @@ type deadlines struct {
 	Uninstall int `json:"uninstall"`
 }
 type config struct {
+	NoFile           int               `json:"nofile,omitempty"`
 	Dependencies     *dependencyPolicy `json:"dependencies,omitempty"`
 	Restart          *restartPolicy    `json:"restart,omitempty"`
 	OperationSeconds int               `json:"operation_seconds,omitempty"`
@@ -115,6 +116,9 @@ func load(dest, data string) (*controller, error) {
 	}
 	if cfg.OperationSeconds < 0 || cfg.OperationSeconds > 3600 {
 		return nil, errors.New("invalid operation budget")
+	}
+	if err := validateNoFile(cfg.NoFile); err != nil {
+		return nil, err
 	}
 	if err := validateDependencies(cfg.Dependencies); err != nil {
 		return nil, err
@@ -570,6 +574,10 @@ func (c *controller) supervise() error {
 	}
 	defer ready.Close()
 	defer owner.Close()
+	if err := applyNoFile(c.NoFile); err != nil {
+		fmt.Fprintln(ready, err)
+		return err
+	}
 	syscall.CloseOnExec(3)
 	syscall.CloseOnExec(4)
 	// These descriptors must be the private pipe and exactly our already-held lock.
