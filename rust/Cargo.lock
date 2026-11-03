@@ -94,7 +94,7 @@ dependencies = [
 
 [[package]]
 name = "syno-pkg-land-app"
-version = "0.47.1"
+version = "0.48.0"
 dependencies = [
  "libc",
  "serde",

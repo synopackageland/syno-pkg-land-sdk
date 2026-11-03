@@ -50,6 +50,7 @@ any replacement. The directory remains for reuse.
 The `PeerServer` handle has the same lifecycle as the executor peer API:
 
 - Eight slots bound authorization callbacks, handlers and retained peers together.
+  SDK 0.48.0 adds the explicit capacity option; the original API is unchanged.
   Packages retaining many streams may explicitly use
   `StartPackagePeerUnixWithOptions(..., PackagePeerOptions{MaxConnections: 316})`.
   Zero retains the default eight; values outside 1–1024 are refused. The chosen

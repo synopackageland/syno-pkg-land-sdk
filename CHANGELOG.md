@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.48.0
+
+- Add explicit bounded package-peer capacity with `ipc.StartPackagePeerUnixWithOptions` and `PackagePeerOptions.MaxConnections` (1–1024); zero and the original entry point retain the default eight
+- Count authorization callbacks, handlers and retained connections against the same bound; refuse overflow without queuing and retain kernel peer identity, ownership, deadlines and cancellation
+- Verify 316 retained peers, overflow and cancellation alongside existing default-capacity cases; reserve consumer capacity for health and protocol probes
+- Publish executor/v0.48.0 and its reproducible lifecycle inventory for the existing Go 1.26.10 module requirement; retain executor policies, task definitions and root SDK dependency
+- Align SDK package version metadata; do not publish a Rust crate as part of this release
+
 ## 0.47.1
 
 - Require Go 1.26.10 in the root, executor and conformance modules and align compiled-linker test fixtures
