@@ -5,6 +5,7 @@
 - Use one five-minute operation default across DSM identity, File Station, WebAPI, commands, bridge startup, cleanup, notifications and transfers; preserve explicit caller cancellation
 - Keep Compose gateways starting through slow readiness and listener gaps; authority and lifecycle failures still refuse ingress
 - Keep live root jobs and asynchronous moves running until completion or cancellation; never kill them by total elapsed time
+- Keep slow WebSocket identity lookups within the original session authority lifetime
 - Make descriptor job timeoutMs optional and add a gate rejecting unreviewed literal operation clocks
 - Pin the executor to the matching DSM budget fixes and rebuild its protected runtime inventory; no publication or NAS acceptance is implied
 

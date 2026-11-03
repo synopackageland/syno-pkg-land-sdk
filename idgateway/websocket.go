@@ -105,9 +105,19 @@ func (f *Front) watchUpgrade(ctx context.Context, conn *checkedUpgrade, id, ip s
 	ticker := time.NewTicker(webSocketRecheck)
 	defer ticker.Stop()
 	for {
-		check, cancel := context.WithTimeout(ctx, webSocketLookupTimeout)
+		// Slow directory work gets the operation allowance, but cannot extend
+		// the authority of the session that admitted this connection.
+		f.mu.Lock()
+		s, exists := f.sessions[id]
+		f.mu.Unlock()
+		if !exists {
+			conn.Close()
+			return
+		}
+		budget := min(runtimebudget.Remaining(ctx, webSocketLookupTimeout), max(0, s.expires.Sub(f.cfg.Now())))
+		check, cancel := context.WithTimeout(ctx, budget)
 		// Close on a stalled lookup even if a custom directory ignores ctx.
-		deadline := time.AfterFunc(webSocketLookupTimeout, func() { conn.Close() })
+		deadline := time.AfterFunc(budget, func() { conn.Close() })
 		allowed := f.upgradeAllowed(check, id, ip)
 		stopped := deadline.Stop()
 		cancel()
