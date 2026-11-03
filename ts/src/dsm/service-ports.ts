@@ -19,9 +19,13 @@ export interface DsmPort {
  * Uses the window's WebAPI channel when present, otherwise same-origin fetch
  * with the current files token. Missing session, refusal, timeout and malformed
  * replies return []. Names already use the session language. */
-export async function readDsmPorts(ctx: Pick<Context, 'files'|'webApi'>): Promise<DsmPort[]> {
+export async function readDsmPorts(ctx: Pick<Context, 'files'|'webApi'|'requestTimeout'>, signal?: AbortSignal): Promise<DsmPort[]> {
  let timer: ReturnType<typeof setTimeout>|undefined
  const controller = new AbortController()
+ const abort=()=>controller.abort()
+ if(signal?.aborted)return []
+ signal?.addEventListener('abort',abort,{once:true})
+ let stopped=()=>{}
  try {
   const request = async (): Promise<unknown> => {
    if (ctx.webApi) return ctx.webApi('SYNO.Core.Service.PortInfo', 'load', 1, {})
@@ -38,7 +42,10 @@ export async function readDsmPorts(ctx: Pick<Context, 'files'|'webApi'>): Promis
    return reply?.success === true ? reply.data : undefined
   }
   const data = await Promise.race([request(), new Promise<undefined>(resolve => {
-   timer = setTimeout(() => {controller.abort(); resolve(undefined)}, clientTimeout())
+   stopped=()=>resolve(undefined)
+   controller.signal.addEventListener('abort',stopped,{once:true})
+   if(controller.signal.aborted)stopped()
+   timer = setTimeout(() => {controller.abort(); resolve(undefined)}, clientTimeout(ctx.requestTimeout))
   })]) as {port_info?: unknown}|null|undefined
   if (!Array.isArray(data?.port_info)) return []
   const text = (v: unknown) => typeof v === 'string' ? v.trim() : ''
@@ -57,5 +64,5 @@ export async function readDsmPorts(ctx: Pick<Context, 'files'|'webApi'>): Promis
     ports: row.dst_port.map(text).filter(v => /^\d{1,5}$/.test(v)).map(Number).filter(n => n >= 1 && n <= 65535), ranges}]
   })
  } catch {return []}
- finally {clearTimeout(timer)}
+ finally {clearTimeout(timer);signal?.removeEventListener('abort',abort);controller.signal.removeEventListener('abort',stopped)}
 }

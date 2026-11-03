@@ -73,3 +73,19 @@ test('a slow DSM channel still returns its ports after sixty seconds', async () 
  await vi.advanceTimersByTimeAsync(60000)
  expect((await pending).map(p=>p.id)).toEqual(['http','ntp','mixed','ftp'])
 })
+
+test('canceling a slow DSM channel settles immediately and clears the shared timer',async()=>{
+ vi.useFakeTimers()
+ const controller=new AbortController()
+ const pending=readDsmPorts({webApi:()=>new Promise(()=>{})},controller.signal)
+ controller.abort()
+ expect(await pending).toEqual([])
+ expect(vi.getTimerCount()).toBe(0)
+})
+
+test('an explicit request allowance also applies to service port reads',async()=>{
+ vi.useFakeTimers()
+ const pending=readDsmPorts({requestTimeout:600000,webApi:()=>new Promise(resolve=>setTimeout(()=>resolve({port_info}),400000))})
+ await vi.advanceTimersByTimeAsync(400000)
+ expect((await pending).length).toBe(4)
+})
