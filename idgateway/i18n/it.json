@@ -1,15 +1,15 @@
 {
   "title": "Accesso all’App DSM",
-  "admin_required": "Questa App richiede un amministratore DSM.",
-  "group_required": "Il tuo account DSM non appartiene a un gruppo autorizzato a usare questa App. Contatta l’amministratore DSM.",
-  "sign_in_required": "Accedi prima a DSM a questo indirizzo, quindi riprova.",
-  "verification_failed": "DSM non ha potuto verificare il tuo accesso. Riprova tra qualche istante.",
-  "sign_in": "Accedi a DSM",
+  "admin_required": "Questa App richiede un amministratore DSM",
+  "group_required": "Il tuo account DSM non appartiene a un gruppo autorizzato a usare questa App. Contatta l’amministratore DSM",
+  "sign_in_required": "Accedi a DSM per aprire questa App",
+  "verification_failed": "DSM non ha potuto verificare il tuo accesso. Riprova tra qualche istante",
+  "sign_in": "Accedi",
   "retry": "Riprova",
   "direct_title": "Connessione diretta all’App",
   "direct_notice": "HTTPS gestito da DSM non è disponibile per questa App. La connessione diretta potrebbe mostrare un avviso sul certificato o utilizzare HTTP non crittografato.",
   "direct_continue": "Continua con la connessione diretta",
-  "app_privilege_denied": "Il tuo account DSM non è autorizzato a usare questa App. Contatta il tuo amministratore DSM.",
+  "app_privilege_denied": "Il tuo account DSM non è autorizzato a usare questa App. Contatta il tuo amministratore DSM",
   "share_title": "Permessi cartella condivisa",
   "share_steps": "Chiedere a un amministratore di aprire Pannello di controllo > Cartella condivisa > {folder} > Modifica > Permessi > Utente interno di sistema > {account} > {access}",
   "share_read": "Sola lettura",
@@ -71,5 +71,6 @@
   "menu_package_center": "Apri Centro pacchetti",
   "menu_settings": "Apri le impostazioni di accesso esterno dell’App",
   "stopped_title": "L’app non è in esecuzione",
-  "stopped": "Apri Centro pacchetti e scegli Esegui o Ripara per questa app"
+  "stopped": "Apri Centro pacchetti e scegli Esegui o Ripara per questa app",
+  "open_dsm": "Apri DSM"
 }

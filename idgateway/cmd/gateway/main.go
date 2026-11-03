@@ -91,6 +91,8 @@ func authorizeHandler(path string) (http.Handler, error) {
 		return nil, err
 	}
 	access := idgateway.AccessVerifier{Next: verifier, Access: cfg.Access, Groups: cfg.Groups, Membership: idgateway.NewDirectory()}
+	// Every mode uses the same DSM launcher, including header/token Apps.
+	// Restricting this to OIDC strands signed-out public-domain visitors.
 	loginApp := cfg.Package
 	external := idgateway.NewExternalReader(cfg)
 	httpsPort := cfg.Listen.HTTPS

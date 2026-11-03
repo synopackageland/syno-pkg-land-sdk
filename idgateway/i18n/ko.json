@@ -1,15 +1,15 @@
 {
   "title": "DSM App 액세스",
-  "admin_required": "이 App을 사용하려면 DSM 관리자 권한이 필요합니다.",
-  "group_required": "DSM 계정이 이 App을 사용할 수 있는 그룹에 속해 있지 않습니다. DSM 관리자에게 문의하십시오.",
-  "sign_in_required": "먼저 이 주소에서 DSM에 로그인한 후 다시 시도하십시오.",
-  "verification_failed": "DSM에서 로그인을 확인할 수 없습니다. 잠시 후 다시 시도하십시오.",
-  "sign_in": "DSM에 로그인",
+  "admin_required": "이 App을 사용하려면 DSM 관리자 권한이 필요합니다",
+  "group_required": "DSM 계정이 이 App을 사용할 수 있는 그룹에 속해 있지 않습니다. DSM 관리자에게 문의하십시오",
+  "sign_in_required": "이 App을 열려면 DSM에 로그인하세요",
+  "verification_failed": "DSM에서 로그인을 확인할 수 없습니다. 잠시 후 다시 시도하십시오",
+  "sign_in": "로그인",
   "retry": "다시 시도",
   "direct_title": "App에 직접 연결",
   "direct_notice": "이 App에서는 DSM이 관리하는 HTTPS를 사용할 수 없습니다. 직접 연결하면 인증서 경고가 표시되거나 암호화되지 않은 HTTP가 사용될 수 있습니다.",
   "direct_continue": "직접 연결 계속",
-  "app_privilege_denied": "DSM 계정에 이 App을 사용할 권한이 없습니다. DSM 관리자에게 문의하세요.",
+  "app_privilege_denied": "DSM 계정에 이 App을 사용할 권한이 없습니다. DSM 관리자에게 문의하세요",
   "share_title": "공유 폴더 권한",
   "share_steps": "관리자에게 다음 경로를 열도록 요청하십시오: 제어판 > 공유 폴더 > {folder} > 편집 > 권한 > 시스템 내부 사용자 > {account} > {access}",
   "share_read": "읽기 전용",
@@ -71,5 +71,6 @@
   "menu_package_center": "패키지 센터 열기",
   "menu_settings": "App의 외부 접근 설정 열기",
   "stopped_title": "앱이 실행 중이 아닙니다",
-  "stopped": "패키지 센터에서 이 앱의 실행 또는 복구를 선택하세요"
+  "stopped": "패키지 센터에서 이 앱의 실행 또는 복구를 선택하세요",
+  "open_dsm": "DSM 열기"
 }

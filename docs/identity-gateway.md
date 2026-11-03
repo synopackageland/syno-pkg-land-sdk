@@ -151,3 +151,22 @@ change DSM entry, upstream authentication, OIDC callback scoping, cookies or
 WebSocket admission. Root `/` is unsupported. The CLI's install checker calls
 `CheckIngressOwnership` before DSM acquires the package-owned web-config resource.
 No App root process or global route configuration writer is added.
+
+### Cold sign-in and explicit retries
+
+A signed-out browser navigation checks the DSM session on the configured DSM
+origin. A missing session opens DSM sign-in with the package launcher and an
+opaque resume token. Public App origins use the published external DSM origin;
+the App's original local path and query stay in its browser-bound transaction.
+After sign-in, the launcher resumes the transaction with `login_attempt=1`.
+A failed resumed check stops on a branded, localized failure card instead of
+opening DSM again. The Sign in action creates a fresh transaction and preserves
+the original App destination, including an OIDC request. It never links only to
+the DSM root. Permission denials offer Open DSM so an administrator can review
+access. Non-navigation API requests continue to receive JSON errors.
+
+The standalone card reuses the launcher's inline DSM theme with a CSP style
+hash. App identity comes from local package metadata; its PNG icon is embedded
+so a signed-out page does not need to fetch protected frontend assets. Rebuild
+packages to pick up gateway changes: the SDK does not update installed helpers
+at runtime.

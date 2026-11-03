@@ -75,9 +75,9 @@ func TestExternalFailurePageSignsInAtDSMOrigin(t *testing.T) {
 		// dsm is the DSM origin when the browser comes back; empty means it
 		// was cleared after the bounce, which leaves no link to show.
 		for _, tc := range []struct{ dsm, origin, want string }{
-			{"https://dsm.example.com", "https://app.example.com", `href="https://dsm.example.com/"`},
+			{"https://dsm.example.com", "https://app.example.com", `href="https://dsm.example.com/?launchApp=`},
 			{"", "https://app.example.com", ""},
-			{"https://dsm.example.com", "https://nas.example.com:18443", `href="https://nas.example.com:5001/"`},
+			{"https://dsm.example.com", "https://nas.example.com:18443", `href="https://nas.example.com:5001/?launchApp=`},
 		} {
 			e := External{Accept: []string{"https://app.example.com"}, DSM: "https://dsm.example.com"}
 			_, h := externalIngress(t, mode, func() External { return e })
@@ -86,7 +86,7 @@ func TestExternalFailurePageSignsInAtDSMOrigin(t *testing.T) {
 			e.DSM = tc.dsm
 			w := b.do("GET", loc.Query().Get("return")+"?"+url.Values{"txn": {loc.Query().Get("txn")}, "error": {"login_required"}}.Encode(), navigate...)
 			body := w.Body.String()
-			if w.Code != http.StatusUnauthorized || !strings.Contains(body, `data-i18n="gateway.retry"`) {
+			if w.Code != http.StatusUnauthorized || strings.Count(body, `class="primary"`) != 1 {
 				t.Fatal(mode, tc, w.Code, body)
 			}
 			if tc.want == "" && strings.Contains(body, "gateway.sign_in\"") || tc.want != "" && !strings.Contains(body, tc.want) || strings.Contains(body, "app.example.com:5001") {

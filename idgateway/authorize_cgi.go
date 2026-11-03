@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"html"
@@ -161,9 +160,7 @@ func (h *AuthorizeCGI) verify(w http.ResponseWriter, r *http.Request, ret *url.U
 					resume = txn + ":" + ret.Port()
 				}
 			}
-			param, _ := json.Marshal(map[string]string{"ssoResume": resume})
-			launch := url.Values{"launchApp": {"SYNO.SDS." + h.LoginApp + ".Instance"}, "launchParam": {string(param)}}
-			http.Redirect(w, r, "/?"+launch.Encode(), http.StatusFound)
+			http.Redirect(w, r, loginLocation(h.LoginApp, resume), http.StatusFound)
 			return
 		}
 		q.Set("error", "login_required")

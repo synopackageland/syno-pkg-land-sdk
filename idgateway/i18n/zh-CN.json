@@ -1,15 +1,15 @@
 {
   "title": "DSM App 访问",
-  "admin_required": "此 App 需要 DSM 管理员权限。",
-  "group_required": "您的 DSM 账户不属于获准使用此 App 的群组。请联系 DSM 管理员。",
-  "sign_in_required": "请先在此地址登录 DSM，然后重试。",
-  "verification_failed": "DSM 无法验证您的登录。请稍后重试。",
-  "sign_in": "登录 DSM",
+  "admin_required": "此 App 需要 DSM 管理员权限",
+  "group_required": "您的 DSM 账户不属于获准使用此 App 的群组。请联系 DSM 管理员",
+  "sign_in_required": "登录 DSM 以打开此 App",
+  "verification_failed": "DSM 无法验证您的登录。请稍后重试",
+  "sign_in": "登录",
   "retry": "重试",
   "direct_title": "直接连接到 App",
   "direct_notice": "此 App 无法使用 DSM 管理的 HTTPS。直接连接可能显示证书警告，或使用未加密的 HTTP。",
   "direct_continue": "继续使用直接连接",
-  "app_privilege_denied": "您的 DSM 帐户没有使用此 App 的权限。请联系 DSM 管理员。",
+  "app_privilege_denied": "您的 DSM 帐户没有使用此 App 的权限。请联系 DSM 管理员",
   "share_title": "共享文件夹权限",
   "share_steps": "请管理员打开控制面板 > 共享文件夹 > {folder} > 编辑 > 权限 > 系统内部用户 > {account} > {access}",
   "share_read": "只读",
@@ -71,5 +71,6 @@
   "menu_package_center": "打开套件中心",
   "menu_settings": "打开 App 的外网设置",
   "stopped_title": "应用程序未运行",
-  "stopped": "请打开套件中心，对此应用程序选择“运行”或“修复”"
+  "stopped": "请打开套件中心，对此应用程序选择“运行”或“修复”",
+  "open_dsm": "打开 DSM"
 }
