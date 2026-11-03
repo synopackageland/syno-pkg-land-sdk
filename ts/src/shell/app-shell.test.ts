@@ -189,12 +189,12 @@ test("a page placed at the bottom is the sidebar's last entry, in a group of its
  shell.unmount()
 })
 
-test("the current page renders its component under its own title and description",async()=>{
+test("the current page renders its component under its own title and description, and a page without one has no subtitle",async()=>{
  const pages=[{id:'home',title:'Home',component:Plain,description:'All good'},{id:'scan',title:'Scanning',hidden:true,component:Plain}]
- const shell=await mount({modelValue:'scan',pages,description:'shell-wide'})
+ const shell=await mount({modelValue:'scan',pages})
  expect(shell.root.querySelector('h1,h2')?.textContent).toBe('Scanning')
  expect(shell.root.querySelectorAll('.page-body')).toHaveLength(1)
- expect(shell.root.textContent).toContain('shell-wide')
+ expect(shell.root.textContent).not.toContain('All good')
  shell.unmount()
  const home=await mount({modelValue:'home',pages})
  expect(home.root.textContent).toContain('All good')

@@ -20,7 +20,7 @@ export interface AppShellPage {
   hidden?: boolean
   /** 'bottom': listed after every other page, in a group of its own (an App's settings). */
   placement?: 'bottom'
-  /** Replaces the shell's description for this page. */
+  /** A subtitle under this page's title. Most pages need none; leave it out. */
   description?: string
   /** false: the page draws its own header. */
   header?: boolean
