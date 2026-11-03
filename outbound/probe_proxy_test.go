@@ -373,3 +373,35 @@ func TestProbeProxyDoesNotForwardItsCredential(t *testing.T) {
 		t.Fatal("proxy credential reached origin")
 	}
 }
+
+func TestProbeProxyBoundsAcceptedIdleConnections(t *testing.T) {
+	p, err := startProbeProxy(context.Background(), ProbeProxyOptions{MaxConnections: 2},
+		func(context.Context, string, string) ([]netip.Addr, error) {
+			t.Error("idle client caused DNS")
+			return nil, nil
+		},
+		func(context.Context, string, string) (net.Conn, error) {
+			t.Error("idle client caused dial")
+			return nil, nil
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+	u, _ := url.Parse(p.URL())
+	for i := 0; i < 3; i++ {
+		c, err := net.Dial("tcp", u.Host)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer c.Close()
+	}
+	select {
+	case <-p.Context().Done():
+	case <-time.After(time.Second):
+		t.Fatal("idle proxy clients exceeded admission limit")
+	}
+	if !p.Exhausted() {
+		t.Fatal("admission limit not recorded")
+	}
+}

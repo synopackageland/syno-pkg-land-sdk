@@ -27,7 +27,8 @@ must pass the same checks. `AllowURL` may impose an additional restriction;
 it cannot relax the SDK's public-address policy. HTTPS exposes its CONNECT
 authority, not its encrypted path, to that restriction.
 
-Each probe has hard ceilings of 64 proxy requests/tunnels, 64 outbound connection
+Each probe has hard ceilings of 64 accepted client connections (including idle
+or unauthenticated connections), 64 proxy requests/tunnels, 64 outbound connection
 attempts and 32 MiB total upstream wire traffic in both directions. Options may
 lower those ceilings, with zero selecting the defaults; negative or larger
 values are refused. The SDK does not add a total wall-clock deadline. The App

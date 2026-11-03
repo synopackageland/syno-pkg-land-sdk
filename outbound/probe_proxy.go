@@ -71,6 +71,7 @@ type ProbeProxy struct {
 	mu          sync.Mutex
 	conns       map[net.Conn]struct{}
 	closing     bool
+	accepted    atomic.Int64
 	requests    atomic.Int64
 	connections atomic.Int64
 	bytes       atomic.Int64
@@ -217,6 +218,11 @@ func startProbeProxy(parent context.Context, options ProbeProxyOptions, lookup l
 		p.mu.Lock()
 		defer p.mu.Unlock()
 		if state == http.StateNew {
+			if p.accepted.Add(1) > options.MaxConnections {
+				p.exhaust()
+				c.Close()
+				return
+			}
 			if p.closing {
 				c.Close()
 			} else {
