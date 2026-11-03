@@ -1,6 +1,6 @@
 {
   "name": "@synopackageland/sdk",
-  "version": "0.49.0",
+  "version": "0.49.1",
   "description": "Frontend SDK for DSM packages built with synopkgland: headless client and Vue components",
   "license": "MIT",
   "homepage": "https://github.com/synopackageland/syno-pkg-land-sdk/tree/main/ts#readme",
@@ -42,7 +42,8 @@
     "prepack": "test -d node_modules || { echo '@synopackageland/sdk: run npm ci before npm pack' >&2; exit 1; }; npm run build",
     "build": "node ../scripts/executor-manifest.mjs --check && vite build && vue-tsc -p tsconfig.build.json && cp -R i18n dist/ && rm -rf spec && cp -R ../spec spec",
     "typecheck": "vue-tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:browser": "node test/browser/picker-layout.mjs"
   },
   "peerDependencies": {
     "@lucide/vue": "^1.48.0",

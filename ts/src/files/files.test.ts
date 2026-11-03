@@ -46,7 +46,8 @@ test('UI 0.11 keeps every server page visible and its filler cell does not chang
  click(last.querySelector<HTMLElement>('[data-grid-filler]')!);await settle()
  expect(selected).toHaveBeenLastCalledWith('/share-29')
  button(root,nasCopy('en').loadMore).click();await settle()
- expect(call.mock.calls.map(([,params])=>params.offset)).toEqual([0,30])
+ // A highlighted folder is listed ahead (nas.files.list); the shares page twice.
+ expect(call.mock.calls.filter(([method])=>method==='nas.files.shares').map(([,params])=>params.offset)).toEqual([0,30])
  expect(root.querySelectorAll('tbody tr[data-row-key]')).toHaveLength(60)
  click(row(root,'/share-59'));await settle()
  expect(selected).toHaveBeenLastCalledWith('/share-59')
@@ -140,9 +141,9 @@ test('tree nodes keep their icon component out of Vue reactivity',async()=>{
  button(root,'Expand homes').click();await settle()
  expect(warn.mock.calls.map(([m])=>String(m)).filter(m=>m.includes('made a reactive object'))).toEqual([])
 })
-test('picker states the DSM session notice once',async()=>{
- const root=mount(NasPicker,fixture(),{open:true,mode:'folder'});await settle()
- expect(root.textContent!.split(nasCopy('en').ownPermissions)).toHaveLength(2)
+test('picker carries no DSM session subtitle',async()=>{
+ mount(NasPicker,fixture(),{open:true,mode:'folder'});await settle()
+ expect(document.querySelector('[role=dialog]')!.textContent).not.toContain(nasCopy('en').ownPermissions)
 })
 test.each([407,408,'denied'])('permission error %s is visible and suppresses misleading empty state',async(code)=>{
  const call=vi.fn(async()=>{throw {code,message:'secret SID'}}),root=mount(FileBrowser,call);await settle()

@@ -621,6 +621,12 @@ npm run typecheck
 npm run build
 ```
 
+`npm run test:browser` measures the NAS folder picker in headless Chromium
+(`test/browser/picker-layout.mjs`): loading must not move the dialog, the tree
+or the list, and nothing scrolls at 1280px or 768px. It needs `npm i --no-save
+playwright-core@1.58.2` and a Playwright Chromium (`CHROMIUM_PATH` selects
+one); `--shots DIR` saves screenshots.
+
 `jsdom` must stay at 29 or newer: the UI's `AppRoot` modal-scope mirror lists
 `[...element.style]`, and jsdom has made `CSSStyleDeclaration` iterable (the
 CSSOM behaviour browsers have) only since 29.
