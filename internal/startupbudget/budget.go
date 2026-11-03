@@ -1,6 +1,11 @@
 // Package startupbudget holds the shared container startup contract.
 package startupbudget
 
+import (
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
+	"time"
+)
+
 // The defaults must let a loaded HDD NAS with 2 GB RAM start an App. A single
 // health probe on such a device can take far longer than on a workstation.
 const (
@@ -10,7 +15,7 @@ const (
 
 	// ProbeSeconds bounds one health request. Timeouts of a few seconds turn a
 	// briefly stalled App into a failure.
-	ProbeSeconds = 30
+	ProbeSeconds = runtimebudget.Operation / time.Second
 	// Floor for Compose healthcheck retries; more tolerant values are kept.
 	// start_period is raised to the startup budget.
 	HealthRetries = 3

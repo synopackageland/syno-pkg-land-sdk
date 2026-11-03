@@ -120,7 +120,7 @@ func childEnv(issuer string, secrets map[string]string) []string {
 var geteuid = os.Geteuid
 
 // AppStopTimeout bounds the app's shutdown after SIGTERM.
-const AppStopTimeout = 20 * time.Second
+const AppStopTimeout = runtimebudget.Operation
 
 // Run serves the gateway until ctx ends or, when app is given, until that
 // supervised app process exits. It refuses to run as root.

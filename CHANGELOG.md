@@ -1,10 +1,18 @@
 # Changelog
 
-## Unreleased
+## 0.49.5
+
+- Use one five-minute operation default across DSM identity, File Station, WebAPI, commands, bridge startup, cleanup, notifications and transfers; preserve explicit caller cancellation
+- Keep Compose gateways starting through slow readiness and listener gaps; authority and lifecycle failures still refuse ingress
+- Keep live root jobs and asynchronous moves running until completion or cancellation; never kill them by total elapsed time
+- Keep slow WebSocket identity lookups within the original session authority lifetime
+- Let background journal admission and rollback use the shared budget through slow lock contention
+- Make descriptor job timeoutMs optional and add a gate rejecting unreviewed literal operation clocks
+- Pin the executor to the matching DSM budget fixes and rebuild its protected runtime inventory; no publication or NAS acceptance is implied
 
 - Add `dsm.LookupAccount` with complete local/domain account snapshots, numeric group IDs, verified source and distinct not-found/timeout/unavailable errors; retain conservative expiry admission and refuse unverified LDAP status
-- Default native account lookups to 15 seconds when the caller supplies no deadline; honor explicit per-call deadlines and cancellation
-- Rebuild all three account bridges and keep executor decoding in sync; the next batched release needs a fresh executor inventory
+- Use the shared five-minute default for native account lookups without a caller deadline; preserve explicit per-call deadlines and cancellation
+- Rebuild all three account bridges, retain full executor decoding and refresh the six protected executor digests
 
 ## 0.49.4
 

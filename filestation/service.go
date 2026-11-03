@@ -5,10 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/synopackageland/syno-pkg-land-sdk/api"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"io"
 	"net/http"
 	"strings"
-	"time"
 )
 
 // DSMClient has only request-scoped session operations. It cannot open a NAS
@@ -43,7 +43,7 @@ func (s *Service) verify(ctx context.Context, c api.Caller, r *http.Request) err
 	if s == nil || s.client == nil {
 		return fail("unavailable")
 	}
-	check, cancel := context.WithTimeout(ctx, 20*time.Second)
+	check, cancel := context.WithTimeout(ctx, runtimebudget.Remaining(ctx, runtimebudget.Operation))
 	defer cancel()
 	return s.client.Verify(check, r, c.User())
 }
@@ -215,7 +215,7 @@ func (s *Service) Browse(ctx context.Context, c api.Caller, r *http.Request, fol
 	if s == nil || s.client == nil {
 		return Page{}, fail("unavailable")
 	}
-	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, runtimebudget.Remaining(ctx, runtimebudget.Operation))
 	defer cancel()
 	if e := s.verify(ctx, c, r); e != nil {
 		return Page{}, e
@@ -237,7 +237,7 @@ func (s *Service) ReadFile(ctx context.Context, c api.Caller, r *http.Request, f
 	if rel == "" {
 		return nil, fail("invalid-request")
 	}
-	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, runtimebudget.Remaining(ctx, runtimebudget.Operation))
 	defer cancel()
 	if e := s.verify(ctx, c, r); e != nil {
 		return nil, e

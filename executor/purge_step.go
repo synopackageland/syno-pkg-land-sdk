@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 	"os"
 	"os/exec"
 	"strconv"
@@ -13,7 +14,7 @@ import (
 )
 
 const (
-	purgeStepTimeout   = 60 * time.Second
+	purgeStepTimeout   = budget.Operation
 	purgeStepLogOutput = 4096
 )
 

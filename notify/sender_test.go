@@ -102,7 +102,7 @@ func TestChatProfileChecksApplicationReceiptAndKeepsSecretsOutOfErrors(t *testin
 	s := Sender{
 		Destination: Destination{Revision: "revision-1", Channel: "webhook", Endpoint: "https://receiver.invalid/", Profile: "synology-chat-v1", SecretRef: "credential-reference"},
 		Secrets: secretFunc(func(ctx context.Context, ref string) (string, error) {
-			if deadline, ok := ctx.Deadline(); !ok || time.Until(deadline) > 40*time.Second || ref != "credential-reference" {
+			if deadline, ok := ctx.Deadline(); !ok || time.Until(deadline) > 5*time.Minute || ref != "credential-reference" {
 				t.Fatal("secret resolution is outside the bounded attempt")
 			}
 			return "fixture-secret", nil

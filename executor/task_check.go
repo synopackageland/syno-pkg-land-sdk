@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 	"sync"
 	"time"
 )
@@ -13,7 +14,7 @@ import (
 const (
 	taskCheckEvery = 10 * time.Minute
 	taskCheckRetry = time.Minute
-	taskCheckSlow  = 150 * time.Second
+	taskCheckSlow  = budget.Operation
 	taskCheckFresh = taskCheckEvery + 2*taskCheckSlow
 )
 

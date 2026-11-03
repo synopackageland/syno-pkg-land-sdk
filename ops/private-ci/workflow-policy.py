@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Keep inherited automation off without editing upstream files (stdlib only)."""
+from runtime_budget import OPERATION_SECONDS
 import argparse
 import json
 import os
@@ -51,7 +52,7 @@ class GitHub:
                      'X-GitHub-Api-Version': '2022-11-28',
                      'User-Agent': 'synopkgland-workflow-policy'})
         try:
-            with urllib.request.urlopen(request, timeout=30) as response:
+            with urllib.request.urlopen(request, timeout=OPERATION_SECONDS) as response:
                 raw = response.read()
                 return json.loads(raw) if raw else None
         except urllib.error.HTTPError as error:

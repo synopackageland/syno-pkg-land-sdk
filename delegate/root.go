@@ -3,6 +3,7 @@ package delegate
 import (
 	"context"
 	"encoding/json"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"io"
 	"os"
 	"regexp"
@@ -17,8 +18,8 @@ const (
 	// MaxRootOutput is the largest output a policy may let a program write.
 	MaxRootOutput = 64 << 20
 	// RootRunTimeout is how long a client waits for root.run: the executor
-	// answers within 130 seconds, and the client waits 10 longer.
-	RootRunTimeout = 140 * time.Second
+	// can run an explicitly approved maximum, plus two response reserves.
+	RootRunTimeout = runtimebudget.MaxSeconds*time.Second + 20*time.Second
 )
 
 // Root job states.

@@ -183,18 +183,13 @@ func TestRawTenGiBHeaderAndProfileBoundary(t *testing.T) {
 	}
 }
 
-func TestRawMetadataDerivesDeadline(t *testing.T) {
+func TestRawMetadataUsesTheSameSharedDeadline(t *testing.T) {
 	for _, size := range []int64{1 << 30, 5 << 30, 10 << 30} {
 		e, _, id, _ := streamSetup(t, func(ctx context.Context, dst io.Writer) error {
 			deadline, ok := ctx.Deadline()
-			want := time.Duration(30) * time.Minute
-			if size == 5<<30 {
-				want = 90 * time.Minute
-			} else if size == 10<<30 {
-				want = 3 * time.Hour
-			}
+			want := 5 * time.Minute
 			if !ok || time.Until(deadline) > want || time.Until(deadline) < want-time.Minute {
-				t.Error("raw size deadline not applied", time.Until(deadline), want)
+				t.Error("raw size invented another default", time.Until(deadline), want)
 			}
 			_, err := io.WriteString(dst, "Content-Type: application/octet-stream\n\n")
 			return err

@@ -3,7 +3,9 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -14,7 +16,7 @@ import (
 	"time"
 )
 
-func TestCompiledHostSupervisorWaitsForAppHealth(t *testing.T) {
+func TestCompiledHostSupervisorKeepsStartingAndRecovers(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("run as the package UID in a disposable container")
 	}
@@ -45,24 +47,24 @@ func TestCompiledHostSupervisorWaitsForAppHealth(t *testing.T) {
 	if err := os.WriteFile(path, raw, 0644); err != nil {
 		t.Fatal(err)
 	}
-	type result struct {
-		rc  int
-		out string
+	// Startup acknowledges ownership while the gateway remains closed to ingress.
+	if rc, out := runControl(control, "start", dest, data); rc != 0 {
+		t.Fatalf("start: %d %s", rc, out)
 	}
-	started := make(chan result, 1)
-	go func() { rc, out := runControl(control, "start", dest, data); started <- result{rc, out} }()
+	defer runControl(control, "stop", dest, data)
 	select {
 	case <-probed:
-	case got := <-started:
-		t.Fatalf("start returned before App health: %+v", got)
 	case <-time.After(4 * time.Second):
-		t.Fatal("App health was not probed")
+		t.Fatal("health was not probed")
+	}
+	if rc, out := runControl(control, "status", dest, data); rc != 0 {
+		t.Fatalf("starting package is not running: %d %s", rc, out)
 	}
 	server.Close()
-	select {
-	case got := <-started:
-		t.Fatalf("start returned during listener gap: %+v", got)
-	case <-time.After(200 * time.Millisecond):
+	// A missing listener is availability, not a policy or ownership violation.
+	time.Sleep(1500 * time.Millisecond)
+	if rc, out := runControl(control, "status", dest, data); rc != 0 {
+		t.Fatalf("listener gap stopped gateway: %d %s", rc, out)
 	}
 	ln, err := net.Listen("tcp4", address)
 	if err != nil {
@@ -73,28 +75,33 @@ func TestCompiledHostSupervisorWaitsForAppHealth(t *testing.T) {
 	final.Listener = ln
 	final.Start()
 	defer final.Close()
-	select {
-	case got := <-started:
-		if got.rc != 0 {
-			t.Fatalf("start: %+v", got)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("start did not finish after health")
-	}
-	if rc, out := runControl(control, "status", dest, data); rc != 0 {
-		t.Fatalf("status: %d %s", rc, out)
-	}
-	final.Close()
-	until := time.Now().Add(4 * time.Second)
+	until := time.Now().Add(5 * time.Second)
 	for {
-		if rc, _ := runControl(control, "status", dest, data); rc == 3 {
+		raw, _ := os.ReadFile(filepath.Join(data, "daemon/daemon.pid"))
+		var record record
+		json.Unmarshal(raw, &record)
+		conn, err := net.Dial("unix", filepath.Join(data, "daemon/ctl.sock"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Fprintf(conn, "status %s\n", record.Digest)
+		conn.SetReadDeadline(until)
+		line, _ := bufio.NewReader(conn).ReadString('\n')
+		conn.Close()
+		if line == "ok\n" {
 			break
 		}
 		if !time.Now().Before(until) {
-			t.Fatal("missing ready listener did not stop the gateway")
+			t.Fatalf("recovery never opened ingress: %q", line)
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
+	final.Close()
+	time.Sleep(1500 * time.Millisecond)
+	if rc, out := runControl(control, "status", dest, data); rc != 0 {
+		t.Fatalf("slow/missing App stopped gateway: %d %s", rc, out)
+	}
+
 }
 
 func TestHostReadinessWaitsForHealthAcrossListenerHandoff(t *testing.T) {
@@ -146,8 +153,8 @@ func TestHostReadinessWaitsForHealthAcrossListenerHandoff(t *testing.T) {
 	final.Close()
 	err = c.checkReadiness()
 	var window healthWindow
-	if err == nil || !window.observe(time.Now(), err, time.Minute) {
-		t.Fatalf("lost ready listener was not fatal: %v", err)
+	if err == nil || window.observe(time.Now(), err, time.Minute) {
+		t.Fatalf("lost ready listener must stay starting: %v", err)
 	}
 }
 

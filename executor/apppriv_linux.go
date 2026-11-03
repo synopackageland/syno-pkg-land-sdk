@@ -5,11 +5,11 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 	"os"
 	"path/filepath"
 	"runtime"
 	"syscall"
-	"time"
 	"unsafe"
 )
 
@@ -36,7 +36,7 @@ func (b appPrivBridge) Check(ctx context.Context, principal, app, addr string) (
 		return false, errAppPriv
 	}
 	defer file.Close()
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, budget.Operation)
 	defer cancel()
 	cmd := command(ctx, "/proc/self/fd/3", []string{principal, app, addr})
 	cmd.ExtraFiles = []*os.File{file}

@@ -41,6 +41,24 @@ func (stalledNames) Name(ctx context.Context, _ int) (string, error) {
 	return "", ctx.Err()
 }
 
+func TestSlowWebSocketLookupCannotOutliveSessionAuthority(t *testing.T) {
+	f, _ := newFront(t, ModeNone, newUpstream(t, nil), func(c *FrontConfig) { c.Accounts = stalledNames{} })
+	f.sessions["live"] = session{subject: alice, ip: "127.0.0.1", expires: f.cfg.Now().Add(25 * time.Millisecond)}
+	upstream, peer := net.Pipe()
+	defer peer.Close()
+	conn := &checkedUpgrade{ReadWriteCloser: upstream, done: make(chan struct{})}
+	defer conn.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	finished := make(chan struct{})
+	defer func() { cancel(); <-finished }()
+	go func() { defer close(finished); f.watchUpgrade(ctx, conn, "live", "127.0.0.1") }()
+	peer.SetReadDeadline(time.Now().Add(250 * time.Millisecond))
+	if _, err := peer.Read(make([]byte, 1)); err != io.EOF {
+		t.Fatalf("slow lookup extended session authority: %v", err)
+	}
+}
+
 func TestWebSocketVerifierDeadlineClosesTheTransport(t *testing.T) {
 	f, _ := newFront(t, ModeNone, newUpstream(t, nil), func(c *FrontConfig) { c.Accounts = stalledNames{} })
 	f.sessions["live"] = session{subject: alice, ip: "127.0.0.1", expires: f.cfg.Now().Add(time.Minute)}
@@ -49,7 +67,9 @@ func TestWebSocketVerifierDeadlineClosesTheTransport(t *testing.T) {
 	conn := &checkedUpgrade{ReadWriteCloser: upstream, done: make(chan struct{})}
 	defer conn.Close()
 	finished := make(chan struct{})
-	go func() { defer close(finished); f.watchUpgrade(context.Background(), conn, "live", "127.0.0.1") }()
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+	go func() { defer close(finished); f.watchUpgrade(ctx, conn, "live", "127.0.0.1") }()
 	peer.SetReadDeadline(time.Now().Add(3 * time.Second))
 	if _, err := peer.Read(make([]byte, 1)); err != io.EOF {
 		t.Fatalf("stalled account lookup left transport open: %v", err)

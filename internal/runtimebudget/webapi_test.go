@@ -10,14 +10,14 @@ func TestWebAPIRawForSize(t *testing.T) {
 		size int64
 		want time.Duration
 	}{
-		{-1, 3 * time.Hour},
-		{0, 30 * time.Minute},
-		{1 << 30, 30 * time.Minute},
-		{(1 << 30) + 1, 36 * time.Minute},
-		{5 << 30, 90 * time.Minute},
-		{10 << 30, 3 * time.Hour},
-		{(10 << 30) + 1, 3 * time.Hour},
-		{1<<63 - 1, 3 * time.Hour},
+		{-1, Operation},
+		{0, Operation},
+		{1 << 30, Operation},
+		{(1 << 30) + 1, Operation},
+		{5 << 30, Operation},
+		{10 << 30, Operation},
+		{(10 << 30) + 1, Operation},
+		{1<<63 - 1, Operation},
 	} {
 		if got := WebAPIRawForSize(tt.size); got != tt.want {
 			t.Errorf("size %d: got %s, want %s", tt.size, got, tt.want)

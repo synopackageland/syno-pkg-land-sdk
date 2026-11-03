@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 	"regexp"
 	"time"
 	"unicode/utf8"
@@ -11,11 +12,10 @@ import (
 
 // Bounds a policy may declare for its root programs.
 const (
-	defaultRootRunTimeout = 20 * time.Second
-	maxRootRunTimeout     = 120 * time.Second
+	defaultRootRunTimeout = budget.Operation
+	maxRootRunTimeout     = budget.MaxSeconds * time.Second
 	defaultRootOutput     = 1 << 20
 	maxRootOutput         = 64 << 20
-	defaultRootJobTimeout = 24 * time.Hour
 	maxRootJobTimeout     = 7 * 24 * time.Hour
 	defaultRootJobGrace   = 10 * time.Second
 	maxRootJobGrace       = time.Minute
@@ -48,6 +48,7 @@ type RootRun struct {
 }
 
 type RootJob struct {
+	// TimeoutS is retained for policy decoding; live jobs end on exit or cancellation.
 	TimeoutS      *int `json:"timeout_s,omitempty"`
 	GraceS        *int `json:"grace_s,omitempty"`
 	MaxConcurrent *int `json:"max_concurrent,omitempty"`
@@ -104,9 +105,6 @@ func (r *RootRun) timeout() time.Duration {
 	return time.Duration(value(r.TimeoutS, int(defaultRootRunTimeout/time.Second))) * time.Second
 }
 func (r *RootRun) maxOutput() int64 { return value(r.MaxOutput, defaultRootOutput) }
-func (j *RootJob) timeout() time.Duration {
-	return time.Duration(value(j.TimeoutS, int(defaultRootJobTimeout/time.Second))) * time.Second
-}
 func (j *RootJob) grace() time.Duration {
 	return time.Duration(value(j.GraceS, int(defaultRootJobGrace/time.Second))) * time.Second
 }

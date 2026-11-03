@@ -21,7 +21,7 @@ Disabled accounts still return a complete snapshot from `LookupAccount`.
 callers should not substitute membership in a single local GID.
 
 ```go
-ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+ctx, cancel := context.WithCancel(ctx)
 defer cancel()
 account, err := dsm.LookupAccount(ctx, principal)
 switch {
@@ -36,9 +36,9 @@ default:
 }
 ```
 
-Without a context deadline, the default is 15 seconds. An explicit caller deadline
-overrides it in either direction; cancellation is honored. The default covers an
-observed 12.4 second lookup on a memory-starved controller (median about 0.7 seconds).
+Without a context deadline, the default is the shared five-minute operation budget.
+An explicit caller deadline overrides it in either direction; cancellation is
+honored. The shared allowance covers an observed 12.4 second lookup on a memory-starved controller (median about 0.7 seconds).
 It is a latency budget, not a freshness guarantee. Request paths can use a shorter
 deadline; background reconciliation should bound concurrency and use the default
 or an explicit longer deadline. There is no SDK cache or automatic retry.

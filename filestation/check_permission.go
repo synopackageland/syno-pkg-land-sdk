@@ -3,8 +3,8 @@ package filestation
 import (
 	"context"
 	"github.com/synopackageland/syno-pkg-land-sdk/api"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"net/http"
-	"time"
 )
 
 func (*Client) CheckPermission(context.Context, *http.Request, string) error {
@@ -27,7 +27,7 @@ func (s *Service) CheckPermission(ctx context.Context, caller api.Caller, r *htt
 	}
 	r = r.Clone(ctx)
 	r.Header.Set("X-SYNO-TOKEN", auth["dsm_synotoken"])
-	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, runtimebudget.Remaining(ctx, runtimebudget.Operation))
 	defer cancel()
 	if err := s.verify(ctx, caller, r); err != nil {
 		return err

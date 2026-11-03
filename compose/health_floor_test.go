@@ -49,12 +49,12 @@ services:
 	if redis == nil || len(redis.Test) == 0 || redis.Test[0] != "CMD-SHELL" {
 		t.Fatalf("App health command lost: %+v", redis)
 	}
-	if time.Duration(*redis.Timeout) != 30*time.Second || time.Duration(*redis.Interval) != 5*time.Second || *redis.Retries != 3 || time.Duration(*redis.StartPeriod) != 600*time.Second {
+	if time.Duration(*redis.Timeout) != 5*time.Minute || time.Duration(*redis.Interval) != 5*time.Second || *redis.Retries != 3 || time.Duration(*redis.StartPeriod) != 600*time.Second {
 		t.Fatalf("strict timing kept: timeout=%v interval=%v retries=%v start=%v", *redis.Timeout, *redis.Interval, *redis.Retries, *redis.StartPeriod)
 	}
 	// An image HEALTHCHECK is inherited; only its timing receives the floor.
 	server := p.Effective.Services["immich-server"].HealthCheck
-	if server == nil || len(server.Test) != 0 || server.Disable || time.Duration(*server.Timeout) != 30*time.Second || time.Duration(*server.StartPeriod) != 600*time.Second {
+	if server == nil || len(server.Test) != 0 || server.Disable || time.Duration(*server.Timeout) != 5*time.Minute || time.Duration(*server.StartPeriod) != 600*time.Second {
 		t.Fatalf("image health timing: %+v", server)
 	}
 	if ml := p.Effective.Services["immich-machine-learning"].HealthCheck; ml == nil || !ml.Disable || ml.Timeout != nil {
@@ -70,7 +70,7 @@ services:
     healthcheck:
       test: redis-cli ping | grep -q PONG || exit 1
       interval: 2m
-      timeout: 90s
+      timeout: 10m
       retries: 10
       start_period: 1h
 `)
@@ -81,7 +81,7 @@ services:
 		t.Fatal(err)
 	}
 	h := p.Effective.Services["redis"].HealthCheck
-	if time.Duration(*h.Timeout) != 90*time.Second || time.Duration(*h.Interval) != 2*time.Minute || *h.Retries != 10 || time.Duration(*h.StartPeriod) != time.Hour {
+	if time.Duration(*h.Timeout) != 10*time.Minute || time.Duration(*h.Interval) != 2*time.Minute || *h.Retries != 10 || time.Duration(*h.StartPeriod) != time.Hour {
 		t.Fatalf("tolerant App values reduced: %+v", h)
 	}
 }

@@ -2,13 +2,14 @@ package main
 
 import (
 	"context"
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 	"strings"
 	"time"
 )
 
 // Legacy step bound; a policy with lifecycle budgets derives its step from
 // the total stop allowance after job drain and response reserve.
-const stopStepTimeout = 30 * time.Second
+const stopStepTimeout = budget.Operation
 
 // rootStop is the App's own root step when the package stops or upgrades:
 // the op the approved policy names as stop, consented to by that approval.

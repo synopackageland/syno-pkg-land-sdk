@@ -6,7 +6,8 @@ import (
 	"context"
 	"os"
 	"runtime"
-	"time"
+
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 )
 
 type nativeAccountBridge struct {
@@ -29,9 +30,9 @@ func (b nativeAccountBridge) Lookup(ctx context.Context, name string) (Subject, 
 	defer f.Close()
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
-		// Keep the default aligned with dsm.LookupAccount without changing this
-		// independently released module's SDK dependency.
-		ctx, cancel = context.WithTimeout(ctx, 15*time.Second)
+		// Native directory work shares the operation default; explicit caller
+		// deadlines and cancellation retain their original authority.
+		ctx, cancel = context.WithTimeout(ctx, budget.Operation)
 		defer cancel()
 	}
 	cmd := command(ctx, "/proc/self/fd/3", []string{name})

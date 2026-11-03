@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 	"log"
 	"os"
 	"path/filepath"
@@ -60,7 +61,7 @@ var portalSites = []string{"server.", ".server."}
 
 // portalStepTimeout bounds the whole register or unregister; a reply that
 // comes too late for the caller still finishes the steps.
-const portalStepTimeout = 2 * time.Minute
+const portalStepTimeout = budget.Operation
 
 type portalEntry struct {
 	Package string
@@ -181,7 +182,7 @@ func (p portalEntry) Register(parent context.Context) error {
 	}
 	// A registration may have consumed its whole deadline. Cleanup must
 	// still be able to run; it has its own bound and retains the marker on failure.
-	cleanup, done := context.WithTimeout(context.WithoutCancel(parent), min(5*time.Second, p.operationBudget()/4))
+	cleanup, done := context.WithTimeout(context.WithoutCancel(parent), p.operationBudget())
 	defer done()
 	if rollback := p.unregister(cleanup); rollback == nil {
 		removeMarker(p.marker())

@@ -5,11 +5,11 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // ErrNoAccount means NSS has no such DSM account, for example after DSM
@@ -134,7 +134,7 @@ func readPasswd(path string) ([]passwdEntry, error) {
 }
 
 func runID(ctx context.Context, args ...string) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, runtimebudget.Remaining(ctx, runtimebudget.Operation))
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "/usr/bin/id", append(args[:1:1], "--", args[1])...)
 	cmd.Env = []string{"LANG=C", "LC_ALL=C"}

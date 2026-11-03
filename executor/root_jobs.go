@@ -344,8 +344,8 @@ func (j *rootJobs) release(job *rootJob) {
 	j.wg.Done()
 }
 
-// superviseJob waits for the job, sends its cancel, kills its process group
-// after the grace or at the timeout, and records how it ended.
+// superviseJob waits for the owned process, sends explicit cancellation and
+// escalates only after its stop grace. Elapsed runtime never fails a live job.
 func (e *Executor) superviseJob(j *rootJobs, job *rootJob, proc rootProcess, control, progress *os.File, output *syncHead, limits *RootJob) {
 	defer j.release(job)
 	defer control.Close()
@@ -357,19 +357,13 @@ func (e *Executor) superviseJob(j *rootJobs, job *rootJob, proc rootProcess, con
 	go func() { code, err := proc.Wait(); exits <- exit{code, err} }()
 	reading := make(chan struct{})
 	go func() { defer close(reading); e.readProgress(j, job, progress) }()
-	timeout := time.NewTimer(limits.timeout())
-	defer timeout.Stop()
 	var kill <-chan time.Time
-	timedOut := false
 	var x exit
 wait:
 	for {
 		select {
 		case x = <-exits:
 			break wait
-		case <-timeout.C:
-			timedOut = true
-			proc.Kill()
 		case reason := <-job.cancel:
 			grace := limits.grace()
 			if reason != "user" {
@@ -407,8 +401,6 @@ wait:
 	j.mu.Lock()
 	r := &job.rec
 	switch {
-	case timedOut:
-		r.State = "timed-out"
 	case r.CancelReason != "":
 		r.State = "canceled"
 	case x.err == nil && x.code == 0:

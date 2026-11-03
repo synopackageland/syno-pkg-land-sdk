@@ -70,6 +70,11 @@ func TestNormalMoveNestedDSMTimeoutDoesNotCancel(t *testing.T) {
 func TestNormalMoveSlowOrTimedOutRevalidationDoesNotCancel(t *testing.T) {
 	for _, timeout := range []bool{false, true} {
 		t.Run(map[bool]string{false: "slow", true: "deadline"}[timeout], func(t *testing.T) {
+			if timeout {
+				old := moveValidationTimeout
+				moveValidationTimeout = 20 * time.Millisecond
+				defer func() { moveValidationTimeout = old }()
+			}
 			e, f, _ := setup(t)
 			if f.user.Admin {
 				t.Fatal("requires normal subject")

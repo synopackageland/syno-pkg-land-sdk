@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 	"unicode"
 )
 
@@ -30,7 +30,7 @@ type dsmReply struct {
 // Browser sessions are verified natively and can never enter this HTTP client.
 func (s *Service) dsmCall(ctx context.Context, form url.Values) (dsmReply, error) {
 	var out dsmReply
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, runtimebudget.Remaining(ctx, runtimebudget.Operation))
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, "POST", s.cfg.Endpoint, strings.NewReader(form.Encode()))
 	if err != nil {

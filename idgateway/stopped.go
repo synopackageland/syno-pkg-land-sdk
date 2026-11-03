@@ -2,11 +2,11 @@ package idgateway
 
 import (
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"html"
 	"net"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 // GatewayAvailable checks only a local listener. It does not infer DSM sign-in
@@ -18,7 +18,7 @@ func GatewayAvailable(cfg Config) bool {
 	} else if cfg.Listen.HTTPS != 0 {
 		address = net.JoinHostPort("127.0.0.1", strconv.Itoa(cfg.Listen.HTTPS))
 	}
-	c, err := net.DialTimeout(network, address, 250*time.Millisecond)
+	c, err := net.DialTimeout(network, address, runtimebudget.Operation)
 	if err != nil {
 		return false
 	}

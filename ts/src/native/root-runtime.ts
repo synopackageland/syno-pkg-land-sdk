@@ -1,3 +1,4 @@
+import {DEFAULT_REQUEST_TIMEOUT} from '../context';
 import {versionUnsupported} from "./dsm-version";
 /** Build-time adapter for explicitly approved native product tasks. */
 /** What the window embeds per root operation: the task it may create, and how to recognize it. */
@@ -35,7 +36,7 @@ export interface RootTask {
  */
 export const ROOT_RUNTIME = `function createRootAccess(options) {
   var API = "SYNO.Core.TaskScheduler";
-  var POLL_MS = 500, MAX_POLL_MS = 1000, RUN_LIMIT_MS = 10 * 60 * 1000;
+  var POLL_MS = 500, MAX_POLL_MS = 1000, RUN_LIMIT_MS = ${DEFAULT_REQUEST_TIMEOUT};
   // The task an authorize just read back as exactly ours, for the run that follows.
   var byOp = {}, running = {}, verified = {};
   // spec/scheduler/v1: the id each task name was last listed with.

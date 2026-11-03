@@ -95,7 +95,7 @@ func TestExecutorAppearsAfterBootDelay(t *testing.T) {
 		}
 	}
 }
-func TestExecutorWaitStopsAtFifteenMinutes(t *testing.T) {
+func TestExecutorWaitUsesSharedOperationBudget(t *testing.T) {
 	s := service(t, absentExecutor(t))
 	now := retryClock(s)
 	start := *now
@@ -103,7 +103,7 @@ func TestExecutorWaitStopsAtFifteenMinutes(t *testing.T) {
 	// Revocation remains pending while the executor is absent.
 	_ = s.RunOnce(context.Background())
 	assertJob(t, s, id, background.StateFailed, "EXECUTOR_UNAVAILABLE")
-	if now.Sub(start) != 15*time.Minute {
+	if now.Sub(start) != 5*time.Minute {
 		t.Fatalf("wait=%s", now.Sub(start))
 	}
 	pending, err := s.Store.DelegationCleanup(context.Background())

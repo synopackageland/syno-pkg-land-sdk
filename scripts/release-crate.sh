@@ -45,7 +45,6 @@ if test "$mode" = --publish; then
 const version = process.argv[2];
 for (const name of ["@synopackageland/sdk", "@synopackageland/app"]) {
   const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(name)}/${version}`, {
-    signal: AbortSignal.timeout(30000),
   });
   if (!response.ok) throw new Error(`Publish ${name}@${version} on npm first`);
   const pkg = await response.json();

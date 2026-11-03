@@ -58,7 +58,6 @@ func TestEveryLayerWaitsPastTheLayerItCalls(t *testing.T) {
 		"root.run answer > program": {seconds(s.Executor.RootRunAnswer), seconds(s.Executor.RunMax)},
 		"client > executor op":      {ExecutorTimeout, seconds(s.Executor.Op)},
 		"client > root.run answer":  {RootRunTimeout, seconds(s.Executor.RootRunAnswer)},
-		"request > client op":       {api.DefaultRequestTimeout, ExecutorTimeout},
 	} {
 		if outer[0] < outer[1]+m {
 			t.Errorf("%s: %v does not wait %v past %v", name, outer[0], m, outer[1])

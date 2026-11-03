@@ -66,7 +66,7 @@ export function createDsmFileStation(options:DsmFileOptions={}){
   const abort=()=>controller.abort()
   signal.addEventListener('abort',abort,{once:true})
   if(signal.aborted)controller.abort()
-  const timer=setTimeout(()=>{timeout=true;controller.abort()},options.timeout??(upload?20*60*1000:clientTimeout()))
+  const timer=setTimeout(()=>{timeout=true;controller.abort()},options.timeout??clientTimeout())
   let stopped=()=>{}
   try{
    const request=async()=>{

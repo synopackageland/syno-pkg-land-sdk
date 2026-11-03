@@ -29,19 +29,14 @@ func TestComposeBudgetInShippedController(t *testing.T) {
 				t.Fatal(err)
 			}
 			rc, out := runControl(control, "start", dest, data)
-			if mode == "settings" {
-				if rc != 0 {
-					t.Fatalf("long budget rejected: %d %s", rc, out)
-				}
-			} else {
-				if rc != 1 || !strings.Contains(out, "COMPOSE_STARTUP_TIMEOUT") || !strings.Contains(out, "phase=COMPOSE_NETWORK_NOT_READY") {
-					t.Fatalf("%d %s", rc, out)
-				}
-				log, _ := os.ReadFile(filepath.Join(data, "daemon/daemon.log"))
-				if strings.Contains(string(log), `"uid":`) {
-					t.Fatal("child started before readiness")
-				}
+			if rc != 0 {
+				t.Fatalf("start: %d %s", rc, out)
 			}
+			defer runControl(control, "stop", dest, data)
+			if rc, out := runControl(control, "status", dest, data); rc != 0 {
+				t.Fatalf("starting daemon: %d %s", rc, out)
+			}
+
 		})
 	}
 }

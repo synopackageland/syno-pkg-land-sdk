@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 // leftoverPaths are where DSM keeps the package's resource declaration and
@@ -31,7 +31,7 @@ func purgeLeftovers(ctx context.Context, d *liveDSM, pkg string, paths leftoverP
 
 // appPrivDeleteTimeout bounds the rule delete: DSM runs every package's
 // app_privilege_set hooks inside it, which took 16-20 seconds on nas.example.
-const appPrivDeleteTimeout = 90 * time.Second
+const appPrivDeleteTimeout = budget.Operation
 
 type appPrivRule struct {
 	App  string `json:"app_id"`

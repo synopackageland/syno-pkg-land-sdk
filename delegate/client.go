@@ -25,7 +25,7 @@ const MaxFrame = 64 * 1024
 // ExecutorTimeout is the default wait, except for root.run and raw WebAPI:
 // the executor answers within 30 seconds, and the client waits 10 longer
 // (spec/protocol/v1/timeouts.json).
-const ExecutorTimeout = 40 * time.Second
+const ExecutorTimeout = runtimebudget.Operation + 10*time.Second
 
 var stableCode = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_-]{0,127}$`)
 
@@ -47,7 +47,7 @@ type Client struct {
 
 // StartGrace is how long after a package start a client waits for its
 // executor to listen: the executor reads the mailbox every half second.
-const StartGrace = 10 * time.Second
+const StartGrace = runtimebudget.Operation
 
 // ExecutorClient keeps the session/staging bridge independent of transport.
 // The production client still uses the existing bounded v1 Unix socket.

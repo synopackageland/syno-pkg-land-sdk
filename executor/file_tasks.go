@@ -6,9 +6,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 	"math"
 	"path/filepath"
-	"time"
 )
 
 // FileTasks starts and follows File Station background tasks (copy, move and
@@ -276,7 +276,7 @@ func (e *Executor) stopTasks(delegation string) {
 		return
 	}
 	for _, t := range running {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), budget.Operation)
 		e.Tasks.Stop(ctx, t.Runner, t.Kind, t.DSMID)
 		cancel()
 	}

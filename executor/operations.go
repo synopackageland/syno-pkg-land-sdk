@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -29,7 +30,7 @@ type operationRuntime struct {
 	cancelReason string // commitMu protects the first acknowledged cancellation cause.
 }
 
-const moveValidationTimeout = 30 * time.Second
+var moveValidationTimeout = budget.Operation
 
 const userCancelReason = "operation-canceled-by-user"
 
@@ -584,7 +585,7 @@ func (e *Executor) operationLoop(r *operationRuntime) {
 				e.commitMu.Unlock()
 				break
 			}
-			ctx, cancel := context.WithTimeout(r.ctx, 24*time.Hour)
+			ctx, cancel := context.WithCancel(r.ctx)
 			r.job = op.Job
 			r.cancelReason = ""
 			r.cancelJob = cancel
@@ -888,7 +889,7 @@ func (e *Executor) settleUncertain(r *operationRuntime, op Operation) {
 	if !ok || op.State != "uncertain" || op.Part == nil {
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(r.ctx, budget.Operation)
 	name, published := checker.PublishedPart(ctx, op)
 	cancel()
 	if !published {
@@ -931,7 +932,7 @@ func (e *Executor) recoverParts(r *operationRuntime) {
 		s, code := e.eligible(withGrantAddress(r.ctx, Auth{}, op.ClientAddr), op.Subject.Username, op.Subject.UID, true)
 		cleanupErr := errors.New("cleanup ineligible")
 		if code == "" {
-			ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(r.ctx, budget.Operation)
 			cleanupErr = cleaner.CleanupRecorded(ctx, s, *op.Part)
 			cancel()
 		}

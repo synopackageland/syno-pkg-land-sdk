@@ -16,7 +16,7 @@ import (
 
 func TestDownloadBudgetsAllowSlowBackgroundWork(t *testing.T) {
 	client := downloadClient()
-	if DownloadTimeout != 30*time.Minute || client.Timeout != DownloadTimeout {
+	if DownloadTimeout != 5*time.Minute || client.Timeout != DownloadTimeout {
 		t.Fatalf("download budgets: %v %v", DownloadTimeout, client.Timeout)
 	}
 	if DownloadTimeout > background.JobTimeout {

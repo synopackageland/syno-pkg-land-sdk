@@ -20,7 +20,7 @@ func TestCommandTimeoutIsPerCallAndBounded(t *testing.T) {
 			t.Errorf("%v: %v", given, got)
 		}
 	}
-	if commandTimeout(ctx) != defaultCommandTimeout || defaultCommandTimeout != 20*time.Second {
+	if commandTimeout(ctx) != defaultCommandTimeout || defaultCommandTimeout != 5*time.Minute {
 		t.Fatal(commandTimeout(ctx))
 	}
 }

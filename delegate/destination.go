@@ -3,8 +3,8 @@ package delegate
 import (
 	"context"
 	"github.com/synopackageland/syno-pkg-land-sdk/api"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"net/http"
-	"time"
 )
 
 // DestinationSession verifies the authenticated caller and the write permission
@@ -52,7 +52,7 @@ func (s *Service) selectDestination(ctx context.Context, caller api.Caller, r *h
 	}
 	if out.DelegationID == "" || out.Subject.Username != owner.User || out.Subject.UIDString() != owner.UID || out.Lifetime != "until-revoked" || !out.ExpiresAt.IsZero() || out.Destination != in.Key || out.Path != in.Path {
 		if out.DelegationID != "" {
-			cleanup, done := context.WithTimeout(context.Background(), 10*time.Second)
+			cleanup, done := context.WithTimeout(context.Background(), runtimebudget.Operation)
 			defer done()
 			_ = s.Client.Call(cleanup, "delegate.revoke", auth, map[string]string{"delegation_id": out.DelegationID}, nil)
 		}

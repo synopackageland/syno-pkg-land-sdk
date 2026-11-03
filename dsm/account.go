@@ -7,8 +7,9 @@ import (
 	"errors"
 	"io"
 	"os/exec"
-	"time"
 	"unicode/utf8"
+
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 )
 
 var (
@@ -23,7 +24,7 @@ var (
 
 // DefaultAccountLookupTimeout accommodates slow directory controllers. A
 // deadline on the caller's context overrides this default (shorter or longer).
-const DefaultAccountLookupTimeout = 15 * time.Second
+const DefaultAccountLookupTimeout = runtimebudget.Operation
 
 // AccountSource identifies the verified identity provider, never name syntax.
 type AccountSource string

@@ -19,7 +19,7 @@ import (
 
 const maxWebAPIParams = 32 << 10
 const maxWebAPIReply = 48 << 10
-const webAPITimeout = 10 * time.Second
+const webAPITimeout = budget.Operation
 
 var webAPIName = regexp.MustCompile(`^SYNO\.[A-Za-z][A-Za-z0-9]*(\.[A-Za-z][A-Za-z0-9]*)*$`)
 var webAPIMethod = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
@@ -252,11 +252,11 @@ func (e *Executor) callWebAPI(ctx context.Context, r Request) Response {
 		}
 	}
 	ctx = withGrantAddress(ctx, r.Auth, d.ClientAddr)
-	timeout := webAPITimeout
+	timeout := e.Policy.budgets().Duration("operation")
 	if p.ResponseType == "raw" {
-		timeout = webAPIRawTimeout
+		timeout = e.Policy.budgets().Duration("operation")
 		if p.ExpectedSize != nil {
-			timeout = budget.WebAPIRawForSize(*p.ExpectedSize)
+			timeout = e.Policy.budgets().Duration("operation")
 		}
 		if d.Lifetime != "until-revoked" {
 			timeout = min(timeout, d.Expires.Sub(e.Now()))

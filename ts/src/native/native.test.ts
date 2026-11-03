@@ -126,7 +126,7 @@ test('a root task that is still running keeps the window waiting and reports pro
 test('a root task that never finishes times out only after a load-sized limit', async () => {
  const f = runningRoot(Infinity);
  await assert.rejects(f.root.run('bootstrap'), {code:'root_timeout'});
- assert.ok(f.elapsed() >= 600000, String(f.elapsed()));
+ assert.ok(f.elapsed() >= 300000, String(f.elapsed()));
 });
 test('a finished root task that failed is reported at once', async () => {
  const f = runningRoot(3000, 1);

@@ -3,6 +3,7 @@ package background
 import (
 	"context"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"golang.org/x/sys/unix"
 	"os"
 	"path/filepath"
@@ -41,15 +42,18 @@ func holdJournal(t *testing.T, s *Store) func() {
 }
 func TestRequestSubmitLockBudgetAndRetry(t *testing.T) {
 	s := NewRequestStore(filepath.Join(t.TempDir(), "background"))
+	// Exercise an explicit short contention limit without waiting for the default.
+	const lockBudget = 50 * time.Millisecond
+	s.lockTimeout = lockBudget
 	release := holdJournal(t, s)
-	ctx, cancel := context.WithTimeout(context.Background(), RequestLockTimeout+time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), lockBudget+time.Second)
 	defer cancel()
 	start := time.Now()
 	req := SubmitRequest{Key: "retry", Name: "copy", Data: []byte("copy"), Submitter: admin}
 	_, _, err := s.Submit(ctx, req)
 	elapsed := time.Since(start)
 	release()
-	if !errors.Is(err, ErrBusy) || elapsed < RequestLockTimeout || elapsed > RequestLockTimeout+500*time.Millisecond {
+	if !errors.Is(err, ErrBusy) || elapsed < lockBudget || elapsed > lockBudget+500*time.Millisecond {
 		t.Fatalf("elapsed=%v err=%v", elapsed, err)
 	}
 	jobs, err := s.List(context.Background())
@@ -86,12 +90,33 @@ func TestJournalCancellationDoesNotWaitOrMutate(t *testing.T) {
 func TestWorkerCanWaitBeyondRequestLockBudget(t *testing.T) {
 	s := NewStore(filepath.Join(t.TempDir(), "background"))
 	release := holdJournal(t, s)
-	ctx, cancel := context.WithTimeout(context.Background(), RequestLockTimeout+250*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 	_, err := s.List(ctx)
 	release()
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("worker wait changed: %v", err)
+	}
+}
+
+func TestRequestJournalWaitsBeyondFormerFiveSecondLimit(t *testing.T) {
+	if RequestLockTimeout != runtimebudget.Operation {
+		t.Fatal("journal admission must share the operation default")
+	}
+	s := NewRequestStore(filepath.Join(t.TempDir(), "background"))
+	release := holdJournal(t, s)
+	released := make(chan struct{})
+	go func() {
+		time.Sleep(6 * time.Second)
+		release()
+		close(released)
+	}()
+	defer func() { <-released }()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	job, duplicate, err := s.Submit(ctx, SubmitRequest{Key: "slow-lock", Name: "copy", Data: []byte("copy"), Submitter: admin})
+	if err != nil || duplicate || job.ID == "" {
+		t.Fatalf("slow journal admission: job=%+v duplicate=%v err=%v", job, duplicate, err)
 	}
 }
 

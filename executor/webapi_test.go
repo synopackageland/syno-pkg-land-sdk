@@ -21,7 +21,7 @@ type webDSM struct {
 func (f *webDSM) WebAPI(ctx context.Context, runner, api, method string, version int, params map[string]any) (json.RawMessage, error) {
 	f.calls++
 	f.runner, f.api, f.method, f.version, f.params = runner, api, method, version, params
-	if deadline, ok := ctx.Deadline(); !ok || time.Until(deadline) > 11*time.Second {
+	if deadline, ok := ctx.Deadline(); !ok || time.Until(deadline) > 5*time.Minute {
 		return nil, errors.New("missing bounded deadline")
 	}
 	if f.reply == nil {

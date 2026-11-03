@@ -2,8 +2,13 @@
 // changes session, token, grant or approval lifetimes.
 package budget
 
-import "time"
+import (
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
+	"time"
+)
 
+const Operation = runtimebudget.Operation
+const MaxSeconds = runtimebudget.MaxSeconds
 const Reserve = 5 * time.Second
 
 type Policy struct {
@@ -13,7 +18,10 @@ type Policy struct {
 	Operation int `json:"operation"`
 }
 
-func Default() Policy { return Policy{Start: 60, Stop: 60, Purge: 300, Operation: 60} }
+func Default() Policy {
+	n := int(Operation / time.Second)
+	return Policy{Start: n, Stop: n, Purge: n, Operation: n}
+}
 func (p Policy) Valid() bool {
 	for _, n := range []int{p.Start, p.Stop, p.Purge} {
 		if n < 2 || n > 3600 {

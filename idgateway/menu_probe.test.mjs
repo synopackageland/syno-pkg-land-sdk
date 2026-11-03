@@ -6,7 +6,7 @@ import vm from 'node:vm';
 const source=readFileSync(process.env.SPL_MENU_PROBE,'utf8');
 const target='https://app.example.com/#/home';
 function launch(respond, reducedMotion) {
- const data={state:'start',mark:'x',ping:'https://app.example.com/_spl/ping',package:'App',target};
+ const data={state:'start',mark:'x',ping:'https://app.example.com/_spl/ping',package:'App',target,timeout:'300000'};
  const opening={hidden:false}, unreachable={hidden:true}, replaced=[], timers=[], requests=[];
  const context={
   document:{documentElement:{dataset:data},getElementById:id=>id==='opening'?opening:unreachable},
@@ -33,7 +33,7 @@ test('a reachable App shows success, then opens, and the timer is stopped',async
  const p=launch(ok({package:'App'}));
  await p.settle();
  assert.equal(p.data.state,'ok');
- assert.ok(p.timers.find(t=>t.ms===8000).cleared);
+ assert.ok(p.timers.find(t=>t.ms===300000).cleared);
  assert.deepEqual(p.replaced,[]);
  p.fire(400);
  assert.deepEqual(p.replaced,[target]);
@@ -57,15 +57,15 @@ test('another package, an error status or a network failure shows the explanatio
   assert.equal(p.data.mark,'x');
   assert.equal(p.unreachable.hidden,false);
   assert.equal(p.opening.hidden,true);
-  assert.ok(p.timers.find(t=>t.ms===8000).cleared);
+  assert.ok(p.timers.find(t=>t.ms===300000).cleared);
  }
 });
 test('a slow App waits 8 seconds before giving up',async()=>{
  const p=launch(()=>{});
- assert.deepEqual(p.timers.map(t=>t.ms),[8000]);
+ assert.deepEqual(p.timers.map(t=>t.ms),[300000]);
  await p.settle();
  assert.equal(p.data.state,'checking');
- p.fire(8000);
+ p.fire(300000);
  await p.settle();
  assert.deepEqual(p.replaced,[]);
  assert.equal(p.data.state,'fail');

@@ -3,10 +3,11 @@ package delegate
 import (
 	"context"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"time"
 )
 
-const executorWaitLimit = 15 * time.Minute
+const executorWaitLimit = runtimebudget.Operation
 
 func (s *Service) clockNow() time.Time {
 	if s.now != nil {

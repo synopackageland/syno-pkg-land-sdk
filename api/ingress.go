@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"net"
 	"net/http"
 	"net/netip"
@@ -20,7 +21,7 @@ const (
 )
 
 // DefaultIngressStreamTimeout matches the CLI's default nginx proxy timeout.
-const DefaultIngressStreamTimeout = time.Hour
+const DefaultIngressStreamTimeout = runtimebudget.Operation
 
 var (
 	ingressSocket = regexp.MustCompile(`^/tmp/synopkgland-ingress-([A-Za-z][A-Za-z0-9]{1,63})\.sock$`)
@@ -99,7 +100,7 @@ func serveIngress(ctx context.Context, socket string, h http.Handler) error {
 	case err := <-done:
 		return err
 	case <-ctx.Done():
-		stop, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		stop, cancel := context.WithTimeout(context.Background(), runtimebudget.Operation)
 		defer cancel()
 		if err := srv.Shutdown(stop); err != nil {
 			srv.Close()

@@ -3,9 +3,9 @@ package dsm
 import (
 	"context"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"net/netip"
 	"regexp"
-	"time"
 )
 
 var errNativeAppPriv = errors.New("DSM Application Privileges verification unavailable")
@@ -24,7 +24,7 @@ func AppPrivilege(ctx context.Context, principal, app, addr string) (bool, error
 	if err != nil || ip.Zone() != "" || ip.String() != addr {
 		return false, errNativeAppPriv
 	}
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, runtimebudget.Remaining(ctx, runtimebudget.Operation))
 	defer cancel()
 	return nativeAppPrivilege(ctx, principal, app, addr)
 }

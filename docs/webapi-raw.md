@@ -55,21 +55,13 @@ defaults to application/octet-stream. Arbitrary headers (including Set-Cookie)
 are discarded. Location and X-Accel-Redirect are refused, never followed or
 interpreted as local paths. MailPlus Attachment.download is outside this feature.
 
-Raw execution allows `max(30 minutes, ceil(size / GiB) * 18 minutes)`, capped at
-three hours and by the parent deadline and a timed grant's remaining lifetime.
-This permits roughly 1 MiB/s at the largest size, with at least 30 minutes for
-setup and small files on a busy disk. Known metadata selects the budget before
-dispatch. A Content-Length narrows it after header validation, measured from
-execution start, without renewing any grant. When size is unknown, use the
-profile ceiling to calculate the budget (at most three hours).
-The socket handler allows three hours plus 10 seconds;
-the default Go client waits three hours plus 20 seconds, or the metadata-derived
-budget plus 20 seconds when supplied. Raw socket `deadline_ms` may therefore
-reach 10820000; other operations retain their existing one-hour hint ceiling.
-Explicit shorter client
-timeouts remain effective. JSON WebAPI keeps its 10-second bound, and ordinary
-DSM commands keep their existing budgets. A short CGI/bridge deadline still
-wins: run large transfers in an existing background job.
+Raw execution uses the shared five-minute operation allowance, clipped by the
+parent deadline and timed grant expiry. Expected byte size does not create a
+second work budget. The socket answer and client retain ten/twenty-second reply
+reserves; an earlier caller deadline still wins. JSON WebAPI uses the same work
+allowance. Size ceilings, runner identity, profile permission, final publication
+checks, cancellation and uncertain-mutation handling remain in force.
+
 
 Grant validity is checked at admission and completion. Revocation and integration
 disable persist the existing fence, cancel active raw command contexts, and drain
@@ -153,7 +145,7 @@ a Drive path, or certify a new Drive endpoint. A job-bound grant must also carry
 its original `JobID`. Increase the Drive profile's limit and renew approval and
 consent. Set the existing background job's timeout to
 `delegate.WebAPIRawTimeoutForSize(sourceSize)` plus enough time for the destination
-copy and publication (the default background budget is still 30 minutes).
+copy and publication (the default background budget is five minutes).
 Keep earlier caller deadlines effective. Existing `CallRawTo` callers may
 continue without options, but interface/mocks declaring its method must accept
 the new `...delegate.RawWebAPIOptions` argument. Lost socket replies can leave

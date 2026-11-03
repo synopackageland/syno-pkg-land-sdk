@@ -146,10 +146,10 @@ func TestLongRootPurgeOutputIsCutInTheLog(t *testing.T) {
 	}
 }
 
-func TestARootPurgeStepPastSixtySecondsIsKilled(t *testing.T) {
+func TestARootPurgeStepHonorsAnExplicitEarlierTimeout(t *testing.T) {
 	r := &purgeRunnerStub{out: "partial", block: true}
 	exit, out := runStep(context.Background(), r, purgePolicy("Demo"), "purge", "purge", []string{"keep-state"}, "", 10*time.Millisecond)
-	if exit != "timeout" || out != "partial" || purgeStepTimeout != time.Minute {
+	if exit != "timeout" || out != "partial" || purgeStepTimeout != 5*time.Minute {
 		t.Fatal(exit, out)
 	}
 }

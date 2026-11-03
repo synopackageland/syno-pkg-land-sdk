@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 	"io"
 	"net/http"
 	"net/netip"
 	"net/url"
 	"strings"
-	"time"
 	"unicode"
 	"unicode/utf8"
 )
@@ -26,7 +26,7 @@ func (d *liveDSM) Verify(ctx context.Context, cookie, token string) (string, err
 	if !ok || err != nil || ip.Zone() != "" || d.session == nil || cookie == "" || len(cookie) > 4096 || id.Valid() != nil || token == "" || len(token) > 4096 || strings.ContainsFunc(token, unicode.IsControl) {
 		return "", errors.New("session")
 	}
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, budget.Operation)
 	defer cancel()
 	out, err := d.session(ctx, authenticateCGI, []string{
 		"REQUEST_METHOD=GET",

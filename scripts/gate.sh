@@ -8,6 +8,8 @@
 set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 node --test "$root/scripts/check-internal-content.test.mjs" "$root/scripts/sdk-version.test.mjs" "$root/scripts/executor-manifest.test.mjs"
+node --test "$root/scripts/check-timeout-policy.test.mjs"
+node "$root/scripts/check-timeout-policy.mjs"
 node "$root/scripts/sdk-version.mjs" --check
 node "$root/scripts/executor-manifest.mjs" --check
 node "$root/scripts/check-internal-content.mjs" --repo "$root"

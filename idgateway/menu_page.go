@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"html"
 	"net/http"
 	"net/url"
@@ -20,10 +21,10 @@ const ConnectPackage = "SynoPkgConnect"
 
 // menuProbeScript checks that the trusted target answers /_spl/ping for this
 // package before opening it. Slow NASes and provider restarts take seconds, so
-// it waits up to 8 seconds; any failure shows the explanation, which still
+// it uses the shared operation allowance; a failure shows the explanation, which still
 // offers to open the address. Success shows briefly before the page is
 // replaced. It is constant, so the CSP pins its hash.
-const menuProbeScript = `(function(){var d=document.documentElement.dataset,o=document.getElementById("opening"),u=document.getElementById("unreachable"),c=new AbortController(),k=setTimeout(function(){c.abort()},8000);function fail(){clearTimeout(k);d.state="fail";o.hidden=true;u.hidden=false}d.state="checking";fetch(d.ping,{mode:"cors",credentials:"omit",cache:"no-store",redirect:"error",signal:c.signal}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||j.package!==d.package)return fail();clearTimeout(k);d.state="ok";setTimeout(function(){location.replace(d.target)},typeof matchMedia=="function"&&matchMedia("(prefers-reduced-motion: reduce)").matches?0:400)},fail)})();`
+const menuProbeScript = `(function(){var d=document.documentElement.dataset,o=document.getElementById("opening"),u=document.getElementById("unreachable"),c=new AbortController(),k=setTimeout(function(){c.abort()},Number(d.timeout));function fail(){clearTimeout(k);d.state="fail";o.hidden=true;u.hidden=false}d.state="checking";fetch(d.ping,{mode:"cors",credentials:"omit",cache:"no-store",redirect:"error",signal:c.signal}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||j.package!==d.package)return fail();clearTimeout(k);d.state="ok";setTimeout(function(){location.replace(d.target)},typeof matchMedia=="function"&&matchMedia("(prefers-reduced-motion: reduce)").matches?0:400)},fail)})();`
 
 func cspHash(s string) string {
 	sum := sha256.Sum256([]byte(s))
@@ -331,7 +332,7 @@ func writeMenuPage(w http.ResponseWriter, r *http.Request, cfg Config, d MenuDec
 		body = explain(menuExplanation(cfg, d, m, false, false), "menu_unavailable")
 	case d.Kind == MenuRedirect:
 		csp = menuCSP(menuProbeHash, d.Origin)
-		attrs := fmt.Sprintf(` data-state="start" data-mark="x"%s data-ping="%s" data-package="%s" data-target="%s"`, hop, html.EscapeString(d.Origin+PingPath), html.EscapeString(cfg.Package), html.EscapeString(target))
+		attrs := fmt.Sprintf(` data-state="start" data-mark="x" data-timeout="%d"%s data-ping="%s" data-package="%s" data-target="%s"`, runtimebudget.Operation.Milliseconds(), hop, html.EscapeString(d.Origin+PingPath), html.EscapeString(cfg.Package), html.EscapeString(target))
 		page := menuUnreachable(cfg, d, target, m, id.Admin, connect)
 		code := "menu_unreachable"
 		if d.Provider == ProviderDirect {

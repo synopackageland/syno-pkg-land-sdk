@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"io"
 	"net"
 	"net/http"
@@ -92,7 +93,7 @@ func SMTPMessageID(id string) string {
 }
 
 func (s Sender) Notify(ctx context.Context, m Message) (Receipt, error) {
-	ctx, cancel := context.WithTimeout(ctx, 40*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, runtimebudget.Remaining(ctx, runtimebudget.Operation))
 	defer cancel()
 	r := Receipt{DeliveryID: m.DeliveryID, State: "failed", Recipients: map[string]string{}}
 	if r.DeliveryID == "" {
@@ -216,7 +217,7 @@ func (s Sender) email(ctx context.Context, m Message, secret string, r Receipt) 
 	if len(pending) == 0 {
 		return recipientResult(r)
 	}
-	conn, err := (&net.Dialer{Timeout: 10 * time.Second}).DialContext(ctx, "tcp", net.JoinHostPort(d.SMTPHost, strconv.Itoa(d.SMTPPort)))
+	conn, err := (&net.Dialer{Timeout: runtimebudget.Operation}).DialContext(ctx, "tcp", net.JoinHostPort(d.SMTPHost, strconv.Itoa(d.SMTPPort)))
 	if err != nil {
 		return r, &DeliveryError{Code: "smtp-connect", Retryable: true}
 	}

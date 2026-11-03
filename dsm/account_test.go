@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/synopackageland/syno-pkg-land-sdk/api"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 )
 
 func TestAdmitPrincipalRefusesDisabledAndUnprivilegedAccounts(t *testing.T) {
@@ -151,7 +152,10 @@ func TestLookupAccountPreservesFullResult(t *testing.T) {
 }
 
 func TestLookupAccountDeadlineAndCancellation(t *testing.T) {
-	for _, timeout := range []time.Duration{0, time.Second, time.Minute} {
+	if DefaultAccountLookupTimeout != runtimebudget.Operation {
+		t.Fatal("native lookup must use the shared operation default")
+	}
+	for _, timeout := range []time.Duration{0, time.Second, time.Minute, 10 * time.Minute} {
 		ctx := context.Background()
 		if timeout != 0 {
 			var cancel context.CancelFunc
