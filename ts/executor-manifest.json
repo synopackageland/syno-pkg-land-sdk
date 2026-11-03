@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "sdkVersion": "0.49.1",
+  "sdkVersion": "0.49.2",
   "executorVersion": "0.48.0",
   "executorDigests": {
     "x86_64": "60b4e1c0c44beabf38ad7845321a67993680936c1a64610f36d3bf8d9b4ae126",

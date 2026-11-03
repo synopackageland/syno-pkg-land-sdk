@@ -105,10 +105,12 @@ test('no SDK section draws the section skeleton: a first load shows its rows',as
  const vue=(dir:string):string[]=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?vue(resolve(dir,e.name)):e.name.endsWith('.vue')?[resolve(dir,e.name)]:[])
  expect(vue(__dirname).filter(file=>/<SettingsSection\b[^>]*\s:?loading\b/.test(readFileSync(file,'utf8')))).toEqual([])
 })
-test('FilesPage: the permission note is the description',async()=>{
+test('FilesPage: no explanatory subtitle under the title',async()=>{
  const call=async(method:string)=>{if(method==='nas.session.status')return {};if(method==='nas.files.shares')return {shares:[],offset:0,total:0};throw {code:'unknown_method'}}
  const root=await mount(FilesPage,{ctx:{call,locale:'en',reopen:()=>()=>{}} as unknown as Context})
- expect(description(root)).toBe(nasCopy('en').ownPermissions)
+ expect(root.querySelector('.ui-settings-section')).not.toBeNull()
+ expect(description(root)).toBeUndefined()
+ expect(root.textContent).not.toContain(nasCopy('en').ownPermissions)
 })
 test('LoginPage: the introduction is the description',async()=>{
  const call=async(method:string)=>{if(method==='identity.status')return {enabled:true};throw {code:'session_required'}}

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.49.2
+
+- Add `outbound.StartProbeProxy`: one SDK-owned, authenticated proxy for a package-account HTTP(S) subprocess probe with a bounded number of clients and no App handler, listener, resolver or dialer ([outbound probe proxy](docs/outbound-probe-proxy.md))
+- Files page: drop the "Operations use your own DSM session…" subtitle under the title. `nasCopy().ownPermissions` stays in the catalogs for Apps that read it
+- Reuse the immutable executor/v0.48.0 release and its six digests; executor sources, policies and task definitions are unchanged
+
 ## 0.49.1
 
 - NAS folder picker: loading no longer inserts a text row or moves the dialog; a spinner overlays the list, the tree shows its own spinner beside an expanding folder, and the refresh icon turns while a shown listing is checked again

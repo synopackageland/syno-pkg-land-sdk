@@ -29,7 +29,7 @@ onBeforeUnmount(()=>{disposed=true;unsubscribe?.();provider.dispose()})
 <template>
  <Callout v-if="lifecycle" tone="info" role="status">{{ lifecycleCopy(lifecycle,ctx.locale) }}</Callout>
  <Callout v-if="error" tone="danger"><span role="alert">{{ nasErrorCopy(error,nasCopy(ctx.locale),ctx.locale,ctx.displayName) }}</span><Button variant="secondary" @click="check">{{ nasCopy(ctx.locale).refresh }}</Button></Callout>
- <SettingsSection v-if="ready" :title="nasCopy(ctx.locale).title" :description="nasCopy(ctx.locale).ownPermissions" :collapsible="false">
+ <SettingsSection v-if="ready" :title="nasCopy(ctx.locale).title" :collapsible="false">
   <div class="files-actions"><Button variant="secondary" @click="mode='folder';open=true">{{ nasCopy(ctx.locale).choose }}</Button><Button variant="secondary" @click="mode='file';open=true">{{ nasCopy(ctx.locale).chooseFile }}</Button></div>
   <p v-if="selected" class="files-path" role="status"><PathDisplay :path="selected" /></p>
   <FileBrowser :key="generation" :provider="provider" :locale="ctx.locale" :name="ctx.displayName" transfers />
