@@ -25,7 +25,12 @@
     "canonicalTaskDefinitionsUnchanged": true,
     "nasAcceptance": false,
     "rustCratePublished": false,
-    "validation": "Development gates cover the shared timeout policy, live-job cancellation and complete native account lookup results. After merging main, rebuild all six executor/lifecycle binaries and verify the manifest; run affected executor/DSM tests, timeout guard and TS typecheck. Full release, cold reproducibility and oldest-runtime matrices remain required once before publication after merge."
+    "validation": "The full SDK release gate covers all Go modules and language SDKs, oldest supported Python/Node runtimes, three Go/Rust architectures and warm/cold reproducible executor builds. Supplemental aarch64/armv7 QEMU checks cover native account decoding, shared deadlines and NOFILE policy. Publication requires the recorded gate and private-policy content/diff/artifact scans to pass on this release candidate. Crates publication and live NAS acceptance are excluded.",
+    "daemonNoFile": {
+      "included": true,
+      "protectedExecutorInputsChanged": false,
+      "reason": "daemonctl is a per-App controller built from SDK source; it is not a protected executor/lifecycle binary or an imported dependency of either protected build."
+    }
   },
   "ui": {
     "builtAgainst": "0.19.0",
@@ -40,6 +45,7 @@
     "Use the shared five-minute operation default and tolerant startup; live root jobs have no total elapsed cap.",
     "Expose complete native local/domain account snapshots, numeric group IDs, verified source and distinct not-found/timeout/unavailable errors.",
     "Retain conservative expiry admission and refuse unverified LDAP status; native account lookups preserve explicit caller deadlines and cancellation.",
-    "Ship the rebuilt native account bridges and refreshed protected executor inventory."
+    "Ship the rebuilt native account bridges and refreshed protected executor inventory.",
+    "Support non-root daemon NOFILE inheritance, bounded configuration and fail-closed inherited hard ceilings; preserve low-limit lifecycle control."
   ]
 }
