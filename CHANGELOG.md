@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `AppShell` no longer takes a shell-wide `description`, which every page without its own showed as a subtitle. A page that needs one still sets `description` on its own entry
+
 ## 0.49.2
 
 - Add `outbound.StartProbeProxy`: one SDK-owned, authenticated proxy for a package-account HTTP(S) subprocess probe with a bounded number of clients and no App handler, listener, resolver or dialer ([outbound probe proxy](docs/outbound-probe-proxy.md))

@@ -23,7 +23,6 @@ const props = defineProps<{
   locale: string
   modelValue: string
   pages: readonly AppShellPageEntry[]
-  description?: string
   // A full page (Portal/standalone) takes the web layout, a device-width
   // viewport and the account from it; a DSM window keeps its own. Both take
   // the brand: a window narrowed to the mobile layout shows it in the phone
@@ -158,7 +157,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
     </template>
     <template v-if="slots.toolbar" #toolbar><slot name="toolbar" :page="modelValue" /></template>
     <PageContent ref="scroller" :class="['app-page', {'app-page-fill': page?.fill}]" :width="pageWidth" :surface="contentSurface">
-      <PageHeader v-if="page?.header !== false" :title="title" :description="page?.description ?? description">
+      <PageHeader v-if="page?.header !== false" :title="title" :description="page?.description">
         <template #meta><span ref="page-info" class="app-page-info" /><slot name="meta" :page="modelValue" /></template>
         <template #actions><div ref="page-actions" class="app-page-actions" /><slot v-if="!loading" name="actions" :page="modelValue" /></template>
       </PageHeader>
