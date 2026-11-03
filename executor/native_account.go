@@ -20,8 +20,15 @@ var (
 )
 
 func parseNativeAccount(out []byte, name string, err error) (Subject, error) {
-	var s Subject
-	if err != nil || !utf8.Valid(out) || strictJSON(out, &s) != nil || s.Username != name || s.UID < 1024 || uint64(s.UID) > 1<<32-2 || s.GID < 0 || uint64(s.GID) > 1<<32-2 || len(s.Groups) == 0 || len(s.Groups) > 1024 || s.Expired != "normal" {
+	var wire struct {
+		Subject
+		Source string `json:"source"`
+	}
+	if err != nil || !utf8.Valid(out) || strictJSON(out, &wire) != nil || (wire.Source != "local" && wire.Source != "domain") {
+		return Subject{}, errNativeAccount
+	}
+	s := wire.Subject
+	if s.Username != name || s.UID < 1024 || uint64(s.UID) > 1<<32-2 || s.GID < 0 || uint64(s.GID) > 1<<32-2 || len(s.Groups) == 0 || len(s.Groups) > 1024 || s.Expired != "normal" {
 		return Subject{}, errNativeAccount
 	}
 	for _, g := range s.Groups {
