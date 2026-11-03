@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"net"
 	"net/http"
 	"net/url"
@@ -33,7 +34,7 @@ type Authenticator struct {
 }
 
 func NewAuthenticator() *Authenticator {
-	return &Authenticator{Timeout: 10 * time.Second, run: runCGI, isAdministrator: IsAdministrator}
+	return &Authenticator{Timeout: runtimebudget.Operation, run: runCGI, isAdministrator: IsAdministrator}
 }
 
 // The name comes only from authenticate.cgi. Preserve directory-qualified and

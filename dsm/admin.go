@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"os/exec"
 	"time"
 )
@@ -14,7 +15,7 @@ func IsAdministrator(ctx context.Context, principal string) (bool, error) {
 	if !validPrincipal(principal) {
 		return false, errors.New("invalid DSM principal")
 	}
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, runtimebudget.Remaining(ctx, runtimebudget.Operation))
 	defer cancel()
 	return nativeAdministrator(ctx, principal)
 }

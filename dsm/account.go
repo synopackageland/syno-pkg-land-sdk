@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"time"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 )
 
 var errNativeAccount = errors.New("DSM account verification unavailable")
@@ -17,7 +17,7 @@ func AccountEnabled(ctx context.Context, principal string) (bool, error) {
 	if !validPrincipal(principal) {
 		return false, errNativeAccount
 	}
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, runtimebudget.Remaining(ctx, runtimebudget.Operation))
 	defer cancel()
 	return nativeAccountEnabled(ctx, principal)
 }
