@@ -147,8 +147,25 @@ func (s *PeerServer) servePeers(ctx context.Context, l *net.UnixListener, policy
 func (s *PeerServer) serveVerifiedPeers(ctx context.Context, l *net.UnixListener, filter func(PeerCredentials) bool, h func(context.Context, net.Conn, PeerCredentials)) {
 	defer close(s.done)
 	defer s.cleanup()
+	var backoff time.Duration
 	for {
 		c, err := l.AcceptUnix()
+		if err != nil && ctx.Err() == nil && transientAcceptError(err) {
+			// Descriptor or buffer exhaustion is a capacity condition, not a
+			// listener failure: keep retained peers and retry admission with a
+			// bounded backoff. Close and cancellation still end the loop.
+			backoff = nextAcceptBackoff(backoff)
+			t := time.NewTimer(backoff)
+			select {
+			case <-t.C:
+			case <-ctx.Done():
+				t.Stop()
+			case <-s.closed:
+				t.Stop()
+			}
+			continue
+		}
+		backoff = 0
 		if err != nil {
 			if ctx.Err() != nil {
 				s.err = ctx.Err()
@@ -187,6 +204,23 @@ func (s *PeerServer) serveVerifiedPeers(ctx context.Context, l *net.UnixListener
 			h(s.ctx, t, peer)
 		}()
 	}
+}
+
+// transientAcceptError reports kernel resource exhaustion or an aborted
+// pending connection, after which accept(2) can succeed again.
+func transientAcceptError(err error) bool {
+	return errors.Is(err, unix.EMFILE) || errors.Is(err, unix.ENFILE) || errors.Is(err, unix.ENOBUFS) ||
+		errors.Is(err, unix.ENOMEM) || errors.Is(err, unix.ECONNABORTED)
+}
+
+func nextAcceptBackoff(d time.Duration) time.Duration {
+	if d == 0 {
+		return 5 * time.Millisecond
+	}
+	if d *= 2; d > time.Second {
+		d = time.Second
+	}
+	return d
 }
 
 func dialPeerUnix(ctx context.Context, run, name string) (net.Conn, error) {

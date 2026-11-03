@@ -3,6 +3,7 @@ package ipc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"path/filepath"
 )
@@ -33,6 +34,11 @@ func StartPackagePeerUnix(ctx context.Context, path string, authorize PeerAuthor
 	return StartPackagePeerUnixWithOptions(ctx, path, authorize, h, PackagePeerOptions{})
 }
 
+// MaxPackagePeerConnections is the largest explicit package-peer bound. It is
+// sized for thousands of retained peers plus probe headroom; each retained peer
+// still holds one file descriptor, so the process RLIMIT_NOFILE must also fit.
+const MaxPackagePeerConnections = 16384
+
 // PackagePeerOptions bounds both callbacks and retained connections. Zero uses
 // the existing eight-peer limit. Larger limits require explicit opt-in by the
 // package composition; kernel peer identity and operation authority are unchanged.
@@ -41,15 +47,16 @@ type PackagePeerOptions struct {
 }
 
 // StartPackagePeerUnixWithOptions is StartPackagePeerUnix with a configurable
-// retained-connection bound. MaxConnections must be zero or between 1 and 1024.
+// retained-connection bound. MaxConnections must be zero or between 1 and
+// MaxPackagePeerConnections.
 // The same bound includes peers still being authorized; there is no overflow queue.
 func StartPackagePeerUnixWithOptions(ctx context.Context, path string, authorize PeerAuthorizer, h func(context.Context, net.Conn, PeerCredentials), options PackagePeerOptions) (*PeerServer, error) {
 	limit := options.MaxConnections
 	if limit == 0 {
 		limit = 8
 	}
-	if limit < 1 || limit > 1024 {
-		return nil, errors.New("ipc: package peer capacity must be between 1 and 1024")
+	if limit < 1 || limit > MaxPackagePeerConnections {
+		return nil, fmt.Errorf("ipc: package peer capacity must be between 1 and %d", MaxPackagePeerConnections)
 	}
 
 	if !filepath.IsAbs(path) || filepath.Clean(path) != path || filepath.Ext(path) != ".sock" ||
