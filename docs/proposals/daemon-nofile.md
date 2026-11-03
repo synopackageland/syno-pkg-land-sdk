@@ -32,16 +32,16 @@ Sources:
 References below use SDK `bc9ebdefaf7850c30d3793469e6fa1ca1e17f0e0` and CLI
 `98bed79c457daf5f4f683edb1d321da34b3e9f63`. Re-check lines on implementation.
 
-- CLI `src/standalone/daemon.ts:5`: add optional integer `daemon.nofile`,
+- CLI `src/standalone/daemon.ts:34`: add optional integer `daemon.nofile`,
   validate a bounded range (1024 through 1048576); omit it to preserve existing
   behavior. Reject unsupported launch kinds rather than silently ignoring it.
-- CLI `src/standalone/lifecycle.ts:374`: route start/stop/restart through
+- CLI `src/standalone/lifecycle.ts:375`: route start/stop/restart through
   `synosystemctl` for this opt-in unit; keep SDK status and uninstall semantics.
   Verify the package account may control only its acquired unit. Stop the outgoing
   unit before replacing payloads. Existing upgrade and failure fencing must hold.
-- CLI `src/standalone/spk.ts:235`: include the generated `conf/systemd/pkg-...`
+- CLI `src/standalone/spk.ts:472`: include the generated `conf/systemd/pkg-...`
   unit in the SPK control archive. Current native manifests refuse arbitrary DSM
-  conf (`manifest.ts:373`); do not bypass that validation from an application.
+  conf (`manifest.ts:375`); do not bypass that validation from an application.
 - CLI `src/standalone/background.ts:40`: this user-unit implementation is a
   reference for generation only; adding LimitNOFILE here cannot solve daemon
   hard-limit inheritance. Do not change other background jobs in this work.
