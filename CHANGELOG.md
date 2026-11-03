@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.47.1
+
+- Require Go 1.26.10 in the root, executor and conformance modules and align compiled-linker test fixtures
+- Retain the immutable executor/v0.39.0 release and its existing Go 1.26.10 payload inventory
+
 ## 0.47.0
 
 - Validate synopkgland.api v2 operation registries, required AI classes, handler/spec equality and preview/job safety before dispatch
