@@ -186,7 +186,7 @@ func TestUpstreamAuthPolicyBindingInCompiledBinary(t *testing.T) {
 		t.Fatal(err)
 	}
 	module := "github.com/synopackageland/syno-pkg-land-sdk"
-	mod := fmt.Sprintf("module gatewayprobe\n\ngo 1.25.0\nrequire %s v0.0.0\nreplace %s => %q\n", module, module, filepath.ToSlash(filepath.Dir(cwd)))
+	mod := fmt.Sprintf("module gatewayprobe\n\ngo 1.26.10\nrequire %s v0.0.0\nreplace %s => %q\n", module, module, filepath.ToSlash(filepath.Dir(cwd)))
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(mod), 0600); err != nil {
 		t.Fatal(err)
 	}
