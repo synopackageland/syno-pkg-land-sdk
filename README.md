@@ -45,6 +45,8 @@ Apps build their API server with
 an SDK policy that differs from the digest the CLI binds with
 `-X github.com/synopackageland/syno-pkg-land-sdk/api.expectedSDKPermissionsDigest=…`.
 
+For bounded public HTTP(S) subprocess probes, see [Outbound probe proxy](docs/outbound-probe-proxy.md).
+
 For owner-bound asynchronous Go work, structured results and ctl integration, see
 [Structured background jobs](docs/background-results.md).
 
