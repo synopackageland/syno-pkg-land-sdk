@@ -42,7 +42,7 @@ References below use SDK `bc9ebdefaf7850c30d3793469e6fa1ca1e17f0e0` and CLI
 - CLI `src/standalone/spk.ts:472`: include the generated `conf/systemd/pkg-...`
   unit in the SPK control archive. Current native manifests refuse arbitrary DSM
   conf (`manifest.ts:375`); do not bypass that validation from an application.
-- CLI `src/standalone/background.ts:40`: this user-unit implementation is a
+- CLI `src/standalone/background.ts:43`: this user-unit implementation is a
   reference for generation only; adding LimitNOFILE here cannot solve daemon
   hard-limit inheritance. Do not change other background jobs in this work.
 - SDK `daemonctl/main.go:445` and `:512`: the supervisor and child naturally
