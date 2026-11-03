@@ -111,7 +111,7 @@ registry.npmjs.org. Without `SYNOPKGLAND_DOCKER_SSH` everything runs here.
 
 Checks run through the scripts above; this repository does not use GitHub
 Actions. From a clone with dependencies accessible, install Git, Bash and the
-Go toolchain in `go.mod`, then fetch the comparison base and run the fast gate:
+Go 1.26.10 toolchain declared in `go.mod`, then fetch the comparison base and run the fast gate:
 
 ```sh
 git fetch origin

@@ -18,7 +18,7 @@ func TestPackagedEntryAndPolicyBindingsInCompiledBinary(t *testing.T) {
 	}
 	root := filepath.Dir(cwd)
 	module := "github.com/synopackageland/syno-pkg-land-sdk"
-	mod := fmt.Sprintf("module entryprobe\n\ngo 1.25.0\nrequire %s v0.0.0\nreplace %s => %q\n", module, module, filepath.ToSlash(root))
+	mod := fmt.Sprintf("module entryprobe\n\ngo 1.26.10\nrequire %s v0.0.0\nreplace %s => %q\n", module, module, filepath.ToSlash(root))
 	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(mod), 0600); err != nil {
 		t.Fatal(err)
 	}

@@ -30,7 +30,7 @@ func TestPackagedBridgePolicyBindings(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	write("go.mod", fmt.Appendf(nil, "module bridgeprobe\n\ngo 1.25.0\nrequire %s v0.0.0\nreplace %s => %q\n", module, module, filepath.ToSlash(root)))
+	write("go.mod", fmt.Appendf(nil, "module bridgeprobe\n\ngo 1.26.10\nrequire %s v0.0.0\nreplace %s => %q\n", module, module, filepath.ToSlash(root)))
 	write("main.go", []byte(`package main
 import (
  "fmt"; "net/http"; "net/http/cgi"; "os"; "strings"
