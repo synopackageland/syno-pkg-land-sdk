@@ -11,10 +11,10 @@
     "apppriv-aarch64.elf": "8ef803709f0bb775cac607833f1d45f3025371da268297ec6c0253f7431a9167",
     "admin-armv7.elf": "da4a0f986adcb66ab7d09d1e8478ee8b22ae9d6ccb1461ea4552789a7663f1f8",
     "apppriv-armv7.elf": "19d86118414f0d04f0806b5f3e199f26092b5521f24e70847093532a2b84b2a7",
-    "account_check.c": "677712d60951f6741d31c38d13d4e6f3b720d9090d64904f09ad67f4bd5b0e30",
-    "account-x86_64.elf": "2179865efbde39a7ea0fc5080e44c64d41337a09360b03228f59a4c79a751d7f",
-    "account-aarch64.elf": "db0be70943b5d0e0ab01bba0b7d08cb35e6aec648f4077435725491ddd54c0d9",
-    "account-armv7.elf": "58a6de387efe45440e3a8105e4732677a1c964a24df308bd748be247b31c8240"
+    "account_check.c": "22841d90848d53b5a38cc545b71df1d284c1d6ecf45ef29a50d8f9c932762f96",
+    "account-x86_64.elf": "adf96c4016358ae028fa51838cdae6ecbe887ef33ad0b8add9eea43c50d08104",
+    "account-aarch64.elf": "1209cd1ff7d338a6d17aed13c7a23e6b38567fef0b4e51d00c9cc7b24c16e3dd",
+    "account-armv7.elf": "47698de956c7a2e4555bdb59e78162711a6e470d1d2f912b1f0797161ef349df"
   },
   "sdkSymbol": "SLIBGroupIsAdminGroupMem",
   "sdkRealtime": true,

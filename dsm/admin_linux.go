@@ -61,10 +61,8 @@ func nativeAppPrivilege(ctx context.Context, principal, app, addr string) (bool,
 	return parseNativeBit(out, err, errNativeAppPriv)
 }
 
-func nativeAccountEnabled(ctx context.Context, principal string) (bool, error) {
-	// Up to 1024 group IDs and a home path follow the fields read here.
-	out, err := runBridgeLimit(ctx, accountBridges, 32768, principal)
-	return parseNativeAccount(out, principal, err)
+func nativeAccountLookup(ctx context.Context, principal string) ([]byte, error) {
+	return runBridgeLimit(ctx, accountBridges, 32768, principal)
 }
 
 // runBridge executes the sealed bridge for this architecture with fixed

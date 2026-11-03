@@ -5,7 +5,10 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/synopackageland/syno-pkg-land-sdk/api"
 )
@@ -92,25 +95,108 @@ func TestActAsThroughEntryGate(t *testing.T) {
 	}
 }
 
-func TestParseNativeAccount(t *testing.T) {
+const normalAccountJSON = `{"username":"alice","uid":1026,"gid":100,"home":"/var/services/homes/alice","admin":false,"expired":"normal","groups":[100],"source":"local"}`
+
+func TestParseAccountInfo(t *testing.T) {
 	for _, tc := range []struct {
 		out     string
 		err     error
-		enabled bool
+		expired string
 		fails   bool
 	}{
-		{`{"username":"alice","uid":1026,"gid":100,"home":"/var/services/homes/alice","admin":false,"expired":"normal","groups":[100]}` + "\n", nil, true, false},
-		{`{"username":"alice","uid":1026,"expired":"now","groups":[100]}`, nil, false, false},
-		{`{"username":"bob","uid":1026,"expired":"normal"}`, nil, false, true},
-		{`{"username":"alice","uid":100,"expired":"normal"}`, nil, false, true},
-		{`{"username":"alice","uid":1026,"expired":"later"}`, nil, false, true},
-		{`{"username":"alice","uid":1026,"expired":"normal"}{}`, nil, false, true},
-		{`not json`, nil, false, true},
-		{`{"username":"alice","uid":1026,"expired":"normal"}`, errors.New("exit 2"), false, true},
+		{normalAccountJSON + "\n", nil, "normal", false},
+		{strings.ReplaceAll(normalAccountJSON, `"normal"`, `"now"`), nil, "now", false},
+		{strings.ReplaceAll(normalAccountJSON, `"alice"`, `"bob"`), nil, "", true},
+		{strings.ReplaceAll(normalAccountJSON, `1026`, `100`), nil, "", true},
+		{strings.ReplaceAll(normalAccountJSON, `"normal"`, `"later"`), nil, "", true},
+		{normalAccountJSON + `{}`, nil, "", true},
+		{normalAccountJSON + `false`, nil, "", true},
+		{normalAccountJSON + `garbage`, nil, "", true},
+		{`not json`, nil, "", true},
+		{normalAccountJSON, errors.New("exit 2"), "", true},
+		{strings.ReplaceAll(normalAccountJSON, `"admin":false,`, ``), nil, "", true},
+		{strings.ReplaceAll(normalAccountJSON, `"gid":100,`, ``), nil, "", true},
+		{strings.ReplaceAll(normalAccountJSON, `"local"`, `"ldap"`), nil, "", true},
+		{strings.ReplaceAll(normalAccountJSON, `"local"`, `"unknown"`), nil, "", true},
+		{strings.ReplaceAll(normalAccountJSON, `1026`, `4294967295`), nil, "", true},
+		{strings.ReplaceAll(normalAccountJSON, `1026`, `4294967296`), nil, "", true},
+		{strings.ReplaceAll(normalAccountJSON, `[100]`, `[]`), nil, "", true},
+		{strings.ReplaceAll(normalAccountJSON, `[100]`, `[101]`), nil, "", true},
+		{strings.ReplaceAll(normalAccountJSON, `[100]`, `[100,-1]`), nil, "", true},
+		{strings.ReplaceAll(normalAccountJSON, `[100]`, `[100,null]`), nil, "", true},
+		{strings.ReplaceAll(normalAccountJSON, `[100]`, `[100,4294967295]`), nil, "", true},
+		{strings.ReplaceAll(normalAccountJSON, `1026`, `null`), nil, "", true},
 	} {
-		enabled, err := parseNativeAccount([]byte(tc.out), "alice", tc.err)
-		if enabled != tc.enabled || (err != nil) != tc.fails {
-			t.Errorf("%s: %v %v", tc.out, enabled, err)
+		account, err := parseAccountInfo([]byte(tc.out), "alice", tc.err)
+		if account.Expired != tc.expired || (err != nil) != tc.fails ||
+			(tc.fails && !reflect.DeepEqual(account, AccountInfo{})) {
+			t.Errorf("%s: %+v %v", tc.out, account, err)
+		}
+	}
+}
+
+func TestLookupAccountPreservesFullResult(t *testing.T) {
+	raw := `{"username":"DOMAIN\\alice","uid":2969567732,"gid":2969567745,"home":"/home/alice","admin":true,"expired":"now","groups":[2969567745,101],"source":"domain"}`
+	account, err := lookupAccount(context.Background(), `DOMAIN\alice`, func(_ context.Context, name string) ([]byte, error) {
+		if name != `DOMAIN\alice` {
+			t.Fatal(name)
+		}
+		return []byte(raw), nil
+	})
+	want := AccountInfo{Exists: true, Username: `DOMAIN\alice`, UID: 2969567732, GID: 2969567745,
+		Home: "/home/alice", Admin: true, Expired: "now", Groups: []uint32{2969567745, 101}, Source: AccountSourceDomain}
+	if err != nil || !reflect.DeepEqual(account, want) {
+		t.Fatal(account, err)
+	}
+}
+
+func TestLookupAccountDeadlineAndCancellation(t *testing.T) {
+	for _, timeout := range []time.Duration{0, time.Second, time.Minute} {
+		ctx := context.Background()
+		if timeout != 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, timeout)
+			defer cancel()
+		}
+		start := time.Now()
+		_, err := lookupAccount(ctx, "alice", func(ctx context.Context, _ string) ([]byte, error) {
+			deadline, ok := ctx.Deadline()
+			want := timeout
+			if want == 0 {
+				want = DefaultAccountLookupTimeout
+			}
+			if !ok || deadline.Sub(start) < want-100*time.Millisecond || deadline.Sub(start) > want+100*time.Millisecond {
+				t.Fatalf("deadline %v; want %v", deadline.Sub(start), want)
+			}
+			return []byte(normalAccountJSON), nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, deadline := range []bool{false, true} {
+		ctx, cancel := context.WithCancel(context.Background())
+		want := error(context.Canceled)
+		if deadline {
+			ctx, cancel = context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+			want = ErrAccountTimeout
+		}
+		cancel()
+		account, err := lookupAccount(ctx, "alice", func(context.Context, string) ([]byte, error) {
+			t.Fatal("canceled lookup started")
+			return nil, nil
+		})
+		if !errors.Is(err, want) || account.Exists || (deadline && !errors.Is(err, context.DeadlineExceeded)) {
+			t.Fatal(account, err)
+		}
+	}
+	for _, name := range []string{"", " alice", "a/b", "a\x00b"} {
+		_, err := lookupAccount(context.Background(), name, func(context.Context, string) ([]byte, error) {
+			t.Fatal("invalid name reached bridge")
+			return nil, nil
+		})
+		if !errors.Is(err, ErrAccountUnavailable) {
+			t.Fatal(err)
 		}
 	}
 }
