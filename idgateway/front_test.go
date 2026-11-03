@@ -348,7 +348,7 @@ func TestOIDCLoginRequiredFollowsPrompt(t *testing.T) {
 		if prompt == "none" && !strings.Contains(w.Header().Get("Location"), "error=login_required") {
 			t.Fatalf("prompt none: %s", w.Header().Get("Location"))
 		}
-		if prompt == "" && !strings.Contains(w.Body.String(), `href="https://nas.example:5001/"`) {
+		if prompt == "" && !strings.Contains(w.Body.String(), `href="https://nas.example:5001/?launchApp=`) {
 			t.Fatalf("sign-in page: %s", w.Body)
 		}
 	}

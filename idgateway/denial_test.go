@@ -36,7 +36,7 @@ func assertDenial(t *testing.T, w *httptest.ResponseRecorder, status int, code, 
 	if w.Code != status || !strings.Contains(body, `data-error-code="`+code+`"`) || !strings.Contains(body, `data-i18n="gateway.`+key+`"`) || !strings.Contains(body, message) {
 		t.Fatalf("denial: %d %s", w.Code, body)
 	}
-	if strings.Contains(body, `data-i18n="gateway.retry"`) != retry {
+	if strings.Contains(body, `data-i18n="gateway.sign_in"`) != retry {
 		t.Fatalf("retry=%v: %s", retry, body)
 	}
 	if w.Header().Get("Location") != "" || w.Header().Get("Cache-Control") != "no-store" || !strings.Contains(w.Header().Get("Content-Security-Policy"), "frame-ancestors 'none'") {
@@ -64,7 +64,7 @@ func TestGatewayInitialAdmissionDenial(t *testing.T) {
 				}
 				verifier := AccessVerifier{Next: verifierFunc(func(*http.Request) (api.Identity, error) { return api.Identity{User: "alice"}, nil }), Access: access, Groups: []string{"admitted"}, Membership: membership}
 				w := finishCGI(t, b, b.do("GET", target, navigate...), verifier)
-				code, key, message := "dsm_admin_required", "admin_required", "This App requires a DSM administrator."
+				code, key, message := "dsm_admin_required", "admin_required", "This App requires a DSM administrator"
 				if access == "dsm-groups" {
 					code, key, message = "dsm_group_required", "group_required", "Your DSM account is not in a group allowed to use this App."
 				}
@@ -84,7 +84,7 @@ func TestGatewaySessionAndVerificationFailuresAreDistinct(t *testing.T) {
 		status             int
 		code, key, message string
 	}{
-		{"expired", fmt.Errorf("wrapped: %w", api.ErrNoSession), 401, "dsm_sign_in_required", "sign_in_required", "Sign in to DSM on this address"},
+		{"expired", fmt.Errorf("wrapped: %w", api.ErrNoSession), 401, "dsm_sign_in_required", "sign_in_required", "Sign in to DSM to open this App"},
 		{"denied", fmt.Errorf("wrapped: %w", api.ErrAdminRequired), 403, "dsm_admin_required", "admin_required", "requires a DSM administrator"},
 		{"unavailable", errors.New("private backend detail"), 503, "dsm_verification_failed", "verification_failed", "DSM could not verify"},
 	} {
@@ -96,7 +96,7 @@ func TestGatewaySessionAndVerificationFailuresAreDistinct(t *testing.T) {
 			if strings.Contains(w.Body.String(), "private backend detail") {
 				t.Fatal("private error leaked")
 			}
-			if tc.status == 401 && !strings.Contains(w.Body.String(), `href="https://nas.example:5001/"`) {
+			if tc.status == 401 && !strings.Contains(w.Body.String(), `href="https://nas.example:5001/?launchApp=`) {
 				t.Fatal("missing DSM sign-in link")
 			}
 		})
@@ -186,7 +186,7 @@ func TestGatewayAppPrivilegeDenialAcrossModes(t *testing.T) {
 				return api.Identity{}, fmt.Errorf("wrapped: %w", api.ErrAppPrivilegeDenied)
 			})
 			w := finishCGI(t, b, b.do("GET", target, navigate...), verifier)
-			assertDenial(t, w, 403, "dsm_app_privilege_denied", "app_privilege_denied", "Your DSM account is not allowed to use this App.", false)
+			assertDenial(t, w, 403, "dsm_app_privilege_denied", "app_privilege_denied", "Your DSM account is not allowed to use this App", false)
 			if up.hits != 0 || tokens.calls != 0 || len(f.sessions) != 0 {
 				t.Fatal("denial created access")
 			}
@@ -203,7 +203,7 @@ func TestGatewayAppPrivilegeDenialAcrossModes(t *testing.T) {
 }
 
 func TestGatewayDenialLocalizesAndEscapesUntrustedErrors(t *testing.T) {
-	for _, tc := range []struct{ lang, want string }{{"zh-TW", "此 App 需要 DSM 管理員權限。"}, {"fr-FR", "Cette App nécessite un administrateur DSM."}, {"xx-YY", "This App requires a DSM administrator."}} {
+	for _, tc := range []struct{ lang, want string }{{"zh-TW", "此 App 需要 DSM 管理員權限"}, {"fr-FR", "Cette App nécessite un administrateur DSM"}, {"xx-YY", "This App requires a DSM administrator"}} {
 		f, _ := newFront(t, ModeHeader, newUpstream(t, nil), func(c *FrontConfig) { c.Access = "dsm-admins" })
 		b := newBrowser(t, f)
 		loc, _ := url.Parse(b.do("GET", "https://nas.example:18443/", navigate...).Header().Get("Location"))

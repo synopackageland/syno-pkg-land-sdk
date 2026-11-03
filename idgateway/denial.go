@@ -59,7 +59,7 @@ func admissionCode(err error) string {
 // writeFailure uses stable gateway codes and message keys in HTML and JSON.
 // Only missing sessions and verification failures offer a user-initiated retry;
 // retrying cannot repair an authenticated account's missing permissions.
-func (f *Front) writeFailure(w http.ResponseWriter, r *http.Request, code, retry string, page bool) {
+func (f *Front) writeFailure(w http.ResponseWriter, r *http.Request, code, retry string, page bool, transactions ...txn) {
 	status, stable, key := http.StatusServiceUnavailable, "dsm_verification_failed", "verification_failed"
 	switch code {
 	case "app_privilege_denied":
@@ -81,25 +81,42 @@ func (f *Front) writeFailure(w http.ResponseWriter, r *http.Request, code, retry
 		writeJSON(w, status, map[string]string{"error": stable, "message_key": "gateway." + key, "message": messages[key]})
 		return
 	}
+	// Preserve an OIDC request as well as a local path/query across an explicit
+	// retry. Never use the callback URL or an untrusted absolute return target.
+	var signIn string
+	if status != http.StatusForbidden {
+		t := txn{returnTo: localTarget(retry)}
+		if len(transactions) != 0 {
+			t = transactions[0]
+		}
+		signIn, _ = f.signInTarget(w, r, t, requestOrigin(r), true)
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src "+cspHash(denialStyle)+"; img-src data:; frame-ancestors 'none'")
 	w.Header().Set("Referrer-Policy", "no-referrer")
 	w.WriteHeader(status)
-	fmt.Fprintf(w, `<!doctype html><html lang="%s"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>%s</title><p data-error-code="%s" data-i18n="gateway.%s">%s</p>`, locale, html.EscapeString(messages["title"]), stable, key, html.EscapeString(messages[key]))
-	if status != http.StatusForbidden {
-		// A public origin signs in at the configured DSM origin, as bounce
-		// does; the DSM port on the public hostname is not reachable there.
-		signIn := f.dsmOrigin(r)
-		if external := f.external(r); external.Index(requestOrigin(r)) >= 0 {
-			signIn = external.DSM
-		}
-		fmt.Fprint(w, `<p>`)
-		if signIn != "" {
-			fmt.Fprintf(w, `<a data-i18n="gateway.sign_in" href="%s/">%s</a> · `, html.EscapeString(signIn), html.EscapeString(messages["sign_in"]))
-		}
-		fmt.Fprintf(w, `<a data-i18n="gateway.retry" href="%s">%s</a></p>`, html.EscapeString(localTarget(retry)), html.EscapeString(messages["retry"]))
+	fmt.Fprintf(w, `<!doctype html><html lang="%s"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>%s</title><style>%s</style><main aria-labelledby="app-name"><div class="brand">`, locale, html.EscapeString(messages["title"]), denialStyle)
+	if f.brand.icon != "" {
+		fmt.Fprintf(w, `<img class="app-icon" src="%s" alt="">`, f.brand.icon)
+	} else {
+		fmt.Fprint(w, `<svg class="app-icon" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#057feb"/><path d="M14 14h8v8h-8zm12 0h8v8h-8zM14 26h8v8h-8zm12 0h8v8h-8z" fill="white"/></svg>`)
 	}
-	fmt.Fprint(w, "</html>")
+	fmt.Fprintf(w, `<h1 id="app-name">%s</h1></div><p role="alert" data-error-code="%s" data-i18n="gateway.%s">%s</p><footer>`, html.EscapeString(f.brand.name), stable, key, html.EscapeString(messages[key]))
+	switch {
+	case signIn != "":
+		fmt.Fprintf(w, `<a class="primary" data-i18n="gateway.sign_in" href="%s">%s</a>`, html.EscapeString(signIn), html.EscapeString(messages["sign_in"]))
+	case status == http.StatusForbidden:
+		origin := f.dsmOrigin(r)
+		if e := f.external(r); e.Index(requestOrigin(r)) >= 0 {
+			origin = e.DSM
+		}
+		if origin != "" {
+			fmt.Fprintf(w, `<a class="primary" data-i18n="gateway.open_dsm" href="%s/">%s</a>`, html.EscapeString(origin), html.EscapeString(messages["open_dsm"]))
+		}
+	default:
+		fmt.Fprintf(w, `<a class="primary" data-i18n="gateway.retry" href="%s">%s</a>`, html.EscapeString(localTarget(retry)), html.EscapeString(messages["retry"]))
+	}
+	fmt.Fprint(w, "</footer></main></html>")
 }
 
 // writeStarting answers while the App is not ready yet, for example during a

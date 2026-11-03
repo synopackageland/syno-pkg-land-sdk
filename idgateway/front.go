@@ -161,6 +161,7 @@ type session struct {
 type Front struct {
 	optional *optionalPassthrough
 	cfg      FrontConfig
+	brand    appBrand
 	upstream *url.URL
 	proxy    *httputil.ReverseProxy
 	cookie   string
@@ -275,7 +276,7 @@ func NewFront(cfg FrontConfig) (*Front, error) {
 		return nil, err
 	}
 	cfg = scopeFront(cfg)
-	f := &Front{cfg: cfg, upstream: up, cookie: "synopkgland_sso_" + cfg.Package, txns: map[string]txn{}, sessions: map[string]session{}}
+	f := &Front{brand: readAppBrand("/var/packages", cfg.Package), cfg: cfg, upstream: up, cookie: "synopkgland_sso_" + cfg.Package, txns: map[string]txn{}, sessions: map[string]session{}}
 	if cfg.Provider != nil && cfg.Entry != "" {
 		cfg.Provider.admit = f.admitClient
 	}
@@ -488,13 +489,28 @@ func (f *Front) authorize(w http.ResponseWriter, r *http.Request, origin string)
 // bounce records the transaction and sends the browser to the authorize CGI
 // on the DSM origin of the same hostname and scheme.
 func (f *Front) bounce(w http.ResponseWriter, r *http.Request, t txn, origin string) {
+	target, reason := f.signInTarget(w, r, t, origin, false)
+	switch reason {
+	case http.StatusServiceUnavailable:
+		writeNoDSMOrigin(w, r)
+	case http.StatusTooManyRequests:
+		w.Header().Set("Retry-After", "30")
+		http.Error(w, "too many sign-in requests", reason)
+	default:
+		http.Redirect(w, r, target, http.StatusFound)
+	}
+}
+
+// signInTarget creates a new browser-bound transaction. A user-initiated
+// restart goes directly to the DSM launcher; its return still carries the
+// one-attempt guard, so even a cancelled login cannot redirect in a loop.
+func (f *Front) signInTarget(w http.ResponseWriter, r *http.Request, t txn, origin string, login bool) (string, int) {
 	external := f.external(r)
 	index := external.Index(origin)
 	dsmOrigin := f.dsmOrigin(r)
 	if index >= 0 {
 		if external.DSM == "" {
-			writeNoDSMOrigin(w, r)
-			return
+			return "", http.StatusServiceUnavailable
 		}
 		dsmOrigin = external.DSM
 	}
@@ -502,17 +518,23 @@ func (f *Front) bounce(w http.ResponseWriter, r *http.Request, t txn, origin str
 	t.origin, t.browser, t.expires = origin, f.browserID(w, r), f.cfg.Now().Add(TxnTTL)
 	t.ip = remoteIP(r)
 	if !f.addTxn(id, t) {
-		w.Header().Set("Retry-After", "30")
-		http.Error(w, "too many sign-in requests", http.StatusTooManyRequests)
-		return
+		return "", http.StatusTooManyRequests
 	}
 	q := url.Values{"txn": {id}, "return": {origin + f.route(ReturnPath)}}
+	appOrigin, _ := url.Parse(origin)
+	resume := id + ":" + appOrigin.Port()
 	if f.cfg.IngressPath != "" {
 		q.Set("resume", id+":p")
 	} else if index >= 0 {
 		q.Set("resume", externalResume(id, index, external))
 	}
-	http.Redirect(w, r, dsmOrigin+f.cfg.AuthorizeCGI+"?"+q.Encode(), http.StatusFound)
+	if q.Get("resume") != "" {
+		resume = q.Get("resume")
+	}
+	if login {
+		return dsmOrigin + loginLocation(f.cfg.Package, resume), 0
+	}
+	return dsmOrigin + f.cfg.AuthorizeCGI + "?" + q.Encode(), 0
 }
 
 func (f *Front) dsmOrigin(r *http.Request) string {
@@ -597,6 +619,14 @@ func localTarget(p string) string {
 	if !strings.HasPrefix(p, "/") || strings.HasPrefix(p, "//") {
 		return "/"
 	}
+	u, err := url.ParseRequestURI(p)
+	if err != nil || u.IsAbs() || u.Host != "" {
+		return "/"
+	}
+	path, err := url.PathUnescape(u.EscapedPath())
+	if err != nil || strings.HasPrefix(path, "//") || strings.ContainsAny(path, "\\\r\n") {
+		return "/"
+	}
 	return p
 }
 
@@ -617,7 +647,7 @@ func (f *Front) denied(w http.ResponseWriter, r *http.Request, t txn, code strin
 	if !t.oidc {
 		retry = localTarget(t.returnTo)
 	}
-	f.writeFailure(w, r, code, retry, true)
+	f.writeFailure(w, r, code, retry, true, t)
 }
 
 func (f *Front) logout(w http.ResponseWriter, r *http.Request, origin string) {

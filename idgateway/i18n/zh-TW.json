@@ -1,15 +1,15 @@
 {
   "title": "DSM App 存取",
-  "admin_required": "此 App 需要 DSM 管理員權限。",
-  "group_required": "您的 DSM 帳號不屬於允許使用此 App 的群組。請聯絡 DSM 管理員。",
-  "sign_in_required": "請先在此位址登入 DSM，再試一次。",
-  "verification_failed": "DSM 無法驗證您的登入。請稍後再試。",
-  "sign_in": "登入 DSM",
+  "admin_required": "此 App 需要 DSM 管理員權限",
+  "group_required": "您的 DSM 帳號不屬於允許使用此 App 的群組。請聯絡 DSM 管理員",
+  "sign_in_required": "登入 DSM 以開啟此 App",
+  "verification_failed": "DSM 無法驗證您的登入。請稍後再試",
+  "sign_in": "登入",
   "retry": "再試一次",
   "direct_title": "直接連線至 App",
   "direct_notice": "此 App 無法使用 DSM 管理的 HTTPS。直接連線可能顯示憑證警告，或使用未加密的 HTTP。",
   "direct_continue": "繼續使用直接連線",
-  "app_privilege_denied": "您的 DSM 帳號沒有使用此 App 的權限。請聯絡 DSM 管理員。",
+  "app_privilege_denied": "您的 DSM 帳號沒有使用此 App 的權限。請聯絡 DSM 管理員",
   "share_title": "共用資料夾權限",
   "share_steps": "請管理員開啟控制台 > 共用資料夾 > {folder} > 編輯 > 權限 > 系統內部使用者 > {account} > {access}",
   "share_read": "唯讀",
@@ -71,5 +71,6 @@
   "menu_package_center": "開啟套件中心",
   "menu_settings": "開啟 App 的外網設定",
   "stopped_title": "應用程式未執行",
-  "stopped": "請開啟套件中心，對此應用程式選擇「執行」或「修復」"
+  "stopped": "請開啟套件中心，對此應用程式選擇「執行」或「修復」",
+  "open_dsm": "開啟 DSM"
 }

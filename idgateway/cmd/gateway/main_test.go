@@ -247,10 +247,10 @@ func TestCompiledCGIExternalResume(t *testing.T) {
 }
 
 func TestEveryGatewayModeLaunchesDSMForColdSignIn(t *testing.T) {
-	for _, mode := range []string{"none", "header"} {
+	for _, mode := range []string{"none", "header", "token"} {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "gateway.json")
-		os.WriteFile(path, []byte(`{"package":"Reader","mode":"`+mode+`","upstream":"http://127.0.0.1:8000","listen":{"https":18443},"authorize_cgi":"/webman/3rdparty/Reader/sso/authorize.cgi","state_dir":"`+filepath.Join(dir, "state")+`","headers":{"user":"Remote-User"}}`), 0600)
+		os.WriteFile(path, []byte(`{"package":"Reader","mode":"`+mode+`","upstream":"http://127.0.0.1:8000","listen":{"https":18443},"authorize_cgi":"/webman/3rdparty/Reader/sso/authorize.cgi","state_dir":"`+filepath.Join(dir, "state")+`","headers":{"user":"Remote-User"},"token":{"command":["/bin/false"]}}`), 0600)
 		h, err := authorizeHandler(path)
 		if err != nil {
 			t.Fatal(err)

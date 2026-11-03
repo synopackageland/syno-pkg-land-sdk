@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.49.3
+
+- Preserve the requested App URL across explicit DSM sign-in retries, including external origins and OIDC requests
+- Show a branded DSM-style failure card with one action, CSP-pinned inline styles and nine locales
+- Cover cold external navigation, cancelled login, clean retries, callback replay and JSON API denials
+
 ## 0.49.2
 
 - Add `outbound.StartProbeProxy`: one SDK-owned, authenticated proxy for a package-account HTTP(S) subprocess probe with a bounded number of clients and no App handler, listener, resolver or dialer ([outbound probe proxy](docs/outbound-probe-proxy.md))
