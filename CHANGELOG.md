@@ -6,6 +6,7 @@
 - Count authorization callbacks, handlers and retained connections against the same bound; refuse overflow without queuing and retain kernel peer identity, ownership, deadlines and cancellation
 - Verify 316 retained peers, overflow and cancellation alongside existing default-capacity cases; reserve consumer capacity for health and protocol probes
 - Publish executor/v0.48.0 and its reproducible lifecycle inventory for the existing Go 1.26.10 module requirement; retain executor policies, task definitions and root SDK dependency
+- Register account-change watching before startup deletion reconciliation so a deletion during an external action is not lost
 - Align SDK package version metadata; do not publish a Rust crate as part of this release
 
 ## 0.47.1

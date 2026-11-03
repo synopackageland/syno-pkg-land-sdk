@@ -13,7 +13,7 @@ func TestWatchFileSeesAReplacementByRename(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "passwd"), []byte("a"), 0o644)
 	ctx, cancel := context.WithCancel(context.Background())
 	changed, done := make(chan struct{}, 8), make(chan error, 1)
-	go func() { done <- watchFile(ctx, dir, "passwd", func() { changed <- struct{}{} }) }()
+	go func() { done <- watchFile(ctx, dir, "passwd", func() { changed <- struct{}{} }, nil) }()
 	time.Sleep(100 * time.Millisecond)
 	os.WriteFile(filepath.Join(dir, "group"), []byte("g"), 0o644)
 	select {
@@ -79,4 +79,21 @@ func TestWatchRetriesAPendingDeletionUntilItSucceeds(t *testing.T) {
 	// The action writes its log before Watch persists the completed deletion.
 	// Observe that commit too, rather than racing the watcher after the log.
 	waitFor(t, func() bool { p, err := f.loadPending(); return err == nil && len(p) == 0 })
+}
+
+func TestWatchDoesNotLoseADeletionDuringStartupReconciliation(t *testing.T) {
+	f := newDeletions(t)
+	f.deleteLocal(t, "bob")
+	// Delete a second account while startup is finishing the first action. The
+	// inotify watch must already exist; waiting for action output is not readiness.
+	f.Deleted = func(p PendingDeletion) {
+		if p.Name == "bob" {
+			f.deleteLocal(t, "alice")
+		}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	t.Cleanup(func() { cancel(); <-done })
+	go func() { defer close(done); _ = f.Watch(ctx, t.Logf) }()
+	waitFor(t, func() bool { return f.actionLog() == "1027 bob\n1026 alice\n" })
 }

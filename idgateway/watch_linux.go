@@ -18,7 +18,14 @@ const watchSettle = 200 * time.Millisecond
 // rename or removed, until ctx ends. It watches the directory with inotify,
 // which needs no root: DSM replaces /etc/passwd by rename, which a watch on
 // the file itself would lose.
-func watchFile(ctx context.Context, dir, name string, changed func()) error {
+func watchFile(ctx context.Context, dir, name string, changed, initial func()) error {
+	started := false
+	defer func() {
+		// Preserve the startup comparison even when inotify is unavailable.
+		if !started && initial != nil {
+			initial()
+		}
+	}()
 	fd, err := unix.InotifyInit1(unix.IN_CLOEXEC | unix.IN_NONBLOCK)
 	if err != nil {
 		return err
@@ -31,6 +38,12 @@ func watchFile(ctx context.Context, dir, name string, changed func()) error {
 	events, readErr := make(chan struct{}, 1), make(chan error, 1)
 	go func() { readErr <- readEvents(f, name, events) }()
 	defer f.Close()
+	// Queue account changes before startup reconciliation can invoke external
+	// actions. A change made by or during that action must not fall in a gap.
+	started = true
+	if initial != nil {
+		initial()
+	}
 	for {
 		select {
 		case <-ctx.Done():

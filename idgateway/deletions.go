@@ -248,8 +248,7 @@ func (d *Deletions) Watch(ctx context.Context, logf func(format string, args ...
 	retried := make(chan struct{})
 	go func() { retryPending(ctx, pending, reconcile); close(retried) }()
 	defer func() { cancel(); <-retried }()
-	reconcile()
-	return watchFile(ctx, filepath.Dir(d.Passwd), filepath.Base(d.Passwd), reconcile)
+	return watchFile(ctx, filepath.Dir(d.Passwd), filepath.Base(d.Passwd), reconcile, reconcile)
 }
 
 // retryPending calls reconcile a while after each signal on pending; the
