@@ -4,9 +4,10 @@ package main
 
 import (
 	"context"
-	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 	"os"
 	"runtime"
+
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 )
 
 type nativeAccountBridge struct {
@@ -27,8 +28,13 @@ func (b nativeAccountBridge) Lookup(ctx context.Context, name string) (Subject, 
 		return Subject{}, errNativeAccount
 	}
 	defer f.Close()
-	ctx, cancel := context.WithTimeout(ctx, budget.Operation)
-	defer cancel()
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		// Native directory work shares the operation default; explicit caller
+		// deadlines and cancellation retain their original authority.
+		ctx, cancel = context.WithTimeout(ctx, budget.Operation)
+		defer cancel()
+	}
 	cmd := command(ctx, "/proc/self/fd/3", []string{name})
 	cmd.ExtraFiles = []*os.File{f}
 	out := &boundedOutput{limit: 64 << 10}

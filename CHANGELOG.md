@@ -10,6 +10,10 @@
 - Make descriptor job timeoutMs optional and add a gate rejecting unreviewed literal operation clocks
 - Pin the executor to the matching DSM budget fixes and rebuild its protected runtime inventory; no publication or NAS acceptance is implied
 
+- Add `dsm.LookupAccount` with complete local/domain account snapshots, numeric group IDs, verified source and distinct not-found/timeout/unavailable errors; retain conservative expiry admission and refuse unverified LDAP status
+- Use the shared five-minute default for native account lookups without a caller deadline; preserve explicit per-call deadlines and cancellation
+- Rebuild all three account bridges, retain full executor decoding and refresh the six protected executor digests
+
 ## 0.49.4
 
 - DSM window WebAPI: `createDsmFileStation` (and so `createNasProvider`, executor scope selection and the folder picker) passes WebAPI values, not JSON text, to `ctx.webApi`. DSM's `sendWebAPI` JSON-encodes every value itself, so a list such as `path` reached DSM 7.4 as a string and File Station answered 401: folder lists, the picker and Open in File Station failed in every CLI-generated window
