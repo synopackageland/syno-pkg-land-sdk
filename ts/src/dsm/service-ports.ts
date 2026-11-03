@@ -31,7 +31,8 @@ export async function readDsmPorts(ctx: Pick<Context, 'files'|'webApi'>): Promis
     method: 'POST', credentials: 'same-origin', mode: 'same-origin', redirect: 'error', cache: 'no-store',
     signal: controller.signal,
     headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-SYNO-TOKEN': token},
-    body: new URLSearchParams({api: 'SYNO.Core.Service.PortInfo', version: '1', method: 'load', SynoToken: token}),
+    // DSM refuses a SynoToken in the body (119; 7.1.1 and 7.4.1 alike); the header carries it.
+    body: new URLSearchParams({api: 'SYNO.Core.Service.PortInfo', version: '1', method: 'load'}),
    })
    const reply = response.ok ? await response.json() : undefined
    return reply?.success === true ? reply.data : undefined

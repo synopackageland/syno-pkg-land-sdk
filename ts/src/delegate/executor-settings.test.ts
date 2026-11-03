@@ -155,7 +155,7 @@ test('scope selection lists shares through the supplied window channel',async()=
  const ctx={webApi,async call<T>(){return {scope_mode:'install-selected',selection:{scope:'shared:media',root:'/media',generation:1}} as T}}
  const p=await settings({state:'ready'},ctx)
  try{
-  expect(webApi).toHaveBeenCalledWith('SYNO.FileStation.List','list_share',2,expect.objectContaining({offset:'0'}))
+  expect(webApi).toHaveBeenCalledWith('SYNO.FileStation.List','list_share',2,expect.objectContaining({offset:0,additional:['size']}))
   expect(fetch).not.toHaveBeenCalled()
  }finally{p.done();vi.unstubAllGlobals()}
 })

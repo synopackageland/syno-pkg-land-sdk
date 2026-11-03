@@ -22,13 +22,16 @@ export function createFileTransfers(transport:FileTransport={}){
    if(!doc){frame.remove();frames.delete(frame);throw {code:'unavailable'}}
    // The isolated form has its own CSP: a DSM redirect cannot submit the
    // token to another origin. No file buffering or blob-size limit is added.
+   // DSM refuses a SynoToken in a POST body (119; 7.1.1 and 7.4.1 alike) and a form cannot set
+   // X-SYNO-TOKEN, so the token is in the same-origin action's query, as in
+   // DSM's own media URLs.
    const csp=doc.createElement('meta');csp.httpEquiv='Content-Security-Policy';csp.content="default-src 'none'; form-action 'self'; base-uri 'none'";doc.head.append(csp)
-   const form=doc.createElement('form');form.method='POST';form.action=DSM_FILE_ENDPOINT
-   for(const [name,value] of Object.entries({api:'SYNO.FileStation.Download',method:'download',version:'2',path:JSON.stringify([path]),mode:'download',SynoToken:token})){
+   const form=doc.createElement('form');form.method='POST';form.action=`${location.origin}${DSM_FILE_ENDPOINT}?${new URLSearchParams({SynoToken:token})}`
+   for(const [name,value] of Object.entries({api:'SYNO.FileStation.Download',method:'download',version:'2',path:JSON.stringify([path]),mode:'download'})){
     const input=doc.createElement('input');input.type='hidden';input.name=name;input.value=value;form.append(input)
    }
    doc.body.append(form)
-   try{form.submit()}finally{for(const input of Array.from(form.querySelectorAll('input')))input.value='';form.remove()}
+   try{form.submit()}finally{for(const input of Array.from(form.querySelectorAll('input')))input.value='';form.action='';form.remove()}
   },
   dispose(){disposed=true;for(const frame of frames)frame.remove();frames.clear();for(const upload of uploads)upload.abort();uploads.clear()},
   async upload(parent:string,file:File,signal:AbortSignal):Promise<void>{
