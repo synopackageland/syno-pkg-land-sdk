@@ -37,12 +37,6 @@
   },
   {
     "file": "background/store.go",
-    "statement": "RequestLockTimeout = 5 * time.Second",
-    "class": "B",
-    "reason": "Local journal lock admission returns retryable busy before work is admitted; loop spacing"
-  },
-  {
-    "file": "background/store.go",
     "statement": "case <-time.After(10 * time.Millisecond):",
     "class": "B",
     "reason": "Local journal lock admission returns retryable busy before work is admitted; loop spacing"

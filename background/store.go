@@ -39,10 +39,9 @@ const (
 	// JobTimeout shares the default operation allowance. Apps can set Runner.Timeout for their
 	// fixed Work; cancel, pause and package stop still interrupt it.
 	JobTimeout = runtimebudget.Operation
-	// RequestLockTimeout bounds journal contention, not job execution. Leave
-	// time for authentication, file import and the response. Workers have no
-	// lock cap.
-	RequestLockTimeout = 5 * time.Second
+	// Journal admission is operation work too. The caller's earlier deadline or
+	// cancellation still wins; workers have no independent lock cap.
+	RequestLockTimeout = runtimebudget.Operation
 	// MaxHistory bounds finished jobs kept for reading results and for key reuse.
 	MaxHistory = 64
 
