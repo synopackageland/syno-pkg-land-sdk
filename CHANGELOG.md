@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.49.4
+
+- DSM window WebAPI: `createDsmFileStation` (and so `createNasProvider`, executor scope selection and the folder picker) passes WebAPI values, not JSON text, to `ctx.webApi`. DSM's `sendWebAPI` JSON-encodes every value itself, so a list such as `path` reached DSM 7.4 as a string and File Station answered 401: folder lists, the picker and Open in File Station failed in every CLI-generated window
+- Session token: where the SDK calls DSM WebAPI itself (File Station JSON calls and uploads, `readDsmPorts`) it sends SynoToken only in `X-SYNO-TOKEN`; DSM refuses a SynoToken in a POST body (119), on 7.1.1 as on 7.4.1, so that placement never worked. Native downloads, whose form cannot set a header, put it in the query of the isolated same-origin form action
+- Test both against a DSM 7.4 model: a `sendWebAPI` that encodes as DSM's `SYNO.API.EncodeParams` does, and an `entry.cgi` that refuses a body token
+- `AppShell` no longer takes a shell-wide `description`, which every page without its own showed as a subtitle. A page that needs one still sets `description` on its own entry
+- Reuse the immutable executor/v0.48.0 release and its six digests; executor sources, policies and task definitions are unchanged
+
 ## 0.49.3
 
 - Preserve the requested App URL across explicit DSM sign-in retries, including external origins and OIDC requests
