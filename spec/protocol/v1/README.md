@@ -36,32 +36,20 @@ arrives before the outer layer gives up. The margin is 10 seconds between
 the executor and its client and between the client and the request; the
 browser waits 2 seconds past the request (`timeouts.json` holds the values).
 
-| Layer | Waits for | Bound |
-|---|---|---|
-| Root program (`run.timeout_s`) | its own work | 1–120 s, default 20; the process group is then killed |
-| Executor, `root.run` | the program, then its reply | answers within 130 s (120 + 10) |
-| Executor, raw `webapi.call` | its streaming DSM call | executes within 1800 s, answers within 1810 s |
-| Executor, other ops | its DSM calls | answers within 30 s |
-| Executor client (Go `delegate.Client`, the bridge runtime's `root.*` and `delegate.*`) | the executor | `root.run` 140 s (`delegate.RootRunTimeout`); Go raw WebAPI 1820 s; other ops 40 s (`delegate.ExecutorTimeout`) |
-| Request (`api.Timeout`, manifest `timeout_seconds`) | the App's backend | default 300 s (`api.DefaultRequestTimeout`), 1–3600 |
-| Browser (`clientTimeout`, the CLI window's `call`) | the request | the request's deadline + 2 s |
+| Layer | Allowance |
+| --- | --- |
+| Operation, JSON/raw WebAPI, command, lifecycle default | 300 s, from `runtimebudget.Operation` |
+| Root program | 300 s default; explicit approved `run.timeout_s` 1–3600 s |
+| Executor root answer | Explicit maximum program ceiling + 10 s reply reserve |
+| Executor client | 10 s beyond executor work/answer; earlier caller deadline wins |
+| Request | 300 s default; explicit `api.Timeout` / manifest setting remains effective |
+| Browser | Request allowance + 2000 ms response reserve |
 
-- The request's deadline ends every inner wait: a client never waits past it.
-  An App whose backend awaits `root.run` therefore needs a deadline of at
-  least the program's `run.timeout_s` + 20 seconds (the executor's 10 and the
-  client's 10), so a 120-second program needs `timeout_seconds` 140; a build
-  tool SHOULD refuse less. The default 300 covers the maximum synchronous
-  program and its response reserve. Longer privileged work uses root jobs;
-  request time never enlarges an approved program budget.
-- A client that gave up does not stop the work: `root.run` runs on (it cannot
-  be canceled), and `portal.register` and `portal.unregister` finish their
-  steps within 2 minutes. The client reads the result again (`status`,
-  `root.jobs.get`) instead of repeating the work.
-- The start step (Package start step) is waited on by no request: while it
-  runs (at most 60 seconds) every op but `status` is refused at once with
-  `EXECUTOR_STARTING` (retryable). A window that waits for the executor to
-  become ready polls `status` for longer than 60 seconds before it reports
-  the start step as still running.
+Every layer consumes remaining caller time; margins never enlarge authority.
+A lost reply leaves a dispatched mutation uncertain and must not cause replay.
+Startup availability remains starting while the owned supervisor waits; policy
+and lifecycle validation failures still fail closed. Non-failure clocks and their
+reasons are recorded in `scripts/timeout-allowlist.json`.
 
 ## Request
 
@@ -185,9 +173,8 @@ Since 0.10.0. Each `root` entry pins a program by its SHA-256 digest; a bare
 digest is a script `root.run` may run with the defaults. The object form is
 `{"digest", "kind", "schema", "run"}`: `kind` `script` (`root/<name>.sh`) or
 `binary` (`root/<name>`), `schema` a closed JSON Schema subset for its params,
-`run` its `timeout_s` (1–120, default 20) and `max_output` (≤ 64 MiB,
-default 1 MiB), `job` its background limits: `timeout_s` (1–604800, default
-86400), `grace_s` (1–60, default 10), `max_concurrent` (1–4, default 1) and
+`run` its `timeout_s` (1–3600, default 300) and `max_output` (≤ 64 MiB,
+default 1 MiB), `job` its background limits: `timeout_s` (legacy compatibility metadata, no elapsed kill timer), `grace_s` (1–60, default 10), `max_concurrent` (1–4, default 1) and
 `nice` (0–19, default 10). `executor/README.md` lists the schema keywords.
 `root.run` needs `run`, `root.start` needs `job`; an entry may have both.
 
@@ -301,8 +288,9 @@ The job reports on fd 5 and is told to stop on fd 4; both are pipes.
   means the executor ended: the job should stop too. The job ends
   gracefully; `grace_s` after the cancel (at most 15 seconds on package stop,
   upgrade and uninstall) the executor kills its process group.
-- **Timeout**: `timeout_s` after the start the process group is killed
-  without a cancel (`timed-out`).
+- **Runtime**: a live job keeps running regardless of elapsed time. Legacy
+  `timeout_s` does not kill it. Process exit, explicit cancellation, lifecycle
+  stop and ownership/authority failure still end it.
 - A job MAY also keep its own progress files (for example in
   `SYNOPKGLAND_ROOT_STATE`) for its App to read; the executor does not
   interpret them.
@@ -345,7 +333,7 @@ the executor runs once after each install or upgrade, with no session:
 - It runs only while the approval is live (as for the purge step); otherwise
   it MUST log `start root step skipped: not approved` and run at the next
   start. A step cut short because the executor ended also runs again.
-- It runs for at most 60 seconds; its exit and output go to the executor log,
+- It runs with the shared operation allowance; its exit and output go to the executor log,
   and the executor MUST become ready whatever it answers. A failure is the result of
   that version: the step does not run again until the next upgrade or
   reinstall, so the program should be idempotent.
@@ -394,7 +382,7 @@ runs as root at uninstall, with no session.
 - The op gets the argument `delete-state` when the package account wrote
   `delete-state` to `var/executor/uninstall` before its request (the
   `executor/lifecycle purge --delete-state` helper does), and `keep-state`
-  otherwise. It runs for at most 60 seconds; its exit status and output go to
+  otherwise. It runs with the shared operation allowance; its exit status and output go to
   the purge log, and a failure MUST NOT stop the rest of the purge.
 
 ## Grants

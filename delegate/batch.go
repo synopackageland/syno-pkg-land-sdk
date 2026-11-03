@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"maps"
 	"net"
 	"strconv"
@@ -74,7 +75,7 @@ func (b *batchClient) call(ctx context.Context, c *Client, op string, auth map[s
 		b.stop = context.AfterFunc(ctx, func() { conn.Close() })
 		b.reader = bufio.NewReader(conn)
 		b.auth = maps.Clone(auth)
-		duration := 60 * time.Second
+		duration := runtimebudget.Operation
 		if deadline, ok := ctx.Deadline(); ok {
 			duration = min(duration, time.Until(deadline))
 		}

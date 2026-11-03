@@ -156,7 +156,7 @@ func TestRootWaitFollowsAJobToItsEnd(t *testing.T) {
 
 // root.run waits for the program's two minutes; a request may carry 1 MiB.
 func TestClientGivesRootRunItsDeadlineAndRequestSize(t *testing.T) {
-	if timeoutFor("root.run", 20*time.Second) != RootRunTimeout || timeoutFor("root.start", 20*time.Second) != 20*time.Second || timeoutFor("root.run", time.Hour) != time.Hour {
+	if timeoutFor("root.run", 20*time.Second) != RootRunTimeout || timeoutFor("root.start", 20*time.Second) != 20*time.Second || timeoutFor("root.run", 2*time.Hour) != 2*time.Hour {
 		t.Fatal("deadlines")
 	}
 	c := executor(t, func(q Request) string { return `{"ok":true,"result":{}}` + "\n" })

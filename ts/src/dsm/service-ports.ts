@@ -1,4 +1,4 @@
-import type {Context} from '../context'
+import {clientTimeout,type Context} from '../context'
 
 /** One inclusive destination range; a single port has equal bounds. */
 export interface DsmPortRange {first: number; last: number}
@@ -38,7 +38,7 @@ export async function readDsmPorts(ctx: Pick<Context, 'files'|'webApi'>): Promis
    return reply?.success === true ? reply.data : undefined
   }
   const data = await Promise.race([request(), new Promise<undefined>(resolve => {
-   timer = setTimeout(() => {controller.abort(); resolve(undefined)}, 5000)
+   timer = setTimeout(() => {controller.abort(); resolve(undefined)}, clientTimeout())
   })]) as {port_info?: unknown}|null|undefined
   if (!Array.isArray(data?.port_info)) return []
   const text = (v: unknown) => typeof v === 'string' ? v.trim() : ''

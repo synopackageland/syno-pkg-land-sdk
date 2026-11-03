@@ -382,8 +382,7 @@
                       "state",
                       "done",
                       "failed",
-                      "intervalMs",
-                      "timeoutMs"
+                      "intervalMs"
                     ]
                   }
                 ]

@@ -1,5 +1,6 @@
 import {afterEach, expect, test, vi} from 'vitest'
 import {readDsmPorts} from './service-ports'
+import {clientTimeout} from '../context'
 
 afterEach(() => {vi.unstubAllGlobals(); vi.useRealTimers()})
 const files = {token: () => 'fixture-token'}
@@ -55,13 +56,20 @@ test('missing session, DSM refusal, HTTP, JSON and transport failure are empty',
  expect(await readDsmPorts({webApi:async()=>{throw Error('denied')}})).toEqual([])
 })
 
-test('a stuck session channel or fetch cannot keep a read pending past five seconds', async () => {
+test('a stuck session channel or fetch uses the shared operation allowance', async () => {
  vi.useFakeTimers()
  for (const ctx of [{webApi:() => new Promise<never>(()=>{})},{files}]) {
   const fetch = vi.fn((_url:string,_options:RequestInit)=>new Promise<never>(()=>{})); vi.stubGlobal('fetch',fetch)
   const pending = readDsmPorts(ctx)
-  await vi.advanceTimersByTimeAsync(5000)
+  await vi.advanceTimersByTimeAsync(clientTimeout())
   expect(await pending).toEqual([])
   if (fetch.mock.calls.length) expect(fetch.mock.calls[0]?.[1].signal?.aborted).toBe(true)
  }
+})
+
+test('a slow DSM channel still returns its ports after sixty seconds', async () => {
+ vi.useFakeTimers()
+ const pending=readDsmPorts({webApi:()=>new Promise(resolve=>setTimeout(()=>resolve({port_info}),60000))})
+ await vi.advanceTimersByTimeAsync(60000)
+ expect((await pending).map(p=>p.id)).toEqual(['http','ntp','mixed','ftp'])
 })

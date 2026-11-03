@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"io"
 	"log"
 	"sync"
@@ -195,7 +196,7 @@ func (r *Runner) Process(parent context.Context, job *Job) {
 	watcher.Wait()
 	outcome.Progress, outcome.Checkpoint, _ = task.update()
 	// The stop signal that ended parent must not prevent recording the outcome.
-	fin, done := context.WithTimeout(context.Background(), 10*time.Second)
+	fin, done := context.WithTimeout(context.Background(), runtimebudget.Operation)
 	defer done()
 	if err := r.Store.Finish(fin, job.ID, outcome); err != nil {
 		log.Printf("job %s outcome not recorded: %v", job.ID, err)

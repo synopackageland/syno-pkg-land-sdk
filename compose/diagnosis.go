@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"github.com/synopackageland/syno-pkg-land-sdk/outbound"
 	"io"
 	"maps"
@@ -95,8 +96,8 @@ func DiagnoseImageFailure(message, phase string) ImageDiagnosis {
 	return imageDiagnosis(ClassifyImageFailure(message), "container_manager", phase, "", "native_operation_failed")
 }
 
-const registryCheckBudget = 5 * time.Second
-const registryRequestBudget = 2 * time.Second
+const registryCheckBudget = runtimebudget.Operation
+const registryRequestBudget = runtimebudget.Operation
 
 // CheckRegistries is informational. It only contacts HTTPS /v2/ on at most
 // four distinct registries from immutable image references in compose.lock.json.
@@ -129,7 +130,7 @@ func checkRegistriesWithMirrors(ctx context.Context, project, phase string, tran
 	if tr, ok := transport.(*http.Transport); ok {
 		tr = tr.Clone()
 		tr.Proxy = nil
-		tr.TLSHandshakeTimeout = registryRequestBudget
+		tr.TLSHandshakeTimeout = runtimebudget.Operation
 		tr.ResponseHeaderTimeout = registryRequestBudget
 		tr.MaxResponseHeaderBytes = 16384
 		tr.DisableKeepAlives = true

@@ -10,27 +10,46 @@ Long or unpredictable NAS operations should use the existing package-private
 background spool and worker. A larger request allowance is useful for bounded
 synchronous operations; it does not make a CGI request durable.
 
-## Request path audit
+## One operation policy
 
-| Boundary | Decision and current behavior |
-| --- | --- |
-| `api.DefaultRequestTimeout`, `WithRequestDeadline` | The old one-minute default truncated ordinary slow NAS work. Default to 300 seconds. An existing deadline is retained by Server; wrapping with a shorter deadline still wins. Handlers and dependencies must honor context cancellation. |
-| `api.ServeIngress` | JSON/transfer requests inherit the same default. Raw `HandleHTTP` routes retain their separate one-hour stream allowance and configured nginx timeout. Read-header and shutdown limits do not bound completed-header business work. |
-| TS `DEFAULT_REQUEST_TIMEOUT`, `clientTimeout`, `createClient` and NAS provider | Default to 300000 ms plus a 2000 ms response reserve. Explicit `requestTimeout` still wins. A slow call is not canceled at one minute. Cancellation still aborts immediately; no mutation is replayed automatically. |
-| Direct browser File Station reads | Default to the same 302-second client allowance; an explicit `DsmFileOptions.timeout` wins. Uploads retain their separate 20-minute default. These are DSM requests, not a package-account proxy. |
-| Legacy Go `filestation.Service` | Keep the existing 20-second verification/import/browse/check bounds in this change. The default Go client refuses file proxy operations; the supported browser path has the larger allowance above. Custom DSMClient adapters that perform slow file import/browse remain a tolerance concern: use independent jobs or separately review their operation budgets. They do not inherit a five-minute file-operation allowance merely from the API default. |
-| `internal/runtimebudget.Operation` | The unconfigured operation fallback is 300 seconds, including bridge interpreter discovery and supervisor recovery windows. Configured operation budgets still win; nested calls retain reply/cleanup reserve. |
-| Bridge cold start | Without an explicit `Config.StartTimeout`, hello shares half the request budget, including when the manifest omits a timeout. This avoids an independent hardcoded one-minute fallback. |
-| `background.JobTimeout` | One minute also truncated jobs after HTTP was removed. Default to 30 minutes. Trusted assembly can choose `Runner.Timeout`; cancellation, pause, stop, crash recovery and spool quotas retain their semantics. |
-| `background.RequestLockTimeout` | Keep five seconds. This bounds contention on a local journal lock, not execution of NAS work. Return busy and retry admission with the same key; lengthening this wait would hold browser requests behind a stalled journal. |
-| `background.ScheduleWindow` | Keep 60 seconds. This is the scheduler tick window, not a job execution cap. Missed schedules are not replayed. |
-| `delegate.DownloadTimeout` and download HTTP client | Default to 30 minutes for the background transfer, with 300 seconds for response headers. The old 60-second total and ten-second header wait were independent slow-origin failures. Size limits, five-second connection establishment, no redirects, final write authorization, revocation and existing grant expiry remain enforced. Queue wait does not renew a grant. |
-| Delegate batch / executor `maxBatchDuration` | Keep the 60-second cap and 32-operation limit on a single privileged connection. A larger browser deadline does not enlarge this protocol bound. Split bounded batches in trusted worker code or use approved root jobs for long privileged work. |
-| Executor ordinary calls, `root.run`, commands and lifecycle | Keep existing per-operation/program caps and pinned `timeouts` policy. Remaining request time can only reduce an approved bound. Changing privileged policy requires approval; long root work uses `root.start` / `root.jobs.*`. No generic HTTP change extends authority. |
-| `idgateway.ResponseHeaderTimeout` | Default to 310 seconds, leaving a ten-second reserve past the standard App deadline. An explicit gateway setting wins and must exceed a customized upstream deadline. Upstream bodies are not covered by this header timer. |
-| Gateway operation / token adapter | Unconfigured operation fallback is 300 seconds. Explicit operation settings and the standalone `ExecTokens` ten-second adapter fallback remain distinct. Token/session/assertion lifetimes, directory authentication bounds and revalidation are not NAS job budgets. |
-| Connection, authentication, cleanup and readiness probes | Keep bounded establishment/lookup/cleanup limits. They protect admission or cleanup, not long business work. Supervisor availability has its existing tolerant starting/recovery window; the operation fallback now allows five minutes. Real authority failures remain immediate refusals. |
-| Separate CLI `ctl` and Compose planning command | Their own transport/planning budgets are outside this request default. Use an explicit ctl timeout for long synchronous calls, or nonblocking job submission and status reads. The SDK Compose plan command retains its 60-second bounded planning call. |
+`internal/runtimebudget.Operation` is the only default work allowance: five
+minutes. Operation code must use it (or the TS `DEFAULT_REQUEST_TIMEOUT`), honor
+an explicit caller/approved policy deadline, or wait without a deadline while
+honoring cancellation. Authentication, directory lookup, DSM WebAPI, File Station,
+notifications, registry checks, subprocesses, cleanup, uploads, downloads and
+background jobs do not invent shorter local defaults. Package-account jobs can
+use an explicit trusted `Runner.Timeout`. Root jobs and asynchronous moves have
+no elapsed lifetime cap: they end on exit, cancellation or lifecycle/authority failure.
+
+Bridge interpreter discovery and hello share the request allowance, without a
+half-budget cold-start cutoff. The standalone Session default is the same
+operation allowance. An explicit `Config.StartTimeout` remains supported.
+
+Executor ordinary commands, JSON/raw WebAPI, lifecycle defaults and batch work
+use the shared allowance. Explicit pinned root program limits remain effective;
+`root.run` defaults to 300 seconds and accepts approved values up to 3600.
+Socket clients leave reply reserves, but an earlier request deadline still wins.
+Byte ceilings, operation allowlists, identities, grants, and no-replay rules
+remain enforced. Raw byte-size hints no longer select another default timeout.
+
+Compose gateways start while the upstream becomes ready. New ingress remains
+closed until a fresh probe succeeds. Slow or missing listeners keep the package
+running and the gateway showing starting; availability alone never stops the
+owned child, even beyond a startup/recovery window. Invalid policy, binding,
+installed version or lifecycle generation still refuses admission immediately.
+Explicit lifecycle stop and cancellation remain effective.
+
+Non-failure timing is separate: retry/backoff spacing, progress and heartbeat
+polls, credential/cache lifetimes, incomplete-header framing, response reserves,
+and graceful stop/reap timing after cancellation. Journal lock contention returns
+retryable busy before work is admitted. Portal's five-second refresh hint keeps
+the pending mutation busy and awaited. None is a second NAS work deadline.
+
+Run `node scripts/check-timeout-policy.mjs` (also part of `scripts/gate.sh`).
+It rejects literal clocks outside the canonical budget unless the exact statement
+has a reviewed B exception and reason in `scripts/timeout-allowlist.json`.
+Import-free browser/Python deployment copies are checked against
+`spec/protocol/v1/timeouts.json`; changed literals fail the gate.
 
 ## Outer DSM and proxy boundaries
 
@@ -63,8 +82,7 @@ long synchronous operations fit.
    the existing admission outcome and original job ID promptly.
 2. Run trusted `Runner.Work` under the package account in its independent
    worker process or resident daemon. Use context-aware NAS calls and report
-   phases with `Task.Report`; unknown totals stay unknown. Set a finite
-   execution allowance appropriate to the fixed operation.
+   phases with `Task.Report`; unknown totals stay unknown. Use the shared operation allowance, or an explicit trusted job allowance.
 3. Authenticate each status/result/cancel request again. Poll by the original
    ID with bounded backoff; keep the last known state during read failures.
    A timed-out poll means status is unavailable, not that the job failed.

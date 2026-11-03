@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"io"
 	"os"
 	"regexp"
@@ -35,9 +36,9 @@ const (
 	MaxOwnerBytes   = 1 << 20
 	MaxPurgeAudit   = 64
 	MaxTotalBytes   = 16 << 20
-	// JobTimeout is independent of HTTP. Apps can set Runner.Timeout for their
+	// JobTimeout shares the default operation allowance. Apps can set Runner.Timeout for their
 	// fixed Work; cancel, pause and package stop still interrupt it.
-	JobTimeout = 30 * time.Minute
+	JobTimeout = runtimebudget.Operation
 	// RequestLockTimeout bounds journal contention, not job execution. Leave
 	// time for authentication, file import and the response. Workers have no
 	// lock cap.

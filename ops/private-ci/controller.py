@@ -1,4 +1,5 @@
 """Repo-scoped, single-use GitHub runners. PAT never enters a job container."""
+from runtime_budget import OPERATION_SECONDS
 import http.client
 import io
 import json
@@ -50,7 +51,7 @@ class GitHub:
                      'Accept': 'application/vnd.github+json',
                      'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'private-ci'})
         try:
-            with urllib.request.urlopen(req, timeout=20) as response:
+            with urllib.request.urlopen(req, timeout=OPERATION_SECONDS) as response:
                 body = response.read()
                 return json.loads(body) if body else None
         except urllib.error.HTTPError as error:
@@ -83,7 +84,7 @@ class GitHub:
             ]
             for command in commands:
                 result = subprocess.run(command, env=env, stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE, timeout=120)
+                                        stderr=subprocess.PIPE, timeout=OPERATION_SECONDS)
                 if result.returncode:
                     raise RuntimeError('dependency Git operation failed')
             if bundle.stat().st_size > 64 * 1024**2:
@@ -96,7 +97,7 @@ class GitHub:
 
 class UnixHTTP(http.client.HTTPConnection):
     def __init__(self):
-        super().__init__('localhost', timeout=30)
+        super().__init__('localhost', timeout=OPERATION_SECONDS)
 
     def connect(self):
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -171,7 +172,7 @@ class Docker:
         try:
             self.request('POST', '/containers/' + cid + '/start')
             # Poll rather than block Docker's connection for the full trim.
-            deadline = time.monotonic() + 600
+            deadline = time.monotonic() + OPERATION_SECONDS
             while True:
                 state = self.request('GET', '/containers/' + cid + '/json')['State']
                 if not state['Running']:

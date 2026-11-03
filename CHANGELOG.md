@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.49.5
+
+- Use one five-minute operation default across DSM identity, File Station, WebAPI, commands, bridge startup, cleanup, notifications and transfers; preserve explicit caller cancellation
+- Keep Compose gateways starting through slow readiness and listener gaps; authority and lifecycle failures still refuse ingress
+- Keep live root jobs and asynchronous moves running until completion or cancellation; never kill them by total elapsed time
+- Make descriptor job timeoutMs optional and add a gate rejecting unreviewed literal operation clocks
+- Pin the executor to the matching DSM budget fixes and rebuild its protected runtime inventory; no publication or NAS acceptance is implied
+
 ## 0.49.4
 
 - DSM window WebAPI: `createDsmFileStation` (and so `createNasProvider`, executor scope selection and the folder picker) passes WebAPI values, not JSON text, to `ctx.webApi`. DSM's `sendWebAPI` JSON-encodes every value itself, so a list such as `path` reached DSM 7.4 as a string and File Station answered 401: folder lists, the picker and Open in File Station failed in every CLI-generated window

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"github.com/synopackageland/syno-pkg-land-sdk/api"
 	"github.com/synopackageland/syno-pkg-land-sdk/background"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"io"
 	"net/http"
 	"net/url"
@@ -286,14 +287,14 @@ func (s *Service) handle(ctx context.Context, c api.Caller, r *http.Request, met
 				return background.DelegationBinding{}, e
 			}
 			if grant.Subject.Username != owner.User || grant.Subject.UIDString() != owner.UID {
-				cleanup, done := context.WithTimeout(context.Background(), 10*time.Second)
+				cleanup, done := context.WithTimeout(context.Background(), runtimebudget.Operation)
 				defer done()
 				s.revokeJob(cleanup, background.DelegationBinding{JobID: id, DelegationID: grant.DelegationID})
 				return background.DelegationBinding{}, fail("identity_unavailable")
 			}
 			return background.DelegationBinding{DelegationID: grant.DelegationID, ExpiresAt: grant.ExpiresAt}, nil
 		}, func(b background.DelegationBinding) {
-			cleanup, done := context.WithTimeout(context.Background(), 10*time.Second)
+			cleanup, done := context.WithTimeout(context.Background(), runtimebudget.Operation)
 			defer done()
 			if s.revokeJob(cleanup, b) == nil {
 				_ = s.Store.ForgetDelegation(cleanup, b.JobID)

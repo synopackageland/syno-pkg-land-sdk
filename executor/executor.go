@@ -338,7 +338,7 @@ func (e *Executor) Connection(parent context.Context, c net.Conn, uid int, peer 
 	if err != nil || (got != uid && got != 0) {
 		return
 	}
-	c.SetDeadline(time.Now().Add(15 * time.Second))
+	c.SetDeadline(time.Now().Add(budget.Operation))
 	// Only root.run and root.start may exceed 64 KiB: they carry params.
 	reader := bufio.NewReader(c)
 	line, err := readBatchLine(reader, maxRootRequest)
@@ -359,17 +359,17 @@ func (e *Executor) Connection(parent context.Context, c net.Conn, uid int, peer 
 		e.batchConnection(parent, c, reader, req, got, uid)
 		return
 	} else {
-		bound := executorOpBound
+		bound := e.Policy.budgets().Duration("operation")
 		if req.Op == "root.run" {
 			bound = rootRunRequestBy
 		} else if req.Op == "webapi.call" && rawWebAPIRequest(req.Params) {
-			bound = webAPIRawTimeout + 10*time.Second
+			bound = e.Policy.budgets().Duration("operation") + 10*time.Second
 		} else if req.DeadlineMS > 0 {
 			bound = e.Policy.budgets().Duration("operation")
 		}
 		maxDeadline := int64(3600000)
 		if req.Op == "webapi.call" && rawWebAPIRequest(req.Params) {
-			maxDeadline = (webAPIRawTimeout + 20*time.Second).Milliseconds()
+			maxDeadline = (budget.MaxSeconds*time.Second + 20*time.Second).Milliseconds()
 		}
 		if req.DeadlineMS < 0 || req.DeadlineMS > maxDeadline {
 			json.NewEncoder(c).Encode(deny("INVALID_REQUEST"))
@@ -388,7 +388,7 @@ func (e *Executor) Connection(parent context.Context, c net.Conn, uid int, peer 
 			out = e.handlePeer(admitted, req, got, uid)
 		}
 	}
-	c.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	c.SetWriteDeadline(time.Now().Add(budget.Operation))
 	json.NewEncoder(c).Encode(out)
 }
 

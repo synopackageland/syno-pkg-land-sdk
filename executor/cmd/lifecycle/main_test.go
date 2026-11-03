@@ -12,11 +12,11 @@ func TestPurgeTakesTheUninstallAnswerAndWaitsForTheRootStep(t *testing.T) {
 		upgrade     bool
 		wait        time.Duration
 	}{
-		{[]string{"stop", "--package", "TestApp"}, false, false, 60 * time.Second},
-		{[]string{"stop", "--package", "TestApp", "--upgrade"}, false, true, 60 * time.Second},
-		{[]string{"start", "--package", "TestApp"}, false, false, 60 * time.Second},
-		{[]string{"purge", "--package", "TestApp"}, false, false, 360 * time.Second},
-		{[]string{"purge", "--package", "TestApp", "--delete-state"}, true, false, 360 * time.Second},
+		{[]string{"stop", "--package", "TestApp"}, false, false, 300 * time.Second},
+		{[]string{"stop", "--package", "TestApp", "--upgrade"}, false, true, 300 * time.Second},
+		{[]string{"start", "--package", "TestApp"}, false, false, 300 * time.Second},
+		{[]string{"purge", "--package", "TestApp"}, false, false, 600 * time.Second},
+		{[]string{"purge", "--package", "TestApp", "--delete-state"}, true, false, 600 * time.Second},
 	} {
 		r, err := parse(c.args)
 		if err != nil || r.cfg.Package != "TestApp" || r.action != c.args[0] || r.cfg.DeleteState != c.deleteState || r.cfg.Upgrade != c.upgrade || r.wait != c.wait {

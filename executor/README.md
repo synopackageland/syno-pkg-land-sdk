@@ -117,7 +117,7 @@ with the defaults; the object form declares the rest:
   which every object must set to `false`. Keys are `[a-z0-9_]{1,64}`, nesting
   is at most 8 levels; any other keyword makes the policy invalid. Without a
   schema the program takes `{}` only.
-- `run`: `root.run` may run it. `timeout_s` is 1–120 (default 20),
+- `run`: `root.run` may run it. `timeout_s` is 1–3600 (default 300),
   `max_output` 1 B–64 MiB (default 1 MiB). An entry without `run` is refused by
   `root.run` with `POLICY_DENIED`.
 
@@ -149,7 +149,7 @@ unavailable`, and executor.log names the program and the cause. Staged root outp
 past `max_output` kills the program (`limit-exceeded`), the timeout kills its
 process group (`ROOT_TIMEOUT`), and a signal or a start failure is
 `ROOT_FAILED`. The request may carry up to 1 MiB of params and the executor
-answers within 130 seconds; clients wait 140.
+uses the approved program allowance plus response reserves; earlier caller deadlines win.
 
 `root.run` cannot be canceled. A client that stops waiting (a browser that
 disconnects, or a bridge request whose deadline passes, so the runtime
@@ -160,7 +160,8 @@ request, is a job: `root.start`, then `root.jobs.stop`.
 
 ### Root jobs
 
-An entry with `job` (`timeout_s` 1–604800, default 86400; `grace_s` 1–60,
+An entry with `job` (`timeout_s` is accepted for compatibility and never caps
+a live job; `grace_s` 1–60,
 default 10; `max_concurrent` 1–4, default 1; `nice` 0–19, default 10) runs in
 the background through `root.start`, and `root.jobs.list`, `root.jobs.get`
 and `root.jobs.stop` follow it (protocol: Root jobs); the four come together
@@ -189,7 +190,7 @@ package stop ended and before the socket goes away, with `stop`, or with
 `var/executor/stop-reason` (`executor/lifecycle stop --upgrade`, from DSM's
 `preupgrade`; a plain `stop` writes `stop`). An upgrade cancels the jobs with
 `upgrade`. Like the purge step it runs only while the approval is live, for at
-most 30 seconds (`SYNOPKGLAND_ROOT_MODE=stop`), logs
+the shared operation allowance (`SYNOPKGLAND_ROOT_MODE=stop`), logs
 `stop root step: ... exit=... output=...` and never blocks the stop;
 `root.run` and `root.start` refuse it, so the policy is invalid when the stop
 or purge entry declares `run` or `job`; pin the same digest under another name
@@ -205,7 +206,7 @@ executor has read the approval tasks back, and until it ends `status`
 answers `ready: false, state: "starting"` and every other request
 `EXECUTOR_STARTING`. Its arguments are
 `install`, or `upgrade` and the version that started before. It runs only
-while the approval is live, for at most 60 seconds
+while the approval is live, with the shared operation allowance
 (`SYNOPKGLAND_ROOT_MODE=start`), logs `start root step: ... exit=...
 output=...` and never blocks the start: the executor becomes ready whatever it answers.
 The executor records the version it started for, with the step's result, in
@@ -325,9 +326,8 @@ produce a mode different from the requested 0600 (observed 0711 on nas.example).
 
 File Station CheckPermission uses v3 with a fixed non-overwriting probe filename
 and size zero; it creates no file. Missing/failed API data is denied. DSM output
-is capped at 1 MiB; commands have 20-second deadlines,
-connection read/write deadlines are 15/5 seconds and request execution is bounded
-by 30 seconds. At most 16 connections are admitted. Legacy runner APIs use short
+is capped at 1 MiB; commands use the shared five-minute default,
+connection reads/writes and ordinary request execution use the shared operation allowance. At most 16 connections are admitted. Legacy runner APIs use short
 admission leases; revoke/disable persist the fence then drain accepted legacy
 calls outside the commit lock before acknowledging. Bulk copy holds no commit
 lock. Linux command timeouts kill the entire command process group.
@@ -418,7 +418,7 @@ each failure without stopping the rest of the cleanup:
   rules=[{app_id,entity_type,entity_name}]`), the calls Control Panel makes.
   Rules of any other App id are never sent. DSM runs every package's
   `app_privilege_set` hooks inside the delete (16-20 seconds on nas.example), so
-  it gets 90 seconds instead of the 20 every other DSM command gets (the
+  it gets the shared operation allowance, as does every other DSM command (the
   per-call bound is capped at 3 minutes). The rules listed after the delete
   decide the outcome, also when the delete call failed; the journal line
   carries `delete_error=timeout|canceled|dsm-<code>|command` then.
@@ -444,7 +444,7 @@ monitor's purge, while the package ships the approved pins and both approval
 tasks of that policy stand unchanged; `root.run` refuses it. Its argument is
 `delete-state` when the package account wrote that answer to
 `var/executor/uninstall` (`executor/lifecycle purge --delete-state`; otherwise
-`keep-state`). It runs for at most 60 seconds, and the log line carries its
+`keep-state`). It runs with the shared operation allowance, and the log line carries its
 exit (`0`, the code, `timeout`, `signal` or `refused`) and up to 4 KiB of
 output. Without a live approval, and on every offline purge, it is skipped and
 `purge root step skipped: not approved` is logged.
@@ -537,7 +537,7 @@ Committed status alone includes `receipt:{path,size}`. Cleanup failures retain
 committed and add `CLEANUP_PENDING`. No same-name/hash guessing establishes receipt.
 
 Limits: 16 GiB per file for the durable operations (legacy `files.write` is held to 100 MiB, checked on the opened staging file before any child starts), actual size+1 read, 16 queued, one active copy per package,
-24-hour attempt, 10 MiB operation metadata. Full journals reject new admissions;
+no elapsed attempt cap, 10 MiB operation metadata. Full journals reject new admissions;
 terminal records are retained to prevent replay. Bulk input bypasses job spools
 and the old 64 MiB wrapper limit. Long copies revalidate account/AppPriv/ACL/path
 with five-second polling and bounded checks; publish revalidates again. An ACL
@@ -618,7 +618,7 @@ API and method names must match their protocol formats. The approved profile
 and the consenting user's DSM permissions govern access. Reserved routing,
 authentication and runner params cannot be supplied. Exact API/method/version
 matches only; no wildcard profiles. Maximum: 32 profiles, 256 version entries,
-1024-byte purpose, 32 KiB encoded params, 48 KiB JSON reply, and a 10-second call
+1024-byte purpose, 32 KiB encoded params, 48 KiB JSON reply, and the shared operation call
 bound (including revalidation). Invalid/duplicate JSON is refused. The normal
 64 KiB wire limit also applies. Audit contains identity, grant, profile, API,
 method, version and admission/completion; it never records API params/results.
@@ -646,12 +646,9 @@ bodies use App-private staging with size and SHA-256. See
 [contract, security bounds and Go consumer example](../docs/webapi-raw.md).
 Attachment.download and X-Accel-Redirect are excluded.
 Raw calls stream with bounded memory and allow 18 minutes per started GiB,
-at least 30 minutes and at most three hours (parent deadline and timed-grant
-expiry can narrow it). Metadata `expected_size` or CGI Content-Length supplies
-the staging reservation; unknown sizes use the profile ceiling. Available disk
-space is checked before body writes; insufficient space is `NO_SPACE`.
-Active staging is protected from orphan cleanup. Revocation/disable cancel and drain the
-transfer; incomplete staging is removed. JSON calls retain the 10-second bound.
+the shared operation allowance (parent deadline and timed-grant expiry still win).
+Expected byte size never selects another default. Cancellation stops the
+transfer; incomplete staging is removed. JSON calls use the shared operation allowance.
 Go consumers use `JobContext.WebAPI().CallRawTo` with a temporary-file writer.
 
 ### Native account eligibility

@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"io"
 	"os"
 	"os/exec"
@@ -26,7 +27,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // Schema is the Config schema this package reads.
@@ -42,7 +42,7 @@ const HeaderName = "synopkgland-backup.json"
 // the data directory while it runs. They are never archived.
 const stagingPrefix = ".synopkgland-backup-"
 
-const hookTimeout = 10 * time.Minute
+const hookTimeout = runtimebudget.Operation
 
 var (
 	// ErrInvalid reports an invalid configuration or an unsafe archive.

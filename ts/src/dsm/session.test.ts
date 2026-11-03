@@ -1,5 +1,6 @@
 import {afterEach, expect, test, vi} from 'vitest'
 import {createDsmSession} from './session.js'
+import {clientTimeout} from '../context'
 
 afterEach(()=>vi.useRealTimers())
 const response=(body:unknown,ok=true)=>({ok,json:async()=>body}) as Response
@@ -70,7 +71,7 @@ test('a recovery deadline aborts the request and settles even if fetch ignores a
  const fetch=vi.fn((_input:RequestInfo|URL,_init?:RequestInit)=>new Promise<Response>(()=>{}))
  const session=createDsmSession({read:()=>undefined,fetch})
  const pending=session.ready()
- await vi.advanceTimersByTimeAsync(15000)
+ await vi.advanceTimersByTimeAsync(clientTimeout())
  expect(await pending).toBeUndefined()
  expect(fetch.mock.calls[0]?.[1]?.signal?.aborted).toBe(true)
 })
@@ -80,10 +81,18 @@ test('a response arriving after the deadline cannot publish a stale token',async
  let resolve!:(response:Response)=>void
  const write=vi.fn(),session=createDsmSession({read:()=>undefined,write,fetch:()=>new Promise<Response>(r=>{resolve=r})})
  const pending=session.ready()
- await vi.advanceTimersByTimeAsync(15000)
+ await vi.advanceTimersByTimeAsync(clientTimeout())
  expect(await pending).toBeUndefined()
  resolve(response({success:true,SynoToken:'late'}))
  await Promise.resolve();await Promise.resolve()
  expect(write).not.toHaveBeenCalled()
  expect(session.token()).toBeUndefined()
+})
+
+test('slow session recovery succeeds after sixty seconds',async()=>{
+ vi.useFakeTimers()
+ const session=createDsmSession({read:()=>undefined,fetch:()=>new Promise(resolve=>setTimeout(()=>resolve(response({success:true,SynoToken:'recovered'})),60000))})
+ const pending=session.ready()
+ await vi.advanceTimersByTimeAsync(60000)
+ expect(await pending).toBe('recovered')
 })

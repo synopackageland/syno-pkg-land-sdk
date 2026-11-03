@@ -2,7 +2,7 @@
 // executor status, the shares to choose from, the user password and why the
 // last approval failed. ExecutorSettings and BackgroundSaveSettings lay it out.
 import {computed,onBeforeUnmount,onMounted,ref,watch} from 'vue'
-import type {Context} from '../context'
+import {DEFAULT_REQUEST_TIMEOUT,type Context} from '../context'
 import type {ScopeSelection} from './long-running'
 import type {CapabilityStatus} from './executor-setup'
 import {confirmFailure,statusUnreachable,useExecutorSetup,type ConfirmFailure} from './use-executor-setup'
@@ -13,7 +13,7 @@ export interface ScopeDetail {scope_mode?:string;preselection?:string;selection?
 // The password field's text for each confirmation DSM refused or could not make.
 const confirmCopy={password_rejected:'passwordRejected',password_required:'passwordRequired',password_confirm_failed:'passwordConfirmFailed'} as const
 // How long a requested scope is read back for, and how often.
-export const SCOPE_READBACK_MS=60000,SCOPE_READBACK_POLL_MS=1000
+export const SCOPE_READBACK_MS=DEFAULT_REQUEST_TIMEOUT,SCOPE_READBACK_POLL_MS=1000
 // initial: a status the caller has just read, which the first load starts from.
 export function useScopeApproval(props:{readonly admin:boolean;readonly locale?:string;readonly ctx?:Pick<Context,'call'|'webApi'>;readonly initial?:CapabilityStatus},confirmed:()=>void|Promise<void>){
  const setup=useExecutorSetup(),copy=computed(()=>delegateCopy(props.locale))

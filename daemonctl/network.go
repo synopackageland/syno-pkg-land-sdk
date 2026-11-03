@@ -132,7 +132,7 @@ func checkNetwork(dir string, uid int, p *networkPolicy) error {
 	}
 	for _, port := range p.Ports {
 		if !found[port] {
-			return fmt.Errorf("compose upstream port %d is not ready as the package UID on 127.0.0.1", port)
+			return fmt.Errorf("COMPOSE_TCP_NOT_READY: upstream port %d is not ready as the package UID on 127.0.0.1", port)
 		}
 	}
 	return nil

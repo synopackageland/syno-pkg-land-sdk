@@ -1,0 +1,698 @@
+[
+  {
+    "file": "api/ingress.go",
+    "statement": "srv := &http.Server{Handler: h, ReadHeaderTimeout: 30 * time.Second}",
+    "class": "B",
+    "reason": "HTTP header framing only; no parsed request or handler work is truncated"
+  },
+  {
+    "file": "api/observer.go",
+    "statement": "o.Duration = time.Nanosecond",
+    "class": "B",
+    "reason": "Positive measurement sentinel, not a work deadline"
+  },
+  {
+    "file": "background/heartbeat.go",
+    "statement": "const workerFreshness = 20 * time.Second",
+    "class": "B",
+    "reason": "Worker liveness evidence; heartbeat loop is independent of job work"
+  },
+  {
+    "file": "background/runner.go",
+    "statement": "sleep(ctx, max(r.Beat, 10*time.Millisecond))",
+    "class": "B",
+    "reason": "Heartbeat, progress and cancellation poll spacing; job has the shared work budget"
+  },
+  {
+    "file": "background/runner.go",
+    "statement": "Poll: 500 * time.Millisecond, CancelPoll: 250 * time.Millisecond, ProgressEvery: time.Second, Beat: 5 * time.Second, Info: info,",
+    "class": "B",
+    "reason": "Heartbeat, progress and cancellation poll spacing; job has the shared work budget"
+  },
+  {
+    "file": "background/schedule.go",
+    "statement": "const ScheduleWindow = 60 * time.Second",
+    "class": "B",
+    "reason": "Scheduler tick admission window; does not terminate an admitted job"
+  },
+  {
+    "file": "background/store.go",
+    "statement": "RequestLockTimeout = 5 * time.Second",
+    "class": "B",
+    "reason": "Local journal lock admission returns retryable busy before work is admitted; loop spacing"
+  },
+  {
+    "file": "background/store.go",
+    "statement": "case <-time.After(10 * time.Millisecond):",
+    "class": "B",
+    "reason": "Local journal lock admission returns retryable busy before work is admitted; loop spacing"
+  },
+  {
+    "file": "bridge/session.go",
+    "statement": "const CancelGrace = time.Second",
+    "class": "B",
+    "reason": "Grace after explicit request cancellation; channel closes with uncertain effects, never replayed"
+  },
+  {
+    "file": "bridge/transfer.go",
+    "statement": "const StaleSpool = 2 * time.Hour",
+    "class": "B",
+    "reason": "Retention age of abandoned spool files, beyond the maximum configured request lifetime"
+  },
+  {
+    "file": "compose/runtime_config_linux.go",
+    "statement": "cmd.WaitDelay = time.Second",
+    "class": "B",
+    "reason": "Pipe drain after subprocess exit/cancellation; never bounds the live command"
+  },
+  {
+    "file": "compose/runtime_periodic_linux.go",
+    "statement": "case <-time.After(5 * time.Second):",
+    "class": "B",
+    "reason": "Grace after lifecycle cancellation before escalating the owned process group"
+  },
+  {
+    "file": "daemonctl/main.go",
+    "statement": "time.Sleep(20 * time.Millisecond)",
+    "class": "B",
+    "reason": "Lock retry, readiness polling or process stabilization spacing; not an availability failure deadline"
+  },
+  {
+    "file": "daemonctl/main.go",
+    "statement": "case <-time.After(min(time.Second, max(0, time.Until(until)))):",
+    "class": "B",
+    "reason": "Lock retry, readiness polling or process stabilization spacing; not an availability failure deadline"
+  },
+  {
+    "file": "daemonctl/main.go",
+    "statement": "tick := time.NewTicker(time.Second)",
+    "class": "B",
+    "reason": "Lock retry, readiness polling or process stabilization spacing; not an availability failure deadline"
+  },
+  {
+    "file": "daemonctl/native.go",
+    "statement": "timer = time.NewTimer(time.Second)",
+    "class": "B",
+    "reason": "Retry/stabilization tick; dependency work keeps its own caller context"
+  },
+  {
+    "file": "daemonctl/startup.go",
+    "statement": "delay := min(100*time.Millisecond, max(0, time.Until(until)))",
+    "class": "B",
+    "reason": "Readiness retry spacing, clipped to the explicit caller wait"
+  },
+  {
+    "file": "delegate/client.go",
+    "statement": "const ExecutorTimeout = runtimebudget.Operation + 10*time.Second",
+    "class": "B",
+    "reason": "Response reserve after the shared work budget, or executor socket retry spacing"
+  },
+  {
+    "file": "delegate/client.go",
+    "statement": "timeout = WebAPIRawTimeout + 20*time.Second",
+    "class": "B",
+    "reason": "Response reserve after the shared work budget, or executor socket retry spacing"
+  },
+  {
+    "file": "delegate/client.go",
+    "statement": "timeout = WebAPIRawTimeoutForSize(*mode.ExpectedSize) + 20*time.Second",
+    "class": "B",
+    "reason": "Response reserve after the shared work budget, or executor socket retry spacing"
+  },
+  {
+    "file": "delegate/client.go",
+    "statement": "case <-time.After(min(100*time.Millisecond, left)):",
+    "class": "B",
+    "reason": "Response reserve after the shared work budget, or executor socket retry spacing"
+  },
+  {
+    "file": "delegate/move.go",
+    "statement": "firstAdmissionBackoff = 2 * time.Second",
+    "class": "B",
+    "reason": "Retry spacing for unconnected admission only; dispatched work is never replayed"
+  },
+  {
+    "file": "delegate/move.go",
+    "statement": "maxAdmissionBackoff = 5 * time.Minute",
+    "class": "B",
+    "reason": "Retry spacing for unconnected admission only; dispatched work is never replayed"
+  },
+  {
+    "file": "delegate/retry.go",
+    "statement": "delay := 2 * time.Second",
+    "class": "B",
+    "reason": "Backoff spacing while no executor connection exists; not a per-attempt work deadline"
+  },
+  {
+    "file": "delegate/retry.go",
+    "statement": "if delay < 30*time.Second {",
+    "class": "B",
+    "reason": "Backoff spacing while no executor connection exists; not a per-attempt work deadline"
+  },
+  {
+    "file": "delegate/retry.go",
+    "statement": "if delay > 30*time.Second {",
+    "class": "B",
+    "reason": "Backoff spacing while no executor connection exists; not a per-attempt work deadline"
+  },
+  {
+    "file": "delegate/retry.go",
+    "statement": "delay = 30 * time.Second",
+    "class": "B",
+    "reason": "Backoff spacing while no executor connection exists; not a per-attempt work deadline"
+  },
+  {
+    "file": "delegate/root.go",
+    "statement": "RootRunTimeout = runtimebudget.MaxSeconds*time.Second + 20*time.Second",
+    "class": "B",
+    "reason": "Reply reserve beyond the maximum explicitly approved root program allowance"
+  },
+  {
+    "file": "delegate/worker.go",
+    "statement": "return &background.Runner{Store: s.Store, Work: work, Timeout: background.JobTimeout, CancelPoll: 100 * time.Millisecond, ProgressEvery: time.Second}",
+    "class": "B",
+    "reason": "Progress, heartbeat and cancel polling; no independent work deadline"
+  },
+  {
+    "file": "delegate/worker.go",
+    "statement": "ticker := time.NewTicker(100 * time.Millisecond)",
+    "class": "B",
+    "reason": "Progress, heartbeat and cancel polling; no independent work deadline"
+  },
+  {
+    "file": "delegate/worker.go",
+    "statement": "beat := time.NewTicker(5 * time.Second)",
+    "class": "B",
+    "reason": "Progress, heartbeat and cancel polling; no independent work deadline"
+  },
+  {
+    "file": "delegate/worker.go",
+    "statement": "ticker := time.NewTicker(500 * time.Millisecond)",
+    "class": "B",
+    "reason": "Progress, heartbeat and cancel polling; no independent work deadline"
+  },
+  {
+    "file": "dsm/admin.go",
+    "statement": "cmd.WaitDelay = 250 * time.Millisecond",
+    "class": "B",
+    "reason": "Pipe drain after command exit/cancellation; does not cap the running lookup"
+  },
+  {
+    "file": "dsm/entry.go",
+    "statement": "EntryCacheTTL = 30 * time.Second",
+    "class": "B",
+    "reason": "Authority cache freshness or duration-unit conversion; not a DSM operation bound"
+  },
+  {
+    "file": "dsm/entry.go",
+    "statement": "if d, ok := entries[key]; ok && d.At <= now && now-d.At < int64(EntryCacheTTL/time.Second) {",
+    "class": "B",
+    "reason": "Authority cache freshness or duration-unit conversion; not a DSM operation bound"
+  },
+  {
+    "file": "dsm/entry.go",
+    "statement": "if d.At <= now && now-d.At < int64(EntryCacheTTL/time.Second) {",
+    "class": "B",
+    "reason": "Authority cache freshness or duration-unit conversion; not a DSM operation bound"
+  },
+  {
+    "file": "dsm/session_cache.go",
+    "statement": "const MaxSessionCacheTTL = time.Hour",
+    "class": "B",
+    "reason": "Session cache lifetime validation; never extends authority or caps a lookup"
+  },
+  {
+    "file": "dsm/session_cache.go",
+    "statement": "if next == nil || ttl < time.Second || ttl > MaxSessionCacheTTL {",
+    "class": "B",
+    "reason": "Session cache lifetime validation; never extends authority or caps a lookup"
+  },
+  {
+    "file": "executor/executor.go",
+    "statement": "bound = e.Policy.budgets().Duration(\"operation\") + 10*time.Second",
+    "class": "B",
+    "reason": "Raw reply reserve beyond shared work, or lock retry spacing"
+  },
+  {
+    "file": "executor/executor.go",
+    "statement": "maxDeadline = (budget.MaxSeconds*time.Second + 20*time.Second).Milliseconds()",
+    "class": "B",
+    "reason": "Raw reply reserve beyond shared work, or lock retry spacing"
+  },
+  {
+    "file": "executor/executor.go",
+    "statement": "case <-time.After(50 * time.Millisecond):",
+    "class": "B",
+    "reason": "Raw reply reserve beyond shared work, or lock retry spacing"
+  },
+  {
+    "file": "executor/internal/budget/budget.go",
+    "statement": "const Reserve = 5 * time.Second",
+    "class": "B",
+    "reason": "Response reserve or seconds-unit conversion; does not set another work default"
+  },
+  {
+    "file": "executor/internal/budget/budget.go",
+    "statement": "n := int(Operation / time.Second)",
+    "class": "B",
+    "reason": "Response reserve or seconds-unit conversion; does not set another work default"
+  },
+  {
+    "file": "executor/internal/lifecycle/lifecycle.go",
+    "statement": "ticker := time.NewTicker(100 * time.Millisecond)",
+    "class": "B",
+    "reason": "Lifecycle mailbox polling interval; total work uses the approved/shared budget"
+  },
+  {
+    "file": "executor/main.go",
+    "statement": "a := monitor.watch(ctx, 500*time.Millisecond)",
+    "class": "B",
+    "reason": "Monitor polling and lock retry spacing"
+  },
+  {
+    "file": "executor/main.go",
+    "statement": "time.Sleep(50 * time.Millisecond)",
+    "class": "B",
+    "reason": "Monitor polling and lock retry spacing"
+  },
+  {
+    "file": "executor/main.go",
+    "statement": "time.Sleep(50 * time.Millisecond)",
+    "class": "B",
+    "reason": "Monitor polling and lock retry spacing"
+  },
+  {
+    "file": "executor/operations.go",
+    "statement": "var moveRevalidationInterval = 5 * time.Second",
+    "class": "B",
+    "reason": "Grant revalidation interval; each validation receives the shared operation allowance"
+  },
+  {
+    "file": "executor/portal_entry.go",
+    "statement": "case <-time.After(50 * time.Millisecond):",
+    "class": "B",
+    "reason": "Lock retry spacing; rollback itself receives the operation allowance"
+  },
+  {
+    "file": "executor/process.go",
+    "statement": "cmd.WaitDelay = time.Second",
+    "class": "B",
+    "reason": "Pipe drain after command exit/cancellation; running command uses shared/caller allowance"
+  },
+  {
+    "file": "executor/root_exec.go",
+    "statement": "cmd.WaitDelay = 5 * time.Second",
+    "class": "B",
+    "reason": "Pipe drain after root process exit/cancellation; pending effects are retained"
+  },
+  {
+    "file": "executor/root_jobs.go",
+    "statement": "stopJobGrace = 15 * time.Second",
+    "class": "B",
+    "reason": "Explicit stop escalation grace, progress persistence or cancel acknowledgement spacing"
+  },
+  {
+    "file": "executor/root_jobs.go",
+    "statement": "jobPersistEvery = time.Second",
+    "class": "B",
+    "reason": "Explicit stop escalation grace, progress persistence or cancel acknowledgement spacing"
+  },
+  {
+    "file": "executor/root_jobs.go",
+    "statement": "case <-time.After(time.Second):",
+    "class": "B",
+    "reason": "Explicit stop escalation grace, progress persistence or cancel acknowledgement spacing"
+  },
+  {
+    "file": "executor/root_policy.go",
+    "statement": "maxRootJobTimeout = 7 * 24 * time.Hour",
+    "class": "B",
+    "reason": "Explicit approved maximum or stop grace; unit conversion preserves pinned policy values"
+  },
+  {
+    "file": "executor/root_policy.go",
+    "statement": "defaultRootJobGrace = 10 * time.Second",
+    "class": "B",
+    "reason": "Explicit approved maximum or stop grace; unit conversion preserves pinned policy values"
+  },
+  {
+    "file": "executor/root_policy.go",
+    "statement": "maxRootJobGrace = time.Minute",
+    "class": "B",
+    "reason": "Explicit approved maximum or stop grace; unit conversion preserves pinned policy values"
+  },
+  {
+    "file": "executor/root_policy.go",
+    "statement": "if r.Run != nil && (!inBounds(r.Run.TimeoutS, 1, int(maxRootRunTimeout/time.Second)) || !inBounds(r.Run.MaxOutput, 1, maxRootOutput)) {",
+    "class": "B",
+    "reason": "Explicit approved maximum or stop grace; unit conversion preserves pinned policy values"
+  },
+  {
+    "file": "executor/root_policy.go",
+    "statement": "return j == nil || (inBounds(j.TimeoutS, 1, int(maxRootJobTimeout/time.Second)) && inBounds(j.GraceS, 1, int(maxRootJobGrace/time.Second)) &&",
+    "class": "B",
+    "reason": "Explicit approved maximum or stop grace; unit conversion preserves pinned policy values"
+  },
+  {
+    "file": "executor/root_policy.go",
+    "statement": "return time.Duration(value(r.TimeoutS, int(defaultRootRunTimeout/time.Second))) * time.Second",
+    "class": "B",
+    "reason": "Explicit approved maximum or stop grace; unit conversion preserves pinned policy values"
+  },
+  {
+    "file": "executor/root_policy.go",
+    "statement": "return time.Duration(value(j.GraceS, int(defaultRootJobGrace/time.Second))) * time.Second",
+    "class": "B",
+    "reason": "Explicit approved maximum or stop grace; unit conversion preserves pinned policy values"
+  },
+  {
+    "file": "executor/root_run.go",
+    "statement": "rootStagingAge = time.Hour",
+    "class": "B",
+    "reason": "Output staging retention, or reply reserve beyond the explicitly approved program ceiling"
+  },
+  {
+    "file": "executor/root_run.go",
+    "statement": "rootRunRequestBy = maxRootRunTimeout + 10*time.Second",
+    "class": "B",
+    "reason": "Output staging retention, or reply reserve beyond the explicitly approved program ceiling"
+  },
+  {
+    "file": "executor/scheduler_read_linux.go",
+    "statement": "backup.Stdin = strings.NewReader(\".timeout 5000\\n.backup \" + filepath.Join(work, schedulerDatabase) + \"\\n\")",
+    "class": "B",
+    "reason": "SQLite snapshot busy-lock wait only; the caller retains the shared operation budget"
+  },
+  {
+    "file": "executor/stop_step.go",
+    "statement": "return max(0, total-min(5*time.Second, total/4))",
+    "class": "B",
+    "reason": "Response/reap reserve within the approved lifecycle allowance"
+  },
+  {
+    "file": "executor/supervise.go",
+    "statement": "minRestartDelay = time.Second",
+    "class": "B",
+    "reason": "Restart backoff and stable-run reset interval; never terminates a running child"
+  },
+  {
+    "file": "executor/supervise.go",
+    "statement": "maxRestartDelay = time.Minute",
+    "class": "B",
+    "reason": "Restart backoff and stable-run reset interval; never terminates a running child"
+  },
+  {
+    "file": "executor/supervise.go",
+    "statement": "stableServeRun = time.Minute",
+    "class": "B",
+    "reason": "Restart backoff and stable-run reset interval; never terminates a running child"
+  },
+  {
+    "file": "executor/task_check.go",
+    "statement": "taskCheckEvery = 10 * time.Minute",
+    "class": "B",
+    "reason": "Task approval readback scheduling/retry spacing; readback work uses the shared budget"
+  },
+  {
+    "file": "executor/task_check.go",
+    "statement": "taskCheckRetry = time.Minute",
+    "class": "B",
+    "reason": "Task approval readback scheduling/retry spacing; readback work uses the shared budget"
+  },
+  {
+    "file": "executor/watch.go",
+    "statement": "const missingPackageGrace = 10 * time.Minute",
+    "class": "B",
+    "reason": "Missing-package ownership grace before cleanup; not live work or readiness"
+  },
+  {
+    "file": "identity/service.go",
+    "statement": "cfg.TTL = 15 * time.Minute",
+    "class": "B",
+    "reason": "Credential authority lifetime validation; unchanged by operation budgets"
+  },
+  {
+    "file": "identity/service.go",
+    "statement": "if cfg.TTL < time.Second || cfg.TTL > 15*time.Minute {",
+    "class": "B",
+    "reason": "Credential authority lifetime validation; unchanged by operation budgets"
+  },
+  {
+    "file": "identity/store.go",
+    "statement": "if !now.Before(v.Start.Add(time.Minute)) {",
+    "class": "B",
+    "reason": "Login rate-limit window; no operation is timed out"
+  },
+  {
+    "file": "idgateway/actions.go",
+    "statement": "cmd.Stdout, cmd.Stderr, cmd.WaitDelay = out, out, time.Second",
+    "class": "B",
+    "reason": "Pipe drain after action exit/cancellation; live action uses the shared budget"
+  },
+  {
+    "file": "idgateway/admission_limits.go",
+    "statement": "f.nextTxnSweep = now.Add(time.Second)",
+    "class": "B",
+    "reason": "Expired transaction sweep interval; no upstream work is capped"
+  },
+  {
+    "file": "idgateway/authorize_cgi.go",
+    "statement": "const AssertionTTL = time.Minute",
+    "class": "B",
+    "reason": "Signed assertion authority lifetime, independent of operation time"
+  },
+  {
+    "file": "idgateway/deletions.go",
+    "statement": "pendingRetry = 5 * time.Second",
+    "class": "B",
+    "reason": "Retry spacing for retained deletion tombstones"
+  },
+  {
+    "file": "idgateway/deletions.go",
+    "statement": "maxPendingRetry = 5 * time.Minute",
+    "class": "B",
+    "reason": "Retry spacing for retained deletion tombstones"
+  },
+  {
+    "file": "idgateway/external.go",
+    "statement": "if r.logged.IsZero() || now.Sub(r.logged) >= time.Hour {",
+    "class": "B",
+    "reason": "Diagnostic log throttling and binding evidence freshness"
+  },
+  {
+    "file": "idgateway/external.go",
+    "statement": "if fresh || r.checked.IsZero() || now.Sub(r.checked) >= 5*time.Second {",
+    "class": "B",
+    "reason": "Diagnostic log throttling and binding evidence freshness"
+  },
+  {
+    "file": "idgateway/front.go",
+    "statement": "TxnTTL = 5 * time.Minute",
+    "class": "B",
+    "reason": "Session/transaction lifetime, TCP keepalive or response reserve beyond shared work"
+  },
+  {
+    "file": "idgateway/front.go",
+    "statement": "DefaultSessionTTL = time.Hour",
+    "class": "B",
+    "reason": "Session/transaction lifetime, TCP keepalive or response reserve beyond shared work"
+  },
+  {
+    "file": "idgateway/front.go",
+    "statement": "transport.DialContext = (&net.Dialer{Timeout: runtimebudget.Operation, KeepAlive: 30 * time.Second}).DialContext",
+    "class": "B",
+    "reason": "Session/transaction lifetime, TCP keepalive or response reserve beyond shared work"
+  },
+  {
+    "file": "idgateway/front.go",
+    "statement": "transport.ResponseHeaderTimeout = runtimebudget.Operation + 10*time.Second",
+    "class": "B",
+    "reason": "Session/transaction lifetime, TCP keepalive or response reserve beyond shared work"
+  },
+  {
+    "file": "idgateway/menu_page.go",
+    "statement": "setTimeout(function(){location.replace(d.target)},typeof matchMedia==\"function\"&&matchMedia(\"(prefers-reduced-motion: reduce)\").matches?0:400)",
+    "class": "B",
+    "reason": "Success animation before navigation; the probe uses the shared operation budget"
+  },
+  {
+    "file": "idgateway/nss_groups.go",
+    "statement": "cmd.WaitDelay = 100 * time.Millisecond",
+    "class": "B",
+    "reason": "Pipe drain after directory command exit/cancellation"
+  },
+  {
+    "file": "idgateway/provider.go",
+    "statement": "CodeTTL = time.Minute",
+    "class": "B",
+    "reason": "OAuth code/token authority lifetimes; no operation deadline"
+  },
+  {
+    "file": "idgateway/provider.go",
+    "statement": "IDTokenTTL = 5 * time.Minute",
+    "class": "B",
+    "reason": "OAuth code/token authority lifetimes; no operation deadline"
+  },
+  {
+    "file": "idgateway/provider.go",
+    "statement": "AccessTokenTTL = 5 * time.Minute",
+    "class": "B",
+    "reason": "OAuth code/token authority lifetimes; no operation deadline"
+  },
+  {
+    "file": "idgateway/run.go",
+    "statement": "NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().AddDate(10, 0, 0),",
+    "class": "B",
+    "reason": "Certificate validity, idle connection expiry or HTTP header framing; no parsed handler deadline"
+  },
+  {
+    "file": "idgateway/run.go",
+    "statement": "const idleTimeout = 2 * time.Minute",
+    "class": "B",
+    "reason": "Certificate validity, idle connection expiry or HTTP header framing; no parsed handler deadline"
+  },
+  {
+    "file": "idgateway/run.go",
+    "statement": "srv := &http.Server{Handler: h, ReadHeaderTimeout: 30 * time.Second, IdleTimeout: idleTimeout}",
+    "class": "B",
+    "reason": "Certificate validity, idle connection expiry or HTTP header framing; no parsed handler deadline"
+  },
+  {
+    "file": "idgateway/run.go",
+    "statement": "srv := &http.Server{Handler: nativeIngressHandler(cfg, gw.Front), ReadHeaderTimeout: 30 * time.Second, IdleTimeout: idleTimeout}",
+    "class": "B",
+    "reason": "Certificate validity, idle connection expiry or HTTP header framing; no parsed handler deadline"
+  },
+  {
+    "file": "idgateway/watch_linux.go",
+    "statement": "const watchSettle = 200 * time.Millisecond",
+    "class": "B",
+    "reason": "Filesystem event debounce; does not fail an operation"
+  },
+  {
+    "file": "idgateway/websocket.go",
+    "statement": "webSocketRecheck = 5 * time.Second",
+    "class": "B",
+    "reason": "Session revalidation spacing; lookup work uses the shared budget"
+  },
+  {
+    "file": "internal/startupbudget/budget.go",
+    "statement": "ProbeSeconds = runtimebudget.Operation / time.Second",
+    "class": "B",
+    "reason": "Seconds-unit conversion of the shared operation allowance"
+  },
+  {
+    "file": "ipc/peer_linux.go",
+    "statement": "return 5 * time.Millisecond",
+    "class": "B",
+    "reason": "Retry spacing during socket identity inspection"
+  },
+  {
+    "file": "ipc/peer_linux.go",
+    "statement": "if d *= 2; d > time.Second {",
+    "class": "B",
+    "reason": "Retry spacing during socket identity inspection"
+  },
+  {
+    "file": "ipc/peer_linux.go",
+    "statement": "d = time.Second",
+    "class": "B",
+    "reason": "Retry spacing during socket identity inspection"
+  },
+  {
+    "file": "ipc/unix_linux.go",
+    "statement": "http: &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second},",
+    "class": "B",
+    "reason": "HTTP header framing only; completed-header work retains its caller context"
+  },
+  {
+    "file": "notify/notify.go",
+    "statement": "interval = 10 * time.Minute",
+    "class": "B",
+    "reason": "Notification schedule interval; live sends use the shared allowance"
+  },
+  {
+    "file": "notify/recorder.go",
+    "statement": "case <-time.After(10 * time.Millisecond):",
+    "class": "B",
+    "reason": "Journal lock retry spacing"
+  },
+  {
+    "file": "ops/private-ci/controller.py",
+    "statement": "LOG.info('controller ready; capacity=1; interval=30s')",
+    "class": "B",
+    "reason": "Informational reconciliation interval text, not a request deadline"
+  },
+  {
+    "file": "outbound/http.go",
+    "statement": "d := &net.Dialer{Timeout: runtimebudget.Operation, KeepAlive: 30 * time.Second}",
+    "class": "B",
+    "reason": "TCP keepalive only; DNS/connect/TLS/header work uses the shared allowance"
+  },
+  {
+    "file": "supervision/limit_linux.go",
+    "statement": "if err := Wait(ctx, 250*time.Millisecond); err != nil {",
+    "class": "B",
+    "reason": "Host start-slot retry spacing; cancellation ends the wait"
+  },
+  {
+    "file": "supervision/policy.go",
+    "statement": "return Config{Mode: Always, Initial: 2 * time.Second, Max: 5 * time.Minute, Min: time.Second, Stable: time.Minute, Window: 10 * time.Minute, Burst: 8}",
+    "class": "B",
+    "reason": "Restart backoff, stable-run reset and burst accounting windows"
+  },
+  {
+    "file": "supervision/process.go",
+    "statement": "timer.Reset(2 * time.Second)",
+    "class": "B",
+    "reason": "Reap observation after an explicit stop escalation; cleanup-required is retained"
+  },
+  {
+    "file": "supervision/wait.go",
+    "statement": "if err := Wait(ctx, 2*time.Second); err != nil {",
+    "class": "B",
+    "reason": "Dependency retry spacing; a slow probe uses the shared operation budget"
+  },
+  {
+    "file": "ts/src/background/BackgroundPanel.vue",
+    "statement": "setInterval(()=>void refresh(),3000)",
+    "class": "B",
+    "reason": "Status polling interval; does not determine the job terminal state"
+  },
+  {
+    "file": "ts/src/delegate/DelegatePanel.vue",
+    "statement": "setInterval(()=>{if(jobs.value.some(pending))void reload()},3000)",
+    "class": "B",
+    "reason": "Status polling interval; does not determine the operation terminal state"
+  },
+  {
+    "file": "ts/src/delegate/lifecycle.ts",
+    "statement": "export const LIFECYCLE_RETRY_MAX_MS=15000,LIFECYCLE_STARTING_RETRY_MAX_MS=4000",
+    "class": "B",
+    "reason": "Backoff between availability status reads; starting remains recoverable"
+  },
+  {
+    "file": "ts/src/delegate/use-scope-approval.ts",
+    "statement": "export const SCOPE_READBACK_MS=DEFAULT_REQUEST_TIMEOUT,SCOPE_READBACK_POLL_MS=1000",
+    "class": "B",
+    "reason": "Scope readback poll interval; total readback uses DEFAULT_REQUEST_TIMEOUT"
+  },
+  {
+    "file": "ts/src/identity/session.ts",
+    "statement": "setTimeout(async () => { try {const next = await identityCall<SessionSubject>('identity.session'); if (!disposed && revision === current) accept(next)} catch(e) {if (!disposed && revision === current && !recordDenial(e)) clear('expired')} }, Math.min(60000, remaining))",
+    "class": "B",
+    "reason": "Authority/session revalidation interval; does not time out the lookup"
+  },
+  {
+    "file": "ts/src/native/root-runtime.ts",
+    "statement": "var POLL_MS = 500, MAX_POLL_MS = 1000, RUN_LIMIT_MS = ${DEFAULT_REQUEST_TIMEOUT};",
+    "class": "B",
+    "reason": "Scheduler history polling intervals; total wait uses DEFAULT_REQUEST_TIMEOUT"
+  },
+  {
+    "file": "ts/src/portal/PortalSettings.vue",
+    "statement": "const REPLY_MS=5000",
+    "class": "B",
+    "reason": "Delayed status refresh hint; pending mutation remains busy and is still awaited"
+  }
+]

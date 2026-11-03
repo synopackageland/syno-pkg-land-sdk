@@ -41,7 +41,7 @@ func TestRootEntryShorthandIsAScriptRunWithTheDefaults(t *testing.T) {
 	if e.Digest != digestA || e.Kind != "script" || e.Run == nil || e.Job != nil || e.Schema != nil {
 		t.Fatalf("%+v", e)
 	}
-	if e.Run.timeout() != 20*time.Second || e.Run.maxOutput() != 1<<20 {
+	if e.Run.timeout() != 5*time.Minute || e.Run.maxOutput() != 1<<20 {
 		t.Fatal(e.Run.timeout(), e.Run.maxOutput())
 	}
 }
@@ -58,42 +58,42 @@ func TestRootEntryDeclaresKindParamsTimeoutsAndJobs(t *testing.T) {
 	if e.Kind != "binary" || e.Run.timeout() != 120*time.Second || e.Run.maxOutput() != 64<<20 {
 		t.Fatalf("%+v", e)
 	}
-	if e.Job.timeout() != 7*24*time.Hour || e.Job.grace() != time.Minute || e.Job.concurrency() != 2 || e.Job.nice() != 19 {
+	if e.Job.TimeoutS == nil || *e.Job.TimeoutS != 604800 || e.Job.grace() != time.Minute || e.Job.concurrency() != 2 || e.Job.nice() != 19 {
 		t.Fatalf("%+v", e.Job)
 	}
-	// A job with no declared limits gets a day, ten seconds of grace, one at a time and nice 10.
+	// A job with no declared limits has no elapsed cap, ten seconds of grace, one at a time and nice 10.
 	p, err = rootPolicy(t, `{"scan":{"digest":"`+digestA+`","job":{}}}`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if j := p.Root["scan"].Job; j.timeout() != 24*time.Hour || j.grace() != 10*time.Second || j.concurrency() != 1 || j.nice() != 10 || p.Root["scan"].Run != nil {
+	if j := p.Root["scan"].Job; j.TimeoutS != nil || j.grace() != 10*time.Second || j.concurrency() != 1 || j.nice() != 10 || p.Root["scan"].Run != nil {
 		t.Fatalf("%+v", j)
 	}
 }
 
 func TestRootEntryRefusesWhatItCannotEnforce(t *testing.T) {
 	for name, root := range map[string]string{
-		"bad digest":              `{"x":"bad"}`,
-		"unknown member":          `{"x":{"digest":"` + digestA + `","argv":["-rf"]}}`,
-		"unknown kind":            `{"x":{"digest":"` + digestA + `","kind":"python"}}`,
-		"run timeout above 120 s": `{"x":{"digest":"` + digestA + `","run":{"timeout_s":121}}}`,
-		"run timeout zero":        `{"x":{"digest":"` + digestA + `","run":{"timeout_s":0}}}`,
-		"output above 64 MiB":     `{"x":{"digest":"` + digestA + `","run":{"max_output":67108865}}}`,
-		"job above 7 days":        `{"x":{"digest":"` + digestA + `","job":{"timeout_s":604801}}}`,
-		"grace above 60 s":        `{"x":{"digest":"` + digestA + `","job":{"grace_s":61}}}`,
-		"concurrency above 4":     `{"x":{"digest":"` + digestA + `","job":{"max_concurrent":5}}}`,
-		"nice above 19":           `{"x":{"digest":"` + digestA + `","job":{"nice":20}}}`,
-		"negative nice":           `{"x":{"digest":"` + digestA + `","job":{"nice":-1}}}`,
-		"schema not an object":    `{"x":{"digest":"` + digestA + `","schema":{"type":"array","items":{"type":"string"}}}}`,
-		"open object":             `{"x":{"digest":"` + digestA + `","schema":{"type":"object","properties":{}}}}`,
-		"open nested object":      `{"x":{"digest":"` + digestA + `","schema":{"type":"object","properties":{"o":{"type":"object","properties":{}}},"additionalProperties":false}}}`,
-		"unknown keyword":         `{"x":{"digest":"` + digestA + `","schema":{"type":"object","properties":{"a":{"type":"string","format":"uri"}},"additionalProperties":false}}}`,
-		"unknown type":            `{"x":{"digest":"` + digestA + `","schema":{"type":"object","properties":{"a":{"type":"file"}},"additionalProperties":false}}}`,
-		"bad pattern":             `{"x":{"digest":"` + digestA + `","schema":{"type":"object","properties":{"a":{"type":"string","pattern":"("}},"additionalProperties":false}}}`,
-		"noncanonical key":        `{"x":{"digest":"` + digestA + `","schema":{"type":"object","properties":{"Volume":{"type":"string"}},"additionalProperties":false}}}`,
-		"required unknown":        `{"x":{"digest":"` + digestA + `","schema":{"type":"object","properties":{},"required":["a"],"additionalProperties":false}}}`,
-		"array without items":     `{"x":{"digest":"` + digestA + `","schema":{"type":"object","properties":{"a":{"type":"array"}},"additionalProperties":false}}}`,
-		"keyword of another type": `{"x":{"digest":"` + digestA + `","schema":{"type":"object","properties":{"a":{"type":"integer","pattern":"^1$"}},"additionalProperties":false}}}`,
+		"bad digest":               `{"x":"bad"}`,
+		"unknown member":           `{"x":{"digest":"` + digestA + `","argv":["-rf"]}}`,
+		"unknown kind":             `{"x":{"digest":"` + digestA + `","kind":"python"}}`,
+		"run timeout above 3600 s": `{"x":{"digest":"` + digestA + `","run":{"timeout_s":3601}}}`,
+		"run timeout zero":         `{"x":{"digest":"` + digestA + `","run":{"timeout_s":0}}}`,
+		"output above 64 MiB":      `{"x":{"digest":"` + digestA + `","run":{"max_output":67108865}}}`,
+		"job above 7 days":         `{"x":{"digest":"` + digestA + `","job":{"timeout_s":604801}}}`,
+		"grace above 60 s":         `{"x":{"digest":"` + digestA + `","job":{"grace_s":61}}}`,
+		"concurrency above 4":      `{"x":{"digest":"` + digestA + `","job":{"max_concurrent":5}}}`,
+		"nice above 19":            `{"x":{"digest":"` + digestA + `","job":{"nice":20}}}`,
+		"negative nice":            `{"x":{"digest":"` + digestA + `","job":{"nice":-1}}}`,
+		"schema not an object":     `{"x":{"digest":"` + digestA + `","schema":{"type":"array","items":{"type":"string"}}}}`,
+		"open object":              `{"x":{"digest":"` + digestA + `","schema":{"type":"object","properties":{}}}}`,
+		"open nested object":       `{"x":{"digest":"` + digestA + `","schema":{"type":"object","properties":{"o":{"type":"object","properties":{}}},"additionalProperties":false}}}`,
+		"unknown keyword":          `{"x":{"digest":"` + digestA + `","schema":{"type":"object","properties":{"a":{"type":"string","format":"uri"}},"additionalProperties":false}}}`,
+		"unknown type":             `{"x":{"digest":"` + digestA + `","schema":{"type":"object","properties":{"a":{"type":"file"}},"additionalProperties":false}}}`,
+		"bad pattern":              `{"x":{"digest":"` + digestA + `","schema":{"type":"object","properties":{"a":{"type":"string","pattern":"("}},"additionalProperties":false}}}`,
+		"noncanonical key":         `{"x":{"digest":"` + digestA + `","schema":{"type":"object","properties":{"Volume":{"type":"string"}},"additionalProperties":false}}}`,
+		"required unknown":         `{"x":{"digest":"` + digestA + `","schema":{"type":"object","properties":{},"required":["a"],"additionalProperties":false}}}`,
+		"array without items":      `{"x":{"digest":"` + digestA + `","schema":{"type":"object","properties":{"a":{"type":"array"}},"additionalProperties":false}}}`,
+		"keyword of another type":  `{"x":{"digest":"` + digestA + `","schema":{"type":"object","properties":{"a":{"type":"integer","pattern":"^1$"}},"additionalProperties":false}}}`,
 	} {
 		if _, err := rootPolicy(t, root); err == nil {
 			t.Error(name, "accepted")

@@ -195,9 +195,10 @@ func TestSlowJobKeepsProgressAfterSubmittingRequestEnds(t *testing.T) {
 			t.Fatalf("claim: %v %v", claimed, err)
 		}
 		r := NewRunner(s.dir, WorkerInfo{UID: 5})
-		if r.Timeout != 30*time.Minute {
-			t.Fatalf("job budget %v, want 30m", r.Timeout)
+		if r.Timeout != 5*time.Minute {
+			t.Fatalf("job budget %v, want 5m", r.Timeout)
 		}
+		r.Timeout = 30 * time.Minute // Explicit trusted allowance for this six-minute job.
 		r.Work = func(ctx context.Context, task *Task) (Result, error) {
 			task.Report(Progress{Phase: "contacting-nas"})
 			select {

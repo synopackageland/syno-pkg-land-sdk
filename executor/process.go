@@ -108,7 +108,7 @@ type cancelWriter struct {
 }
 
 // Only raw WebAPI handlers use these streaming commands. Leave the generic
-// DSM command budget unchanged while allowing a bounded large-file transfer.
+// shared operation allowance, while preserving cancellation and byte ceilings.
 func streamCommandTimeout(ctx context.Context) time.Duration {
 	if until, ok := ctx.Deadline(); ok {
 		return min(webAPIRawTimeout, budget.Inner(time.Until(until)))
@@ -140,8 +140,8 @@ func command(ctx context.Context, path string, args []string) *exec.Cmd {
 // A DSM command gets defaultCommandTimeout unless its caller set another
 // bound with withCommandTimeout, which never exceeds maxCommandTimeout.
 const (
-	defaultCommandTimeout = 20 * time.Second
-	maxCommandTimeout     = 3 * time.Minute
+	defaultCommandTimeout = budget.Operation
+	maxCommandTimeout     = budget.MaxSeconds * time.Second
 )
 
 type commandTimeoutKey struct{}

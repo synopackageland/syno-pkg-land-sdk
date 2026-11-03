@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 	"net"
 	"path/filepath"
 	"time"
@@ -13,12 +14,12 @@ import (
 // It asks the live executor to serialize selection with admission and publish;
 // a second process must never write the authority file around that fence.
 func rootSelectScope(pkg, scope, actor string, expectedGeneration uint64) error {
-	c, err := net.DialTimeout("unix", filepath.Join(socketBase, pkg, "executor.sock"), 5*time.Second)
+	c, err := net.DialTimeout("unix", filepath.Join(socketBase, pkg, "executor.sock"), budget.Operation)
 	if err != nil {
 		return errors.New("scope executor unavailable")
 	}
 	defer c.Close()
-	if err = c.SetDeadline(time.Now().Add(30 * time.Second)); err != nil {
+	if err = c.SetDeadline(time.Now().Add(budget.Operation)); err != nil {
 		return err
 	}
 	if err = json.NewEncoder(c).Encode(map[string]any{"v": 1, "op": "delegate.setScope", "auth": map[string]string{}, "params": map[string]any{"scope": scope, "actor": actor, "expected_generation": expectedGeneration}}); err != nil {

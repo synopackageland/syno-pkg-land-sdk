@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 	"io"
 	"log"
 	"os"
@@ -28,7 +29,7 @@ const (
 	rootRunSlots     = 2
 	rootRunRequestBy = maxRootRunTimeout + 10*time.Second
 	// executorOpBound is the default answer bound; raw WebAPI has its own.
-	executorOpBound = 30 * time.Second
+	executorOpBound = budget.Operation
 )
 
 // rootCall is one start of a pinned root program. Env holds only the

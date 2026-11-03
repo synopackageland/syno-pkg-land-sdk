@@ -95,7 +95,7 @@ func (s *Service) RunOnce(parent context.Context) error {
 	switch job.Worker {
 	case background.WorkerSHA256V1:
 		s.runner().Process(parent, job)
-		finish, done := context.WithTimeout(context.Background(), 20*time.Second)
+		finish, done := context.WithTimeout(context.Background(), runtimebudget.Operation)
 		defer done()
 		return s.Sweep(finish)
 	case background.WorkerDownloadV1:
@@ -103,7 +103,7 @@ func (s *Service) RunOnce(parent context.Context) error {
 	default:
 		outcome = background.Outcome{State: background.StateFailed, ErrorCode: "unsupported"}
 	}
-	finish, done := context.WithTimeout(context.Background(), 20*time.Second)
+	finish, done := context.WithTimeout(context.Background(), runtimebudget.Operation)
 	defer done()
 	if e = s.Store.Finish(finish, job.ID, outcome); e != nil {
 		return e

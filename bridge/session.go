@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"log"
 	"net"
 	"net/http"
@@ -36,8 +37,8 @@ const MaxFrame = api.MaxRequestBytesCeiling + 64<<10
 const CancelGrace = time.Second
 
 // DefaultStartTimeout bounds the wait for the App's hello when Session sets
-// none. A cold Node start on an ARM NAS took up to 1.2 seconds.
-const DefaultStartTimeout = 10 * time.Second
+// none. Startup shares the operation allowance, including on a busy NAS.
+const DefaultStartTimeout = runtimebudget.Operation
 
 // ErrProtocol means the App broke the channel protocol; the browser sees
 // only "internal".
@@ -97,7 +98,7 @@ type Session struct {
 	Dial     Dialer
 	Methods  []string           // the App's methods, from the trusted manifest
 	Services map[string]Service // what the App may ask for; nothing else
-	// StartTimeout bounds the wait for the App's hello; 0 is DefaultStartTimeout.
+	// StartTimeout bounds the wait for the App's hello; 0 is the shared operation allowance.
 	StartTimeout time.Duration
 	// Transfers are the methods that are an upload or a download, from the
 	// manifest; Spool is the directory for their files (SpoolDir).

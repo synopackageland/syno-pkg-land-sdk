@@ -49,7 +49,9 @@ func TestWebSocketVerifierDeadlineClosesTheTransport(t *testing.T) {
 	conn := &checkedUpgrade{ReadWriteCloser: upstream, done: make(chan struct{})}
 	defer conn.Close()
 	finished := make(chan struct{})
-	go func() { defer close(finished); f.watchUpgrade(context.Background(), conn, "live", "127.0.0.1") }()
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+	go func() { defer close(finished); f.watchUpgrade(ctx, conn, "live", "127.0.0.1") }()
 	peer.SetReadDeadline(time.Now().Add(3 * time.Second))
 	if _, err := peer.Read(make([]byte, 1)); err != io.EOF {
 		t.Fatalf("stalled account lookup left transport open: %v", err)

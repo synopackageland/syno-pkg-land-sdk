@@ -25,7 +25,7 @@
       "$comment": "The App's methods. The App's hello MUST list exactly these. They MUST NOT be SDK methods (api/sdk-permissions.json)."
     },
     "access": { "enum": ["admin-only", "app-privilege"], "$comment": "Entry restriction (dsm.NewEntryGate). Absent: permissions.json alone decides." },
-    "timeout_seconds": { "type": "integer", "minimum": 1, "maximum": 3600, "$comment": "Request deadline. Absent: api.DefaultRequestTimeout (60 s). The browser client must wait longer." },
+    "timeout_seconds": { "type": "integer", "minimum": 1, "maximum": 3600, "$comment": "Request deadline. Absent: api.DefaultRequestTimeout (300 s). The browser client must wait longer." },
     "max_request_bytes": { "type": "integer", "minimum": 1, "maximum": 16777216, "$comment": "JSON request body limit. Absent: api.MaxRequestBytes." },
     "env": {
       "type": "object",

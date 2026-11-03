@@ -2,6 +2,7 @@ package supervision
 
 import (
 	"context"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"time"
 )
 
@@ -28,7 +29,7 @@ func Dependency(ctx context.Context, probe func(context.Context) error, waiting 
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		bounded, cancel := context.WithTimeout(ctx, 5*time.Second)
+		bounded, cancel := context.WithTimeout(ctx, runtimebudget.Remaining(ctx, runtimebudget.Operation))
 		err := probe(bounded)
 		cancel()
 		if err == nil {

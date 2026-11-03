@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"io"
 	"os"
 	"os/exec"
@@ -13,7 +14,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type Port struct {
@@ -108,7 +108,7 @@ func portValue(raw string) (int, error) {
 // CheckPort consults DSM's registered service definitions. A successful command
 // exit alone is not a clearance: servicetool documents IsConflict on stdout.
 func CheckPort(ctx context.Context, pkg, key string, p Port, n int) error {
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, runtimebudget.Remaining(ctx, runtimebudget.Operation))
 	defer cancel()
 	tool, err := exec.LookPath("servicetool")
 	if err != nil {

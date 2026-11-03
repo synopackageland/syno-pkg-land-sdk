@@ -65,7 +65,7 @@ bindings 是 commands 所需的內部方法 allowlist，只含 effect 與後端�
 長工作範例（示範協定，不宣稱三個實際 App 已有這些 method 名稱）：
 
 ```json
-{"summary":"Run a scan and wait for its result","cli":["scan","start"],"effect":"write","permission":"administrators","flow":{"type":"job","start":"scan.start","poll":"scan.status","result":"scan.result","jobId":"job_id","idParam":"job_id","state":"state","done":["completed"],"failed":["failed","cancelled"],"intervalMs":1000,"timeoutMs":60000},"paramsSchema":{"type":"object","required":["target"],"properties":{"target":{"type":"string"}},"additionalProperties":false},"examples":[{"target":"/volume1/example"}]}
+{"summary":"Run a scan and wait for its result","cli":["scan","start"],"effect":"write","permission":"administrators","flow":{"type":"job","start":"scan.start","poll":"scan.status","result":"scan.result","jobId":"job_id","idParam":"job_id","state":"state","done":["completed"],"failed":["failed","cancelled"],"intervalMs":1000},"paramsSchema":{"type":"object","required":["target"],"properties":{"target":{"type":"string"}},"additionalProperties":false},"examples":[{"target":"/volume1/example"}]}
 ```
 
 App 特有流程應做高階 backend method；CLI 不寫 Gopeed／Reclaim／Connect 專用分支。cleanup 的 plan 身分與確認、BT 檔案選擇、provider 授權等不能被 generic adapter 或 --yes 取代。
@@ -107,3 +107,7 @@ CLI 以固定 `"<redacted>"` 顯示這些欄位，涵蓋 dry-run、缺少 `--yes
 建議 CLI path 採 `<資源> <動詞>`。常用動詞可選 `list`／`get`／`export`（多為讀取）、`create`／`update`／`import`／`run`（多為寫入）、`delete`（多為破壞性）。同一 App 內同義動詞擇一，例如不要針對相同任務混用 show／get／status。**僅為建議，App 可用領域動詞，例如 pause、resume。**
 
 每個 command 仍須由開發者明確宣告必填 `effect`；CLI／build 不從動詞推估或覆寫。既有「command effect 不得比 binding 寬鬆」等檢查維持，不新增動詞白名單或拒絕規則。
+
+A job flow may omit `timeoutMs`. CLI requests then use the shared operation
+allowance. This field, when present, bounds each status request; it never caps
+the elapsed lifetime of a live job. Poll until a terminal state or cancellation.

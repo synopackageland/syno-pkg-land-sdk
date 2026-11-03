@@ -5,6 +5,7 @@ package outbound
 import (
 	"context"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"net"
 	"net/http"
 	"net/netip"
@@ -124,17 +125,17 @@ func (t guardedTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 // resolves and checks every address, and dials the checked IP without a second
 // DNS lookup. TLS still authenticates the original hostname. Replacing this
 // transport in an app opts out of the policy. responseHeaderTimeout bounds
-// the wait for headers; non-positive values use 30 seconds.
+// the wait for headers; non-positive values use the shared operation allowance.
 func NewTransport(responseHeaderTimeout time.Duration) http.RoundTripper {
 	if responseHeaderTimeout <= 0 {
-		responseHeaderTimeout = 30 * time.Second
+		responseHeaderTimeout = runtimebudget.Operation
 	}
-	d := &net.Dialer{Timeout: 5 * time.Second, KeepAlive: 30 * time.Second}
+	d := &net.Dialer{Timeout: runtimebudget.Operation, KeepAlive: 30 * time.Second}
 	tr := &http.Transport{
 		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
 			return dialPublic(ctx, network, address, net.DefaultResolver.LookupNetIP, d.DialContext)
 		},
-		TLSHandshakeTimeout: 10 * time.Second, ResponseHeaderTimeout: responseHeaderTimeout,
+		TLSHandshakeTimeout: runtimebudget.Operation, ResponseHeaderTimeout: responseHeaderTimeout,
 		MaxResponseHeaderBytes: 32 << 10, DisableCompression: true, DisableKeepAlives: true,
 	}
 	return guardedTransport{tr}

@@ -53,7 +53,7 @@ runner.Work = func(ctx context.Context, task *background.Task) (background.Resul
 err = runner.Run(packageContext)
 ```
 
-The default job allowance is 30 minutes, independently of the five-minute
+The default job allowance is five minutes, matching the five-minute
 request budget. A slower NAS is not a failure while the job remains queued or
 running. `Task.Report` publishes a phase even when no total or percentage is
 known. The UI can label a long-running phase as "Still working" or "Slow NAS"
@@ -85,7 +85,7 @@ The runner verifies a bounded snapshot of the private input before calling Work;
 Work consumes that same snapshot. Structured results do not have to return the
 input's hash. Legacy hash results remain `{sha256, bytes}` and keep their existing
 validation. Check the context during I/O and between work units: cancellation and
-timeouts are cooperative. The default job timeout is 30 minutes; changing request
+timeouts are cooperative. The default job timeout is five minutes; changing request
 timeouts does not extend it.
 
 ## Result reads and limits

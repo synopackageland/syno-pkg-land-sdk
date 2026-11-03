@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"net/http"
 	"os/user"
 	"path/filepath"
@@ -48,7 +49,7 @@ func New(cfg Config) (*Service, error) {
 		cfg.Endpoint = "http://127.0.0.1:5000/webapi/entry.cgi"
 	}
 	if cfg.Client == nil {
-		cfg.Client = &http.Client{Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+		cfg.Client = &http.Client{Timeout: runtimebudget.Operation, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	}
 	if cfg.Now == nil {
 		cfg.Now = time.Now

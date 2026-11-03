@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 	"os"
 	"regexp"
 	"strings"
@@ -11,7 +12,7 @@ import (
 
 // The start step delays only the executor's readiness, never the package
 // start, which returns once it wrote its request, nor the listener.
-const startStepTimeout = 60 * time.Second
+const startStepTimeout = budget.Operation
 
 const startRecordName = "start.record"
 

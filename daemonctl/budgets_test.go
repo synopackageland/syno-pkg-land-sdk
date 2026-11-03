@@ -69,8 +69,8 @@ func TestAdmittedAppGetsStartupBudgetToRecover(t *testing.T) {
 	if window.observe(now, slow, c.recoveryBudget()) || window.observe(now.Add(10*time.Minute), slow, c.recoveryBudget()) {
 		t.Fatal("stalled App stopped inside its startup budget")
 	}
-	if !window.observe(now.Add(901*time.Second), slow, c.recoveryBudget()) {
-		t.Fatal("App unavailable beyond its startup budget kept running")
+	if window.observe(now.Add(24*time.Hour), slow, c.recoveryBudget()) {
+		t.Fatal("slow App was stopped instead of remaining starting")
 	}
 	short := &controller{config: config{Timeouts: deadlines{Start: 10, Stop: 30, Status: 5, Uninstall: 60}}}
 	if short.recoveryBudget() != short.operationBudget() {

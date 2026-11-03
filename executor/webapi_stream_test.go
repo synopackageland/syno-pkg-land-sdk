@@ -59,7 +59,7 @@ func TestWebAPIStreamsBeyond64MiBAsGrantOwner(t *testing.T) {
 	const size = 65 << 20
 	e, f, id, dir := streamSetup(t, func(ctx context.Context, dst io.Writer) error {
 		until, ok := ctx.Deadline()
-		if !ok || time.Until(until) < 29*time.Minute || streamCommandTimeout(ctx) < 29*time.Minute {
+		if !ok || time.Until(until) < 4*time.Minute || streamCommandTimeout(ctx) < 4*time.Minute {
 			return errors.New("old timeout still limits raw transfer")
 		}
 		if _, err := io.WriteString(dst, "Content-Type: application/octet-stream\r\nContent-Length: "+strconv.Itoa(size)+"\r\n\r\n"); err != nil {
@@ -282,13 +282,13 @@ func TestWebAPIStreamTimedGrantCancelsDuringTransfer(t *testing.T) {
 }
 
 func TestWebAPIStreamSocketDoesNotKeepOldOperationCap(t *testing.T) {
-	for _, hint := range []int64{0, 250, 3600000, 10820000} {
+	for _, hint := range []int64{0, 250, 300000, 3600000} {
 		t.Run(strconv.FormatInt(hint, 10), func(t *testing.T) {
 			e, _, id, _ := streamSetup(t, func(ctx context.Context, dst io.Writer) error {
 				deadline, ok := ctx.Deadline()
 				left := time.Until(deadline)
 				if !ok || hint == 250 && (left <= 0 || left > 250*time.Millisecond) ||
-					hint != 250 && left < 29*time.Minute {
+					hint != 250 && left < 4*time.Minute {
 					return errors.New("socket kept old 30/60 second budget or escaped parent")
 				}
 				_, err := io.WriteString(dst, "Content-Type: application/octet-stream\n\nok")

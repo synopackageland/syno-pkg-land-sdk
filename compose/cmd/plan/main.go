@@ -8,9 +8,9 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"io"
 	"os"
-	"time"
 
 	"github.com/synopackageland/syno-pkg-land-sdk/compose"
 	"github.com/synopackageland/syno-pkg-land-sdk/sharedfolder"
@@ -94,7 +94,7 @@ func run(in io.Reader, out io.Writer) error {
 	if err := dec.Decode(&extra); err != io.EOF {
 		return fmt.Errorf("[COMPOSE_REQUEST_INVALID] expected one JSON request")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), runtimebudget.Operation)
 	defer cancel()
 	p, err := compose.Build(ctx, req)
 	if err != nil {

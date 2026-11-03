@@ -30,7 +30,7 @@ export function createDsmSession(options) {
         clearTimeout(timer);
         resolve(value);
       }
-      var timer = setTimeout(function () { controller.abort(); finish(undefined); }, 15000);
+      var timer = setTimeout(function () { controller.abort(); finish(undefined); }, 302000);
       // Relative, like DSM's own WebAPI paths: portal aliases route only
       // their own prefix. Same-origin mode and redirect:error forbid a
       // redirect to another origin; no credentials enter a URL or storage.

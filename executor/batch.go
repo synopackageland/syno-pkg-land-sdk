@@ -5,12 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 	"net"
 	"time"
 )
 
 const maxBatchRootCalls = 32
-const maxBatchDuration = 60 * time.Second
+const maxBatchDuration = budget.Operation
 
 type batchVerifiedKey struct{}
 type batchVerified struct {
@@ -37,7 +38,7 @@ func readBatchLine(r *bufio.Reader, limit int) ([]byte, error) {
 
 func (e *Executor) batchConnection(parent context.Context, c net.Conn, reader *bufio.Reader, req Request, peerUID, packageUID int) {
 	answer := func(out Response) bool {
-		c.SetWriteDeadline(time.Now().Add(5 * time.Second))
+		c.SetWriteDeadline(time.Now().Add(budget.Operation))
 		return json.NewEncoder(c).Encode(out) == nil
 	}
 	var in struct {

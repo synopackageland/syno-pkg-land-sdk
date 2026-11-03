@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/composeingress"
-	"github.com/synopackageland/syno-pkg-land-sdk/internal/startupbudget"
 	"io"
 	"net"
 	"net/http"
@@ -152,15 +151,19 @@ func (c *controller) checkReadiness() error {
 // probeBudget bounds one readiness request. It is independent of DSM's short
 // status command budget: a loaded NAS can take tens of seconds to answer.
 func (c *controller) probeBudget() time.Duration {
-	return min(startupbudget.ProbeSeconds*time.Second, c.operationBudget())
+	return c.operationBudget()
 }
 
 func (c *controller) checkReadinessUntil(until time.Time) error {
-	ctx, cancel := context.WithDeadline(context.Background(), until)
+	return c.checkReadinessContext(context.Background(), until)
+}
+
+func (c *controller) checkReadinessContext(parent context.Context, until time.Time) error {
+	ctx, cancel := context.WithDeadline(parent, until)
 	defer cancel()
 	if c.Network == nil || c.Network.Mode != "bridge" {
 		// Preserve the host UID/binding guard. Missing listeners are retried by
-		// startup's waitReadiness, but remain fatal once admitted. HTTP health
+		// availability loop; ownership and binding violations stay fatal. HTTP health
 		// prevents a temporary startup listener from admitting the gateway.
 		if err := checkNetwork("/proc/net", os.Geteuid(), c.Network); err != nil {
 			return err

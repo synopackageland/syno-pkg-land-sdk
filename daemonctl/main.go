@@ -4,6 +4,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -478,15 +479,11 @@ func (c *controller) start(until time.Time) error {
 	}()
 	select {
 	case err := <-ready:
-		if err == nil && !time.Now().Before(until) {
-			cmd.Process.Signal(syscall.SIGTERM)
-			return errors.New("daemon start timeout")
-		}
 		return err
 	case <-time.After(time.Until(until)):
-		// Only our own still-retained supervisor can be signalled, never inventory.
-		cmd.Process.Signal(syscall.SIGTERM)
-		return errors.New("daemon start timeout")
+		// The lifecycle caller has finished waiting. The owned supervisor keeps
+		// starting; a slow exec or dependency is not a reason to kill the App.
+		return nil
 	}
 }
 
@@ -592,24 +589,15 @@ func (c *controller) supervise() error {
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
 	defer signal.Stop(signals)
 	until, err := runtimebudget.DecodeDeadline(os.Getenv("SYNOPKGLAND_START_DEADLINE"))
-	if err != nil || !time.Now().Before(until) {
-		return errors.New("daemon start deadline missing or exhausted")
+	if err != nil {
+		return errors.New("daemon start deadline missing")
 	}
 	if c.Network == nil {
 		return c.superviseNative(ready, signals)
 	}
-	// Process stability and handoff are inside the caller's original deadline.
-	if c.Network != nil {
-		readinessUntil := until.Add(-time.Second - min(runtimebudget.Cleanup, time.Until(until)/10))
-		err := waitReadiness(readinessUntil, signals, func() error {
-			return c.checkReadinessUntil(minDeadline(readinessUntil, time.Now().Add(c.probeBudget())))
-		})
-		if err != nil {
-			fmt.Fprintln(ready, err)
-			return err
-		}
-		c.rememberImages()
-	}
+	// Launch the gateway while dependencies become ready. Its admission gate
+	// asks this supervisor for current readiness and serves the starting page.
+	// Availability probes run below, without spending a startup failure window.
 	cmd := c.child(c.Args)
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	owned, err := supervision.Start(cmd)
@@ -618,8 +606,11 @@ func (c *controller) supervise() error {
 	}
 	done := make(chan error, 1)
 	go func(child *exec.Cmd, result chan<- error) { result <- owned.Wait() }(cmd, done)
+	probeContext, cancelProbes := context.WithCancel(context.Background())
+	defer cancelProbes()
 	stopUntil := time.Time{}
 	stop := func() error {
+		cancelProbes()
 		if done == nil {
 			return nil
 		}
@@ -635,10 +626,6 @@ func (c *controller) supervise() error {
 	case <-signals:
 		return stop()
 	case <-time.After(min(time.Second, max(0, time.Until(until)))):
-	}
-	if !time.Now().Before(until) {
-		stop()
-		return errors.New("daemon start timeout")
 	}
 	r := record{Supervisor: os.Getpid(), Child: cmd.Process.Pid, Birth: processBirth(cmd.Process.Pid), Digest: c.digest, State: "running"}
 	err = c.writeRecord(r)
@@ -666,14 +653,9 @@ func (c *controller) supervise() error {
 		stop()
 		return err
 	}
-	if !time.Now().Before(until) {
-		clean = stop() == nil
-		return errors.New("daemon start timeout")
-	}
-	if _, err := ready.WriteString("ready\n"); err != nil {
-		clean = stop() == nil
-		return err
-	}
+	// The original caller may already have returned the accepted starting
+	// state. A closed acknowledgement pipe must not stop the gateway.
+	_, _ = ready.WriteString("ready\n")
 	ready.Close()
 	connections := make(chan *net.UnixConn)
 	go func() {
@@ -691,7 +673,8 @@ func (c *controller) supervise() error {
 	}()
 	tick := time.NewTicker(time.Second)
 	defer tick.Stop()
-	healthy := true
+	healthy := false
+	remembered := false
 	var health healthWindow
 	results := make(chan error, 1)
 	probing := false
@@ -749,10 +732,7 @@ func (c *controller) supervise() error {
 				probing = true
 				probeStarted = time.Now()
 				probeUntil := probeStarted.Add(c.probeBudget())
-				if !health.failedAt.IsZero() {
-					probeUntil = minDeadline(probeUntil, health.failedAt.Add(c.recoveryBudget()))
-				}
-				go func() { results <- c.checkReadinessUntil(probeUntil) }()
+				go func() { results <- c.checkReadinessContext(probeContext, probeUntil) }()
 			}
 		case err := <-results:
 			probing = false
@@ -767,6 +747,10 @@ func (c *controller) supervise() error {
 				return recoveryFailure(err, c.recoveryBudget())
 			}
 			healthy = err == nil
+			if healthy && !remembered {
+				c.rememberImages()
+				remembered = true
+			}
 			flushStatus([]byte(statusLine(healthy)))
 		case conn := <-answered:
 			for i, w := range statusWaiters {

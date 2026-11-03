@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"net"
 	"os"
 	"time"
@@ -198,7 +199,7 @@ func (s *PeerServer) serveVerifiedPeers(ctx context.Context, l *net.UnixListener
 		}
 		s.conns[t] = struct{}{}
 		s.mu.Unlock()
-		c.SetDeadline(time.Now().Add(5 * time.Second))
+		c.SetDeadline(time.Now().Add(runtimebudget.Operation))
 		go func() {
 			defer t.handlerReturned()
 			h(s.ctx, t, peer)

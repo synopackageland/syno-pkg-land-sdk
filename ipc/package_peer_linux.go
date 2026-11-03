@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"net"
 	"os"
 	"path/filepath"
-	"time"
 
 	"golang.org/x/sys/unix"
 )
@@ -56,7 +56,7 @@ func startPackagePeerUnix(ctx context.Context, path string, authorize PeerAuthor
 	}
 	pinned := fmt.Sprintf("/proc/self/fd/%d/%s", fd, name)
 	if stale, err := packagePeerSocket(fd, name); err == nil {
-		c, dialErr := (&net.Dialer{Timeout: time.Second}).DialContext(ctx, "unix", pinned)
+		c, dialErr := (&net.Dialer{Timeout: runtimebudget.Operation}).DialContext(ctx, "unix", pinned)
 		if dialErr == nil {
 			c.Close()
 			return nil, errors.New("ipc: package peer socket is live")

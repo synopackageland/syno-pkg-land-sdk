@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/synopackageland/syno-pkg-land-sdk/background"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"os"
 	"regexp"
 	"strconv"
@@ -249,7 +250,7 @@ func (s *Service) unclaimedAdmission(ctx context.Context, auth map[string]string
 func (s *Service) sendAdmission(ctx context.Context, auth map[string]string, in MoveParams) (OperationResult, error) {
 	ref := OperationRef{in.DelegationID, in.JobID}
 	// Mirror writes survive a caller deadline that ended the request.
-	persist, done := context.WithTimeout(context.Background(), 10*time.Second)
+	persist, done := context.WithTimeout(context.Background(), runtimebudget.Operation)
 	defer done()
 	var out OperationResult
 	err := s.Client.Call(ctx, "files.moveFromStaging", auth, in, &out)

@@ -443,7 +443,7 @@ func (c Config) provider(secrets map[string]string) (*Provider, error) {
 }
 
 // TokenAdapterTimeout bounds one run of a token adapter.
-const TokenAdapterTimeout = 10 * time.Second
+const TokenAdapterTimeout = runtimebudget.Operation
 
 // ExecTokens runs an adapter program for each signed-in request. The program
 // gets SYNOPKGLAND_SSO_UID, _USER and _ADMIN ("1" or "0") and prints

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,7 +28,7 @@ type DeleteAction struct {
 }
 
 // DeleteActionTimeout bounds one exec action.
-const DeleteActionTimeout = time.Minute
+const DeleteActionTimeout = runtimebudget.Operation
 
 var placeholderPattern = regexp.MustCompile(`\{[^{}]*\}`)
 

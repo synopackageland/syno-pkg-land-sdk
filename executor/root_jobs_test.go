@@ -147,12 +147,18 @@ func TestStoppingAJobAsksItToCancelThenKillsItAfterItsGrace(t *testing.T) {
 	}
 }
 
-func TestAJobPastItsTimeoutIsKilled(t *testing.T) {
+func TestALiveJobNeverFailsByElapsedTimeAndStillCancels(t *testing.T) {
 	e, _, r := jobSetup(t, cleanPolicy(`,"timeout_s":1`), func(ctx context.Context, _ rootCall, _ *bufio.Reader, _ io.Writer) (int, error) {
 		<-ctx.Done()
 		return -1, errKilled
 	})
-	awaitJob(t, e, startJob(t, e, nil), "timed-out")
+	id := startJob(t, e, nil)
+	time.Sleep(1200 * time.Millisecond)
+	if state := result(t, request(e, "root.jobs.get", map[string]any{"job_id": id}))["state"]; state != "running" {
+		t.Fatalf("live job failed by elapsed time: %v", state)
+	}
+	request(e, "root.jobs.stop", map[string]any{"job_id": id})
+	awaitJob(t, e, id, "canceled")
 	if r.killed() != 1 {
 		t.Fatal(r.killed())
 	}

@@ -50,7 +50,7 @@ func pythonVersion(ctx context.Context, path string) (int, int, error) {
 			return atoi2(m[1], m[2])
 		}
 	}
-	ctx, cancel := context.WithTimeout(ctx, runtimebudget.Inner(runtimebudget.Remaining(ctx, runtimebudget.Operation)/2))
+	ctx, cancel := context.WithTimeout(ctx, runtimebudget.Inner(runtimebudget.Remaining(ctx, runtimebudget.Operation)))
 	defer cancel()
 	cmd := exec.CommandContext(ctx, path, "-I", "-S", "-c", "import sys; print(*sys.version_info[:2])")
 	cmd.Env = []string{"PATH=/usr/local/bin:/usr/bin:/bin"}

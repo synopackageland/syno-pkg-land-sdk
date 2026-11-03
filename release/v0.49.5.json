@@ -1,0 +1,39 @@
+{
+  "version": "0.49.5",
+  "executorVersion": "0.49.5",
+  "executorRootSDK": "v0.49.4-0.20261103141054-34994683c7b8",
+  "packages": {
+    "@synopackageland/sdk": "0.49.5",
+    "@synopackageland/app": "0.49.5",
+    "syno-pkg-land-app": "0.49.5",
+    "synopkgland_app": "0.49.5"
+  },
+  "executorDigests": {
+    "x86_64": "2318919d5793e5d134ad1bb79009b4d3e8949e6d9b892ac1e1e74015eb3a7cb6",
+    "aarch64": "a27fcc31a2534677caf5650538c79da6f25296353b1e999b6419e894fd2d9ae7",
+    "armv7": "2dd370bfd368de3c476c8d593afa656b2a9a77b69ab5c4806ddb3cb63d2b847c",
+    "lifecycle": {
+      "x86_64": "3b2720a4d093aeaa82674a75f16e3adc0bfaa76b8357e58ef591d1f15a73a5c0",
+      "aarch64": "f8a9bb0e69dd380d993fcc89cf19e9e3a526a76bdc24c97d53f01001953aad0d",
+      "armv7": "118edf2426e8aaeeea66d1b3b114c86d0aa680c02449755fc37b0d5a288dc430"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": false,
+    "executorReleaseReused": false,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Development gates cover the shared timeout policy and live-job cancellation. Full release, cold reproducibility and oldest-runtime matrices remain required once before publication after merge."
+  },
+  "ui": {
+    "builtAgainst": "0.19.0",
+    "peer": ">=0.10.1 <0.20.0"
+  },
+  "node": {
+    "build": "24.22.1",
+    "compatibility": "22.23.4",
+    "minimum": "22"
+  }
+}

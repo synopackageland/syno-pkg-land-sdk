@@ -294,12 +294,12 @@ func NewFront(cfg FrontConfig) (*Front, error) {
 		return nil, errors.New("Share settings require DSM administrator admission")
 	}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.DialContext = (&net.Dialer{Timeout: 5 * time.Second, KeepAlive: 30 * time.Second}).DialContext
+	transport.DialContext = (&net.Dialer{Timeout: runtimebudget.Operation, KeepAlive: 30 * time.Second}).DialContext
 	transport.ResponseHeaderTimeout = cfg.ResponseHeaderTimeout
 	if transport.ResponseHeaderTimeout <= 0 {
 		transport.ResponseHeaderTimeout = runtimebudget.Operation + 10*time.Second
 	}
-	transport.TLSHandshakeTimeout = 10 * time.Second
+	transport.TLSHandshakeTimeout = runtimebudget.Operation
 	f.proxy = &httputil.ReverseProxy{Rewrite: f.rewrite, ModifyResponse: f.modifyProxyResponse, Transport: transport, ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
 		var limit *http.MaxBytesError
 		if errors.As(err, &limit) {

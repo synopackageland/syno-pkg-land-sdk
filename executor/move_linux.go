@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
 	"io"
 	"os"
 	"path/filepath"
@@ -19,7 +20,7 @@ import (
 )
 
 // publishReceiptTimeout bounds the only I/O done under the commit lock.
-var publishReceiptTimeout = 5 * time.Second
+var publishReceiptTimeout = budget.Operation
 
 // syncPublished makes the child's link durable; tests slow it down.
 var syncPublished = func(dir *os.File) error { return dir.Sync() }
@@ -154,7 +155,7 @@ func (w subprocessWriter) Move(ctx context.Context, s Subject, op Operation, d D
 	}()
 	defer func() {
 		if spec.Part.Part.Inode != 0 {
-			cleanup, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			cleanup, cancel := context.WithTimeout(context.Background(), budget.Operation)
 			defer cancel()
 			w.cleanupPart(cleanup, spec, dir)
 		}

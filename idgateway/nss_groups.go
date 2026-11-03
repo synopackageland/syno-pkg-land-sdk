@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -112,5 +113,5 @@ var groupName = regexp.MustCompile(`^(?:[A-Za-z0-9._-]{1,64}|[A-Za-z0-9._-]{1,64
 
 // Groups uses DSM's NSS-aware id, including qualified group names with spaces.
 func (d *Directory) Groups(ctx context.Context, name string) ([]string, error) {
-	return (directoryLookup{timeout: 2 * time.Second, run: runDirectoryCommand}).groups(ctx, name)
+	return (directoryLookup{timeout: runtimebudget.Operation, run: runDirectoryCommand}).groups(ctx, name)
 }

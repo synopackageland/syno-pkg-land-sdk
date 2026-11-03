@@ -63,7 +63,7 @@ func waitReadiness(until time.Time, stop <-chan os.Signal, probe func() error) e
 	}
 }
 
-// Only availability failures receive a window. Policy, generation and network
+// Availability remains starting indefinitely. Policy, generation and network
 // ownership failures remain fatal immediately; an unknown result never admits ingress.
 func transientReadiness(err error) bool {
 	return err != nil && (readinessPhase(err) == "COMPOSE_TCP_NOT_READY" || readinessPhase(err) == "COMPOSE_HEALTH_NOT_READY")
@@ -82,11 +82,11 @@ func (w *healthWindow) observe(now time.Time, err error, budget time.Duration) b
 	if w.failedAt.IsZero() {
 		w.failedAt = now
 	}
-	return !now.Before(w.failedAt.Add(budget))
+	return false
 }
 
 // recoveryBudget is how long an admitted App may stay unavailable before the
-// supervisor stops its gateway: as long as it was allowed to start.
+// supervisor reports recovery metadata; availability no longer stops the gateway.
 func (c *controller) recoveryBudget() time.Duration {
 	return max(c.operationBudget(), time.Duration(c.Timeouts.Start)*time.Second)
 }
