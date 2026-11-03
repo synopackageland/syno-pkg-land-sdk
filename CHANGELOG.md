@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.49.1
+
+- NAS folder picker: loading no longer inserts a text row or moves the dialog; a spinner overlays the list, the tree shows its own spinner beside an expanding folder, and the refresh icon turns while a shown listing is checked again
+- Show folders the picker already listed at once and list them again in the background; a highlighted folder is listed ahead, opening a folder while another loads replaces that load, and requests that start together share one App admission check (a refused App still asks DSM nothing)
+- Drop the picker's default DSM session subtitle and the consent paragraph: the lasting save grant is an info tip in the footer that also describes Confirm, and the selected path moves to the footer, cut with its full path in a tooltip
+- The picker keeps one size (800×600, capped to the window) with the toolbar and breadcrumb in one row and the tree and list filling the rest; long names are cut in their cells and nothing scrolls sideways
+- Reuse the immutable executor/v0.48.0 release and its six digests; executor sources, policies and task definitions are unchanged
+
 ## 0.49.0
 
 - Raise the explicit package-peer ceiling to `ipc.MaxPackagePeerConnections` (16384) so one listener can retain thousands of peers plus handshake and probe headroom; zero and the original entry point still retain the default eight, and every explicit bound still counts authorization callbacks, handlers and retained connections together without an overflow queue

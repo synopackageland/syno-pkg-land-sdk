@@ -29,6 +29,14 @@ export function createNasProvider(ctx:Pick<Context,'call'|'files'|'requestTimeou
  const life=new AbortController()
  const transfers=createFileTransfers(ctx.files)
  const dsm=createDsmFileStation({webApi:ctx.webApi,token:ctx.files?.token,timeout:clientTimeout(ctx.requestTimeout)})
+ // Requests that start together (a listing, the folder listed ahead, the tree)
+ // share one admission check; each still waits for it before asking DSM, so a
+ // refused App makes no DSM request. A later request checks again.
+ let admitting:Promise<unknown>|undefined
+ function admit(){
+  admitting??=ctx.call('nas.session.status',{}, {signal:life.signal}).finally(()=>{admitting=undefined})
+  return admitting
+ }
  async function request(method:string,params:Record<string,unknown>,signal:AbortSignal,mutation=false):Promise<unknown>{
   if(disposed||signal.aborted)refuse('canceled')
   let cleanup=()=>{}
@@ -44,7 +52,7 @@ export function createNasProvider(ctx:Pick<Context,'call'|'files'|'requestTimeou
   async function direct(){
    // The App's authenticated entry gate is still authoritative. This status
    // only checks admission and advertises the browser transport, with no relay.
-   await ctx.call('nas.session.status',{}, {signal:controller.signal})
+   await admit()
    if(controller.signal.aborted)refuse('canceled')
    switch(method){
     case 'nas.files.shares':return dsm.shares(params.offset as number,controller.signal)
