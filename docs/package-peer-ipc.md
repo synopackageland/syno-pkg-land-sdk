@@ -50,14 +50,21 @@ any replacement. The directory remains for reuse.
 The `PeerServer` handle has the same lifecycle as the executor peer API:
 
 - Eight slots bound authorization callbacks, handlers and retained peers together.
-  SDK 0.48.0 adds the explicit capacity option; the original API is unchanged.
+  The explicit capacity option leaves the original API unchanged.
   Packages retaining many streams may explicitly use
-  `StartPackagePeerUnixWithOptions(..., PackagePeerOptions{MaxConnections: 316})`.
-  Zero retains the default eight; values outside 1–1024 are refused. The chosen
+  `StartPackagePeerUnixWithOptions(..., PackagePeerOptions{MaxConnections: 3200})`.
+  Zero retains the default eight; values outside 1–`MaxPackagePeerConnections`
+  (16384) are refused. Each retained peer holds one descriptor in the listener
+  process, so size `RLIMIT_NOFILE` for the bound plus the handler's own
+  descriptors (for example an upstream connection per peer). The chosen
   limit still includes pending authorization and there is no overflow queue.
   This does not increase a downstream protocol's own session/handshake limits or
   change peer identity checks. Size the bound for retained peers plus probes;
   the handler remains responsible for its own authenticated-session admission.
+- Descriptor or buffer exhaustion during accept (`EMFILE`, `ENFILE`, `ENOBUFS`,
+  `ENOMEM`, `ECONNABORTED`) does not stop the listener or close retained peers:
+  admission backs off from 5 ms to at most 1 s and resumes when resources return.
+  Pending clients wait in the kernel backlog meanwhile.
 - Connections have a five-second initial deadline; set an explicit deadline
   for longer exchanges. Authorization callbacks themselves must honor context.
 - The handler owns its connection, including after returning. Close it when done.

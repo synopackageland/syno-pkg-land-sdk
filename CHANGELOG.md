@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.49.0
+
+- Raise the explicit package-peer ceiling to `ipc.MaxPackagePeerConnections` (16384) so one listener can retain thousands of peers plus handshake and probe headroom; zero and the original entry point still retain the default eight, and every explicit bound still counts authorization callbacks, handlers and retained connections together without an overflow queue
+- Keep peer listeners and their retained connections open when accept(2) reports descriptor or buffer exhaustion (`EMFILE`, `ENFILE`, `ENOBUFS`, `ENOMEM`, `ECONNABORTED`); admission retries with a 5 ms to 1 s backoff and resumes once resources return, while close and cancellation still end the loop
+- Verify 3200 retained package peers with immediate overflow refusal and slot reuse, and descriptor exhaustion with retained peers still serving
+- Reuse the immutable executor/v0.48.0 release and its six digests; executor sources, policies and task definitions are unchanged
+
 ## 0.48.0
 
 - Add explicit bounded package-peer capacity with `ipc.StartPackagePeerUnixWithOptions` and `PackagePeerOptions.MaxConnections` (1–1024); zero and the original entry point retain the default eight

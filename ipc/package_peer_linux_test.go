@@ -372,3 +372,211 @@ func TestPackagePeerConfiguredRetainedCapacity(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func echoPeer(ctx context.Context, c net.Conn, entered chan<- struct{}) {
+	defer c.Close()
+	if err := c.SetDeadline(time.Time{}); err != nil {
+		return
+	}
+	entered <- struct{}{}
+	go func() { <-ctx.Done(); c.Close() }()
+	b := make([]byte, 1)
+	for {
+		if _, err := c.Read(b); err != nil {
+			return
+		}
+		if _, err := c.Write(b); err != nil {
+			return
+		}
+	}
+}
+
+func echoes(t *testing.T, c net.Conn) {
+	t.Helper()
+	_ = c.SetDeadline(time.Now().Add(5 * time.Second))
+	b := []byte{'x'}
+	if _, err := c.Write(b); err != nil {
+		t.Fatalf("retained peer write: %v", err)
+	}
+	if _, err := io.ReadFull(c, b); err != nil || b[0] != 'x' {
+		t.Fatalf("retained peer echo: %q %v", b, err)
+	}
+}
+
+func openFDs(t *testing.T) uint64 {
+	t.Helper()
+	entries, err := os.ReadDir("/proc/self/fd")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return uint64(len(entries))
+}
+
+// Scale target: a few thousand retained peers plus handshake/probe headroom on
+// one listener, with overflow still refused immediately rather than queued.
+func TestPackagePeerRetainsThousandsOfPeers(t *testing.T) {
+	path := packagePeerPath(t)
+	const limit = 3200
+	var rl syscall.Rlimit
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rl); err != nil || rl.Cur < 2*limit+256 {
+		t.Skipf("RLIMIT_NOFILE %d cannot hold %d client and server descriptors", rl.Cur, 2*limit)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	entered := make(chan struct{}, limit)
+	s, err := StartPackagePeerUnixWithOptions(ctx, path, allowPackagePeer, func(ctx context.Context, c net.Conn, _ PeerCredentials) {
+		echoPeer(ctx, c, entered)
+	}, PackagePeerOptions{MaxConnections: limit})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	start := time.Now()
+	conns := make([]net.Conn, 0, limit)
+	for range limit {
+		c, err := net.Dial("unix", path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer c.Close()
+		conns = append(conns, c)
+		select {
+		case <-entered:
+		case <-time.After(5 * time.Second):
+			t.Fatalf("peer %d not admitted", len(conns))
+		}
+	}
+	t.Logf("admitted %d retained peers in %v", limit, time.Since(start))
+	echoes(t, conns[0])
+	echoes(t, conns[limit-1])
+	c, err := net.Dial("unix", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	c.SetReadDeadline(time.Now().Add(time.Second))
+	b := make([]byte, 1)
+	if _, err := c.Read(b); err == nil {
+		t.Fatal("overflow peer admitted")
+	} else if n, ok := err.(net.Error); ok && n.Timeout() {
+		t.Fatal("overflow peer queued without a bound")
+	}
+	// A released slot is reusable at scale.
+	conns[7].Close()
+	r, err := net.Dial("unix", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	deadline := time.After(5 * time.Second)
+	for admitted := false; !admitted; {
+		select {
+		case <-entered:
+			admitted = true
+		case <-deadline:
+			t.Fatal("released slot not reused")
+		case <-time.After(10 * time.Millisecond):
+			r.Close()
+			if r, err = net.Dial("unix", path); err != nil {
+				t.Fatal(err)
+			}
+			defer r.Close()
+		}
+	}
+	cancel()
+	if err := s.Close(); !errors.Is(err, context.Canceled) {
+		t.Fatal(err)
+	}
+}
+
+// Descriptor exhaustion must not close the listener or retained peers; admission
+// resumes once descriptors are available again.
+func TestPackagePeerDescriptorExhaustionKeepsPeers(t *testing.T) {
+	path := packagePeerPath(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	entered := make(chan struct{}, 16)
+	s, err := StartPackagePeerUnixWithOptions(ctx, path, allowPackagePeer, func(ctx context.Context, c net.Conn, _ PeerCredentials) {
+		echoPeer(ctx, c, entered)
+	}, PackagePeerOptions{MaxConnections: 16})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	var retained []net.Conn
+	for range 4 {
+		c, err := net.Dial("unix", path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer c.Close()
+		<-entered
+		echoes(t, c)
+		retained = append(retained, c)
+	}
+	var original syscall.Rlimit
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &original); err != nil {
+		t.Fatal(err)
+	}
+	restore := func() { _ = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &original) }
+	defer restore()
+	// Let earlier tests' descriptors close, then consume every spare descriptor
+	// and release exactly one for the client socket. The server accept then
+	// fails with EMFILE until the limit is restored.
+	time.Sleep(200 * time.Millisecond)
+	lowered := original
+	lowered.Cur = openFDs(t) + 8
+	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &lowered); err != nil {
+		t.Fatal(err)
+	}
+	var fillers []*os.File
+	for {
+		f, err := os.Open(os.DevNull)
+		if err != nil {
+			break
+		}
+		fillers = append(fillers, f)
+	}
+	if len(fillers) == 0 {
+		restore()
+		t.Fatal("no spare descriptor for the client")
+	}
+	fillers[0].Close()
+	defer func() {
+		for _, f := range fillers[1:] {
+			f.Close()
+		}
+	}()
+	pending, dialErr := net.Dial("unix", path)
+	time.Sleep(200 * time.Millisecond)
+	select {
+	case <-entered:
+		restore()
+		t.Fatal("peer admitted without a descriptor")
+	default:
+	}
+	select {
+	case <-s.done:
+		restore()
+		t.Fatalf("listener stopped on descriptor exhaustion: %v", s.err)
+	default:
+	}
+	restore()
+	if dialErr != nil {
+		t.Fatalf("client dial under lowered limit: %v", dialErr)
+	}
+	defer pending.Close()
+	for _, c := range retained {
+		echoes(t, c)
+	}
+	select {
+	case <-entered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("admission did not resume after descriptors returned")
+	}
+	echoes(t, pending)
+	cancel()
+	if err := s.Close(); !errors.Is(err, context.Canceled) {
+		t.Fatal(err)
+	}
+}
