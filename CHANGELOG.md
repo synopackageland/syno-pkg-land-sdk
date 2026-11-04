@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.50.8
+
+- Add opt-in `identity_gateway.secure_context: required` for Compose and standalone Apps that need HTTPS, without changing upstream App code
+- Show localized DSM light HTTPS guidance for HTTP document navigations and return `https_required` for other HTTP App requests, without automatic redirects
+- Use the authenticated browser scheme and declared HTTPS ports only; show instructions when the port is unknown, preserving HTTPS and default HTTP behavior
+- Reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.50.7
 
 - Keep DSM path-ingress HTTP sign-in working after HTTPS visits by using separate HTTP session and transaction cookies; HTTPS cookies remain Secure
