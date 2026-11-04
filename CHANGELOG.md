@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Remove request-body byte caps from trusted App operation registries and installed description files; keep DSM authentication, regular-file validation, exact route binding and incoming request limits
+- Cover 556 routes and 228 exposed operations with metadata above the former 1 MiB threshold
+
 ## 0.49.5
 
 - Use one five-minute operation default across DSM identity, File Station, WebAPI, commands, bridge startup, cleanup, notifications and transfers; preserve explicit caller cancellation

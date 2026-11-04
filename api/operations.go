@@ -43,10 +43,9 @@ func infrastructureOperation(name string) bool {
 // ValidateOperationRegistry checks equality in both directions, including hidden
 // operations and SDK capability routes. Only the fixed discovery/session routes
 // are infrastructure. It runs before handlers, migrations or network I/O.
+// Registry bytes are trusted App build metadata, not a request body; the
+// request-body allowance must not limit the number or size of model schemas.
 func ValidateOperationRegistry(raw, permissions []byte, routes ...Route) error {
-	if len(raw) > MaxRequestBytes {
-		return fmt.Errorf("operation registry exceeds request limit")
-	}
 	var doc operationRegistry
 	if err := json.Unmarshal(raw, &doc); err != nil {
 		return fmt.Errorf("invalid operation registry: %w", err)

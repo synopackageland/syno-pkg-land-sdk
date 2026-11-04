@@ -17,6 +17,8 @@ const DescriptionFile = "synopkgland-api.json"
 // WithDescription serves only the fixed discovery method using DSM auth, even
 // outside a standalone App session. next retains all business/session guards.
 // filename is a trusted private package path, never a request parameter.
+// App-authored description files have no byte-size cap; request limits still
+// apply to the incoming discovery request.
 func WithDescription(next http.Handler, auth Authenticator, filename string) http.Handler {
 	return &routeWrapper{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if HTTPRouteMethod(next, r) != "" {
@@ -78,12 +80,12 @@ func WithDescription(next http.Handler, auth Authenticator, filename string) htt
 		}
 		defer file.Close()
 		info, err := file.Stat()
-		if err != nil || !info.Mode().IsRegular() || info.Size() > MaxRequestBytes {
+		if err != nil || !info.Mode().IsRegular() {
 			writeError(w, &Error{"description_invalid", "API description unavailable"})
 			return
 		}
-		raw, err := io.ReadAll(io.LimitReader(file, MaxRequestBytes+1))
-		if err != nil || len(raw) > MaxRequestBytes || !json.Valid(raw) {
+		raw, err := io.ReadAll(file)
+		if err != nil || !json.Valid(raw) {
 			writeError(w, &Error{"description_invalid", "API description unavailable"})
 			return
 		}
