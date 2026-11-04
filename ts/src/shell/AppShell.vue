@@ -162,13 +162,15 @@ watchEffect(onCleanup => {
   onCleanup(() => observer.disconnect())
 }, {flush: 'post'})
 // The page bar holds the actions and notes of a page without the shell's
-// header; it shows only while one of them renders something.
+// header; it shows only while one of them renders something, or while its
+// toolbar holds the UI's single button for dismissed callouts (UI 0.20.1+):
+// without it a page with no buttons would leave them nowhere to come back from.
 const pageBar = useTemplateRef<HTMLElement>('page-bar')
 const pageBarEmpty = ref(true)
 watchEffect(onCleanup => {
   const bar = pageBar.value
   if(!bar) {pageBarEmpty.value = true; return}
-  const read = () => {pageBarEmpty.value = !Array.from(bar.querySelectorAll('.app-page-meta, .app-page-bar-actions')).some(slot => rendersOwnContent(slot, '.app-page-slot'))}
+  const read = () => {pageBarEmpty.value = !bar.querySelector('[data-ui-callout-recall-trigger]') && !Array.from(bar.querySelectorAll('.app-page-meta, .app-page-bar-actions')).some(slot => rendersOwnContent(slot, '.app-page-slot'))}
   read()
   const observer = new MutationObserver(read)
   observer.observe(bar, {childList: true, subtree: true, characterData: true})

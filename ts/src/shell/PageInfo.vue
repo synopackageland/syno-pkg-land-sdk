@@ -25,7 +25,13 @@ const props = withDefaults(defineProps<{
 const slots = defineSlots<{default?: () => unknown}>()
 const shown = computed(() => (props.notes ?? []).filter(Boolean))
 const target = props.inline ? null : inject(PageInfoTarget, null)
+// The template would unwrap target itself, and !target would then read "no
+// shell" until the shell's title line mounts: the button would first render in
+// place and move later. In the shell it waits for its place, where the UI takes
+// it as the page's info button (UI 0.20.1+ lists dismissed callouts in it).
+const inShell = target !== null
 const to = computed(() => target?.value ?? null)
+const show = computed(() => (shown.value.length > 0 || !!slots.default) && (!inShell || to.value !== null))
 const shellLocale = inject(ShellLocale, null)
 const label = computed(() => {
   if(props.label) return props.label
@@ -35,7 +41,7 @@ const label = computed(() => {
 </script>
 
 <template>
-  <Teleport v-if="(shown.length || slots.default) && (!target || to)" :to="to ?? 'body'" :disabled="!target">
+  <Teleport v-if="show" :to="to ?? 'body'" :disabled="!inShell">
     <InfoTip v-bind="$attrs" class="page-info" icon="info" trigger-action="click" :side="side" :align="align" :aria-label="label">
       <slot><ul class="page-info-notes"><li v-for="note in shown" :key="note">{{ note }}</li></ul></slot>
     </InfoTip>
