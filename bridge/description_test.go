@@ -7,6 +7,7 @@ import (
 	"github.com/synopackageland/syno-pkg-land-sdk/api"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -60,3 +61,43 @@ func TestRuntimeRegistryDigestAndEqualityBeforeAppExecution(t *testing.T) {
 }
 
 func registryDigest(raw []byte) string { return fmt.Sprintf("%x", sha256.Sum256(raw)) }
+
+func TestLargeRuntimeRegistryLoadsWithDigestAndExactRoutes(t *testing.T) {
+	operations := map[string]any{}
+	permissions := map[string]string{}
+	methods := []string{}
+	for i := range 556 {
+		name := fmt.Sprintf("catalog.item%d.get", i)
+		ai := "hidden"
+		if i < 228 {
+			ai = "read"
+		}
+		operations[name] = map[string]any{"summary": "Read object", "ai": ai, "effect": "read", "permission": "authenticated", "paramsSchema": map[string]any{"type": "object"}, "resultSchema": map[string]any{"type": "object", "description": strings.Repeat("Model documentation ", 200)}, "flow": map[string]any{"type": "invoke", "method": name}}
+		methods = append(methods, name)
+		permissions[name] = "authenticated"
+	}
+	raw, err := json.Marshal(map[string]any{"format": "synopkgland.api", "version": 2, "operations": operations})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(raw) <= api.MaxRequestBytes {
+		t.Fatal("fixture must exceed former metadata cap")
+	}
+	manifest, _ := json.Marshal(map[string]any{"schema": 1, "runtime": "python", "entry": "main.py", "mode": "exec", "methods": methods})
+	policy, _ := json.Marshal(map[string]any{"schema": 1, "default": "administrators", "methods": permissions})
+	dir := appDir(t, string(manifest), string(policy), nil)
+	path := filepath.Join(dir, "synopkgland-operations.json")
+	if err := os.WriteFile(path, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := Config{PackageID: "Example", AppDir: dir, DataDir: t.TempDir(), Auth: userAuth{api.Identity{User: "caller"}}, OperationsDigest: registryDigest(raw)}
+	if _, err := NewRuntime(cfg); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, append(raw, ' '), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := NewRuntime(cfg); err == nil {
+		t.Fatal("large registry bypassed digest verification")
+	}
+}
