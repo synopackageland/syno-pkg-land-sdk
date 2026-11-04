@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.50.7
 
 - Keep DSM path-ingress HTTP sign-in working after HTTPS visits by using separate HTTP session and transaction cookies; HTTPS cookies remain Secure
 - Use the authenticated ingress scheme consistently for cookies, origins, return URLs and upstream forwarding, while direct listeners continue to use their own TLS state
