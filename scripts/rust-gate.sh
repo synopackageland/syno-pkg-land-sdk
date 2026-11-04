@@ -5,6 +5,10 @@
 # (scripts/rust-docker-gate.sh).
 # SYNOPKGLAND_RUST_TOOLCHAIN: the rustup toolchain with the DSM targets (stable).
 set -euo pipefail
+if ! test -f /.dockerenv; then
+  echo 'Run Rust checks inside a Linux build container.' >&2
+  exit 1
+fi
 cd "$(dirname "$0")/../rust"
 cargo build --locked -p syno-pkg-land-app --examples
 cargo fmt --all --check
