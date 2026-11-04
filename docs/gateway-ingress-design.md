@@ -45,8 +45,10 @@ The socket itself grants no authority. A caller without the package keypair
 cannot complete its TLS handshake. Only the authenticated proxy can supply the
 client IP used by gateway sessions. nginx overwrites that header, preserves the
 external Host and Origin, and forwards upgrades without buffering. Public direct
-listeners do not trust the proxy header. Cookies remain host-only, HttpOnly and
-Secure on the native entry.
+listeners do not trust the proxy header. Cookies remain host-only and HttpOnly;
+Secure follows the external browser scheme. Path ingress accepts HTTP as well
+as HTTPS, with separate HTTP cookies so stored Secure cookies cannot block an
+HTTP sign-in. Dedicated-port native entries continue to use HTTPS.
 
 The resource worker owns nginx registration and removal. Stopping the gateway
 closes its socket; stopping/removing the package withdraws its public ingress.
