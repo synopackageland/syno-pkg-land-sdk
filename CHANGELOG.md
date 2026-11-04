@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.50.11
+
+- Add actionable repair guidance to package hook logs when a same-name Compose project registration remains from an earlier failed installation, preserving volumes, data and images
+- Reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.50.10
 
 - Discover the DSM HTTPS guidance port from native `DSM.json` before falling back to `synoinfo.conf`, including default and customized ports
