@@ -14,7 +14,7 @@ export type CapabilityState='unsupported'|'needs-admin-approval'|'ready'|'blocke
 // scheduler_denied, …); reason is the English detail. outcome: what a failed
 // approval's rollback did (restored, withdrawn, restore_failed, withdraw_failed).
 // The DSM window's access of an older CLI reports reason only.
-export interface CapabilityStatus {state:CapabilityState;approval?:ApprovalDifference;reason?:string;code?:string;outcome?:string;requested?:{scope:string;generation:number};retry?:boolean}
+export interface CapabilityStatus {state:CapabilityState;approval?:ApprovalDifference;reason?:string;code?:string;outcome?:string;diagnostic?:{api:string;method:string;version:number;dsm_code:number};requested?:{scope:string;generation:number};retry?:boolean}
 // The App supplies the implementation through app.provide(ExecutorSetupKey, setup).
 // Passwords belong only to this call and must never be persisted or logged.
 export interface ExecutorSetup {

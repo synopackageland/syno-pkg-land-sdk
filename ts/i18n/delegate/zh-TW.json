@@ -86,5 +86,8 @@
   "upgradePolicyLabel": "核准政策",
   "upgradeChanges": "權限與參數差異",
   "upgradeUnknown": "先前的受保護執行環境未提供比較資料，無法判斷變更內容或權限是否擴張，需要管理員重新核准",
-  "upgradeConsentTitle": "核准此次更新"
+  "upgradeConsentTitle": "核准此次更新",
+  "schedulerDenied": "DSM 拒絕存取任務排程表。請登出 DSM，重新登入 DSM 桌面後按「重試」。若仍被拒絕，請聯絡管理員",
+  "approvalRestoreFailed": "無法還原先前的核准。請按「重試」確認目前狀態，再重新核准",
+  "approvalWithdrawFailed": "無法撤回這次核准建立的任務。請按「重試」確認目前狀態，再重新核准"
 }

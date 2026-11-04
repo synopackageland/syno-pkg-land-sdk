@@ -15,7 +15,7 @@ import ExecutorConsent from './ExecutorConsent.vue'
 const props=defineProps<{admin:boolean;locale?:string;ctx?:Pick<Context,'call'|'webApi'>;initial?:CapabilityStatus;purpose?:string;title?:string;layout?:'page'|'inline'}>()
 const emit=defineEmits<{confirmed:[]}>()
 const copy=computed(()=>delegateCopy(props.locale))
-const {status,password,busy,confirming,error,failure,passwordError,scope,chosen,options,dynamic,files,webapiProfiles,canConfirm,needsScope,refresh,submit,explain}=useScopeApproval(props,()=>emit('confirmed'))
+const {status,password,busy,confirming,error,failure,passwordError,scope,chosen,options,dynamic,files,webapiProfiles,canConfirm,needsScope,refresh,submit,explain,recovery}=useScopeApproval(props,()=>emit('confirmed'))
 const state=computed(()=>confirming.value?'confirming':!status.value?undefined:status.value.state==='ready'?'ready':'blocked')
 const badge=computed(()=>({ready:{tone:'success',text:copy.value.statusReady},blocked:{tone:'danger',text:copy.value.statusBlocked},confirming:{tone:'info',text:copy.value.statusConfirming}} as const)[state.value??'confirming'])
 // A stopped or starting package waits for no approval: the panel says so and
@@ -32,16 +32,16 @@ defineExpose({refresh})
 <template>
  <SettingsSection v-if="admin" :title="title??copy.setupTitle" :description="consent?undefined:files?copy.setupHelpFiles:copy.setupHelp" :collapsible="false" :aria-busy="busy||!status&&!confirming&&!error">
   <Callout v-if="error" tone="danger" role="alert"><span class="executor-alert"><span>{{ copy.setupError }}</span><Button variant="secondary" size="sm" :disabled="busy" @click="refresh">{{ copy.retry }}</Button></span></Callout>
-  <Callout v-else-if="failure&&!('confirm' in failure)" tone="danger" role="alert">{{ failure.code==='session_ended'?copy.session:explain(failure)??copy.setupError }}<span v-if="failure.reason" class="executor-reason">{{ failure.reason }}</span></Callout>
+  <Callout v-else-if="failure&&!('confirm' in failure)" tone="danger" role="alert"><span class="executor-alert"><span>{{ failure.code==='session_ended'?copy.session:explain(failure)??copy.setupError }}<span v-if="recovery(failure)" class="executor-reason">{{ recovery(failure) }}</span><span v-if="failure.reason" class="executor-reason">{{ failure.reason }}</span></span><Button variant="secondary" size="sm" :disabled="busy" @click="refresh">{{ copy.retry }}</Button></span></Callout>
   <Callout v-if="lifecycle" tone="info" role="status">{{ lifecycleCopy(lifecycle,locale) }}</Callout>
   <template v-else>
    <div v-if="!status&&!confirming&&!error" class="executor-summary"><SettingsRow :label="copy.status" data-placeholder-row><Skeleton width="5rem" height="20px" /></SettingsRow></div>
    <div v-if="(status||confirming)&&!consent" class="executor-summary">
     <SettingsRow :label="copy.status"><span role="status" :data-executor-status="state"><Badge :tone="badge.tone">{{ badge.text }}</Badge></span></SettingsRow>
-    <SettingsRow v-if="status?.reason&&(status.state==='blocked'||status.state==='unsupported')" :label="copy.details"><template v-if="explain(status)">{{ explain(status) }}<span class="executor-reason">{{ status.reason }}</span></template><template v-else>{{ status.reason }}</template></SettingsRow>
+    <SettingsRow v-if="status?.reason&&(status.state==='blocked'||status.state==='unsupported')" :label="copy.details"><template v-if="explain(status)">{{ explain(status) }}<span class="executor-reason">{{ status.reason }}</span></template><template v-else>{{ status.reason }}</template><span v-if="recovery(status)" class="executor-reason">{{ recovery(status) }}</span></SettingsRow>
     <SettingsRow v-if="scope?.selection" :label="copy.protectedScope"><PathDisplay :path="scope.selection.root" /></SettingsRow>
    </div>
-   <Callout v-if="state==='blocked'&&!consent" tone="warning">{{ files?copy.blocked:copy.executorBlocked }}</Callout>
+   <Callout v-if="state==='blocked'&&!consent" tone="warning"><span class="executor-alert"><span>{{ files?copy.blocked:copy.executorBlocked }}</span><Button v-if="!failure&&!error" variant="secondary" size="sm" :disabled="busy" @click="refresh">{{ copy.retry }}</Button></span></Callout>
    <Callout v-if="scope?.mismatch" tone="warning">{{ copy.scopeMismatch }}</Callout>
    <component :is="consent?ExecutorConsent:'div'" v-if="form" v-bind="consent?{admin:true,locale,files,purpose,layout,webapiProfiles,status}:{}">
     <Form direction="vertical" class="executor-form" @submit.prevent="submit">

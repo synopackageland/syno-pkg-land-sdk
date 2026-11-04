@@ -86,5 +86,8 @@
   "upgradePolicyLabel": "Política",
   "upgradeChanges": "Cambios en permisos y parámetros",
   "upgradeUnknown": "El entorno protegido anterior no proporcionó datos de comparación. No se pueden determinar los cambios ni la ampliación de permisos. Se requiere una nueva aprobación del administrador",
-  "upgradeConsentTitle": "Aprobar esta actualización"
+  "upgradeConsentTitle": "Aprobar esta actualización",
+  "schedulerDenied": "DSM denegó el acceso al Programador de tareas. Cierre sesión en DSM, vuelva a entrar desde el escritorio de DSM y seleccione Reintentar. Si se sigue denegando el acceso, contacte con su administrador",
+  "approvalRestoreFailed": "No se pudo restaurar la aprobación anterior. Seleccione Reintentar para comprobar el estado actual antes de aprobar de nuevo",
+  "approvalWithdrawFailed": "No se pudieron retirar las tareas creadas por esta aprobación. Seleccione Reintentar para comprobar el estado actual antes de aprobar de nuevo"
 }

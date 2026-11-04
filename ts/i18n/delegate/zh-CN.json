@@ -86,5 +86,8 @@
   "upgradePolicyLabel": "批准策略",
   "upgradeChanges": "权限与参数差异",
   "upgradeUnknown": "先前的受保护运行环境未提供比较数据，无法判断更改内容或权限是否扩展，需要管理员重新批准",
-  "upgradeConsentTitle": "批准此次更新"
+  "upgradeConsentTitle": "批准此次更新",
+  "schedulerDenied": "DSM 拒绝访问任务计划。请退出 DSM，重新登录 DSM 桌面后点击“重试”。若仍被拒绝，请联系管理员",
+  "approvalRestoreFailed": "无法恢复先前的批准。请点击“重试”确认当前状态，再重新批准",
+  "approvalWithdrawFailed": "无法撤回此次批准创建的任务。请点击“重试”确认当前状态，再重新批准"
 }

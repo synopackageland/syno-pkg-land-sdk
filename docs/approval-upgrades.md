@@ -45,3 +45,33 @@ unknown. A candidate that fails verification cannot be described as safe.
 other changes. Root digests and JSON-pointer policy differences are included.
 Diagnostics contain no passwords or session credentials and live under `/run`,
 so reboot removes them. They do not cause DSM to launch a window.
+
+Package-account lifecycle scripts are not an approval pin. A change to a
+generated `start-stop-status` alone does not change root authority when the
+policy, protected programs, executor anchor and exact scheduler definitions
+still match. Inspect must nevertheless recognize the entire lifecycle script;
+the CLI accepts only explicitly supported, byte-exact released variants. An
+arbitrary lifecycle edit still makes a baseline invalid. Packages without a
+daemon retain their original lifecycle bytes when daemon stop handling changes.
+
+An approval refusal is distinct from the unavailable executor it may leave
+behind. The SDK retains the scheduler error and rollback outcome even if a
+subsequent `delegate.status` reports `EXECUTOR_UNAVAILABLE`. Administrators can
+select Retry to read the current state; Retry neither resends a password nor
+creates or runs a task. A failed rollback is never permission to run a task.
+
+For `dsm_105`, sign out of DSM, sign in through the DSM desktop, and check the
+status before approving again. Approval uses that window's native WebAPI
+transport and password confirmation, independently of the App's RPC fetch.
+DSM releases can additionally require a session-bound request hash for Root
+scheduler calls from non-private addresses. A password confirmation token does
+not replace that hash. Keep the desktop session, its token and its native
+credential together; do not replace this path with a root command or a separate
+password login. A persistent denial requires administrator diagnosis, not an
+automatic reboot or a fallback to another scheduler API.
+
+New CLI windows include the refused API, method, version and numeric DSM code
+in `CapabilityStatus.diagnostic`, without request parameters or credentials.
+The original error remains available if rollback also fails. Rollback success
+requires an exact readback of the restored tasks, and withdrawal success requires
+readback of their absence.
