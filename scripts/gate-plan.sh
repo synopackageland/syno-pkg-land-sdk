@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Reads changed paths, one per line, and prints the gate segments they
 # affect, one per line: go-root, go-executor and go-conformance (the Go
-# modules), rust, python, node and ts. scripts/gate.sh --fast runs only those.
+# modules), rust, python, node and ts. scripts/gate-full.sh --fast selects only those.
 # A path's segments are the ones whose tests read it.
 set -euo pipefail
 all="go-root go-executor go-conformance rust python node ts"

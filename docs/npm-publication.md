@@ -12,7 +12,8 @@ Python ships source directly; its generated `_version.py` is covered by
 `sdk-version.mjs --check`. Rust uses Cargo's package version at compile time and
 the frontend's build output is not committed to the Go module.
 
-Build and gate the package before packing it. Prepare the gated archive in a new
+Run `npm run gates` for basic checks before packing. Extended checks are optional
+and require `npm run gates:full` when explicitly requested. Prepare the gated archive in a new
 private staging directory using `python3 scripts/prepare-npm-publish.py ARCHIVE DESTINATION`.
 The command rejects unsafe archive members and local dependency references,
 removes installation-only manifest fields, and verifies that repacking preserves
@@ -60,25 +61,24 @@ requires a new manifest format and corresponding CLI support.
 
 Before packing a release:
 
-1. Record the reproducible results from `bash scripts/executor-digests.sh VERSION`
-   in `release/vVERSION.json`, together with the immutable `executorVersion`.
+1. When executor sources or build inputs change, explicitly run
+   `bash scripts/executor-digests.sh VERSION` and record its inventory in
+   `release/vVERSION.json`, together with the immutable `executorVersion`.
    Reusing an older executor tag requires identical executor source and bytes;
    otherwise create a new executor release. Never use a branch or `latest`.
 2. Run `node scripts/executor-manifest.mjs` after updating package versions and
    the release record. Commit both generated files with the release metadata.
 3. Run `node --test scripts/executor-manifest.test.mjs` and
-   `node scripts/executor-manifest.mjs --check`. The full release gate also
-   compares both reproducible builds with the declared six digests; stale pins
-   fail. Inspect the actual npm tarball and Go module archive for the manifest.
+   `node scripts/executor-manifest.mjs --check`. The optional full gate also
+   compares both builds with the declared digests only when explicitly requested
+   using `npm run gates:full`. Basic validates the committed manifest without
+   rebuilding the executor matrix. Inspect the actual npm tarball and Go module archive for the manifest.
 4. Publish/tag only after release approval. Consumers lock npm integrity and Go
    module sums; the CLI reads the manifest from the resolved SDK module and
    verifies both built payloads before packaging. Nothing fetches a manifest
    at NAS runtime. A compatible SDK minor needs no CLI release. An unsupported
    format requires CLI support; malformed manifests are always rejected.
 
-The manifest ships starting with SDK 0.27.1, which reuses executor/v0.27.0
-and its six verified payload digests. When executor sources and build inputs are
-unchanged, retain that immutable inventory and its existing reproducibility
-evidence; do not rebuild an executor matrix or create another executor tag.
-SDK 0.28.0 and 0.29.0 also reuse executor/v0.27.0: executor sources are unchanged since 0.27.0. SDK 0.26.0 and 0.27.0 as
-already published remain compatible through the CLI's frozen legacy inventory.
+When executor sources and build inputs are unchanged, retain the immutable
+inventory and its recorded evidence. Do not rebuild an executor matrix or create
+another executor tag for an unrelated patch release.

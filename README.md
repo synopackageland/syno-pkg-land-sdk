@@ -89,43 +89,37 @@ Native foreground daemons can opt into bounded crash recovery in their generated
 runtime config; see [native daemon restart policy](docs/native-daemon-restart.md)
 for defaults, status diagnostics and the required CLI/templates integration.
 
-```
-scripts/gate.sh                 # go, executor, conformance, bridge App SDKs, rust/app, ts, 3 arches, digests
-scripts/gate.sh --fast          # only what the changes since origin/main reach (scripts/gate-plan.sh)
-scripts/rust-linux-test.sh      # rust/app tests on Linux in Docker (gate runs it off Linux)
-go generate ./...               # after editing spec/protocol/v1 or spec/delegate/v1
-scripts/executor-digests.sh     # digest table entry for the CLI
+```sh
+npm run gates                  # basic checks for development and release
+npm run gates:full             # extended checks, only when explicitly requested
+bash scripts/gate.sh --plan    # print the default workloads without running them
+go generate ./...              # after editing protocol or delegate specs
 ```
 
-Use `--fast` while developing: it prints the segments it skips, and checks
-the executor digests' reproducibility only in the full gate. Run the full gate
-once before a release. With `SYNOPKGLAND_DOCKER_SSH=<ssh host>` the Rust
-checks run on that Docker host in `synopkgland-gate-sdk:<hash>`
-(`scripts/gate.Dockerfile`), with the host's shared `synopkgland-cache-*`
-volumes, and wait for one of its two gate slots. The ts segment
-(`scripts/ts-gate.sh`: npm ci, vue-tsc, vitest, build, pack) runs there too,
-in Node.js 24.22.1's image with the shared npm cache
-(`scripts/ts-docker-gate.sh`), so this machine's load cannot time out its
-tests; set `SYNOPKGLAND_DOCKER_NPM_REGISTRY` when that host cannot reach
-registry.npmjs.org. Without `SYNOPKGLAND_DOCKER_SSH` everything runs here.
+Basic checks cover core unit tests, native builds, static policy and manifest
+validation, npm packing and tarball content scans. Full adds target matrices,
+runtime containers, daemon/gateway integration, Rust target checks, cold
+executor reproducibility and registry integration. Full is optional for releases.
+See [release checks](docs/release-checks.md) for all entry points.
+A configured `SYNOPKGLAND_DOCKER_SSH` supplies build isolation for frontend checks;
+it does not enable extended integrations. Rust runs only in Linux containers.
 
 ### Contributor checks
 
-Checks run through the scripts above; this repository does not use GitHub
-Actions. From a clone with dependencies accessible, install Git, Bash and the
-Go 1.26.10 toolchain declared in `go.mod`, then fetch the comparison base and run the fast gate:
+Local release checks and private CI share the basic gate. From a clone with
+dependencies accessible, install Git, Bash and the Go toolchain declared in
+`go.mod`, then run:
 
 ```sh
 git fetch origin
-scripts/gate.sh --fast
+npm run gates
 ```
 
-The selected segments print before they run. Install the tools for those
-segments: Node.js/npm for `node`, `ts` and the root Go module's bridge tests;
-Python 3 and `uv` for Python checks; Rust/rustup with the targets in
-`scripts/rust-gate.sh` for Rust checks; and Docker for the Linux/runtime checks
-(including Rust on macOS, Node 22 and Python 3.8). A release uses
-`scripts/gate.sh` without `--fast`. Neither gate requires a NAS or DSM login.
+Basic checks need Node.js/npm, Go and Python. Extended checks additionally use
+`uv`, Rust/rustup and Docker for supported runtime and target checks. Rust runs
+inside a Linux container. A release uses basic checks; extended checks require
+`npm run gates:full`.
+Neither gate requires a NAS or DSM login.
 The root module's Compose prepare tests read Linux kernel routes from `/proc`;
 run those checks on Linux or in a Linux container. Docker SSH redirects the
 Rust/TS segments; root Go checks still run on the machine invoking the gate.
@@ -134,7 +128,7 @@ Docker SSH is optional. Contributors can use their own local tools and Docker
 engine with `SYNOPKGLAND_DOCKER_SSH` unset, or an SSH-accessible Docker host:
 
 ```sh
-SYNOPKGLAND_DOCKER_SSH=builder.example scripts/gate.sh --fast
+SYNOPKGLAND_DOCKER_SSH=builder.example npm run gates
 ```
 
 `builder.example` is a placeholder; supply your own host. Set
@@ -142,9 +136,9 @@ SYNOPKGLAND_DOCKER_SSH=builder.example scripts/gate.sh --fast
 On a shared host, keep the `synopkgland-` gate images and cache volumes; remove
 only containers and temporary files created by your run.
 
-The executor digest changes only when `executor/` changes. Build it only as
-`executor-digests.sh` does (a copy of `executor/`, pinned go1.26.10); any other
-build gives other digests.
+Executor source or build-input changes require a matching immutable inventory.
+Build it only as `executor-digests.sh` specifies; other build inputs can change
+the resulting digests. Unrelated patches reuse the committed inventory.
 
 License: MIT for SDK code; retained upstream Compose fixtures have separate
 [licenses and notices](compose/testdata/README.md).

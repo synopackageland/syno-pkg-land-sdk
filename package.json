@@ -1,0 +1,10 @@
+{
+  "name": "synopkgland-sdk-checks",
+  "private": true,
+  "scripts": {
+    "gates": "bash scripts/gate.sh",
+    "gates:full": "bash scripts/gate.sh --full",
+    "gates:fast": "bash scripts/gate.sh",
+    "build": "npm --prefix node run build && npm --prefix ts run build"
+  }
+}
