@@ -27,10 +27,15 @@ into every generated native window, including Go-only Apps.
 
 An old page can retain a rejected token after another tab signs in again.
 `refresh(rejectedToken)` forces same-origin recovery while sharing concurrent
-requests. `createClient({sessionRetry: {session, operations}})` opts in to one
+requests. Failed refresh or a same-token reply retains the existing carrier
+for later calls; `refresh()` still returns `undefined` and prevents a replay.
+`createClient({sessionRetry: {session, operations}})` opts in to one
 retry for trusted `effect: read`, `kind: rpc` operations only. Writes, AI,
 streams and batches never replay; the default remains off because the client
-cannot infer operation effects. Existing `ctx.call` is not automatically wrapped.
+cannot infer operation effects. Pass the CLI-generated
+`sessionRetryOperations` from `generated/session-retry.ts` as `operations`;
+unclassified routes have `kind: unknown` and never retry. Existing `ctx.call`
+is not automatically wrapped.
 See [HTTPS and session recovery](../docs/https-and-session-recovery.md) for the
 API, cancellation/deadline behavior and the CLI skill link.
 
@@ -41,6 +46,10 @@ returns `https_required`; render `identityCopy(locale).httpsTitle` and
 `readDsmHttpsURL(ctx, location.href)` discovers `dms_https` through
 `readDsmPorts` only for an administrator. Ordinary/unknown users get no
 PortInfo request and should see instructions only. No port is guessed.
+To preserve the current URL's `launchApp` and `launchParam`, use
+`readDsmHttpsURL(ctx, location.href, {keepLaunchApp: true, signal})`.
+Other query parameters and fragments are dropped; the default still opens DSM
+without launch routing. A third-argument `AbortSignal` remains supported.
 
 ## DSM WebAPI
 

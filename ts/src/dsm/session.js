@@ -35,10 +35,8 @@ export function createDsmSession(options) {
     var current = token();
     if (current && current !== rejected) return Promise.resolve(current);
     if (pending) return pending;
-    // A desktop can keep reporting its rejected token. Suppress that carrier
-    // until it changes, even when the host supplies no write callback.
-    ignored = valid(options.read());
-    recovered = undefined;
+    // Keep the current carrier until a distinct replacement succeeds. Failed
+    // refresh must not strip credentials from later writes or stream requests.
     return recover(rejected);
   }
   /** @param {string | undefined} [rejected] */
@@ -71,7 +69,11 @@ export function createDsmSession(options) {
           var value = reply && reply.success === true ? valid(reply.SynoToken) : undefined;
           if (value === rejected) value = undefined;
           if (value) {
+            // Prefer the recovered token while the desktop still reports the
+            // old carrier, even when the host supplies no write callback.
+            var previous = valid(options.read());
             if (options.write) options.write(value);
+            ignored = previous;
             recovered = value;
           }
           finish(value);
