@@ -71,6 +71,10 @@ func (f *Front) writeFailure(w http.ResponseWriter, r *http.Request, code, retry
 		}
 	case "login_required":
 		status, stable, key = http.StatusUnauthorized, "dsm_sign_in_required", "sign_in_required"
+	case "sign_in_expired":
+		status, stable, key = http.StatusBadRequest, "dsm_sign_in_expired", "sign_in_expired"
+	case "assertion_invalid":
+		status, stable, key = http.StatusBadRequest, "dsm_assertion_invalid", "assertion_invalid"
 	}
 	locale, messages := denialMessages(r)
 	w.Header().Set("Cache-Control", "no-store")
@@ -101,7 +105,11 @@ func (f *Front) writeFailure(w http.ResponseWriter, r *http.Request, code, retry
 	} else {
 		fmt.Fprint(w, `<svg class="app-icon" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#057feb"/><path d="M14 14h8v8h-8zm12 0h8v8h-8zM14 26h8v8h-8zm12 0h8v8h-8z" fill="white"/></svg>`)
 	}
-	fmt.Fprintf(w, `<h1 id="app-name">%s</h1></div><p role="alert" data-error-code="%s" data-i18n="gateway.%s">%s</p><footer>`, html.EscapeString(f.brand.name), stable, key, html.EscapeString(messages[key]))
+	fmt.Fprintf(w, `<h1 id="app-name">%s</h1></div><p role="alert" data-error-code="%s" data-i18n="gateway.%s">%s</p>`, html.EscapeString(f.brand.name), stable, key, html.EscapeString(messages[key]))
+	if !requestSecure(r) {
+		fmt.Fprintf(w, `<p data-i18n="gateway.http_warning">%s</p>`, html.EscapeString(messages["http_warning"]))
+	}
+	fmt.Fprint(w, "<footer>")
 	switch {
 	case signIn != "":
 		fmt.Fprintf(w, `<a class="primary" data-i18n="gateway.sign_in" href="%s">%s</a>`, html.EscapeString(signIn), html.EscapeString(messages["sign_in"]))

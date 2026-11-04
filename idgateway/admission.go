@@ -280,7 +280,7 @@ func entryHandlerWithMenu(cfg Config, preflight func() error, shares func() erro
 		// the host that started the transaction.
 		decision := MenuDecision{Kind: MenuBaseline}
 		if cfg.IngressPath == "" {
-			decision = MenuDestination(cfg, menu(), r.Host, r.TLS != nil)
+			decision = MenuDestination(cfg, menu(), r.Host, requestSecure(r))
 		}
 		if post && decision.Kind == MenuBaseline {
 			http.Error(w, "invalid entry", 400)
@@ -405,7 +405,7 @@ func (f *Front) serveProxy(w http.ResponseWriter, r *http.Request) {
 	}
 	if isUpgrade(r) {
 		if _, protected := r.Context().Value(subjectKey).(Subject); protected {
-			if c, err := r.Cookie(f.cookie); err == nil {
+			if c, err := r.Cookie(f.sessionCookie(r)); err == nil {
 				connection := &checkedUpgrade{done: make(chan struct{})}
 				r = r.WithContext(context.WithValue(r.Context(), upgradeKey, upgradeSession{id: c.Value, ip: remoteIP(r), connection: connection}))
 				w = &upgradeWriter{ResponseWriter: w, connection: connection}

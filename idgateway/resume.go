@@ -70,7 +70,7 @@ func externalResume(txn string, index int, e External) string {
 }
 func localAppOrigin(r *http.Request, port int) string {
 	scheme := "http"
-	if r.TLS != nil {
+	if requestSecure(r) {
 		scheme = "https"
 	}
 	return scheme + "://" + net.JoinHostPort(hostname(r.Host), strconv.Itoa(port))
@@ -86,7 +86,7 @@ func (h *AuthorizeCGI) localOrigin(r *http.Request) string {
 		return ""
 	}
 	port := h.AppPorts[0]
-	if r.TLS != nil {
+	if requestSecure(r) {
 		port = h.AppPorts[len(h.AppPorts)-1]
 	}
 	return localAppOrigin(r, port)

@@ -25,6 +25,22 @@ path token rather than choosing an App port. The nginx hop supplies the original
 scheme and peer address over mutual TLS; client forwarding headers never grant
 identity. Legacy dedicated-port external-origin routing is not used in this mode.
 
+The CLI's nginx location overwrites `X-Synopkgland-Scheme` with `$scheme`.
+Only the mutually authenticated private ingress handler accepts this header;
+direct listeners and the authorize CGI use their own TLS state and ignore
+forwarded scheme headers. The internal connection stays TLS-authenticated even
+when the browser uses HTTP. Cookies, origins, return URLs and upstream forwarding
+all use that external scheme. HTTP remains available with an encryption warning;
+HTTPS session and binding cookies remain Secure. HTTP ingress uses separate
+cookie names, so an earlier HTTPS cookie cannot prevent the browser from storing
+the HTTP sign-in cookies. This also keeps HTTP sessions out of HTTPS sign-in.
+
+An expired transaction, missing/mismatched browser binding or invalid assertion
+starts a fresh sign-in once on browser navigation. Its transaction carries the
+retry guard even if cookies are dropped or the previous transaction is gone.
+A repeated failure shows a localized explanation and an explicit sign-in link.
+Recovery never redeems the failed assertion or resumes another browser's target.
+
 The CLI owns the public manifest and capability check; see its
 [ingress guide](https://github.com/synopackageland/syno-pkg-land-cli/blob/main/docs/path-ingress.md).
 Do not construct an nginx rule or edit installed gateway JSON in an application.

@@ -1,6 +1,7 @@
 package idgateway
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -92,6 +93,14 @@ func nativeIngressHandler(cfg Config, next http.Handler) http.Handler {
 			return
 		}
 		if cfg.IngressPath != "" {
+			scheme := r.Header.Values(nativeSchemeHeader)
+			if len(scheme) != 1 || scheme[0] != "http" && scheme[0] != "https" {
+				http.Error(w, "invalid ingress scheme", http.StatusBadRequest)
+				return
+			}
+			r = r.WithContext(context.WithValue(r.Context(), ingressSchemeKey{}, scheme[0]))
+		}
+		if cfg.IngressPath != "" {
 			if !cleanPath(r.URL.Path) {
 				http.Error(w, "invalid path", 400)
 				return
@@ -110,7 +119,10 @@ func nativeIngressHandler(cfg Config, next http.Handler) http.Handler {
 		if err == nil {
 			port = authority.Port()
 			if port == "" {
-				port = "443"
+				port = "80"
+				if requestSecure(r) {
+					port = "443"
+				}
 			}
 		}
 		snapshot := requestExternal(r, external, fresh)
@@ -125,17 +137,7 @@ func nativeIngressHandler(cfg Config, next http.Handler) http.Handler {
 			return
 		}
 		request := withExternal(r.Clone(r.Context()), snapshot)
-		if cfg.IngressPath != "" {
-			scheme := r.Header.Values("X-Synopkgland-Scheme")
-			if len(scheme) != 1 || scheme[0] != "http" && scheme[0] != "https" {
-				http.Error(w, "invalid ingress scheme", 400)
-				return
-			}
-			if scheme[0] == "http" {
-				request.TLS = nil
-			}
-			request.Header.Del("X-Synopkgland-Scheme")
-		}
+		request.Header.Del(nativeSchemeHeader)
 		request.RemoteAddr = net.JoinHostPort(values[0], "0")
 		request.Header.Del(nativeClientIPHeader)
 		next.ServeHTTP(w, request)

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Keep DSM path-ingress HTTP sign-in working after HTTPS visits by using separate HTTP session and transaction cookies; HTTPS cookies remain Secure
+- Use the authenticated ingress scheme consistently for cookies, origins, return URLs and upstream forwarding, while direct listeners continue to use their own TLS state
+- Automatically restart expired or mismatched browser sign-in once, then show a localized reason and an explicit sign-in link; HTTP remains available with an encryption warning
+
 ## 0.50.6
 
 - Add session-bound media grants (Go `media` package, `dsm.NewMediaAuthenticator`, frontend `mediaUrl`) so native audio and video elements can play and seek private App media with GET, HEAD and Range, without a SynoToken in the URL or a public route. See docs/media.md

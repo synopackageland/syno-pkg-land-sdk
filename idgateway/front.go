@@ -10,6 +10,7 @@ import (
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/composeingress"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -142,6 +143,7 @@ type FrontConfig struct {
 }
 
 type txn struct {
+	recovery bool
 	ip       string
 	oidc     bool
 	req      AuthRequest
@@ -159,12 +161,13 @@ type session struct {
 
 // Front is the gateway handler on the app's ports.
 type Front struct {
-	optional *optionalPassthrough
-	cfg      FrontConfig
-	brand    appBrand
-	upstream *url.URL
-	proxy    *httputil.ReverseProxy
-	cookie   string
+	httpWarning sync.Once
+	optional    *optionalPassthrough
+	cfg         FrontConfig
+	brand       appBrand
+	upstream    *url.URL
+	proxy       *httputil.ReverseProxy
+	cookie      string
 
 	mu           sync.Mutex // Authenticated sessions only
 	txnMu        sync.Mutex // Unauthenticated transactions never take mu
@@ -319,6 +322,9 @@ func NewFront(cfg FrontConfig) (*Front, error) {
 }
 
 func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if !requestSecure(r) {
+		f.httpWarning.Do(func() { log.Print("idgateway: HTTP is unencrypted; use HTTPS when available") })
+	}
 	if f.cfg.IngressPath != "" {
 		if !strings.HasPrefix(r.URL.Path, f.cfg.IngressPath) {
 			http.NotFound(w, r)
@@ -515,6 +521,11 @@ func (f *Front) signInTarget(w http.ResponseWriter, r *http.Request, t txn, orig
 		dsmOrigin = external.DSM
 	}
 	id := randomID(24)
+	if t.recovery {
+		// The guard survives missing cookies, expired/consumed transactions and
+		// gateway restarts. It grants no authority; assertions still bind the ID.
+		id = recoveryTxnPrefix + id
+	}
 	t.origin, t.browser, t.expires = origin, f.browserID(w, r), f.cfg.Now().Add(TxnTTL)
 	t.ip = remoteIP(r)
 	if !f.addTxn(id, t) {
@@ -541,7 +552,7 @@ func (f *Front) dsmOrigin(r *http.Request) string {
 	if f.cfg.IngressPath != "" {
 		return requestOrigin(r)
 	}
-	if r.TLS != nil {
+	if requestSecure(r) {
 		return "https://" + net.JoinHostPort(hostname(r.Host), strconv.Itoa(f.cfg.DSMPorts.HTTPS))
 	}
 	return "http://" + net.JoinHostPort(hostname(r.Host), strconv.Itoa(f.cfg.DSMPorts.HTTP))
@@ -550,11 +561,11 @@ func (f *Front) dsmOrigin(r *http.Request) string {
 // browserID binds transactions to the browser that started them, so an
 // assertion for one person cannot sign in another person's browser.
 func (f *Front) browserID(w http.ResponseWriter, r *http.Request) string {
-	if c, err := r.Cookie(f.cookie + "_b"); err == nil && txnPattern.MatchString(c.Value) {
+	if c, err := r.Cookie(f.sessionCookie(r) + "_b"); err == nil && txnPattern.MatchString(c.Value) {
 		return c.Value
 	}
 	id := randomID(24)
-	setCookie(w, r, f.cookie+"_b", id)
+	setCookie(w, r, f.sessionCookie(r)+"_b", id)
 	return id
 }
 
@@ -563,7 +574,7 @@ func (f *Front) dsmReturn(w http.ResponseWriter, r *http.Request, origin string)
 	q := r.URL.Query()
 	t, ok := f.takeTxn(r, q.Get("txn"), origin)
 	if !ok {
-		http.Error(w, "sign-in expired or started elsewhere; reload the app", http.StatusBadRequest)
+		f.recoverSignIn(w, r, origin, t, "sign_in_expired")
 		return
 	}
 	if q.Get("error") != "" {
@@ -576,7 +587,7 @@ func (f *Front) dsmReturn(w http.ResponseWriter, r *http.Request, origin string)
 	}
 	a, err := OpenAssertion(f.cfg.Key, q.Get("assertion"), f.cfg.Now())
 	if err != nil || a.Txn != q.Get("txn") || a.Origin != origin {
-		http.Error(w, "invalid sign-in assertion", http.StatusBadRequest)
+		f.recoverSignIn(w, r, origin, t, "assertion_invalid")
 		return
 	}
 	// Membership may change between CGI verification and assertion redemption.
@@ -593,7 +604,7 @@ func (f *Front) dsmReturn(w http.ResponseWriter, r *http.Request, origin string)
 		http.Error(w, "too many sign-in sessions", http.StatusTooManyRequests)
 		return
 	}
-	setCookie(w, r, f.cookie, id)
+	setCookie(w, r, f.sessionCookie(r), id)
 	if t.oidc {
 		http.Redirect(w, r, f.cfg.Provider.Complete(t.req, a.Subject), http.StatusFound)
 		return
@@ -604,12 +615,13 @@ func (f *Front) dsmReturn(w http.ResponseWriter, r *http.Request, origin string)
 // takeTxn consumes the transaction only for the browser and origin that
 // started it, so a stray or hostile request cannot burn someone's sign-in.
 func (f *Front) takeTxn(r *http.Request, id, origin string) (txn, bool) {
-	browser, err := r.Cookie(f.cookie + "_b")
+	browser, err := r.Cookie(f.sessionCookie(r) + "_b")
 	f.txnMu.Lock()
 	defer f.txnMu.Unlock()
 	t, ok := f.txns[id]
 	if !ok || err != nil || browser.Value != t.browser || t.origin != origin {
-		return txn{}, false
+		// Never disclose or resume another browser's target or OIDC request.
+		return txn{recovery: strings.HasPrefix(id, recoveryTxnPrefix)}, false
 	}
 	f.deleteTxn(id, t)
 	return t, !f.cfg.Now().After(t.expires)
@@ -655,12 +667,12 @@ func (f *Front) logout(w http.ResponseWriter, r *http.Request, origin string) {
 		http.Error(w, "sign out with a same-origin POST", http.StatusForbidden)
 		return
 	}
-	if c, err := r.Cookie(f.cookie); err == nil {
+	if c, err := r.Cookie(f.sessionCookie(r)); err == nil {
 		f.mu.Lock()
 		delete(f.sessions, c.Value)
 		f.mu.Unlock()
 	}
-	setCookie(w, r, f.cookie, "")
+	setCookie(w, r, f.sessionCookie(r), "")
 	http.Redirect(w, r, f.route("/"), http.StatusFound)
 }
 
@@ -668,7 +680,7 @@ func (f *Front) logout(w http.ResponseWriter, r *http.Request, origin string) {
 // expires, arrives from another address, or its uid no longer resolves to the
 // same DSM name (account deleted or renamed).
 func (f *Front) session(w http.ResponseWriter, r *http.Request) (Subject, bool) {
-	c, err := r.Cookie(f.cookie)
+	c, err := r.Cookie(f.sessionCookie(r))
 	if err != nil {
 		return Subject{}, false
 	}
@@ -683,7 +695,7 @@ func (f *Front) session(w http.ResponseWriter, r *http.Request) (Subject, bool) 
 	f.mu.Lock()
 	delete(f.sessions, c.Value)
 	f.mu.Unlock()
-	setCookie(w, r, f.cookie, "")
+	setCookie(w, r, f.sessionCookie(r), "")
 	return Subject{}, false
 }
 
@@ -703,9 +715,9 @@ func (f *Front) RevokeUID(uid int) {
 }
 
 // setCookie sets a gateway cookie, or clears it when value is empty. It is
-// Secure on TLS listeners only: the gateway also serves plain http.
+// Secure follows the browser's scheme, independently of the internal TLS hop.
 func setCookie(w http.ResponseWriter, r *http.Request, name, value string) {
-	c := &http.Cookie{Name: name, Value: value, Path: requestCookiePath(r), HttpOnly: true, Secure: r.TLS != nil, SameSite: http.SameSiteLaxMode}
+	c := &http.Cookie{Name: name, Value: value, Path: requestCookiePath(r), HttpOnly: true, Secure: requestSecure(r), SameSite: http.SameSiteLaxMode}
 	if value == "" {
 		c.MaxAge = -1
 	}
@@ -727,7 +739,7 @@ func (f *Front) rewrite(pr *httputil.ProxyRequest) {
 	pr.Out.Host = pr.In.Host
 	out := pr.Out.Header
 	stripped := map[string]bool{}
-	for _, name := range append(f.cfg.Headers.all(), nativeClientIPHeader, "X-Syno-User", "X-Syno-Admin", "Remote-User", "Remote-Groups", "Remote-Email", "Remote-Name", "X-SYNO-TOKEN", "X-Real-Ip", "X-Forwarded-Port", "X-Forwarded-Prefix", "X-Original-Url", "X-Rewrite-Url") {
+	for _, name := range append(f.cfg.Headers.all(), nativeClientIPHeader, nativeSchemeHeader, "X-Syno-User", "X-Syno-Admin", "Remote-User", "Remote-Groups", "Remote-Email", "Remote-Name", "X-SYNO-TOKEN", "X-Real-Ip", "X-Forwarded-Port", "X-Forwarded-Prefix", "X-Original-Url", "X-Rewrite-Url") {
 		out.Del(name)
 		stripped[http.CanonicalHeaderKey(name)] = true
 	}
@@ -738,10 +750,7 @@ func (f *Front) rewrite(pr *httputil.ProxyRequest) {
 			delete(out, name)
 		}
 	}
-	ip, proto := remoteIP(pr.In), "http"
-	if pr.In.TLS != nil {
-		proto = "https"
-	}
+	ip, proto := remoteIP(pr.In), requestScheme(pr.In)
 	out.Set("X-Forwarded-For", ip)
 	out.Set("X-Real-Ip", ip)
 	out.Set("X-Forwarded-Proto", proto)

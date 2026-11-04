@@ -91,8 +91,9 @@ func TestExternalColdNavigationReturnsToOriginalURLAndRetryDoesNotLoop(t *testin
 			if mode == ModeOIDC && !strings.HasPrefix(final.Header().Get("Location"), e.Accept[0]+"/accounts/oidc/dsm/login/callback/") {
 				t.Fatal("OIDC return lost", final.Header())
 			}
-			if replay := b.do("GET", done.Header().Get("Location"), navigate...); replay.Code != 400 {
-				t.Fatal("assertion replay", replay.Code)
+			sessions := len(f.sessions)
+			if replay := b.do("GET", done.Header().Get("Location"), navigate...); replay.Code != 302 || !strings.HasPrefix(replay.Header().Get("Location"), e.DSM+f.cfg.AuthorizeCGI+"?") || len(f.sessions) != sessions {
+				t.Fatal("assertion replay must start a fresh transaction without creating a session", replay.Code)
 			}
 		})
 	}

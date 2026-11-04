@@ -168,13 +168,14 @@ func TestBrowserRedirectRequestHostsKeepIssuerAndPKCE(t *testing.T) {
 		}
 		ret := cgi.Header().Get("Location")
 		other := newBrowser(t, g.Front)
-		if w := other.do("GET", ret, navigate...); w.Code != 400 {
-			t.Fatalf("other browser redeemed: %d", w.Code)
+		sessions := len(g.Front.sessions)
+		if w := other.do("GET", ret, navigate...); w.Code != 302 || !strings.Contains(w.Header().Get("Location"), g.Front.cfg.AuthorizeCGI+"?") || len(g.Front.sessions) != sessions {
+			t.Fatalf("other browser must start fresh without redeeming the assertion: %d", w.Code)
 		}
 		// Even copying the binding cookie cannot replay a transaction on another host.
 		foreign := strings.Replace(ret, origin, "https://foreign-alias.example:18443", 1)
-		if w := b.do("GET", foreign, navigate...); w.Code != 400 {
-			t.Fatalf("other origin redeemed: %d", w.Code)
+		if w := b.do("GET", foreign, navigate...); w.Code != 302 || !strings.Contains(w.Header().Get("Location"), g.Front.cfg.AuthorizeCGI+"?") || len(g.Front.sessions) != sessions {
+			t.Fatalf("other origin must start fresh without redeeming the assertion: %d", w.Code)
 		}
 		w := b.do("GET", ret, navigate...)
 		if w.Code != 302 {

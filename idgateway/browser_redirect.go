@@ -81,7 +81,7 @@ func (f *Front) browserAuthority(r *http.Request) bool {
 	}
 	port := u.Port()
 	expected := f.cfg.PublicListen.HTTP
-	if r.TLS != nil {
+	if requestSecure(r) {
 		expected = f.cfg.PublicListen.HTTPS
 		if port == "" {
 			port = "443"
