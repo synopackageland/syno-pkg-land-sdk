@@ -32,10 +32,10 @@ export function encodeSecretRequest(value: unknown, credentials: string[] = []):
 
 /** Detached diagnostic copy; never log raw bodies or fall back to the input. */
 export function redactSecrets(value: unknown, credentials: readonly string[] = [], fields: readonly string[] = []): unknown {
- const names = ['password','passwd','passphrase','otp','token','secret','authorization','cookie','synotoken','sid']
+ const names = ['password','passwd','passphrase','otp','token','secret','authorization','cookie','synotoken','sid','media_grant','set-cookie']
  const sensitive = (key: string) => names.includes(key.toLowerCase()) || key.toLowerCase()==='x-syno-token' || fields.includes(key)
  const known = [...credentials].filter(Boolean).sort((a,b)=>b.length-a.length)
- const text = (value: string) => known.reduce((safe,secret)=>safe.split(secret).join(REDACTED), value)
+ const text = (value: string) => known.reduce((safe,secret)=>safe.split(secret).join(REDACTED), value.replace(/([?&]media_grant=)[^&#\s]*/gi,`$1${REDACTED}`))
  function walk(item: unknown): unknown {
   if(typeof item==='string')return text(item)
   if(Array.isArray(item))return item.map(walk)

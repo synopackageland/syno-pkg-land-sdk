@@ -6,13 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"regexp"
 	"sort"
 	"strings"
 )
 
 // SensitiveKey recognizes credential names across JSON, headers and form data.
 func SensitiveKey(key string) bool {
-	for _, name := range []string{"password", "passwd", "passphrase", "otp", "token", "secret", "authorization", "cookie", "synotoken", "sid", "X-SYNO-TOKEN"} {
+	for _, name := range []string{"password", "passwd", "passphrase", "otp", "token", "secret", "authorization", "cookie", "synotoken", "sid", "X-SYNO-TOKEN", "Set-Cookie", "media_grant"} {
 		if strings.EqualFold(key, name) {
 			return true
 		}
@@ -101,7 +102,11 @@ func (r *Redactor) collect(value any, sensitive bool) {
 		}
 	}
 }
+
+var mediaGrantQuery = regexp.MustCompile(`(?i)([?&]media_grant=)[^&#\s]*`)
+
 func (r *Redactor) Text(text string) string {
+	text = mediaGrantQuery.ReplaceAllString(text, "${1}"+Redacted)
 	// Replace longest first so overlapping credentials cannot reveal a suffix.
 	for _, value := range r.values {
 		text = strings.ReplaceAll(text, value, Redacted)

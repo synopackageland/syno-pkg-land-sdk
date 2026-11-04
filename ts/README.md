@@ -747,3 +747,7 @@ Do not add root/executor access to browser-only Apps such as OpenList.
 current administrator's DSM session. Start it after rendering the App. Refusal,
 missing session and timeout return `[]`; use package-account `dsmservices`
 reading on the backend independently. See [service ports](../docs/dsm-service-ports.md).
+
+For private native `<audio>` / `<video>` playback, use `mediaUrl(ctx, {asset})`
+with the Go media service. It renews a stable, session-bound URL without resetting
+playback. See [media grants](../docs/media.md) for backend hooks and cleanup.
