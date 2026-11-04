@@ -39,12 +39,13 @@ test('AppError keeps message within 1024 bytes of UTF-8', () => {
   assert.equal(new AppError('x', '😀'.repeat(300)).message, '😀'.repeat(256))
 })
 
-test('an unexpected error is internal and goes to the log', async () => {
+test('an unexpected error is internal and its raw content never goes to the log', async () => {
   const { errors, app } = logged()
   app.method('a.crash', () => { throw new Error('secret detail') })
   const rt = runtime(app)
   assert.deepEqual((await rt.result('a.crash')).error, internal)
-  assert.match(String(errors[0]), /secret detail/)
+  assert.doesNotMatch(String(errors[0]), /secret detail/)
+  assert.deepEqual(errors[0], internal)
 })
 
 test('a rejected promise and a thrown non-Error are internal', async () => {
@@ -71,5 +72,5 @@ test('a method the App does not have is internal', async () => {
   const { errors, app } = logged()
   const rt = runtime(app.method('a.one', () => 1))
   assert.deepEqual((await rt.result('a.two')).error, internal)
-  assert.match(String(errors[0]), /a\.two/)
+  assert.doesNotMatch(String(errors[0]), /a\.two/)
 })

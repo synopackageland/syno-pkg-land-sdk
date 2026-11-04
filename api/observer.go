@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/synopackageland/syno-pkg-land-sdk/secret"
 )
 
 // Outcome is what the SDK decided about one request to the App's server, as
@@ -74,6 +76,8 @@ func (w *observedResponse) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 // answered it. Wrap the App's Server with it (inside WithRequestDeadline, the
 // same way), for example to audit refused sign-ins. observe runs after the
 // response and cannot change it; a panic in observe is logged and dropped.
+// The callback receives detached metadata without bodies, queries, forms or
+// credential header values; use Outcome for the verified identity and method.
 func WithObserver(next http.Handler, observe func(*http.Request, Outcome)) http.Handler {
 	return &observerHandler{next: next, observe: observe}
 }
@@ -104,10 +108,10 @@ func (h *observerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() {
 		if p := recover(); p != nil {
-			log.Printf("request observer panic: %v", p)
+			log.Print("request observer panic: [redacted]")
 		}
 	}()
-	h.observe(r, o)
+	h.observe(secret.RequestMetadata(r), o)
 }
 
 // IntegrationRoute and HTTPRoute let SDK middleware look through the observer.

@@ -302,3 +302,26 @@ fn only_a_lone_describe_flag_describes() {
         assert!(!describing(args.iter().map(OsString::from)), "{args:?}");
     }
 }
+
+#[test]
+fn handler_panic_log_redacts() {
+    if std::env::var_os("SDK_SECRET_PANIC_CHILD").is_some() {
+        let mut app = App::new();
+        app.method("a.crash", |_, _| -> Result<(), Error> {
+            panic!("unlabelled-canary")
+        });
+        let mut rt = Runtime::start(app);
+        rt.call("a.crash", "null");
+        assert_eq!(rt.recv()["error"]["code"], "internal");
+        return;
+    }
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "tests::handler_panic_log_redacts", "--nocapture"])
+        .env("SDK_SECRET_PANIC_CHILD", "1")
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let diagnostics = String::from_utf8_lossy(&output.stderr);
+    assert!(!diagnostics.contains("unlabelled-canary"));
+    assert!(diagnostics.contains("[redacted]"));
+}

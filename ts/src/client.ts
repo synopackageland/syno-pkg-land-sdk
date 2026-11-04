@@ -1,3 +1,4 @@
+import {encodeSecretRequest,redactSecrets} from './secret'
 import {createBatch} from './batch.js'
 import {clientTimeout, type CallOptions} from './context'
 
@@ -10,6 +11,7 @@ export interface ClientOptions {endpoint: string; token?: () => string | undefin
 export function createClient(options: ClientOptions) {
  const request = options.fetch ?? globalThis.fetch
  async function send(envelope: object, callOptions?: CallOptions): Promise<unknown> {
+  const credentials: string[] = []
   const controller = new AbortController()
   const canceled = {code: 'request_canceled', message: 'request canceled'}
   let failure: typeof canceled | undefined
@@ -24,13 +26,18 @@ export function createClient(options: ClientOptions) {
    }
    if(failure) throw failure
    const token = options.token?.()
-   const response = await request(options.endpoint, {method: 'POST', mode: 'same-origin', credentials: 'same-origin', redirect: 'error', cache: 'no-store', headers: {'Content-Type': 'application/json', ...(token ? {'X-SYNO-TOKEN': token} : {})}, body: JSON.stringify(envelope), signal: controller.signal})
+   if(token)credentials.push(token)
+   const response = await request(options.endpoint, {method: 'POST', mode: 'same-origin', credentials: 'same-origin', redirect: 'error', cache: 'no-store', headers: {'Content-Type': 'application/json', ...(token ? {'X-SYNO-TOKEN': token} : {})}, body: encodeSecretRequest(envelope,credentials), signal: controller.signal})
    const body: unknown = await response.json()
    if(!body || typeof body !== 'object' || !('success' in body)) throw {code: 'bad_response', message: 'unexpected response'}
    const reply = body as {success: boolean; data?: unknown; error?: unknown}
    if(!reply.success) throw reply.error ?? {code: 'bad_response', message: 'unexpected response'}
    return reply.data
-  } catch(error) {throw failure ?? error}
+  } catch(error) {
+   if(failure)throw failure
+   if(error && typeof error==='object' && 'code' in error)throw redactSecrets(error,credentials)
+   throw {code: 'network', message: 'request failed'}
+  }
   finally {clearTimeout(timer); signal?.removeEventListener('abort', stop)}
  }
  return {call: <T = unknown>(method: string, params?: Record<string, unknown>, callOptions?: CallOptions) => send({method, params: params ?? {}}, callOptions) as Promise<T>, batch: createBatch(send) as Batch}

@@ -43,3 +43,5 @@ export {createEntryCheck, type EntryCheck, type EntryFailure, type EntryMode} fr
 export {createClient, type Batch, type BatchCall, type BatchResult, type ClientOptions} from './client'
 
 export {readDsmPorts, type DsmPort, type DsmPortRange} from './dsm/service-ports'
+
+export {requestSecret, RequestSecret, redactSecrets} from './secret'

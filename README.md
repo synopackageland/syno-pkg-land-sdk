@@ -203,3 +203,5 @@ Run `synopkgland ctl generate`, `synopkgland ctl generate --check` and
 `synopkgland check` before building with matching SDK/CLI/templates releases.
 OpenAPI imports use the same v2 format; every imported operation is hidden until
 reviewed per API. Wrapper-owned specs and adapters stay under `synology/`.
+
+External-service passwords and tokens should use the [request-only Secret contract](docs/request-secrets.md), including its persistence and diagnostic boundaries.

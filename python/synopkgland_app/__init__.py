@@ -14,7 +14,6 @@ import re
 import sys
 import threading
 import time
-import traceback
 from typing import TYPE_CHECKING, Any, BinaryIO, Callable, Dict, List, Optional, Tuple, TypeVar
 
 from ._refusals import REFUSALS
@@ -222,7 +221,7 @@ class App:
 
         The handler gets the Context and the request's params and returns
         any JSON value; raising Error sends that error, and any other
-        exception sends internal (the traceback goes to stderr).
+        exception sends internal (only a redacted event goes to stderr).
         """
         if not _METHOD.match(name):
             raise ValueError("not a method name: %r" % name)
@@ -268,7 +267,7 @@ class App:
         except Error as e:
             return _encode(dict(frame, ok=False, error=_error(e)))
         except Exception:
-            traceback.print_exc()
+            print("synopkgland_app: handler error: [redacted]", file=sys.stderr)
             return _encode(dict(frame, ok=False, error=_INTERNAL))
 
     def describe(self) -> Dict[str, Any]:

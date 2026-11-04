@@ -129,11 +129,11 @@ func (r *Runner) Run(ctx context.Context) error {
 	go func() { defer beats.Done(); r.heartbeat(ctx) }()
 	for ctx.Err() == nil {
 		if err := r.Store.Tick(ctx); err != nil && ctx.Err() == nil {
-			log.Printf("schedule tick failed: %v", err)
+			log.Print("schedule tick failed: [redacted]")
 		}
 		job, err := r.Store.Claim(ctx)
 		if err != nil && ctx.Err() == nil {
-			log.Printf("claim failed: %v", err)
+			log.Print("claim failed: [redacted]")
 		}
 		if job == nil || err != nil {
 			sleep(ctx, r.Poll)
@@ -158,7 +158,7 @@ func (r *Runner) heartbeat(ctx context.Context) {
 			return
 		}
 		if err := r.Store.Heartbeat(ctx, r.Info); err != nil && ctx.Err() == nil {
-			log.Printf("heartbeat failed: %v", err)
+			log.Print("heartbeat failed: [redacted]")
 		}
 	}
 }
@@ -189,7 +189,7 @@ func (r *Runner) Process(parent context.Context, job *Job) {
 	case errors.Is(err, errInputChanged):
 		outcome = Outcome{State: StateFailed, ErrorCode: "input-changed"}
 	case err != nil:
-		log.Printf("job %s failed: %v", job.ID, err)
+		log.Printf("job %s failed: [redacted]", job.ID)
 		outcome = Outcome{State: StateFailed, ErrorCode: "worker-error"}
 	}
 	cancel(nil)
@@ -199,7 +199,7 @@ func (r *Runner) Process(parent context.Context, job *Job) {
 	fin, done := context.WithTimeout(context.Background(), runtimebudget.Operation)
 	defer done()
 	if err := r.Store.Finish(fin, job.ID, outcome); err != nil {
-		log.Printf("job %s outcome not recorded: %v", job.ID, err)
+		log.Printf("job %s outcome not recorded: [redacted]", job.ID)
 	}
 }
 

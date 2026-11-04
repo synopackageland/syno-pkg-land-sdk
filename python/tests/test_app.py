@@ -106,7 +106,8 @@ class AppTest(unittest.TestCase):
         with contextlib.redirect_stderr(stderr):
             rt.call("a.crash")
             self.assertEqual(rt.recv()["error"], {"code": "internal", "message": "internal error"})
-        self.assertIn("secret detail", stderr.getvalue())
+        self.assertNotIn("secret detail", stderr.getvalue())
+        self.assertIn("[redacted]", stderr.getvalue())
 
     def fail_with(self, code, message="no"):
         app = App()
@@ -230,7 +231,8 @@ class AppTest(unittest.TestCase):
             with contextlib.redirect_stderr(stderr):
                 rt.call("a.bad")
                 self.assertEqual(rt.recv()["error"], {"code": "internal", "message": "internal error"}, data)
-            self.assertIn("Traceback", stderr.getvalue())
+            self.assertNotIn("Traceback", stderr.getvalue())
+            self.assertIn("[redacted]", stderr.getvalue())
 
     def test_lone_surrogates_go_out_escaped(self):
         app = App()

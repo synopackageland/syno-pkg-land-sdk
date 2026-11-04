@@ -110,7 +110,7 @@ export class App {
             const error = browserError(e);
             if (error)
                 return encode({ t: 'result', id, ok: false, error });
-            this.#log(e);
+            this.#log({ ...internal });
             return encode({ t: 'result', id, ok: false, error: internal });
         }
     }

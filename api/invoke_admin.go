@@ -57,7 +57,7 @@ func (s *Server) InvokeAsAdministrator(ctx context.Context, user, method string,
 	}
 	defer func() {
 		if p := recover(); p != nil {
-			log.Printf("handler panic: %v", p)
+			log.Print("handler panic: [redacted]")
 			out, err = nil, internalError
 		}
 	}()

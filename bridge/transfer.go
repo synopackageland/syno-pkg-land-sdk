@@ -208,7 +208,7 @@ func (s *Session) download(method string) api.StreamHandler {
 		w.WriteHeader(http.StatusOK)
 		// Once headers are sent a failed transfer stays truncated.
 		if _, err := io.Copy(w, io.LimitReader(contextReader{ctx, body}, info.Size())); err != nil {
-			log.Printf("bridge: download of %s interrupted: %v", method, err)
+			log.Printf("bridge: download of %s interrupted: [redacted]", method)
 		}
 		return nil
 	}

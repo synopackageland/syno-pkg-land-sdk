@@ -21,8 +21,8 @@ export type Handler<P = unknown> = (ctx: Context, params: P) => unknown
 
 export interface AppOptions {
   /**
-   * Where an unexpected error goes (stderr, the DSM log, by default); the
-   * browser only sees internal.
+   * Where a redacted failure event goes (stderr by default). Original
+   * exceptions and request bodies are never passed to this callback.
    */
   log?: (error: unknown) => void
 }
@@ -122,7 +122,7 @@ export class App {
     } catch (e) {
       const error = browserError(e)
       if (error) return encode({ t: 'result', id, ok: false, error })
-      this.#log(e)
+      this.#log({...internal})
       return encode({ t: 'result', id, ok: false, error: internal })
     }
   }

@@ -113,10 +113,10 @@ func TestStreamPanicsBeforeAndAfterCommit(t *testing.T) {
 					if recovered != nil {
 						t.Fatalf("real panic escaped: %v", recovered)
 					}
-					if !strings.Contains(logs.String(), "handler panic: boom") {
+					if !strings.Contains(logs.String(), "handler panic: [redacted]") {
 						t.Fatalf("missing panic log: %s", &logs)
 					}
-					transferFailed := strings.Contains(logs.String(), "transfer failed after response started: internal: internal error")
+					transferFailed := strings.Contains(logs.String(), "transfer failed after response started: [redacted]")
 					if transferFailed != started {
 						t.Fatalf("transfer failure log: started=%t logs=%s", started, &logs)
 					}

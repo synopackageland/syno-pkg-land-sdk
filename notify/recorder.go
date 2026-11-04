@@ -10,6 +10,8 @@ import (
 	"reflect"
 	"syscall"
 	"time"
+
+	"github.com/synopackageland/syno-pkg-land-sdk/secret"
 )
 
 const maxLogBytes = 8 << 20
@@ -26,6 +28,9 @@ type loggedRecord struct {
 }
 
 func (f FileRecorder) Admit(ctx context.Context, r Record, interval time.Duration) (Record, bool, error) {
+	if err := secret.RefusePersistence(ctx); err != nil {
+		return Record{}, false, err
+	}
 	if f.Dir == "" || !deliveryID.MatchString(r.DeliveryID) || !eventID.MatchString(r.Event) || interval <= 0 {
 		return Record{}, false, errors.New("invalid notification admission")
 	}
