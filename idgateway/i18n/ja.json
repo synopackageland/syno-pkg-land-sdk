@@ -75,5 +75,9 @@
   "menu_settings": "App の外部アクセス設定を開く",
   "stopped_title": "アプリは実行されていません",
   "stopped": "パッケージセンターでこのアプリを実行または修復してください",
-  "open_dsm": "DSM を開く"
+  "open_dsm": "DSM を開く",
+  "https_title": "HTTPS が必要です",
+  "https_required": "サインインするには HTTPS でこのアプリを開いてください",
+  "https_open": "HTTPS で開く",
+  "https_unknown": "HTTPS で DSM を開いてからこのアプリを開き直すか、管理者に HTTPS アドレスを確認してください"
 }

@@ -77,7 +77,12 @@ type Names interface {
 
 // FrontConfig configures the gateway on the app's ports.
 type FrontConfig struct {
-	IngressPath string
+	// SecureContext is empty (HTTP allowed) or required (HTTPS guidance).
+	SecureContext string
+	// DSMHTTPSPort is a declared DSM HTTPS port, with zero meaning unknown.
+	// Unlike DSMPorts, this value must never include a fallback port.
+	DSMHTTPSPort int
+	IngressPath  string
 	// External resolves the current public-origin policy; nil preserves local
 	// behavior. ExternalFresh, when set, rechecks it for requests on a public
 	// origin; see ExternalReader.Fresh.
@@ -187,6 +192,9 @@ const (
 
 // NewFront validates cfg and builds the gateway handler.
 func NewFront(cfg FrontConfig) (*Front, error) {
+	if err := validateSecureContext(cfg.SecureContext); err != nil {
+		return nil, err
+	}
 	if err := (Config{Entry: cfg.Entry, Access: cfg.Access, UpstreamAccess: cfg.UpstreamAccess, Groups: cfg.Groups, ComposeBlocked: cfg.ComposeBlocked, UpstreamAuthPaths: cfg.UpstreamAuthPaths, Passthrough: cfg.Passthrough, OptionalPassthrough: cfg.OptionalPassthrough}).checkEntryPolicy(); err != nil {
 		return nil, err
 	}
@@ -338,6 +346,14 @@ func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if !cleanPath(r.URL.Path) || (f.optional != nil || len(f.cfg.UpstreamAuthPaths) > 0) && !cleanOptionalPath(r) {
 		http.Error(w, "invalid path", http.StatusBadRequest)
+		return
+	}
+	if f.cfg.SecureContext == "required" && !requestSecure(r) {
+		if !validRequestAuthority(r) {
+			http.Error(w, "invalid authority", http.StatusBadRequest)
+			return
+		}
+		f.writeHTTPSRequired(w, r)
 		return
 	}
 	if f.cfg.External != nil {

@@ -75,5 +75,9 @@
   "menu_settings": "App의 외부 접근 설정 열기",
   "stopped_title": "앱이 실행 중이 아닙니다",
   "stopped": "패키지 센터에서 이 앱의 실행 또는 복구를 선택하세요",
-  "open_dsm": "DSM 열기"
+  "open_dsm": "DSM 열기",
+  "https_title": "HTTPS 필요",
+  "https_required": "로그인하려면 HTTPS로 이 앱을 여십시오",
+  "https_open": "HTTPS로 열기",
+  "https_unknown": "HTTPS로 DSM을 연 다음 이 앱을 다시 열거나 관리자에게 HTTPS 주소를 문의하십시오"
 }

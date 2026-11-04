@@ -75,5 +75,9 @@
   "menu_settings": "Apri le impostazioni di accesso esterno dell’App",
   "stopped_title": "L’app non è in esecuzione",
   "stopped": "Apri Centro pacchetti e scegli Esegui o Ripara per questa app",
-  "open_dsm": "Apri DSM"
+  "open_dsm": "Apri DSM",
+  "https_title": "HTTPS obbligatorio",
+  "https_required": "Aprire questa app tramite HTTPS per accedere",
+  "https_open": "Apri tramite HTTPS",
+  "https_unknown": "Apri DSM tramite HTTPS e riapri questa app oppure chiedi l’indirizzo HTTPS all’amministratore"
 }
