@@ -87,9 +87,11 @@ every CGI start. Nothing in it comes from a request.
 
 ## Sequence
 
+`<sdk-version>` represents the installed SDK release reported by the App.
+
 ```
 runtime → app   {"t":"hello","versions":[1]}
-app → runtime   {"t":"hello","version":1,"sdk":"python/0.10.11","methods":["hello.greet","hello.save"]}
+app → runtime   {"t":"hello","version":1,"sdk":"python/<sdk-version>","methods":["hello.greet","hello.save"]}
 runtime → app   {"t":"call","id":"1","method":"hello.save","params":{…},"ctx":{…}}
 app → runtime   {"t":"svc","id":"s1","op":"files.list","params":{…}}        (0..n)
 runtime → app   {"t":"svc_result","id":"s1","ok":true,"result":{…}}         (one per svc)
@@ -133,7 +135,7 @@ app → runtime   {"t":"result","id":"1","ok":true,"data":…}
   `../../protocol/v1/errors.json` (for example `SCOPE_DENIED` or
   `APP_STOPPED` from a service), which `@synopackageland/sdk` can translate.
   Other upper-case codes, such as the `outcome` kind, are protocol errors
-  (`client` codes since 0.10.4). `message` has at most 1024 bytes. The browser
+  (`client` codes). `message` has at most 1024 bytes. The browser
   sees them as `{"success":false,"error":{…}}`.
 - The runtime's own refusals are reserved and an App MUST NOT return them:
   `session_required`, `admin_required`, `app_privilege_denied`,
@@ -160,7 +162,7 @@ app → runtime   {"t":"result","id":"1","ok":true,"data":…}
   Application Portal page). It is not temporary: the user signs in again. An
   App's own status passes it on, or reports reason `credential_not_ready`,
   which `AuthorizationGate` words as such.
-- Since 0.10.4, `errors.json` also carries the text of the executor
+- `errors.json` also carries the text of the executor
   client's `APP_STOPPED` and `APP_STARTING` (kind `service`, retryable): the
   `root.*` services answer them for a stopped package, and in the 10 seconds
   after a start once the executor still does not listen.
@@ -313,7 +315,7 @@ retain HTTP 200 error envelopes. Once a transfer response starts, errors MUST
 NOT append JSON or replace its status. DSM nginx may replace CGI error bodies;
 clients MUST check the HTTP status before treating a response as a file.
 
-### Profile WebAPI services (SDK 0.11.0)
+### Profile WebAPI services
 
 `capabilities.webapi:true` offers `webapi.grant`, `webapi.grants`,
 `webapi.revoke`, and `webapi.call` through the existing `Context.runtime` channel

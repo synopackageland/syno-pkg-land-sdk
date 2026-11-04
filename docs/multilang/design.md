@@ -1,7 +1,7 @@
 # 多語言 App SDK 設計（Go runtime + Python／Node／Rust 薄層）
 
-狀態：設計與原型，P1 Go runtime 正式版（2026-10-13）：`spec/bridge/v1` 已凍結，`bridge.NewRuntime` 與 `bridge/cmd/runtime` 已完成，只有 exec 模式（§1.1）。隨 SDK 0.10.0 發布。
-協定：`spec/bridge/v1/`。Go runtime：`bridge/`。App SDK：`rust/app/`（Rust 薄層 `syno-pkg-land-app`，P6 正式版，見 `rust/app/README.md`）；`python/`（`synopkgland_app`）、`node/`（`@synopackageland/app`）自 0.10.0 起為正式版。Rust 完整 SDK（`rust/sdk`）已在 P6 移除，最後的 tag 是 v0.9.9。
+狀態：設計與原型，P1 Go runtime 正式版（2026-10-13）：`spec/bridge/v1` 已凍結，`bridge.NewRuntime` 與 `bridge/cmd/runtime` 已完成，只有 exec 模式（§1.1）。
+協定：`spec/bridge/v1/`。Go runtime：`bridge/`。App SDK：`rust/app/`（Rust 薄層 `syno-pkg-land-app`，P6 正式版，見 `rust/app/README.md`）；`python/`（`synopkgland_app`）、`node/`（`@synopackageland/app`）為正式版。Rust App 使用 `rust/app` 薄層 SDK。
 
 ## 1. 結論
 
@@ -345,7 +345,7 @@ CLI 的工作：
 
 ## 13. Rust：這一輪移除完整 SDK
 
-決定（使用者，第二輪）：這一輪就移除 Rust 完整 SDK。Rust App 改成和 Python、Node 一樣的薄層，走同一條通道。早期階段只做原型、量測與計畫；P6 已刪除 `rust/sdk`，Reclaim 仍未動，釘在 v0.9.7。
+決定（使用者，第二輪）：這一輪就移除 Rust 完整 SDK。Rust App 改成和 Python、Node 一樣的薄層，走同一條通道。早期階段只做原型、量測與計畫；P6 已刪除 `rust/sdk`，Reclaim 仍未動，使用其既有固定 tag。
 
 ### 13.1 Rust 薄層（P6 正式版）
 
@@ -355,7 +355,7 @@ CLI 的工作：
 
 ### 13.2 Reclaim 目前用到的 Rust SDK 功能
 
-Reclaim 的 `package/privilege` 依賴 `syno-pkg-land-sdk` 的 git tag v0.9.7。用到的 SDK 模組是 `api`、`dsm`、`http`、`portal`、`ctx`；在 SDK 裡這些約 7,800 行（含測試）。SDK 其他模組（background、delegate、identity、filestation 等）沒用到。
+Reclaim 的 `package/privilege` 依賴 `syno-pkg-land-sdk` 的 固定 git tag。用到的 SDK 模組是 `api`、`dsm`、`http`、`portal`、`ctx`；在 SDK 裡這些約 7,800 行（含測試）。SDK 其他模組（background、delegate、identity、filestation 等）沒用到。
 
 | Rust SDK 功能 | Reclaim 的用法（檔案） | 新架構由誰提供 |
 |---|---|---|
@@ -377,7 +377,7 @@ Reclaim 的 `package/privilege` 依賴 `syno-pkg-land-sdk` 的 git tag v0.9.7。
 |---|---|---|---|
 | **M1（建議）** | CGI 換成 Go runtime＋Rust 薄層 App；Reclaim 的 root 工作改成 SDK executor App 的 root operation 與 policy，經 `delegate.*` svc 呼叫；移除 Reclaim 自己的 helper 協定與 DSM 檢查 | 15–25 人天（信心：中低） | 符合兩層權限：root 能力只屬 executor App，DSM 再驗證由 Go 統一做。工作量取決於 Reclaim 的掃描、刪除、升級、protected 目錄信任等邏輯有多少能對應到 executor 的既有 operation；需要先逐一盤點 |
 | M2（過渡） | CGI 換成 Go runtime＋Rust App；runtime 新增「把 session 轉給套件自己的 root helper」的 svc；helper 保留，並把 SDK 的 `dsm` 驗證（約 1,700 行含測試）搬進 Reclaim | 6–10 人天 | 不建議：把 session 交給 App 管轄的通道，違反 §7；而且 Reclaim 裡會留下第二份 DSM 驗證，就是這次要消除的重複 |
-| M3（不遷移） | Reclaim 釘在 SDK tag v0.9.7 | 0 | 可以當短期狀態：tag 不會消失，Reclaim 照樣能建置；但拿不到 SDK 之後的安全修正 |
+| M3（不遷移） | Reclaim 使用既有固定 SDK tag | 0 | 可以當短期狀態：tag 不會消失，Reclaim 照樣能建置；但拿不到 SDK 之後的安全修正 |
 
 M1 的步驟：
 

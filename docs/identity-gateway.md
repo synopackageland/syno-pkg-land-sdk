@@ -6,7 +6,7 @@ authentication while `access` still protects DSM OIDC issuance. Native clients
 need no gateway cookie or browser Origin. The issuer still requires DSM sign-in
 and App Privileges; upstream must enforce its own authentication, CSRF and
 WebSocket policy. See [the design and security boundaries](provider-only-oidc-design.md).
-Use the matching SDK and CLI 0.27.0 releases for this field.
+Use matching SDK and CLI releases for this field.
 
 ## Native OIDC browser navigation
 
@@ -44,7 +44,7 @@ the origin; null/foreign Origin requests remain rejected by the gateway.
 Discovery, issuer and ID token `iss` stay fixed on loopback, as do token,
 userinfo and JWKS. Server-side discovery caches remain valid. Redirect allowlists,
 PKCE, client authentication and browser-bound DSM transactions are unchanged.
-This requires matching SDK/CLI 0.24 support.
+This requires matching SDK and CLI support.
 
 Server-managed OIDC consumers that already redirect to their provider should
 leave `browser` unset. `oidc.native_login: true` opts into #37's native DSM cold
@@ -94,7 +94,7 @@ fall back to local sign-in. This applies when `oidc.native_login` is set or an
 
 `launch_path: /#/sso?identifier=fixed-organization` selects a fixed local App
 URL when the DSM menu opens the classless gateway entry. Paths, queries and SPA
-fragments are supported. The default remains `/`. Use SDK and CLI 0.27.0 for matching launcher and runtime support.
+fragments are supported. The default remains `/`. Use matching SDK and CLI releases for matching launcher and runtime support.
 
 The menu probe, continuation links and DSM sign-in bootstrap retain the fixed
 query and fragment. The fragment stays in the browser's navigation URL; it is
@@ -119,7 +119,7 @@ direct-access notice with the fixed destination as its continue link.
 
 ## Public origins
 
-See [external access](external-access.md) for SDK 0.29.0 policy, file contracts,
+See [external access](external-access.md) for the SDK policy, file contracts,
 public sign-in continuation and the heartbeat, streaming, upload and WebSocket
 requirements for App authors.
 
@@ -145,7 +145,7 @@ opens; the SDK does not weaken browser TLS checks.
 ### Custom DSM ingress base
 
 `ingress_path` defaults to the package's `/synopkgland/<package>/` namespace.
-The CLI may explicitly select `/my-app/` or nested lowercase segments. SDK 0.44.0
+The CLI may explicitly select `/my-app/` or nested lowercase segments. The SDK
 validates this form with the same reserved-prefix rules as the CLI; it does not
 change DSM entry, upstream authentication, OIDC callback scoping, cookies or
 WebSocket admission. Root `/` is unsupported. The CLI's install checker calls

@@ -405,8 +405,8 @@ always lists. The rules and their shared test vectors are
 are stored in root:root 0600 `runtime/tasks.json`. Purge regenerates the scripts
 and revalidates each current definition before EventScheduler v1
 delete (`task_name`) or TaskScheduler v2 delete (`tasks=[{id,real_owner}]`).
-Without `tasks.json` (an install whose setup.json the snapshot refused, as
-CLI 0.9.0's with `sdk` was before SDK 0.9.1), purge rebuilds the same
+Without `tasks.json` (an install whose setup.json the snapshot refused),
+purge rebuilds the same
 inventory from the root-owned `runtime/policy.json`. Purge also deletes the
 install-selected `<pkg> executor selection` TaskScheduler tasks whose script
 has the exact selection shape for this package.
@@ -589,7 +589,7 @@ verified boolean and `disabled` capability state. Backend `delegate.operations.l
 is strictly empty-params, freshly owner/UID-filtered move-mirror metadata; it is
 not an executor operation. Live completion remains `files.operationStatus`.
 
-## Delegated JSON WebAPI profiles (0.11.0)
+## Delegated JSON WebAPI profiles
 
 A policy may declare `webapi` alongside its other capabilities:
 
@@ -638,7 +638,7 @@ streaming output from synowebapi and are excluded from this JSON operation.
 These measurements do not certify every package API: validate each profile
 against its target DSM/package version before enabling it.
 
-## Raw WebAPI profiles (0.12.1)
+## Raw WebAPI profiles
 
 Profiles may opt in with `raw_max_bytes` (1..10737418240, at most 10 GiB); zero/omitted stays JSON-only.
 `webapi.call` then accepts `response_type:"raw"`. Small bodies use base64; large

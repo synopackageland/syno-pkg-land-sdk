@@ -1,6 +1,6 @@
 # External access settings
 
-External access requires SDK 0.29.0 or later. A Compose App must use that
+External access requires an SDK with external access support. A Compose App must use that
 version for both `compose.sdk` and `identity_gateway.sdk`.
 
 ## DSM settings page
@@ -55,7 +55,7 @@ storage_init:
         external_origin: true
 ```
 
-With SDK 0.30.1, an entry may also name exactly one installation setting as a
+An entry may also name exactly one installation setting as a
 fallback:
 
 ```yaml

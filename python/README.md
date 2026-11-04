@@ -41,8 +41,11 @@ round, or every call fails.
 
 ```
 $ python3 app/main.py --describe
-{"sdk": "python/0.17.3", "versions": [1], "methods": ["notes.greet"]}
+{"sdk": "python/<sdk-version>", "versions": [1], "methods": ["notes.greet"]}
 ```
+
+`<sdk-version>` represents the installed SDK release reported by the App; it is
+not a literal value to send in the handshake.
 
 `examples/hello/app.py` is a complete App; `bridge/runtime_test.go` runs it end
 to end through the runtime, as a package would.

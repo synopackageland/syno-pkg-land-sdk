@@ -31,10 +31,9 @@ Policy pins deliberately retain exact-byte SHA-256 compatibility with existing
 CLI builds. Pretty JSON, compact JSON, key ordering and a trailing newline are
 all valid build inputs; the runtime checks the exact bytes the build pinned.
 After building, even a whitespace-only file edit is rejected, as is any semantic
-change. Rebuild to change the installed policy or manifest. Apps on SDK 0.38.4
-no longer need to sort, compact, strip a newline from, or force administrator
-permissions into their policy to match the bridge's former temporary policy.
-No CLI digest migration or App-specific JSON formatter is required.
+change. Rebuild to change the installed policy or manifest. Keep the policy's
+original formatting and declared permissions; the SDK accepts valid JSON without
+an App-specific formatter or administrator permission overrides.
 
 `dsm.EntryGate.EntryMode` automatically carries the floor into the server.
 Packaged administrator-only builds still enforce the floor if a wrapper loses
@@ -122,7 +121,7 @@ templates receive explicit policies for `app.status`, `greeting.get` and
 `greeting.set`. Custom HTTP dispatch must move into `HandleRequest`,
 `HandleResponse`, `HandleStream` or fixed `HandleHTTP`; dynamic registries must declare fixed method
 names. Use `upstream_auth_paths` for client API paths that use upstream
-authentication. Rebuild with SDK 0.33.0 and CLI 0.35.0 to bind the entry floor and HTTP inventory.
+authentication. Rebuild with matching SDK and CLI releases to bind the entry floor and HTTP inventory.
 
 Administrator admission grants App access, never a root UID. The privileged
 executor remains an isolated, explicitly approved helper. CGI Application

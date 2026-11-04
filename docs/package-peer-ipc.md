@@ -3,7 +3,7 @@
 `ipc.StartPackagePeerUnix` serves a bounded Unix peer protocol as the package
 account on Linux. It requires no root helper, executor build or approval and
 refuses to run as root. Use a direct constructor call so the CLI entry audit
-can recognize the SDK boundary (CLI 0.46.0 or later).
+can recognize the SDK boundary (use a matching CLI with package-peer IPC audit support).
 
 ```go
 server, err := ipc.StartPackagePeerUnix(ctx, socketPath,

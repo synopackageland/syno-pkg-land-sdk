@@ -1,18 +1,20 @@
 # External access
 
-Use SDK 0.30.0 and a matching CLI for public origins and sign-in continuation.
+Use matching SDK and CLI releases with external access support for public origins and sign-in continuation.
 Apps keep their dedicated native HTTPS listener and their existing DSM admission
 policy. Connect is optional: local access and a manually configured public origin
 work without it. The gateway does not create tunnels or change DSM settings.
 
 Compose Apps that keep an installation-time origin while no external origin is
-set use SDK 0.30.1 and the [host-side setting fallback](external-access-settings.md#compose-environment).
+set use an SDK with the [host-side setting fallback](external-access-settings.md#compose-environment).
 
 ## Package policy
 
+`<sdk-version>` is a placeholder, not manifest syntax. `synopkgland init` copies compatible SDK pins from the locally installed templates. For a manual configuration, query `npm view @synopackageland/sdk version`, replace the placeholder with that exact release, and keep all App SDK declarations (including Go, Rust and frontend dependencies) aligned. Run `synopkgland check` with an up-to-date CLI before building.
+
 ```yaml
 identity_gateway:
-  sdk: 0.30.0
+  sdk: <sdk-version>
   external_access:
     connect: optional
     origin_change: none
@@ -22,8 +24,8 @@ identity_gateway:
 Apps whose upstream configuration depends on a fixed URL should declare `confirm`
 so changing the URL requires confirmation. Omitting the block means
 `{connect: optional, origin_change: none}`. The CLI writes the policy as
-`external` in `target/sso/gateway.json`. Pin `identity_gateway.sdk` to 0.30.0
-or a compatible later version when declaring external access.
+`external` in `target/sso/gateway.json`. Keep `identity_gateway.sdk` aligned with
+the App's other SDK declarations when declaring external access.
 
 ### Single-origin Apps
 
