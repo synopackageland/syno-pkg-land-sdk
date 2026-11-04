@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.50.2
+
+- Add request-only secrets: Go `secret.Value` and `api.WithRequestSecrets`, and frontend `requestSecret` sent through `createClient`. Declared credentials are redacted in JSON, logs, debug output and errors, are never written by the SDK background store or notification recorder, and are never replayed by session recovery
+- Redact credentials and session headers or cookies from SDK errors, panics and observer copies in Go, Node, Python and Rust (`secret.Redact`, `redactSecrets`)
+- `api.CheckOrigin` without `Sec-Fetch-Site` checks the full Origin or Referer host and port; a scheme difference only logs a warning, so HTTP keeps working
+- Reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.50.1
 
 - Add opt-in DSM session recovery with `createDsmSession.refresh` and `createClient.sessionRetry`: retry a declared read RPC once after `session_required`, sharing refresh and preserving cancellation and the total request allowance; writes, destructive calls, AI, streams and batches never retry
