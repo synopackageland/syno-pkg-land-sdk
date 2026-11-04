@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.50.10
+
+- Discover the DSM HTTPS guidance port from native `DSM.json` before falling back to `synoinfo.conf`, including default and customized ports
+- Keep text guidance when HTTPS discovery fails or the listener is absent; distinguish HTTPS availability from automatic HTTP redirection
+- Reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.50.9
 
 - Invoke DSM `servicetool` through `/usr/syno/bin/servicetool` and report tool failures separately from port conflicts, preserving exit code, bounded stderr and elapsed diagnostics
