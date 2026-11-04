@@ -210,3 +210,7 @@ OpenAPI imports use the same v2 format; every imported operation is hidden until
 reviewed per API. Wrapper-owned specs and adapters stay under `synology/`.
 
 External-service passwords and tokens should use the [request-only Secret contract](docs/request-secrets.md), including its persistence and diagnostic boundaries.
+
+Private native audio/video playback is available through the Go `media` service
+and TypeScript `mediaUrl` helper; see [media grants](docs/media.md) for owner hooks,
+session binding, renewal, and Range handling.

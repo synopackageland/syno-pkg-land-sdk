@@ -688,5 +688,29 @@
     "statement": "const REPLY_MS=5000",
     "class": "B",
     "reason": "Delayed status refresh hint; pending mutation remains busy and is still awaited"
+  },
+  {
+    "file": "media/media.go",
+    "statement": "const DefaultTTL = 5 * time.Minute",
+    "class": "B",
+    "reason": "Media credential freshness, never a work deadline or playback failure timer"
+  },
+  {
+    "file": "media/media.go",
+    "statement": "const MaxTTL = 30 * time.Minute",
+    "class": "B",
+    "reason": "Upper bound on media credential validity, never a work deadline"
+  },
+  {
+    "file": "ts/src/media.ts",
+    "statement": "setTimeout(() => { void renew().catch(error => { if(disposed) return failure = error try {options.onError?.(error)} catch { /* App callbacks cannot create unhandled renewal errors. */ } }) }, grant.ttl_ms / 2)",
+    "class": "B",
+    "reason": "Renew the same media credential at half its server-provided TTL; no playback or work failure timer"
+  },
+  {
+    "file": "media/media.go",
+    "statement": "if cfg.TTL < time.Second || cfg.TTL > MaxTTL {",
+    "class": "B",
+    "reason": "Credential validity must fit browser cookie expiry precision; no work is timed out"
   }
 ]
