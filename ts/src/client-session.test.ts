@@ -11,6 +11,7 @@ const operations: Record<string, SessionRetryOperation> = {
  'settings.delete': {effect: 'destructive', kind: 'rpc'},
  'assistant.ask': {effect: 'read', kind: 'ai'},
  'events.watch': {effect: 'read', kind: 'stream'},
+ 'legacy.read': {effect: 'read', kind: 'unknown'},
 }
 function setup(error: unknown = refusal, extra: {enabled?: boolean; refreshFails?: boolean} = {}) {
  const tokens: (string | undefined)[] = []
@@ -76,7 +77,7 @@ test('request params and retry policy are snapshots, not mutable caller hints', 
  expect(recover).toHaveBeenCalledOnce()
 })
 
-test.each(['settings.set', 'settings.delete', 'assistant.ask', 'events.watch', 'unknown.get', 'toString'])(
+test.each(['settings.set', 'settings.delete', 'assistant.ask', 'events.watch', 'legacy.read', 'unknown.get', 'toString'])(
  '%s never refreshes or replays', async method => {
   const {client, fetch, recover} = setup()
   await expect(client.call(method)).rejects.toEqual(refusal)
@@ -155,4 +156,21 @@ test('refresh and replay share the original request allowance', async () => {
  await pending
  expect(fetch).toHaveBeenCalledTimes(2)
  expect(vi.getTimerCount()).toBe(0)
+})
+
+test.each(['failure','same token'])('%s recovery leaves the token on later writes and ingress requests',async kind=>{
+ const recover=vi.fn(async()=>response(kind==='failure'?{success:false}:{success:true,SynoToken:'desktop'}))
+ const session=createDsmSession({read:()=> 'desktop',fetch:recover})
+ const sent:string[]=[]
+ const fetch=vi.fn(async(_url:RequestInfo|URL,init?:RequestInit)=>{
+  sent.push((init?.headers as Record<string,string>)['X-SYNO-TOKEN'])
+  return response(sent.length===1?{success:false,error:refusal}:{success:true,data:'done'})
+ })
+ const client=createClient({endpoint:'/api.cgi',fetch,sessionRetry:{session,operations}})
+ await expect(client.call('settings.get')).rejects.toEqual(refusal)
+ expect(await client.call('settings.set')).toBe('done')
+ // Ingress transports read the shared carrier directly.
+ expect(session.token()).toBe('desktop')
+ expect(sent).toEqual(['desktop','desktop'])
+ expect(recover).toHaveBeenCalledOnce()
 })

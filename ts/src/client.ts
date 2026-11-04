@@ -7,8 +7,8 @@ export interface BatchCall {method: string; params?: Record<string, unknown>}
 export type BatchResult<T = unknown> = {success: true; data: T} | {success: false; error: {code: string; message: string}}
 export type Batch = <T = unknown>(calls: readonly BatchCall[], options?: CallOptions) => Promise<BatchResult<T>[]>
 /** Trusted App metadata, never inferred from method names or request params.
- * Copy effect from the operation registry; classify AI and streaming explicitly. */
-export interface SessionRetryOperation {effect: 'read' | 'write' | 'destructive'; kind: 'rpc' | 'ai' | 'stream'}
+ * Use the CLI-generated sessionRetryOperations; unknown kinds never retry. */
+export interface SessionRetryOperation {effect: 'read' | 'write' | 'destructive'; kind: 'rpc' | 'ai' | 'stream' | 'unknown'}
 export interface SessionRetryOptions {
  session: ReturnType<typeof createDsmSession>
  operations: Readonly<Record<string, SessionRetryOperation>>

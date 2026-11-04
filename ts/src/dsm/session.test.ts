@@ -134,3 +134,44 @@ test('separate future logins can refresh again; a rejected token reply is never 
  expect(await session.refresh('newest')).toBeUndefined()
  expect(write).toHaveBeenCalledTimes(2)
 })
+
+test.each(['refusal','same token','HTTP','JSON','network','throw','timeout'])(
+ 'refresh %s retains the desktop carrier during and after recovery',async kind=>{
+  vi.useFakeTimers()
+  let token='desktop'
+  const write=vi.fn()
+  const fetch=vi.fn(()=>{
+   if(kind==='throw')throw Error('unavailable')
+   if(kind==='timeout')return new Promise<Response>(()=>{})
+   if(kind==='network')return Promise.reject(Error('unavailable'))
+   if(kind==='JSON')return Promise.resolve({ok:true,json:async()=>{throw Error('bad JSON')}} as unknown as Response)
+   return Promise.resolve(response({success:kind!=='refusal',SynoToken:'desktop'},kind!=='HTTP'))
+  })
+  const session=createDsmSession({read:()=>token,write,fetch})
+  const pending=session.refresh('desktop')
+  expect(session.token()).toBe('desktop')
+  if(kind==='timeout')await vi.advanceTimersByTimeAsync(clientTimeout())
+  expect(await pending).toBeUndefined()
+  expect(session.token()).toBe('desktop')
+  expect(await session.ready()).toBe('desktop')
+  expect(write).not.toHaveBeenCalled()
+  expect(fetch).toHaveBeenCalledOnce()
+  token='next-desktop'
+  expect(session.token()).toBe('next-desktop')
+ })
+
+test('a failed later refresh preserves the last recovered carrier',async()=>{
+ const fetch=vi.fn().mockResolvedValueOnce(response({success:true,SynoToken:'fresh'}))
+  .mockRejectedValueOnce(Error('unavailable'))
+ const session=createDsmSession({read:()=> 'desktop',fetch})
+ expect(await session.refresh('desktop')).toBe('fresh')
+ expect(await session.refresh('fresh')).toBeUndefined()
+ expect(session.token()).toBe('fresh')
+})
+
+test('a host write failure keeps the existing desktop carrier',async()=>{
+ const session=createDsmSession({read:()=> 'desktop',write:()=>{throw Error('host unavailable')},
+  fetch:async()=>response({success:true,SynoToken:'fresh'})})
+ expect(await session.refresh('desktop')).toBeUndefined()
+ expect(session.token()).toBe('desktop')
+})

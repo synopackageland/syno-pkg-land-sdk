@@ -43,6 +43,6 @@ export {createEntryCheck, type EntryCheck, type EntryFailure, type EntryMode} fr
 export {createClient, type Batch, type BatchCall, type BatchResult, type ClientOptions, type SessionRetryOptions, type SessionRetryOperation} from './client'
 
 export {readDsmPorts, type DsmPort, type DsmPortRange} from './dsm/service-ports'
-export {readDsmHttpsURL} from './dsm/https'
+export {readDsmHttpsURL, type DsmHttpsURLOptions} from './dsm/https'
 
 export {requestSecret, RequestSecret, redactSecrets} from './secret'

@@ -40,11 +40,18 @@ const copy = identityCopy(ctx.locale)
 // For unknown/ordinary users this returns undefined without calling PortInfo.
 const dsmURL = await readDsmHttpsURL(ctx, location.href, signal)
 // Offer the link only if present; explain reopening the App after entering DSM.
+// To reopen the App when the current URL has DSM launch parameters:
+const appURL = await readDsmHttpsURL(ctx, location.href, {signal, keepLaunchApp: true})
 ```
 
 The helper keeps the current hostname, selects the declared HTTPS port and
 opens `/webman/`, removing page paths, query strings and fragments. It does
-not redirect automatically or forward session tokens. Missing, ambiguous,
+not redirect automatically or forward session tokens. Pass `{keepLaunchApp: true}`
+(optionally with `signal`) to retain only `launchApp` and its associated
+`launchParam` from the current URL. Other query parameters and the fragment
+are still removed. This does not invent a route for URLs without `launchApp`;
+the administrator-only discovery rule stays the same. Existing third-argument
+`AbortSignal` callers continue to work. Missing, ambiguous,
 refused or timed-out discovery leaves instructions only; it never guesses
 a default port. A declaration does not prove that the port is reachable or
 that a reverse proxy exposes it. The App owns that deployment-specific guidance.
@@ -59,13 +66,18 @@ recover through the same-origin DSM login endpoint even while `read()` still
 reports the rejected token. `token()` then prefers the recovered carrier until
 the desktop supplies a different one. Concurrent recovery is shared; a newer
 desktop token wins over an older response. Nothing enters storage or URLs.
-Refresh failure returns `undefined`; it is not a sign-in flow.
+Refresh failure or a reply with the same rejected token returns `undefined`,
+so the client does not replay. Both leave the existing carrier available to
+`token()` and `ready()`, including for later writes and ingress streams.
+The carrier changes only after successful recovery or when `read()` changes;
+refresh is not a sign-in flow.
 
 `createClient` can refresh and retry one single-call JSON read on a decoded
 `session_required` refusal:
 
 ```ts
 import {createClient, createDsmSession} from '@synopackageland/sdk'
+import {sessionRetryOperations} from './generated/session-retry'
 
 const session = createDsmSession({
  read: () => ctx.files?.token?.(),
@@ -76,28 +88,30 @@ const client = createClient({
  requestTimeout: ctx.requestTimeout,
  sessionRetry: {
   session,
-  operations: {
-   // Use the corresponding operation registry's effect, never request params.
-   'settings.get': {effect: 'read', kind: 'rpc'},
-   'settings.set': {effect: 'write', kind: 'rpc'},
-   'assistant.ask': {effect: 'read', kind: 'ai'},
-   'events.watch': {effect: 'read', kind: 'stream'},
-  },
+  operations: sessionRetryOperations,
  },
 })
 await client.call('settings.get', {}, {signal})
 ```
 
 `sessionRetry.session` supplies this client's token and readiness callbacks.
-The operations map is trusted App assembly metadata, snapshotted at client
-creation. Reuse each operation's authoritative registry effect and explicitly
-classify AI and streaming work; `ai: read` in the command registry describes
-AI tool exposure, not whether execution invokes an AI model. It is not enough
-to establish replay safety. Do not classify model calls as ordinary RPC reads.
-Neither method-name prefixes nor caller-provided params establish effects.
+Run `synopkgland ctl generate` to emit `generated/session-retry.ts` from the
+operation registry and exported route declarations. Commit that artifact;
+`ctl generate --check` and normal check/build detect drift. Its exported
+`sessionRetryOperations` is a literal effect/kind map that can be passed directly
+to the SDK. The map is trusted App assembly metadata, snapshotted at client
+creation. Declare optional registry `kind: rpc | ai | stream` when needed;
+mark model execution `kind: ai`, even if it returns JSON.
+
+Without `kind`, the generator uses actual JSON route declarations for `rpc`,
+and transfer/stream/download/export routes or NDJSON/upload flows for `stream`.
+Known non-RPC declarations take precedence over `kind: rpc`. An unclassified
+route yields `kind: unknown` and cannot retry. The registry's `ai: read` class
+describes AI tool exposure, not model execution; it never establishes replay
+safety. Neither method-name prefixes nor caller-provided params establish effects.
 
 Only `effect: read` plus `kind: rpc` may retry. Writes, destructive calls, AI,
-streams, unknown methods and all batches never retry. Other refusal codes,
+streams, unknown kinds/methods and all batches never retry. Other refusal codes,
 HTTP/network/JSON failures and timeouts do not trigger recovery. A second
 refusal propagates without another refresh. Failed recovery retains the
 original refusal. The original serialized params, cancellation signal and
