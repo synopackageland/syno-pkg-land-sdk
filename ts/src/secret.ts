@@ -31,9 +31,9 @@ export function encodeSecretRequest(value: unknown, credentials: string[] = []):
 }
 
 /** Detached diagnostic copy; never log raw bodies or fall back to the input. */
-export function redactSecrets(value: unknown, credentials: readonly string[] = []): unknown {
+export function redactSecrets(value: unknown, credentials: readonly string[] = [], fields: readonly string[] = []): unknown {
  const names = ['password','passwd','passphrase','otp','token','secret','authorization','cookie','synotoken','sid']
- const sensitive = (key: string) => {const normalized=key.replace(/[^a-z0-9]/gi,'').toLowerCase(); return names.some(name=>normalized.startsWith(name)||normalized.endsWith(name))}
+ const sensitive = (key: string) => names.includes(key.toLowerCase()) || key.toLowerCase()==='x-syno-token' || fields.includes(key)
  const known = [...credentials].filter(Boolean).sort((a,b)=>b.length-a.length)
  const text = (value: string) => known.reduce((safe,secret)=>safe.split(secret).join(REDACTED), value)
  function walk(item: unknown): unknown {

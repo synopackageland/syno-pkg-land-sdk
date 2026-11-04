@@ -8,19 +8,12 @@ import (
 	"net/http"
 	"sort"
 	"strings"
-	"unicode"
 )
 
 // SensitiveKey recognizes credential names across JSON, headers and form data.
 func SensitiveKey(key string) bool {
-	key = strings.Map(func(r rune) rune {
-		if unicode.IsLetter(r) || unicode.IsDigit(r) {
-			return unicode.ToLower(r)
-		}
-		return -1
-	}, key)
-	for _, name := range []string{"password", "passwd", "passphrase", "otp", "token", "secret", "authorization", "cookie", "synotoken", "sid"} {
-		if key == name || strings.HasSuffix(key, name) || strings.HasPrefix(key, name) {
+	for _, name := range []string{"password", "passwd", "passphrase", "otp", "token", "secret", "authorization", "cookie", "synotoken", "sid", "X-SYNO-TOKEN"} {
+		if strings.EqualFold(key, name) {
 			return true
 		}
 	}
@@ -32,7 +25,7 @@ func SensitiveKey(key string) bool {
 func Redact(value any) any { return (&Redactor{}).Redact(value) }
 
 // Redactor is local to one request. It also removes declared credential values
-// from unlabelled messages and other fields in the same request's output.
+// from unlabelled messages and other fields in diagnostic copies.
 type Redactor struct {
 	values []string
 	fields []string
@@ -49,7 +42,7 @@ func NewRedactor(raw json.RawMessage, fields ...string) *Redactor {
 }
 
 // IncludeRequestCredentials keeps session/header credentials out of the same
-// request's public errors. It retains no request pointer and never reads a body.
+// request's diagnostics. It retains no request pointer and never reads a body.
 func (r *Redactor) IncludeRequestCredentials(req *http.Request) {
 	if req == nil {
 		return
@@ -165,7 +158,7 @@ func RefusePersistence(ctx context.Context) error {
 	return nil
 }
 
-// RequestMetadata removes bodies, query strings and all unapproved header
+// RequestMetadata removes bodies, query strings and credential header
 // values before passing request metadata to an SDK diagnostic observer.
 func RequestMetadata(r *http.Request) *http.Request {
 	safe := r.Clone(r.Context())
@@ -181,12 +174,14 @@ func RequestMetadata(r *http.Request) *http.Request {
 	safe.URL.Fragment = ""
 	safe.RequestURI = safe.URL.EscapedPath()
 	for key := range safe.Header {
-		if key != "Content-Type" && key != "Sec-Fetch-Site" {
+		if SensitiveKey(key) {
 			safe.Header.Set(key, Redacted)
 		}
 	}
 	for key := range safe.Trailer {
-		safe.Trailer.Set(key, Redacted)
+		if SensitiveKey(key) {
+			safe.Trailer.Set(key, Redacted)
+		}
 	}
 	return safe
 }

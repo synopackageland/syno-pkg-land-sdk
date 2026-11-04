@@ -325,3 +325,27 @@ fn handler_panic_log_redacts() {
     assert!(!diagnostics.contains("unlabelled-canary"));
     assert!(diagnostics.contains("[redacted]"));
 }
+
+#[test]
+fn client_results_and_public_errors_preserve_credential_like_content() {
+    let payload = json!({"token":"t","password":"p","sid":"s","tokenCount":7,"sidebar":"left","secretName":"label","otpEnabled":true});
+    let returned = payload.clone();
+    let mut app = App::new();
+    app.method("a.fields", move |_, _| Ok(returned.clone()));
+    app.method("a.fail", |_, _| {
+        Err::<(), _>(Error::new("token_count", "password sid tokenCount sidebar"))
+    });
+    let mut rt = Runtime::start(app);
+    rt.call("a.fields", "null");
+    assert_eq!(rt.recv()["data"], payload);
+    let mut app = App::new();
+    app.method("a.fail", |_, _| {
+        Err::<(), _>(Error::new("token_count", "password sid tokenCount sidebar"))
+    });
+    let mut rt = Runtime::start(app);
+    rt.call("a.fail", "null");
+    assert_eq!(
+        rt.recv()["error"],
+        json!({"code":"token_count","message":"password sid tokenCount sidebar"})
+    );
+}

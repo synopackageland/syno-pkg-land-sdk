@@ -1,4 +1,4 @@
-import {encodeSecretRequest,redactSecrets} from './secret'
+import {encodeSecretRequest} from './secret'
 import {createBatch} from './batch.js'
 import {clientTimeout, type CallOptions} from './context'
 import type {createDsmSession} from './dsm/session.js'
@@ -56,7 +56,6 @@ export function createClient(options: ClientOptions) {
    for(let attempt = 0; attempt < 2; attempt++) {
     if(failure) throw failure
     const sentToken = token?.()
-    if(sentToken)credentials.push(sentToken)
     const response = await wait(request(options.endpoint, {method: 'POST', mode: 'same-origin', credentials: 'same-origin', redirect: 'error', cache: 'no-store', headers: {'Content-Type': 'application/json', ...(sentToken ? {'X-SYNO-TOKEN': sentToken} : {})}, body, signal: controller.signal}))
     const value: unknown = await wait(response.json())
     if(response.ok === false || !value || typeof value !== 'object' || !('success' in value)) throw {code: 'bad_response', message: 'unexpected response'}
@@ -69,11 +68,7 @@ export function createClient(options: ClientOptions) {
     if(failure) throw failure
     if(!fresh || fresh === sentToken) throw error
    }
-  } catch(error) {
-   if(failure)throw failure
-   if(error && typeof error==='object' && 'code' in error)throw redactSecrets(error,credentials)
-   throw {code: 'network', message: 'request failed'}
-  }
+  } catch(error) {throw failure ?? error}
   finally {
    clearTimeout(timer)
    signal?.removeEventListener('abort', stop)

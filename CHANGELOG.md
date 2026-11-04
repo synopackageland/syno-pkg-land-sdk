@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.50.3
+
+- Preserve complete client results and public error codes, messages and details for RPC, batch and stream responses, including opt-in request-only routes; frontend transport errors retain their original content
+- Keep request-only secrets out of background storage and notification journals, consume their frontend wrappers once and prevent session-recovery replay
+- Match diagnostic credential fields by exact name, including explicitly declared application fields; preserve fields such as `sidebar`, `tokenCount`, `secretName` and `otpEnabled`
+- Keep Node, Python and Rust stderr diagnostics redacted without changing their client error responses
+- Reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.50.2
 
 - Add request-only secrets: Go `secret.Value` and `api.WithRequestSecrets`, and frontend `requestSecret` sent through `createClient`. Declared credentials are redacted in JSON, logs, debug output and errors, are never written by the SDK background store or notification recorder, and are never replayed by session recovery

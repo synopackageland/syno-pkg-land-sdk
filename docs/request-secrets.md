@@ -15,7 +15,7 @@ This is not a sandbox or a memory-erasure guarantee.
 | Frontend params | Ordinary JSON serialization | `requestSecret` exposes plaintext only to `createClient`'s request encoder; ordinary JSON, strings and inspection stay redacted |
 | Error diagnostics | Original errors, panic payloads or tracebacks could reach diagnostic sinks | Go API, bridge and background errors, Node handler failures, Python exceptions and Rust handler panics emit redacted events |
 | Request observer | Callback received the original request | Callback receives detached request metadata, without body, query, forms or credential header values |
-| API error details | Arbitrary public JSON | Common credential field names are redacted recursively; declared routes also remove their credential values from public errors and results |
+| API error details | Arbitrary public JSON | Complete public details, results and errors pass through unchanged, including declared routes |
 | Persistent background work | Inputs, checkpoints, schedules and results can be stored for replay | A credential-bearing declared route cannot access the background store in its request scope, before filesystem access |
 | Transport | Guarded same-origin SDK client | Existing transport policy stays in place; generated DSM Window RPC applies the same redirect, credential and cache restrictions |
 
@@ -50,8 +50,9 @@ requires a fresh credential. A request canceled before encoding sends nothing;
 clear the wrapper when abandoning the form. The wrapper's `toJSON`, string
 conversion and object inspection do not expose its contents. Use
 `redactSecrets(value)` for detached JSON diagnostics, never raw request bodies.
-Network exceptions are converted to a fixed safe error. Public errors are
-redacted using the request's credentials and current session token.
+Client results, public errors and transport exceptions retain their original
+content. The SDK does not apply field-name or credential-value redaction to
+responses, including requests using Secret wrappers.
 
 This does not introduce browser-side encryption. HTTP remains available where
 it was available before, with existing warnings and HTTPS-specific ceremonies
@@ -80,9 +81,10 @@ route := api.WithRequestSecrets(api.Handle("service.connect",
 Declare every custom credential field name. Names apply recursively, including
 nested objects and arrays. Common password, OTP, token, secret, authorization,
 cookie and DSM token names are included automatically on declared routes.
-Results and public error messages/details are redacted before SDK serialization,
-including credential header values and session cookie values from the request;
-unknown errors and panic payloads never reach the SDK's error log. `secret.Value`
+Results and public error codes, messages and details pass through unchanged,
+including credential-like fields and values. Unknown errors and panic payloads
+remain fixed internal client errors, as before request-only secrets; their raw
+content never reaches the SDK's error log. `secret.Value`
 also redacts ordinary JSON/text/Gob serialization, formatting (including debug
 verbs), and structured logging. A serialized redaction marker cannot restore a
 credential. `Clear` clears the shared byte holder, including copies of the value;
@@ -102,12 +104,20 @@ event log. Other SDK settings accept their existing constrained configuration
 schemas; do not copy revealed values into settings, state, telemetry, audit
 records, caches, arbitrary files, or application-managed persistence.
 
+Diagnostic helpers match credential names exactly (case-insensitively):
+`password`, `passwd`, `passphrase`, `otp`, `token`, `secret`, `authorization`,
+`cookie`, `synotoken`, `sid`, and the `X-SYNO-TOKEN` header. Prefixes and suffixes
+do not match: `sidebar`, `tokenCount`, `secretName`, `otpEnabled` and `api_token`
+remain intact unless explicitly declared. Use `secret.NewRedactor(raw, fields...).Redact(value)`
+or `redactSecrets(value, credentials, fields)` for application-specific diagnostic fields.
+Never apply these helpers to client responses.
+
 `secret.Redact(value)` returns a detached JSON-safe diagnostic copy and fails
 closed for unsupported values. `api.WithObserver` still reports the authorized
 account, method, code, duration and status through `Outcome`, while its request
 argument contains metadata only. It strips bodies, query strings, form data and
-non-metadata header values. An observer must not capture the original request
-in a closure or add a raw-body middleware logger.
+credential header values. Other header values remain unchanged. An observer
+must not capture the original request in a closure or add a raw-body middleware logger.
 
 ## Long-lived connections
 

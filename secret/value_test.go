@@ -48,7 +48,7 @@ func TestValueNeverSerializesPlaintext(t *testing.T) {
 }
 
 func TestRedactNestedAndRequestDump(t *testing.T) {
-	value := map[string]any{"Password": "canary-p", "nested": []any{map[string]any{"api_token": "canary-t", "X-SYNO-TOKEN": "canary-s", "otp": "canary-o", "Cookie": "canary-c"}}, "safe": "visible", "custom": New("canary-v")}
+	value := map[string]any{"Password": "canary-p", "nested": []any{map[string]any{"token": "canary-t", "X-SYNO-TOKEN": "canary-s", "otp": "canary-o", "Cookie": "canary-c"}}, "safe": "visible", "custom": New("canary-v")}
 	raw, err := json.Marshal(Redact(value))
 	if err != nil || bytes.Contains(raw, []byte("canary-")) || !bytes.Contains(raw, []byte("visible")) {
 		t.Fatalf("%s %v", raw, err)
@@ -73,5 +73,28 @@ func TestValueRejectsNullAndCannotRestoreRedaction(t *testing.T) {
 		if copy.Reveal() != "" {
 			t.Fatal("failed decode retained old credential")
 		}
+	}
+}
+
+func TestDiagnosticRedactionUsesExactNames(t *testing.T) {
+	input := map[string]any{}
+	for _, key := range []string{"password", "passwd", "passphrase", "otp", "token", "secret", "authorization", "cookie", "synotoken", "sid", "Password", "X-SYNO-TOKEN", "appCredential"} {
+		input[key] = "hidden"
+	}
+	for _, key := range []string{"sidebar", "tokenCount", "secretName", "otpEnabled", "api_token", "passwordHint", "side_bar"} {
+		input[key] = "visible"
+	}
+	got := NewRedactor(nil, "appCredential").Redact(input).(map[string]any)
+	for key, value := range input {
+		want := any(Redacted)
+		if value == "visible" {
+			want = value
+		}
+		if got[key] != want {
+			t.Errorf("%s = %v, want %v", key, got[key], want)
+		}
+	}
+	if input["password"] != "hidden" {
+		t.Fatal("diagnostic copy mutated source")
 	}
 }

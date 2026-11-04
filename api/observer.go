@@ -77,7 +77,8 @@ func (w *observedResponse) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 // same way), for example to audit refused sign-ins. observe runs after the
 // response and cannot change it; a panic in observe is logged and dropped.
 // The callback receives detached metadata without bodies, queries, forms or
-// credential header values; use Outcome for the verified identity and method.
+// credential header values; other headers are unchanged. Use Outcome for the
+// verified identity and method.
 func WithObserver(next http.Handler, observe func(*http.Request, Outcome)) http.Handler {
 	return &observerHandler{next: next, observe: observe}
 }

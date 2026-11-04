@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/synopackageland/syno-pkg-land-sdk/background"
 	"github.com/synopackageland/syno-pkg-land-sdk/secret"
 	"log"
@@ -49,11 +50,16 @@ func TestObserverCannotDumpCredentials(t *testing.T) {
 		if r.Body != http.NoBody || r.Header.Get("Authorization") != "[redacted]" || r.URL.RawQuery != "" || r.Header.Get("X-SYNO-TOKEN") != "[redacted]" {
 			t.Fatal("observer received raw request")
 		}
+		if r.Header.Get("Sidebar") != "left" || r.Header.Get("TokenCount") != "7" {
+			t.Fatal("observer redacted non-credential headers")
+		}
 	})
 	post(t, handler, `{"method":"demo.crash","params":{"password":"canary"}}`, func(r *http.Request) {
 		r.URL.RawQuery = "token=canary"
 		r.Header.Set("Authorization", "Bearer canary")
 		r.Header.Set("X-SYNO-TOKEN", "canary")
+		r.Header.Set("Sidebar", "left")
+		r.Header.Set("TokenCount", "7")
 	})
 }
 
@@ -75,7 +81,7 @@ func TestOriginFallbackStrictSyntaxAndHTTPCompatibility(t *testing.T) {
 	}
 }
 
-func TestDeclaredRequestSecretsRedactErrorAndRefuseReplay(t *testing.T) {
+func TestDeclaredRequestSecretsPreserveErrorAndRefuseReplay(t *testing.T) {
 	for _, batch := range []bool{false, true} {
 		dir := t.TempDir() + "/spool"
 		route := WithRequestSecrets(Handle("demo.crash", func(ctx context.Context, _ Caller, raw json.RawMessage) (any, error) {
@@ -92,7 +98,7 @@ func TestDeclaredRequestSecretsRedactErrorAndRefuseReplay(t *testing.T) {
 			body = `{"v":1,"calls":[` + body + `]}`
 		}
 		rec, _ := post(t, srv, body)
-		if strings.Contains(rec.Body.String(), "canary") || !strings.Contains(rec.Body.String(), "visible") {
+		if !strings.Contains(rec.Body.String(), "custom-canary") || !strings.Contains(rec.Body.String(), "canary-p") || !strings.Contains(rec.Body.String(), "visible") {
 			t.Fatal(rec.Body.String())
 		}
 		if _, err := os.Stat(dir); !errors.Is(err, os.ErrNotExist) {
@@ -106,7 +112,7 @@ func TestDeclaredRequestSecretSuccessPreservesNumbers(t *testing.T) {
 		return map[string]any{"id": json.Number("9007199254740993"), "echo": "custom-canary", "token": "canary-t"}, nil
 	}), "credential")
 	rec, _ := post(t, newTestServer(t, &fakeAuth{admin: true}, route), `{"method":"demo.crash","params":{"credential":"custom-canary"}}`)
-	if strings.Contains(rec.Body.String(), "canary") || !strings.Contains(rec.Body.String(), "9007199254740993") {
+	if !strings.Contains(rec.Body.String(), "custom-canary") || !strings.Contains(rec.Body.String(), "canary-t") || !strings.Contains(rec.Body.String(), "9007199254740993") {
 		t.Fatal(rec.Body.String())
 	}
 }
@@ -146,7 +152,7 @@ func TestOriginFallbackRefererPortAndSchemeWarning(t *testing.T) {
 	}
 }
 
-func TestDeclaredRequestSecretErrorsAlsoRedactSessionHeaders(t *testing.T) {
+func TestDeclaredRequestSecretErrorsPreserveSessionHeaders(t *testing.T) {
 	route := WithRequestSecrets(HandleRequest("demo.crash", func(_ context.Context, _ Caller, r *http.Request, _ json.RawMessage) (any, error) {
 		return nil, BadRequest(r.Header.Get("X-SYNO-TOKEN") + " bearer-canary cookie-canary")
 	}), "credential")
@@ -155,7 +161,51 @@ func TestDeclaredRequestSecretErrorsAlsoRedactSessionHeaders(t *testing.T) {
 		r.Header.Set("Authorization", "Bearer bearer-canary")
 		r.AddCookie(&http.Cookie{Name: "session", Value: "cookie-canary"})
 	})
-	if strings.Contains(rec.Body.String(), "canary") {
+	if !strings.Contains(rec.Body.String(), "session-canary bearer-canary cookie-canary") {
 		t.Fatal(rec.Body.String())
+	}
+}
+
+func TestClientResponsesPreserveFieldNames(t *testing.T) {
+	payload := map[string]any{"token": "t", "password": "p", "sid": "s", "tokenCount": 7, "sidebar": "left", "secretName": "label", "otpEnabled": true, "api_token": "custom", "nested": []any{map[string]any{"password": "nested"}}}
+	expected, _ := json.Marshal(payload)
+	for _, kind := range []string{"rpc", "batch", "stream"} {
+		for _, failure := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/error=%t", kind, failure), func(t *testing.T) {
+				public := &Error{Code: "token_count", Message: "password sid tokenCount sidebar"}
+				route := Handle("demo.fields", func(context.Context, Caller, json.RawMessage) (any, error) {
+					if failure {
+						return nil, WithDetails(public, payload)
+					}
+					return payload, nil
+				})
+				if kind == "stream" {
+					if !failure {
+						return
+					}
+					route = HandleStream("demo.fields", func(context.Context, Caller, http.ResponseWriter, *http.Request) error {
+						return WithDetails(public, payload)
+					})
+				}
+				srv := newTestServer(t, &fakeAuth{admin: true}, route)
+				var rec *httptest.ResponseRecorder
+				if kind == "stream" {
+					rec = httptest.NewRecorder()
+					srv.ServeHTTP(rec, httptest.NewRequest("GET", "/api.cgi?method=demo.fields", nil))
+				} else {
+					body := `{"method":"demo.fields","params":{}}`
+					if kind == "batch" {
+						body = `{"v":1,"calls":[` + body + `]}`
+					}
+					rec, _ = post(t, srv, body)
+				}
+				if !strings.Contains(rec.Body.String(), string(expected)) {
+					t.Fatal(rec.Body.String())
+				}
+				if failure && (!strings.Contains(rec.Body.String(), public.Code) || !strings.Contains(rec.Body.String(), public.Message)) {
+					t.Fatal(rec.Body.String())
+				}
+			})
+		}
 	}
 }
