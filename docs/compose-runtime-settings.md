@@ -2,9 +2,9 @@
 
 For a host-resolved external App address, use
 [`external_origin: true`](external-access-settings.md#compose-environment)
-with SDK 0.29.0 or later. It needs no required installation setting.
+with an SDK that supports external access. It needs no required installation setting.
 
-Use SDK and CLI 0.29.0 for native installation settings and runtime setting bindings.
+Use matching SDK and CLI releases for native installation settings and runtime setting bindings.
 
 Schema 2 Apps declare installation configuration without App hooks or SPK edits:
 

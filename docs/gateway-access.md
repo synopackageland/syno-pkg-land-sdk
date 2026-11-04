@@ -52,7 +52,7 @@ does not revoke upstream tokens, sessions or active connections.
 The CLI requires SDK sources containing `UpstreamAuthPathsVersion = 1` and links
 the static entry policy digest into the gateway. Editing the entry mode,
 upstream-auth paths or passthrough settings without rebuilding refuses startup
-and CGI loading. Build with SDK 0.32.0 and CLI 0.34.0.
+and CGI loading. Build with matching SDK and CLI releases with gateway access support.
 
 The identity gateway distinguishes DSM authentication from App admission. A
 verified DSM session does not grant administrator or admitted-group membership.
@@ -106,10 +106,12 @@ native sessions on explicitly configured passthrough routes.
 `optional_passthrough` declares fixed App-authenticated prefixes, separately from
 permanent `passthrough`. For example, the CLI manifest can declare:
 
+`<sdk-version>` is a placeholder, not manifest syntax. `synopkgland init` copies compatible SDK pins from the locally installed templates. For a manual configuration, query `npm view @synopackageland/sdk version`, replace the placeholder with that exact release, and keep all App SDK declarations (including Go, Rust and frontend dependencies) aligned. Run `synopkgland check` with an up-to-date CLI before building.
+
 ```yaml
 identity_gateway:
   # Keep the App's other gateway fields.
-  sdk: 0.32.0
+  sdk: <sdk-version>
   upstream_auth_paths: [/dav, /api/mobile]
   optional_passthrough:
     mobile:
@@ -153,5 +155,5 @@ an error and writes disabled state. Responses report `configured_enabled` and
 briefly receive 403 until the signal is handled. Changes to the fixed manifest
 prefixes require rebuilding/restarting the gateway; changing the boolean does not.
 
-Build with SDK 0.32.0 and CLI 0.34.0. With explicit App entry, contain all
+Build with matching SDK and CLI releases with gateway access support. With explicit App entry, contain all
 optional and permanent passthrough in `upstream_auth_paths`.

@@ -81,11 +81,11 @@ directly from the application.
 
 ## Release integration
 
-This additive Go API warrants a proposed SDK minor version, 0.50.0 from 0.49.4.
+This additive Go API requires matching SDK and executor releases.
 No version metadata, tags or published artifacts are changed by this work.
 The account bridge payloads in both `dsm/native` and `executor/native` change;
 the next batched release must build and publish a fresh executor inventory rather
-than reuse executor/v0.48.0, then regenerate the SDK executor manifest/digests.
+than reuse an executor without this capability, then regenerate the SDK executor manifest/digests.
 
 After that release, Studio should update its pinned SDK dependency, use
 `LookupAccount` for background checks/reconciliation and DSM's returned `Admin`

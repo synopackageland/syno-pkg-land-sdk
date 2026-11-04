@@ -18,23 +18,24 @@ SDK for DSM packages built with [synopkgland](https://github.com/synopackageland
 | `conformance/` | Runs the vectors against the executor over a Unix socket (repository check, not published) |
 | `scripts/` | `gate.sh` (local gate), `executor-digests.sh` (reproducible SDK payload inventory) |
 
+`<sdk-version>` is a placeholder, not manifest syntax. `synopkgland init` copies compatible SDK pins from the locally installed templates. For a manual configuration, query `npm view @synopackageland/sdk version`, replace the placeholder with that exact release, and keep all App SDK declarations (including Go, Rust and frontend dependencies) aligned. Run `synopkgland check` with an up-to-date CLI before building.
+
 An app depends on the SDK through `backend/go.mod`:
 
 ```
-require github.com/synopackageland/syno-pkg-land-sdk v0.41.1
+require github.com/synopackageland/syno-pkg-land-sdk v<sdk-version>
 ```
 
 A Rust App depends on `syno-pkg-land-app` (`rust/app/`) and runs behind the
 Go runtime:
 
 ```
-syno-pkg-land-app = { git = "https://github.com/synopackageland/syno-pkg-land-sdk", tag = "v0.41.1" }
+syno-pkg-land-app = { git = "https://github.com/synopackageland/syno-pkg-land-sdk", tag = "v<sdk-version>" }
 ```
 
 The `go.mod` line is the only source of the SDK version. The CLI builds the executor
 from `github.com/synopackageland/syno-pkg-land-sdk/executor` at the immutable
-release declared by the SDK executor manifest. SDK 0.41.1 uses executor/v0.39.0
-and its six verified payload digests. The manifest ships in both the Go module
+release declared by the SDK executor manifest and verifies its six payload digests. The manifest ships in both the Go module
 and npm package. Use a CLI that supports executor manifest format 1 and
 templates that produce the owner-and-grant staging/job namespaces required by
 `delegate.OwnerStagingPrefix` and `delegate.OwnerJobSuffix`. The CLI builds the

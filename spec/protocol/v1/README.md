@@ -1,6 +1,6 @@
 # Executor protocol v1
 
-Since 0.9.0. The key words MUST, MUST NOT, REQUIRED, SHALL, SHALL NOT, SHOULD,
+The key words MUST, MUST NOT, REQUIRED, SHALL, SHALL NOT, SHOULD,
 SHOULD NOT, RECOMMENDED, MAY and OPTIONAL are to be interpreted as described in
 RFC 2119.
 
@@ -30,7 +30,7 @@ the executor against the vectors here.
 
 ## Timeouts
 
-Since 0.10.3. Every layer between the browser and a root program waits
+Every layer between the browser and a root program waits
 longer than the layer it calls, so the inner answer, or the inner refusal,
 arrives before the outer layer gives up. The margin is 10 seconds between
 the executor and its client and between the client and the request; the
@@ -61,13 +61,13 @@ reasons are recorded in `scripts/timeout-allowlist.json`.
 - `op` MUST be one of the ops with a schema in `schema/`. An unknown op is
   `UNKNOWN_OP`; an op outside the approved policy is `POLICY_DENIED`.
 - `auth` is OPTIONAL. When present it MUST contain only `dsm_cookie`,
-  `dsm_synotoken` and `remote_addr` (since 0.9.4), the browser's address
+  `dsm_synotoken` and `remote_addr`, the browser's address
   (REMOTE_ADDR). DSM's Application Privileges are evaluated for that address;
   an op that checks them MUST be refused with `APP_DENIED` when a present
   `auth` has no usable `remote_addr`. A grant records the `remote_addr` of the
   `delegate.create` that made it (creating it again records the new one), and
-  an operation records the address of its `files.moveFromStaging` (since
-  0.9.6). A request without `auth` under a grant, and the operation's
+  an operation records the address of its `files.moveFromStaging`. A request
+  without `auth` under a grant, and the operation's
   background revalidation, are checked from that recorded address; work with no
   recorded address is checked as coming from 127.0.0.1. A present `auth` is
   always treated as caller authentication, never ignored, even when empty. Ops whose schema says
@@ -112,7 +112,7 @@ reasons are recorded in `scripts/timeout-allowlist.json`.
 ## Status
 
 `status` answers `version` (`"1"`), `ready`, `disabled`, `executor_digest`
-and `policy_digest`. With `auth` (since 0.9.6) it also answers `allowed`:
+and `policy_digest`. With `auth` it also answers `allowed`:
 whether DSM's Application Privileges let the caller use the App and File
 Station from `remote_addr`, the check `delegate.create` makes; an invalid
 session is `AUTH_DENIED`. A CGI sends the caller's `auth` so an App the
@@ -136,7 +136,7 @@ the tasks back itself.
 
 ## Application Portal
 
-Since 0.9.6. A policy MAY carry `"portal": {"application": "<display name>",
+A policy MAY carry `"portal": {"application": "<display name>",
 "alias": "<default alias>"}` together with both `portal.register` and
 `portal.unregister`; a policy with only some of the three is invalid. The
 executor then registers the App's Application Portal entry the way DSM's
@@ -169,7 +169,7 @@ packages.
 
 ## Root programs
 
-Since 0.10.0. Each `root` entry pins a program by its SHA-256 digest; a bare
+Each `root` entry pins a program by its SHA-256 digest; a bare
 digest is a script `root.run` may run with the defaults. The object form is
 `{"digest", "kind", "schema", "run"}`: `kind` `script` (`root/<name>.sh`) or
 `binary` (`root/<name>`), `schema` a closed JSON Schema subset for its params,
@@ -223,7 +223,7 @@ Every root program, whatever starts it:
 
 ## Root jobs
 
-Since 0.10.0. `root.start`, `root.jobs.list`, `root.jobs.get` and
+`root.start`, `root.jobs.list`, `root.jobs.get` and
 `root.jobs.stop` come together in `operations`. Each requires an administrator
 session whose Application Privileges allow the App, like `root.run`; any such
 administrator sees and stops every job of the package.
@@ -299,7 +299,7 @@ The job reports on fd 5 and is told to stop on fd 4; both are pipes.
 
 ## Package stop step
 
-Since 0.10.0. A policy MAY carry `"stop": "<name>"`, naming a `root` entry the
+A policy MAY carry `"stop": "<name>"`, naming a `root` entry the
 executor runs when the package stops, after its jobs ended, with no session.
 Its argument is `prepare-upgrade` when the package account wrote `upgrade`
 to `var/executor/stop-reason` before the stop request (the
@@ -315,7 +315,7 @@ entry, which may pin the same digest under another name.
 
 ## Package start step
 
-Since 0.10.3. A policy MAY carry `"start": "<name>"`, naming a `root` entry
+A policy MAY carry `"start": "<name>"`, naming a `root` entry
 the executor runs once after each install or upgrade, with no session:
 
 - The executor MUST run it at the first start of a package version (the
@@ -353,7 +353,7 @@ MUST NOT expect its result. The App reads it from `status`.
 
 ## Root state directory
 
-Since 0.10.0. A policy with `"root_state": true` gives its root programs a
+A policy with `"root_state": true` gives its root programs a
 directory only root can read: `/volumeN/@synopkgland/<package>`, root:root
 0700, on the volume that holds the package's `var` (DSM's
 `/volumeN/@appdata/<package>`); `/volumeN/@synopkgland` is root:root 0755.
@@ -366,7 +366,7 @@ the step the executor deletes it for `delete-state` and keeps it for
 
 ## Uninstall purge step
 
-Since 0.9.7. A policy MAY carry `"purge": "<name>"`, naming one of its `root`
+A policy MAY carry `"purge": "<name>"`, naming one of its `root`
 ops as the App's root step at uninstall; any other value makes the policy
 invalid. Approving that policy is the administrator's consent that the op
 runs as root at uninstall, with no session.
@@ -398,8 +398,8 @@ runs as root at uninstall, with no session.
   Application Privileges, scope, directory identity and write permission
   against DSM. A failure the user or an administrator can undo MUST fail only
   that operation and MUST keep the grant: `PERMISSION_DENIED` (the ACL refuses
-  the write), `not-found` (the granted folder is not at its path) and, since
-  0.9.6, `APP_DENIED` (an Application Privileges rule refuses the account from
+  the write), `not-found` (the granted folder is not at its path) and
+  `APP_DENIED` (an Application Privileges rule refuses the account from
   the checked address). Once the cause is fixed, a new operation under the same
   grant succeeds. Any other revalidation failure (`DELEGATION_DENIED`,
   `INELIGIBLE`, `SCOPE_DENIED`, including a different folder at the granted
@@ -448,7 +448,7 @@ administrator). Their `dsm_cookie` is the user name and `dsm_synotoken` is
 New ops and members are added with a `since` of the SDK release. The protocol
 `v` changes only for an incompatible envelope change.
 
-## JSON WebAPI grants (since 0.11.0)
+## JSON WebAPI grants
 
 `webapi.call` MUST execute only an exact API/method/version in the grant's named
 `webapi` policy profile, with `runner` fixed to its owner. A profile has `purpose`
@@ -475,7 +475,7 @@ cannot be confirmed MUST answer `WEBAPI_UNCERTAIN` (nonretryable); client
 transport failure MAY also hide a completed operation. Binary/streaming replies
 MUST be refused. These bounds and semantics also apply to until-revoked grants.
 
-## Raw WebAPI extension (since 0.12.1)
+## Raw WebAPI extension
 
 The JSON-only restriction above applies to the default response mode. An explicit
 `response_type:"raw"` MUST require a positive, approved profile `raw_max_bytes`

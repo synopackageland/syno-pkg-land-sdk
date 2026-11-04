@@ -176,8 +176,7 @@ const ctx = createStandaloneContext({locale: 'zh-TW', call: (method, params) => 
 
 The default logo and app name return to the first entry in `pages` (including a
 hidden entry) through `v-model`. With no pages, activation changes no selection.
-This needs UI 0.14.3 or later; older supported
-UI versions keep their static brand. Pointer, Enter and Space share the same
+Use a matching UI release with brand activation support. Pointer, Enter and Space share the same
 native button action; the phone drawer closes on activation.
 
 `@brand` receives the original `MouseEvent`. To replace the default selection,
@@ -271,9 +270,8 @@ tested on its own provides `PageInfoTarget` as it does `PageActionsTarget`.
 horizontal bar in web and DSM window layouts. The `sidebar-footer` slot (or
 the account supplied by `ctx`) follows the navigation; mobile keeps its drawer.
 Omit `navigation` to keep the installed UI's default sidebar, or pass
-`navigation="sidebar"` explicitly. Top navigation requires
-**@synopackageland/ui 0.13.1 or later**; older supported UI peers keep their
-existing layout. Sidebar width and collapse preferences are unused in top mode.
+`navigation="sidebar"` explicitly. Use a matching `@synopackageland/ui` release
+with top navigation support. Sidebar width and collapse preferences are unused in top mode.
 
 ```vue
 <AppShell v-model="page" :locale="ctx.locale" :ctx="ctx" :pages="pages" navigation="top" />
@@ -291,9 +289,8 @@ surface at every width (web, DSM window and mobile):
 <AppShell v-model="page" :locale="ctx.locale" :ctx="ctx" :pages="pages" page-surface="none" />
 ```
 
-`none` requires **@synopackageland/ui 0.12.5 or later**. The SDK still accepts
-older UI peers and forwards the value unchanged, but those releases do not
-provide the no-surface/no-horizontal-gutter behavior. Other shell spacing,
+`none` requires a matching `@synopackageland/ui` release with no-surface support.
+Other shell spacing,
 including the body bottom padding, stays unchanged.
 
 Moving to another page starts it at the top; `keep-scroll` keeps the
@@ -547,8 +544,8 @@ differ provides its adapter there, and the dialog reads as its settings
 page does.
 
 A full page, or a window DSM left open, keeps running the UI it loaded across
-a package upgrade until the page reloads (CLI 0.33.2+ windows opened after
-the upgrade load the new UI themselves). The CLI's DSM window (CLI 0.33.2+) gives `ctx.uiUpdate`: its `check()` reads the package's `ui/config`
+a package upgrade until the page reloads; windows opened after
+the upgrade load the new UI themselves. The CLI's DSM window gives `ctx.uiUpdate`: its `check()` reads the package's `ui/config`
 without the browser cache and answers whether the installed build replaced
 the window this page loaded. `AppShell` given that `ctx` shows
 `UiUpdateNotice` above every page once it answers yes: one line, Updated.
