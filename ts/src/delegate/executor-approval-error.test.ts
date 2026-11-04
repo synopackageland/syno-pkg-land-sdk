@@ -159,3 +159,41 @@ test('the window approval keeps its state through a refusal reported in code',as
   expect(p.root.querySelector('[data-executor-consent]')).not.toBeNull()
  }finally{p.done()}
 })
+
+test('scheduler refusal and failed restoration survive an unavailable executor, with a read-only retry in every language',async()=>{
+ for(const locale of Object.keys(delegateCatalogs)){
+  const copy=delegateCopy(locale),access=windowAccess({state:'blocked',code:'scheduler_denied',outcome:'restore_failed',reason:'dsm_105: DSM denied administrator scheduler access. Restoring the earlier approval failed.'})
+  let available=false,approvals=0
+  const authorize=access.setup.authorize
+  access.setup.authorize=async password=>{approvals++;return authorize(password)}
+  const ctx={call:async<T,>()=>{if(!available)throw {code:'EXECUTOR_UNAVAILABLE'};return {} as T}}
+  const p=mountIn(()=>h(AppRoot,{},()=>h(ExecutorSettings,{admin:true,locale,ctx})),access.setup)
+  try{
+   await settle();await submit(p.root,'secret')
+   const alert=p.root.querySelector('[role=alert]')
+   expect(alert?.textContent,locale).toContain(copy.schedulerDenied)
+   expect(alert?.textContent,locale).toContain(copy.approvalRestoreFailed)
+   expect(alert?.textContent).toContain('dsm_105')
+   expect(alert?.textContent).not.toContain(copy.setupError)
+   await access.poll();await settle()
+   expect(p.root.querySelector('[role=alert]')?.textContent).toContain(copy.schedulerDenied)
+   const retry=Array.from(p.root.querySelectorAll('button')).find(b=>b.textContent?.trim()===copy.retry)
+   expect(retry,locale).toBeDefined()
+   available=true;retry!.click();await settle()
+   expect(approvals).toBe(1)
+   expect(p.root.querySelector('[role=alert]')).toBeNull()
+   expect(p.root.querySelector<HTMLInputElement>('#delegate-password')?.disabled).toBe(false)
+   expect(p.root.querySelector<HTMLInputElement>('#delegate-password')?.value).toBe('')
+  }finally{p.done()}
+ }
+})
+
+test('a legacy scheduler denial explains recovery and offers Retry even when automatic reapproval is unsafe',async()=>{
+ const copy=delegateCopy('zh-TW'),access=windowAccess({state:'blocked',reason:'dsm_105: DSM denied administrator scheduler access.',retry:false})
+ const p=mountIn(()=>h(AppRoot,{},()=>h(ExecutorSettings,{admin:true,locale:'zh-TW',initial:{state:'blocked',reason:'dsm_105: DSM denied administrator scheduler access.'}})),access.setup)
+ try{
+  await settle()
+  expect(p.root.textContent).toContain(copy.schedulerDenied)
+  expect(Array.from(p.root.querySelectorAll('button')).some(b=>b.textContent?.trim()===copy.retry)).toBe(true)
+ }finally{p.done()}
+})

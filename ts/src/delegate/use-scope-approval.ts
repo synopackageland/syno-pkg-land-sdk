@@ -20,7 +20,7 @@ export function useScopeApproval(props:{readonly admin:boolean;readonly locale?:
  const status=ref<CapabilityStatus>(),password=ref(''),busy=ref(false),confirming=ref(false),error=ref(false)
  // Why the last approval failed: a refused password, or the executor's
  // reason. It stays until the administrator submits again or refreshes.
- const failure=ref<{confirm:ConfirmFailure}|{reason:string;code?:string}>()
+ const failure=ref<{confirm:ConfirmFailure}|{reason:string;code?:string;outcome?:string}>()
  // The password field's own error: none was entered (until one is typed), or
  // DSM refused or could not confirm it (until the next submit, the regression test).
  const missing=ref(false)
@@ -42,7 +42,14 @@ export function useScopeApproval(props:{readonly admin:boolean;readonly locale?:
   status.value=next
   // A stopped or starting package has no file scope to read.
   if(!props.ctx||appLifecycle(next))return
-  const detail=await props.ctx.call<ScopeDetail>('delegate.status')
+  let detail:ScopeDetail
+  try{detail=await props.ctx.call<ScopeDetail>('delegate.status')}
+  catch(e){
+   // Failed approval can leave no executor to read. Its scheduler refusal is
+   // still the useful result; absence of a file scope must not hide it.
+   if(next.state!=='ready'&&(e as {code?:string})?.code==='EXECUTOR_UNAVAILABLE'){scope.value=undefined;return}
+   throw e
+  }
   if(disposed)return
   scope.value=detail
   if(detail.scope_mode!=='install-selected')return
@@ -71,6 +78,7 @@ export function useScopeApproval(props:{readonly admin:boolean;readonly locale?:
    const refused=confirmFailure(next)
    // What was typed stays for another try; it is never sent again by itself.
    if(refused){if(!disposed){failure.value={confirm:refused};password.value=entered}return}
+   if(next.state!=='ready'&&!disposed)failure.value={reason:next.reason??'',code:next.code,outcome:next.outcome}
    await load(next)
    // After a reinstall the approval can end before the share is confirmed;
    // confirm it in this submit. A refused password is never sent again.
@@ -79,7 +87,8 @@ export function useScopeApproval(props:{readonly admin:boolean;readonly locale?:
    if(next.state!=='ready'&&next.requested&&await landed(next.requested)){next=await setup.status();await load(next)}
    // Approved, yet the executor did not come up: say so instead of showing the form again.
    if(next.state==='ready'&&dynamic.value&&scope.value?.selection?.scope!==requestedScope){if(!disposed)failure.value={reason:'',code:'selection_failed'};return}
-   if(next.state!=='ready'){if(!disposed)failure.value={reason:next.reason??'',code:next.code};return}
+   if(next.state!=='ready'){if(!disposed)failure.value={reason:next.reason??'',code:next.code,outcome:next.outcome};return}
+   failure.value=undefined
    if(!disposed)await confirmed()
   }
   catch{if(!disposed)error.value=true}
@@ -97,8 +106,9 @@ export function useScopeApproval(props:{readonly admin:boolean;readonly locale?:
   return false
  }
  // Copy that explains a blocked reason the window's access names; any other reason is shown as it is.
- const explain=(r?:{reason?:string;code?:string})=>r?.code==='executor_starting'?copy.value.statusStarting:statusUnreachable(r?.reason)?copy.value.statusUnreachable:undefined
+ const explain=(r?:{reason?:string;code?:string})=>r?.code==='executor_starting'?copy.value.statusStarting:r?.code==='scheduler_denied'||!r?.code&&/^dsm_105\b/.test(r?.reason??'')?copy.value.schedulerDenied:statusUnreachable(r?.reason)?copy.value.statusUnreachable:undefined
+ const recovery=(r?:{outcome?:string})=>r?.outcome==='restore_failed'?copy.value.approvalRestoreFailed:r?.outcome==='withdraw_failed'?copy.value.approvalWithdrawFailed:undefined
  onMounted(()=>{setup.subscribe?.(next=>{if(!disposed&&!confirmFailure(next))status.value=next});void reload(props.initial)})
  onBeforeUnmount(()=>{disposed=true;password.value=''})
- return {status,password,busy,confirming,error,failure,passwordError,scope,chosen,options,dynamic,files,webapiProfiles:setup.webapiProfiles,canConfirm,needsScope,refresh,authorize,submit,explain}
+ return {status,password,busy,confirming,error,failure,passwordError,scope,chosen,options,dynamic,files,webapiProfiles:setup.webapiProfiles,canConfirm,needsScope,refresh,authorize,submit,explain,recovery}
 }
