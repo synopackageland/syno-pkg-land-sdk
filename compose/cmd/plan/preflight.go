@@ -23,6 +23,18 @@ func preflight() error {
 	}
 	project := filepath.Dir(executable)
 	incoming := os.Getenv("SYNOPKG_PKGINST_TEMP_DIR")
+	if incoming != "" && sameDirectory(project, filepath.Join(incoming, "compose")) {
+		if hint := compose.ProjectRecoveryHint(project); hint != "" {
+			fmt.Fprintln(os.Stderr, hint)
+			// DSM displays this hook log when its later worker acquisition fails.
+			if path := os.Getenv("SYNOPKG_TEMP_LOGFILE"); path != "" {
+				if f, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE|syscall.O_NOFOLLOW, 0600); err == nil {
+					fmt.Fprintln(f, hint)
+					f.Close()
+				}
+			}
+		}
+	}
 	if err := preflightProject(project, incoming, os.Getenv("SYNOPKG_PKGVAR")); err != nil {
 		return err
 	}
