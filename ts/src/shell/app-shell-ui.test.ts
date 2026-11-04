@@ -40,22 +40,27 @@ test.each([
   const logs=Array.from(root.querySelectorAll<HTMLElement>('nav button')).find(button=>button.textContent?.includes('Logs'))!
   logs.click();await nextTick();await nextTick()
   expect(page.value).toBe('logs')
-  expect(root.querySelector('[data-ui-page-header]')?.textContent).toContain('Logs')
+  expect(root.querySelector('h1.app-page-title')?.textContent).toContain('Logs')
   if(mobile) expect(root.querySelector('[role="dialog"]')?.getAttribute('aria-hidden')).toBe('true')
  }finally{app.unmount();root.remove();vi.restoreAllMocks()}
 })
 
 // With the real UI components: the notices share the page body, and so the
-// padding, with the page header; app-root gives the shell its own app root.
-test('in the real page the notices sit beside the header inside the page body',async()=>{
+// padding, with the page's title; app-root gives the shell its own app root.
+test.each([undefined,true])('in the real page (header %s) the notices sit beside the title inside the page body',async header=>{
  const root=document.createElement('div');document.body.append(root)
- const app=createApp({render:()=>h(AppShell,{appRoot:true,locale:'en',modelValue:'home',pages:[{id:'home',title:'Home'}]},{notices:()=>h('p',{class:'notice'},'Saved')})})
+ const app=createApp({render:()=>h(AppShell,{appRoot:true,locale:'en',modelValue:'home',pages:[{id:'home',title:'Home',header}]},{notices:()=>h('p',{class:'notice'},'Saved')})})
  app.config.idPrefix='shell-ui';app.mount(root);await nextTick()
  // The shell fills the root: no element of the locale's provider sits between them.
  expect(root.querySelector('[data-ui-app] > [data-ui-background] > .app-shell')).not.toBeNull()
  const body=root.querySelector('[data-ui-app] [data-page-content-body]')!
- expect(body.querySelector(':scope > [data-ui-page-header]')).not.toBeNull()
+ expect(body.querySelector(':scope > [data-ui-page-header]')!==null).toBe(header===true)
+ expect(body.querySelector(':scope > h1.app-page-title')!==null).toBe(header!==true)
  expect(body.querySelector(':scope > .app-notices > .notice')?.textContent).toBe('Saved')
+ // Without the header, its bar is the layout's toolbar: outside the scrolling page.
+ const bar=root.querySelector('[data-app-page-bar]')
+ expect(bar!==null).toBe(header!==true)
+ expect(bar?.closest('main')??null).toBeNull()
  app.unmount();root.remove()
 })
 
@@ -117,7 +122,7 @@ test('a loading shell draws the sidebar and title with a loading body in place o
  const app=createApp({data:()=>({loading:true}),render(){return h(AppShell,{appRoot:true,locale:'en',loading:this.loading,modelValue:'home',pages:[{id:'home',title:'Home',component:Page},{id:'logs',title:'Logs'}]},{default:()=>h('p',{class:'slot'},'Slot body'),actions:()=>h('button',{class:'act'},'New')})}})
  app.config.idPrefix='shell-loading';const vm=app.mount(root) as unknown as {loading:boolean};await nextTick()
  expect(root.querySelector('[data-ui-sidebar-body]')?.textContent).toContain('Logs')
- expect(root.querySelector('[data-ui-page-header]')?.textContent).toContain('Home')
+ expect(root.querySelector('h1.app-page-title')?.textContent).toContain('Home')
  expect(root.querySelector('.app-page-content')?.textContent).toContain('Loading…')
  expect(root.querySelector('.page, .slot, .act')).toBeNull()
  expect(root.querySelector('.app-shell')?.classList.contains('app-shell-fill')).toBe(true)
@@ -147,11 +152,11 @@ test.each([1365,390])('the published UI brand selects home and allows an App ove
   expect(brand).not.toBeNull()
   brand.click();await nextTick()
   expect(page.value).toBe('home')
-  expect(root.querySelector('[data-ui-page-header]')?.textContent).toContain('Home')
+  expect(root.querySelector('h1.app-page-title')?.textContent).toContain('Home')
   page.value='logs';override.value=true;await nextTick()
   brand.click();await nextTick()
   expect(page.value).toBe('custom')
-  expect(root.querySelector('[data-ui-page-header]')?.textContent).toContain('Custom home')
+  expect(root.querySelector('h1.app-page-title')?.textContent).toContain('Custom home')
  }finally{app.unmount();root.remove();vi.restoreAllMocks()}
 })
 

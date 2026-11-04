@@ -1,17 +1,21 @@
 <script setup lang="ts">
-// DSM-style shell: navigation and one page with a
-// header. A page the default slot renders stays mounted (v-show) so provider
-// leases and job polling keep running while the user moves between pages; a
-// page's own component is rendered only while it is the current page.
+// DSM-style shell: navigation and one page. The sidebar names the page, so
+// the page draws no title of its own unless it asks for one (header: true); a
+// visually hidden h1 still names it, and its actions sit in a bar above the
+// page. The navigation, that bar, a page's tabs and a settings footer stay in
+// place: only the content scrolls. A page the default slot renders stays
+// mounted (v-show) so provider leases and job polling keep running while the
+// user moves between pages; a page's own component is rendered only while it
+// is the current page.
 import {computed, provide, ref, useTemplateRef, watch, watchEffect, type FunctionalComponent} from 'vue'
 import {LogOut} from '@lucide/vue'
-import {AppLayout, AppRoot, AppSidebar, AppSidebarUser, Callout, IconButton, ConfigProvider, LoadingArea, PageContent, PageHeader, ensureDeviceViewport, type WideLayout} from '@synopackageland/ui'
+import {AppLayout, AppRoot, AppSidebar, AppSidebarUser, AppToolbar, Callout, IconButton, ConfigProvider, LoadingArea, PageContent, PageHeader, ensureDeviceViewport, type WideLayout} from '@synopackageland/ui'
 import {isFullPage, type ShellContext} from '../context'
 import {appRefusal} from '../authorization/refusal'
 import {shellCopy} from './i18n'
 import {readPortalChrome, type PortalChrome} from './portal-chrome'
 import {uiLocale} from '../i18n'
-import {hasContent, rendersContent} from './slot-content'
+import {fillState, hasContent, rendersContent, rendersOwnContent} from './slot-content'
 import type {ShellPage} from './pages'
 import {resolvePages, sidebarGroups, type AppShellDenied, type AppShellPageEntry, type AppShellPageSurface} from './app-pages'
 import ExecutorNotice from '../delegate/ExecutorNotice.vue'
@@ -65,7 +69,28 @@ const contentSurface = computed(() => props.pageSurface as InstanceType<typeof P
 const pages = computed(() => resolvePages(props.pages, copy.value))
 const groups = computed(() => sidebarGroups(pages.value))
 const current = computed(() => pages.value.find(page => page.id === props.modelValue))
-const page = computed(() => current.value && props.loading ? {...current.value, fill: true} : current.value)
+const page = current
+// 'shown': the shell's PageHeader (header: true). 'hidden', the default: a
+// visually hidden title. 'own': the page draws its own header (header: false).
+const headerMode = computed(() => page.value?.header === true ? 'shown' : page.value?.header === false ? 'own' : 'hidden')
+// A page fills the height when it says so, while it loads, or when it shows a
+// SettingsPage or a SectionTabs fill: their tabs and footer stay and only their
+// body scrolls. fill: false keeps the page scrolling as a whole.
+const content = useTemplateRef<HTMLElement>('content')
+const detected = ref({fill: false, footer: false})
+watchEffect(onCleanup => {
+  const element = content.value
+  if(!element) return
+  const read = () => {
+    const next = fillState(element)
+    if(next.fill !== detected.value.fill || next.footer !== detected.value.footer) detected.value = next
+  }
+  read()
+  const observer = new MutationObserver(read)
+  observer.observe(element, {childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'hidden', 'class']})
+  onCleanup(() => observer.disconnect())
+}, {flush: 'post'})
+const fill = computed(() => !!props.loading || page.value?.fill === true || (page.value?.fill !== false && detected.value.fill))
 const title = computed(() => page.value?.title ?? copy.value[props.modelValue as ShellPage] ?? copy.value.status)
 const scroller = useTemplateRef<{$el: HTMLElement}>('scroller')
 const ownPages = computed(() => props.pages.some(page => typeof page !== 'string'))
@@ -118,9 +143,9 @@ const canSignOut = computed(() => {
   return typeof host?.signOut === 'function' && host.platform().host === 'dsm'
 })
 function signOut() {pageCtx.value?.host?.signOut?.()}
-// A page component's PageActions render into the header, before the App's actions.
+// A page component's PageActions render into the header (or the page bar), before the App's actions.
 provide(PageActionsTarget, useTemplateRef<HTMLElement>('page-actions'))
-// A page component's PageInfo renders on the title line, before the App's meta.
+// A page component's PageInfo renders on the title line (or the page bar), before the App's meta.
 provide(PageInfoTarget, useTemplateRef<HTMLElement>('page-info'))
 provide(ShellLocale, computed(() => props.locale))
 // The notices block shows by what its slot renders: a notice component that
@@ -136,6 +161,19 @@ watchEffect(onCleanup => {
   observer.observe(block, {childList: true, subtree: true, characterData: true})
   onCleanup(() => observer.disconnect())
 }, {flush: 'post'})
+// The page bar holds the actions and notes of a page without the shell's
+// header; it shows only while one of them renders something.
+const pageBar = useTemplateRef<HTMLElement>('page-bar')
+const pageBarEmpty = ref(true)
+watchEffect(onCleanup => {
+  const bar = pageBar.value
+  if(!bar) {pageBarEmpty.value = true; return}
+  const read = () => {pageBarEmpty.value = !Array.from(bar.querySelectorAll('.app-page-meta, .app-page-bar-actions')).some(slot => rendersOwnContent(slot, '.app-page-slot'))}
+  read()
+  const observer = new MutationObserver(read)
+  observer.observe(bar, {childList: true, subtree: true, characterData: true})
+  onCleanup(() => observer.disconnect())
+}, {flush: 'post'})
 // Without one a phone lays a full page out ~980px wide and never reaches the mobile layout.
 watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
 </script>
@@ -147,7 +185,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
     <PageHeader v-if="denied.header !== false" :title="denied.title ?? refusal?.title ?? copy.deniedTitle" />
     <slot name="denied"><Callout tone="danger"><span role="alert">{{ denied.message ?? refusal?.message ?? copy.deniedMessage }}</span></Callout></slot>
   </PageContent>
-  <AppLayout v-else ref="layout" :class="['app-shell', {'app-shell-fill': page?.fill, 'app-shell-portal-brand': portalChrome.brand}]" min-height="0" :wide-layout="wideLayout ?? (fullPage ? 'web' : 'window')" :sidebar-storage-key="sidebarStorageKey"
+  <AppLayout v-else ref="layout" :class="['app-shell', {'app-shell-fill': fill, 'app-shell-portal-brand': portalChrome.brand}]" min-height="0" :wide-layout="wideLayout ?? (fullPage ? 'web' : 'window')" :sidebar-storage-key="sidebarStorageKey"
     :navigation="navigation" :brand-name="brandName ?? ctx?.displayName" :brand-icon="brandIcon ?? ctx?.appIcon" @brand="onBrand">
     <template #sidebar>
       <AppSidebar :model-value="modelValue" :groups="groups" @update:model-value="emit('update:modelValue', $event)" />
@@ -155,16 +193,25 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
     <template v-if="slots['sidebar-footer'] || user" #sidebar-footer>
       <slot name="sidebar-footer"><div v-if="user" class="app-shell-account"><AppSidebarUser :name="user.name" :detail="user.isAdmin ? copy.administrator : copy.dsmUser" /><IconButton v-if="canSignOut" class="app-shell-sign-out" variant="ghost" :label="copy.signOut" @click="signOut"><LogOut :size="16" aria-hidden="true" /></IconButton></div></slot>
     </template>
-    <template v-if="slots.toolbar" #toolbar><slot name="toolbar" :page="modelValue" /></template>
-    <PageContent ref="scroller" :class="['app-page', {'app-page-fill': page?.fill}]" :width="pageWidth" :surface="contentSurface">
-      <PageHeader v-if="page?.header !== false" :title="title" :description="page?.description">
+    <template v-if="slots.toolbar || headerMode !== 'shown'" #toolbar>
+      <slot name="toolbar" :page="modelValue" />
+      <div v-if="headerMode !== 'shown'" ref="page-bar" class="app-page-bar" :hidden="pageBarEmpty" data-app-page-bar>
+        <AppToolbar>
+          <div class="app-page-slot app-page-meta"><span ref="page-info" class="app-page-slot app-page-info" /><slot name="meta" :page="modelValue" /></div>
+          <template #actions><div class="app-page-slot app-page-bar-actions"><div ref="page-actions" class="app-page-slot app-page-actions" /><slot v-if="!loading" name="actions" :page="modelValue" /></div></template>
+        </AppToolbar>
+      </div>
+    </template>
+    <PageContent ref="scroller" :class="['app-page', {'app-page-fill': fill, 'app-page-untitled': headerMode === 'hidden', 'app-page-flush': detected.footer}]" :width="pageWidth" :surface="contentSurface">
+      <PageHeader v-if="headerMode === 'shown'" :title="title">
         <template #meta><span ref="page-info" class="app-page-info" /><slot name="meta" :page="modelValue" /></template>
         <template #actions><div ref="page-actions" class="app-page-actions" /><slot v-if="!loading" name="actions" :page="modelValue" /></template>
       </PageHeader>
+      <h1 v-else-if="headerMode === 'hidden'" class="app-page-title">{{ title }}</h1>
       <UiUpdateNotice v-if="ctx?.uiUpdate" :ctx="ctx" :locale="locale" />
       <ExecutorNotice v-if="ctx?.executor" :ctx="ctx" :locale="locale" />
       <div v-if="hasContent(slots.notices?.({page: modelValue}))" ref="notices" class="app-notices" :hidden="noticesEmpty"><slot name="notices" :page="modelValue" /></div>
-      <div class="app-page-content"><LoadingArea v-if="loading" :text="copy.loading" /><template v-else><component :is="page.component" v-if="page?.component" :key="page.id" /><slot :page="modelValue" /></template></div>
+      <div ref="content" class="app-page-content"><LoadingArea v-if="loading" :text="copy.loading" /><template v-else><component :is="page.component" v-if="page?.component" :key="page.id" /><slot :page="modelValue" /></template></div>
     </PageContent>
   </AppLayout>
   </component>
@@ -191,6 +238,16 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
 .app-shell[data-ui-sidebar-collapsed] .app-shell-account { flex: 0 0 auto; flex-direction: column; }
 /* Lays a page's own actions and notes out as the header's own items. */
 .app-page-actions, .app-page-info { display: contents; }
+/* A page without the shell's header: its notes sit at the start of a bar above
+   the page and its actions at the end, as the header placed them. The bar
+   stays while the page scrolls and shows only while it holds something. */
+.app-page-bar[hidden] { display: none; }
+.app-page-meta, .app-page-bar-actions { display: flex; align-items: center; gap: var(--ui-space-2, 8px); min-width: 0; }
+.app-page-bar-actions { flex-wrap: wrap; justify-content: flex-end; }
+/* The page's name for assistive technology, where the sidebar shows it. Out of
+   the flow, so it takes no gap in the page. */
+.app-page-title { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+.app-page-untitled { padding-top: var(--ui-page-padding-y, 16px); }
 /* A fill page: the body takes the height under the header and notices, its
    content stretches to it and scrolls itself. 100dvh follows a phone's
    address bar, which never collapses while the page does not scroll. */
@@ -209,7 +266,16 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
 .app-notices { display: flex; flex-direction: column; gap: var(--ui-space-2, 8px); }
 .app-notices[hidden] { display: none; }
 .app-page-content { padding-bottom: var(--ui-space-6, 24px); }
-/* A SettingsPage's footer is the bottom of the window, as in DSM: a fill page
-   that holds one drops the space under it. */
-.app-page-fill .app-page-content:has(> [data-ui-settings-page] > [data-ui-settings-page-footer]) { padding-bottom: 0; }
+/* A SettingsPage's footer is the bottom of the window, as in DSM: a page that
+   shows one drops the space under it, however deeply the App wraps it. */
+.app-page-flush .app-page-content { padding-bottom: 0; }
+/* A fill page gives its height to a SettingsPage or a SectionTabs fill through
+   the App's own wrappers: each element between the page and that component is
+   a flex column taking the room its siblings leave, so the App needs no CSS to
+   pass the height down. A hidden wrapper (v-show, hidden) stays hidden. */
+.app-page-fill .app-page-content :deep(:not([hidden], [data-ui-section-tabs-fill], [data-ui-settings-page]):has([data-ui-section-tabs-fill], [data-ui-settings-page])) { display: flex; flex: 1 1 0%; flex-direction: column; min-width: 0; min-height: 0; }
+/* Its other top-level nodes keep their own size instead of sharing the height. */
+.app-page-fill .app-page-content:has([data-ui-section-tabs-fill], [data-ui-settings-page]) > :deep(:not([data-ui-section-tabs-fill], [data-ui-settings-page]):not(:has([data-ui-section-tabs-fill], [data-ui-settings-page]))) { flex: none; }
+/* A tab that is not a SettingsPage scrolls under the strip. */
+.app-page-fill .app-page-content :deep(.ui-section-tabs-fill > .ui-tab-panel:not(:has(> [data-ui-settings-page]))) { overflow-y: auto; overscroll-behavior: contain; }
 </style>

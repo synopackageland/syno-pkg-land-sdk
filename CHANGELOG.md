@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.50.0
+
+- `AppShell` pages show no visible title by default: the sidebar names the page and a visually hidden `h1` names it for screen readers. The `#actions` and `#meta` slots, `PageActions` and `PageInfo` sit in a page bar above the page, which stays while the page scrolls and shows only while it holds something. `header: true` keeps the shell's `PageHeader`; `header: false` still means the page draws its own
+- Pages carry no subtitle: a page's `description` is no longer shown
+- Only the content scrolls. A page that shows a `SettingsPage` or a `SectionTabs fill` fills the height by itself, through the App's own wrappers with no CSS: the tab strip and the settings footer stay and only the settings body scrolls; a tab that is not a `SettingsPage` scrolls under the strip. `fill: false` keeps a page scrolling as a whole
+- A page that shows a settings footer has no space under it, whether or not the `SettingsPage` sits in tabs
+- The Vue entry accepts UI 0.20 (`@synopackageland/ui` peer `>=0.10.1 <0.21.0`)
+- Add a real-browser AppShell layout check (`test/browser/shell-layout.mjs`, desktop and 390px)
+- Reuse the immutable executor/v0.49.5 release and its six digests; executor sources, policies and task definitions are unchanged
+
 ## 0.49.5
 
 - Use one five-minute operation default across DSM identity, File Station, WebAPI, commands, bridge startup, cleanup, notifications and transfers; preserve explicit caller cancellation

@@ -189,22 +189,60 @@ test("a page placed at the bottom is the sidebar's last entry, in a group of its
  shell.unmount()
 })
 
-test("the current page renders its component under its own title and description, and a page without one has no subtitle",async()=>{
- const pages=[{id:'home',title:'Home',component:Plain,description:'All good'},{id:'scan',title:'Scanning',hidden:true,component:Plain}]
+// The sidebar names the page: by default the shell draws no title, only a
+// visually hidden h1 that names the page for assistive technology.
+test('the current page renders its component under a hidden title and draws no header',async()=>{
+ const pages=[{id:'home',title:'Home',component:Plain},{id:'scan',title:'Scanning',hidden:true,component:Plain}]
  const shell=await mount({modelValue:'scan',pages})
- expect(shell.root.querySelector('h1,h2')?.textContent).toBe('Scanning')
+ const title=shell.root.querySelectorAll('h1,h2')
+ expect(title).toHaveLength(1)
+ expect(title[0]!.tagName).toBe('H1')
+ expect(title[0]!.textContent).toBe('Scanning')
+ expect(title[0]!.classList.contains('app-page-title')).toBe(true)
+ expect(shell.root.querySelector('.app-page')!.classList.contains('app-page-untitled')).toBe(true)
  expect(shell.root.querySelectorAll('.page-body')).toHaveLength(1)
- expect(shell.root.textContent).not.toContain('All good')
  shell.unmount()
- const home=await mount({modelValue:'home',pages})
- expect(home.root.textContent).toContain('All good')
- home.unmount()
 })
 
-test('a page that draws its own header gets none from the shell',async()=>{
+test('a page asks for the visible header with header: true and never shows a subtitle',async()=>{
+ const shell=await mount({modelValue:'home',pages:[{id:'home',title:'Home',header:true,description:'All good',component:Plain}]},{actions:()=>h('button',{class:'add'},'Add')})
+ expect(shell.root.querySelector('.app-page-title')).toBeNull()
+ expect(shell.root.querySelector('.app-page')!.classList.contains('app-page-untitled')).toBe(false)
+ expect(shell.root.querySelector('[data-app-page-bar]')).toBeNull()
+ expect(shell.root.textContent).not.toContain('All good')
+ shell.unmount()
+})
+
+test('a page that draws its own header gets no title from the shell',async()=>{
  const shell=await mount({modelValue:'home',pages:[{id:'home',title:'Home',header:false}]})
  expect(shell.root.querySelector('h1,h2')).toBeNull()
+ expect(shell.root.querySelector('.app-page')!.classList.contains('app-page-untitled')).toBe(false)
  shell.unmount()
+})
+
+// The actions and notes a header would hold stay reachable without it.
+test.each([undefined,false])('with header %s, the App actions and meta sit in a page bar above the page',async header=>{
+ const shell=await mount({modelValue:'home',pages:[{id:'home',title:'Home',header}]},{actions:({page})=>h('button',{class:'add'},`Add ${page}`),meta:()=>h('span',{class:'meta'},'Read 5 min ago')})
+ await nextTick()
+ const bar=shell.root.querySelector<HTMLElement>('[data-app-page-bar]')!
+ expect(bar.hidden).toBe(false)
+ expect(bar.closest('header')).not.toBeNull()
+ expect(bar.querySelector('.app-page-bar-actions .add')?.textContent).toBe('Add home')
+ expect(bar.querySelector('.app-page-meta .meta')?.textContent).toBe('Read 5 min ago')
+ expect(shell.root.querySelector('.app-page .add')).toBeNull()
+ shell.unmount()
+})
+
+test('a page bar with nothing in it is hidden, and a loading shell holds its actions',async()=>{
+ const empty=await mount({modelValue:'home',pages:[{id:'home',title:'Home'}]},{actions:()=>[createCommentVNode('v-if',true)]})
+ await nextTick()
+ expect(empty.root.querySelector<HTMLElement>('[data-app-page-bar]')!.hidden).toBe(true)
+ empty.unmount()
+ const loading=await mount({modelValue:'home',pages:[{id:'home',title:'Home'}],loading:true},{actions:()=>h('button',{class:'add'},'Add')})
+ await nextTick()
+ expect(loading.root.querySelector('.add')).toBeNull()
+ expect(loading.root.querySelector<HTMLElement>('[data-app-page-bar]')!.hidden).toBe(true)
+ loading.unmount()
 })
 
 // The App owns the current page: the sidebar asks for a page through v-model.
@@ -257,7 +295,8 @@ test('the notices sit in the page under its header and above the body',async()=>
  const page=shell.root.querySelector('.app-page')!
  const notices=page.querySelector(':scope > .app-notices')
  expect(notices?.textContent).toBe('notice')
- expect(notices?.previousElementSibling?.querySelector('h1,h2')?.textContent).toBe('VPN')
+ expect(notices?.previousElementSibling?.matches('h1.app-page-title')).toBe(true)
+ expect(notices?.previousElementSibling?.textContent).toBe('VPN')
  expect(notices?.nextElementSibling?.querySelector('.body')).not.toBeNull()
  shell.unmount()
  const headless=await mount({modelValue:'home',pages:[{id:'home',title:'Home',header:false}]},{notices:notice})
@@ -265,9 +304,11 @@ test('the notices sit in the page under its header and above the body',async()=>
  headless.unmount()
 })
 
-test('a shell without a toolbar or notices adds neither',async()=>{
+test('a shell without a toolbar, actions or notices shows none of them',async()=>{
  const shell=await mount({})
- expect(shell.root.querySelector('header')).toBeNull()
+ await nextTick()
+ expect(shell.root.querySelector<HTMLElement>('[data-app-page-bar]')!.hidden).toBe(true)
+ expect(shell.root.querySelector('header .toolbar')).toBeNull()
  expect(shell.root.querySelector('.app-notices')).toBeNull()
  shell.unmount()
 })

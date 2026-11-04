@@ -195,13 +195,39 @@ This does not change the DSM window title bar or DSM's own Portal header.
 a `title` the App has already translated, and optionally an `icon`, a `group`
 label (pages with the same label sit together), a `badge`, a `component` to
 render while it is the current page, `hidden` (reachable through `v-model`
-but not in the sidebar), its own `description`, `placement: 'bottom'` for a
-page the sidebar lists last, after every group (an App's settings), and
-`header: false` for a page that draws its own header. `fill: true` gives the page's body the height under
-its header and notices; the page does not scroll, so the content scrolls
-itself (a treemap, a table paged by height, a log viewer). The shell then
-holds to `100dvh`, so a phone's address bar does not leave a gap. The built-in `'status'` and `'background'`
-may sit in the same list.
+but not in the sidebar), `placement: 'bottom'` for a page the sidebar lists
+last, after every group (an App's settings), `header` and `fill`. The built-in
+`'status'` and `'background'` may sit in the same list.
+
+### Page title and actions
+
+The sidebar already names the page, so a page shows no title of its own and no
+subtitle. A visually hidden `h1` with the page's `title` still names it for
+screen readers. The `#actions` slot, `PageActions`, the `#meta` slot and
+`PageInfo` sit in a bar above the page: notes at the start, actions at the
+end. The bar stays in place while the page scrolls and shows only while it
+holds something. `header: true` shows the shell's `PageHeader` with the title
+and puts the notes and actions on its line instead. `header: false` is for a
+page that draws its own header: the shell adds no title, and its actions still
+go to the bar.
+
+### Scrolling
+
+The navigation, the page bar, a page's tabs and a settings footer stay in
+place; only the content scrolls, so no scrollbar runs past them. A page
+scrolls as a whole by default. A page that shows a `SettingsPage` or a
+`SectionTabs fill` fills the height instead: the tab strip stays at the top,
+the footer at the bottom edge of the window, and only the `SettingsPage` body
+scrolls (a tab that is not a `SettingsPage` scrolls under the strip). This
+works through the App's own wrappers, such as a template's
+`.integration-app > [data-page]`, with no CSS in the App. A page that shows a
+settings footer has no space under it, whether or not it sits in tabs.
+
+`fill: true` makes any page fill: the page does not scroll and the content
+scrolls itself (a treemap, a table paged by height, a log viewer). `fill: false`
+keeps a page scrolling as a whole even when it shows a `SettingsPage`. A filling
+shell holds to `100dvh`, so a phone's address bar does not leave a gap. On a
+phone the same rules give one scrolling area, with the footer in view.
 
 ```vue
 <AppShell v-model="page" :ctx="ctx" :locale="ctx.locale" :pages="[
@@ -216,9 +242,10 @@ may sit in the same list.
 ```
 
 A page passed as `component` cannot fill the shell's `#actions` slot. It puts
-its own header buttons, such as its refresh, in `PageActions` anywhere in its
-template: they show in the page header before the App's `#actions` and leave
-with the page. Outside an `AppShell`, `PageActions` renders nothing.
+its own buttons, such as its refresh, in `PageActions` anywhere in its
+template: they show in the page bar (or the page header) before the App's
+`#actions` and leave with the page. Outside an `AppShell`, `PageActions`
+renders nothing.
 
 ```vue
 <!-- PackagesPage.vue -->
@@ -226,7 +253,8 @@ with the page. Outside an `AppShell`, `PageActions` renders nothing.
 ```
 
 A page's secondary notes take no row of their own: `PageInfo` puts them behind
-one info button on the title line, after the title and before the App's `#meta`.
+one info button at the start of the page bar (on the title line with
+`header: true`), before the App's `#meta`.
 The button is named "Notes (2)" in the shell's language (`label` names it
 otherwise); a click, or focus from the keyboard, opens the notes below it from
 its start, inside the App's window, and Escape closes them. The default slot
@@ -269,16 +297,32 @@ provide the no-surface/no-horizontal-gutter behavior. Other shell spacing,
 including the body bottom padding, stays unchanged.
 
 Moving to another page starts it at the top; `keep-scroll` keeps the
-position. The `toolbar` slot sits above the page (in `AppLayout`'s toolbar)
-and `notices` in the page, under its header and inside the same padding, and
-scrolls with it. `activePage(current, pages)` keeps a selection that still exists and
+position. The `toolbar` slot sits above the page (in `AppLayout`'s toolbar,
+above the page bar) and `notices` at the top of the page, inside the same
+padding, and scrolls with it. `activePage(current, pages)` keeps a selection that still exists and
 otherwise picks the first page the sidebar shows. A router drives the shell
 through `v-model`:
 `:model-value="route.name" @update:model-value="name => router.push({name})"`.
 
+### Moving an existing App to these defaults
+
+- A page that should keep its visible title sets `header: true`. Pages carry no
+  subtitle: drop `description` from the page entries (it is no longer shown).
+- An App that set `header: false` only to hide the title, and added its own
+  hidden `h1`, can drop both: the shell now names the page itself. Buttons it
+  moved into its own `#toolbar` `AppToolbar` can go back to `#actions`.
+- Remove CSS that passed the height to a settings page, such as
+  `.integration-app > [data-page][data-fill] { flex: 1 1 0%; min-height: 0 }`
+  and the same rule for its child, and CSS that removed the space under a
+  settings footer (`.app-page-content:has(...) { padding-bottom: 0 }`).
+- Remove `fill: true` from pages whose content is a `SettingsPage` or a
+  `SectionTabs fill`; keep it for pages that scroll their own content, such as
+  a split view or a list paged by height. A page that must keep scrolling as a
+  whole while it shows a `SettingsPage` sets `fill: false`.
+
 Render the shell immediately, with [`EntryGuard`](../docs/app-entry.md) checking
 session/admin access in the background, and pass `loading` while startup reads
-run. The sidebar and title show immediately; the page body shows
+run. The sidebar and the page bar show immediately; the page body shows
 its loading area and the actions slot waits. With the current CLI/SDK, use
 `ctx.batch` for independent startup reads so they share one HTTP request and
 App process:
