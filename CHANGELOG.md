@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.50.6
+
+- Add session-bound media grants (Go `media` package, `dsm.NewMediaAuthenticator`, frontend `mediaUrl`) so native audio and video elements can play and seek private App media with GET, HEAD and Range, without a SynoToken in the URL or a public route. See docs/media.md
+- Grants bind the DSM session, subject, App entry, install generation and asset owner revision, default to 5 minutes, renew while in use and can be revoked
+- Redact `media_grant` values and `Set-Cookie` headers in logs only; client responses are unchanged
+- Reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.50.5
 
 - Executor approval keeps the DSM Task Scheduler denial and rollback outcome visible instead of replacing them with a generic unavailable state
