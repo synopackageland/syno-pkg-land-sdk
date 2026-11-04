@@ -9,6 +9,8 @@
 - The Vue entry accepts UI 0.20 (`@synopackageland/ui` peer `>=0.10.1 <0.21.0`)
 - Add a real-browser AppShell layout check (`test/browser/shell-layout.mjs`, desktop and 390px)
 - Reuse the immutable executor/v0.49.5 release and its six digests; executor sources, policies and task definitions are unchanged
+- Remove request-body byte caps from trusted App operation registries and installed description files; keep DSM authentication, regular-file validation, exact route binding and incoming request limits
+- Cover 556 routes and 228 exposed operations with metadata above the former 1 MiB threshold
 
 ## 0.49.5
 
