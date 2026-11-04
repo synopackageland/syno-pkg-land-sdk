@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.50.4
+
+- Keep the current DSM desktop session carrier when refresh fails or returns the same token, so later writes and streams still send credentials
+- Add the `unknown` sessionRetry operation kind, which never retries; use the CLI-generated `sessionRetryOperations`
+- `readDsmHttpsURL` accepts `{keepLaunchApp: true}` to carry `launchApp` and `launchParam` to the HTTPS DSM desktop
+- Reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.50.3
 
 - Preserve complete client results and public error codes, messages and details for RPC, batch and stream responses, including opt-in request-only routes; frontend transport errors retain their original content
