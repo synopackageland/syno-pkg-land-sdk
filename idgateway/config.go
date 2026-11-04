@@ -376,7 +376,7 @@ func Build(cfg Config, ports DSMPorts) (*Gateway, error) {
 	external := NewExternalReader(cfg)
 	dsmHTTPSPort := 0
 	if cfg.SecureContext == "required" && cfg.IngressPath != "" {
-		dsmHTTPSPort = declaredDSMHTTPSPort("/etc/synoinfo.conf")
+		dsmHTTPSPort = declaredDSMHTTPSPort("/usr/syno/etc/www/DSM.json", "/etc/synoinfo.conf")
 	}
 	front := FrontConfig{
 		IngressPath:   cfg.IngressPath,
