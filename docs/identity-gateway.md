@@ -195,3 +195,13 @@ unambiguous DSM HTTPS port declaration, opening `/webman/` with the package's
 link forwards the request query or fragment. If the HTTPS port is unavailable,
 the page shows instructions to reopen DSM over HTTPS and ask an administrator
 for the address; it never guesses a port or calls administrator-only APIs.
+
+For DSM path ingress, the gateway first reads the integer `ssl.port` from
+`/usr/syno/etc/www/DSM.json`, including a default or customized port. If that
+source is unreadable or malformed, or has no usable port, it falls back to a
+unique `secure_admin_port` in `/etc/synoinfo.conf`. An absent, null or false
+`ssl` section, or an explicit zero HTTPS port, suppresses the link even if
+synoinfo still declares a port. `ssl.redirect: false` disables automatic HTTP
+redirection only and does not suppress the HTTPS link. DSM 7's normal settings
+declare an HTTPS port without a separate HTTPS enable flag; this discovery does
+not probe network reachability or change DSM settings.

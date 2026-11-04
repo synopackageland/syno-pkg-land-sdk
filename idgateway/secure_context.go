@@ -2,6 +2,7 @@ package idgateway
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html"
@@ -25,7 +26,45 @@ func validateSecureContext(policy string) error {
 
 // Authentication retains ReadDSMPorts' legacy defaults. Guidance must use an
 // actual, unambiguous declaration, never those defaults or forwarded headers.
-func declaredDSMHTTPSPort(path string) int {
+func declaredDSMHTTPSPort(dsmPath, synoinfoPath string) int {
+	if port, declared := declaredDSMJSONHTTPSPort(dsmPath); declared {
+		return port
+	}
+	return declaredSynoinfoHTTPSPort(synoinfoPath)
+}
+
+func declaredDSMJSONHTTPSPort(path string) (port int, declared bool) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return 0, false
+	}
+	var config map[string]json.RawMessage
+	if json.Unmarshal(raw, &config) != nil || config == nil {
+		return 0, false
+	}
+	ssl := strings.TrimSpace(string(config["ssl"]))
+	// DSM's nginx template renders its HTTPS listener inside the ssl section.
+	// An absent/null/false section must not revive a stale synoinfo port.
+	// ssl.redirect controls only HTTP redirection, not HTTPS availability.
+	if ssl == "" || ssl == "null" || ssl == "false" {
+		return 0, true
+	}
+	var listener struct {
+		Port *int `json:"port"`
+	}
+	if json.Unmarshal([]byte(ssl), &listener) != nil || listener.Port == nil {
+		return 0, false
+	}
+	if *listener.Port == 0 {
+		return 0, true
+	}
+	if !validPort(*listener.Port, false) {
+		return 0, false
+	}
+	return *listener.Port, true
+}
+
+func declaredSynoinfoHTTPSPort(path string) int {
 	f, err := os.Open(path)
 	if err != nil {
 		return 0

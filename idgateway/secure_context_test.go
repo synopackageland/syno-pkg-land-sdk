@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -127,27 +128,67 @@ func TestSecureContextUnknownPortAndAuthority(t *testing.T) {
 }
 
 func TestDeclaredDSMHTTPSPort(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "ports.conf")
-	if declaredDSMHTTPSPort(path) != 0 {
-		t.Fatal("missing file guessed a port")
-	}
 	for _, tc := range []struct {
-		data string
-		want int
+		name, dsm, synoinfo string
+		want                int
 	}{
-		{"secure_admin_port=\"7443\"\n", 7443},
-		{"admin_port=\"7080\"\n", 0},
-		{"secure_admin_port=\"bad\"\n", 0},
-		{"secure_admin_port=\"0\"\n", 0},
-		{"secure_admin_port=\"65536\"\n", 0},
-		{"secure_admin_port=\"443\"\nsecure_admin_port=\"7443\"\n", 0},
+		{"DSM only", `{"port":7080,"ssl":{"port":7443,"redirect":false}}`, "", 7443},
+		{"DSM default declaration", `{"port":5000,"ssl":{"port":5001}}`, "", 5001},
+		{"synoinfo only", "", "secure_admin_port=\"7443\"\n", 7443},
+		{"DSM takes precedence", `{"ssl":{"port":8443}}`, "secure_admin_port=\"7443\"\n", 8443},
+		{"both missing", "", "", 0},
+		{"HTTP only synoinfo", "", "admin_port=\"7080\"\n", 0},
+		{"malformed DSM fallback", `{"ssl":`, "secure_admin_port=\"7443\"\n", 7443},
+		{"malformed DSM alone", `{"ssl":`, "", 0},
+		{"trailing JSON fallback", `{"ssl":{"port":8443}} {}`, "secure_admin_port=\"7443\"\n", 7443},
+		{"invalid port fallback", `{"ssl":{"port":"8443"}}`, "secure_admin_port=\"7443\"\n", 7443},
+		{"missing port fallback", `{"ssl":{}}`, "secure_admin_port=\"7443\"\n", 7443},
+		{"negative port", `{"ssl":{"port":-1}}`, "", 0},
+		{"large port", `{"ssl":{"port":65536}}`, "", 0},
+		{"fractional port", `{"ssl":{"port":7443.5}}`, "", 0},
+		{"HTTPS section absent", `{"port":7080}`, "secure_admin_port=\"7443\"\n", 0},
+		{"HTTPS section null", `{"ssl":null}`, "secure_admin_port=\"7443\"\n", 0},
+		{"HTTPS section false", `{"ssl":false}`, "secure_admin_port=\"7443\"\n", 0},
+		{"HTTPS zero port", `{"ssl":{"port":0}}`, "secure_admin_port=\"7443\"\n", 0},
+		{"null document fallback", `null`, "secure_admin_port=\"7443\"\n", 7443},
+		{"bad synoinfo port", "", "secure_admin_port=\"bad\"\n", 0},
+		{"zero synoinfo port", "", "secure_admin_port=\"0\"\n", 0},
+		{"large synoinfo port", "", "secure_admin_port=\"65536\"\n", 0},
+		{"duplicate synoinfo port", "", "secure_admin_port=\"443\"\nsecure_admin_port=\"7443\"\n", 0},
 	} {
-		if err := os.WriteFile(path, []byte(tc.data), 0600); err != nil {
-			t.Fatal(err)
-		}
-		if got := declaredDSMHTTPSPort(path); got != tc.want {
-			t.Fatalf("declaration %q: %d", tc.data, got)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			dsm, synoinfo := filepath.Join(dir, "DSM.json"), filepath.Join(dir, "synoinfo.conf")
+			for path, data := range map[string]string{dsm: tc.dsm, synoinfo: tc.synoinfo} {
+				if data != "" {
+					if err := os.WriteFile(path, []byte(data), 0600); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			port := declaredDSMHTTPSPort(dsm, synoinfo)
+			if port != tc.want {
+				t.Fatalf("HTTPS port: got %d, want %d", port, tc.want)
+			}
+			f, _ := newFront(t, ModeNone, newUpstream(t, nil), func(c *FrontConfig) {
+				c.SecureContext, c.IngressPath, c.DSMHTTPSPort = "required", "/synopkgland/App/", port
+			})
+			r := httptest.NewRequest("GET", "http://app.example:7080/synopkgland/App/?token=private", nil)
+			r.Header.Set("Accept", "text/html")
+			w := httptest.NewRecorder()
+			f.ServeHTTP(w, r)
+			body := w.Body.String()
+			if w.Code != 403 || strings.Contains(body, "private") {
+				t.Fatalf("guidance: %d %s", w.Code, body)
+			}
+			if tc.want == 0 {
+				if strings.Contains(body, "href=") || !strings.Contains(body, "gateway.https_unknown") {
+					t.Fatalf("unknown or disabled HTTPS produced a link: %s", body)
+				}
+			} else if !strings.Contains(body, `href="https://app.example:`+strconv.Itoa(tc.want)+`/webman/?launchApp=SYNO.SDS.App.Instance"`) {
+				t.Fatalf("missing discovered HTTPS link: %s", body)
+			}
+		})
 	}
 }
 
