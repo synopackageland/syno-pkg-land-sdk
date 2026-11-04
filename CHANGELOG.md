@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.50.1
+
+- Add opt-in DSM session recovery with `createDsmSession.refresh` and `createClient.sessionRetry`: retry a declared read RPC once after `session_required`, sharing refresh and preserving cancellation and the total request allowance; writes, destructive calls, AI, streams and batches never retry
+- Add the opt-in Go `api.RequireSecureOrigin` guard and `readDsmHttpsURL` for HTTPS guidance; only administrators discover the declared DSM HTTPS port, with no guessed port or automatic redirect
+- Reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.50.0
 
 - `AppShell` pages show no visible title by default: the sidebar names the page and a visually hidden `h1` names it for screen readers. The `#actions` and `#meta` slots, `PageActions` and `PageInfo` sit in a page bar above the page, which stays while the page scrolls and shows only while it holds something. `header: true` keeps the shell's `PageHeader`; `header: false` still means the page draws its own
