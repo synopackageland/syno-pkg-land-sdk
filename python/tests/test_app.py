@@ -66,6 +66,21 @@ class AppTest(unittest.TestCase):
         self.assertEqual(rt.recv()["error"]["code"], "conflict")
         self.assertEqual(rt.recv()["data"], "")
 
+    def test_client_results_and_public_errors_preserve_credential_like_content(self):
+        payload = dict(token="t", password="p", sid="s", tokenCount=7,
+                       sidebar="left", secretName="label", otpEnabled=True)
+        app = App()
+        app.method("a.fields")(lambda ctx, p: payload)
+        def fail(ctx, p):
+            raise Error("token_count", "password sid tokenCount sidebar")
+        app.method("a.fail")(fail)
+        rt = self.runtime(app)
+        rt.call("a.fields")
+        self.assertEqual(rt.recv()["data"], payload)
+        rt = self.runtime(app)
+        rt.call("a.fail")
+        self.assertEqual(rt.recv()["error"], dict(code="token_count", message="password sid tokenCount sidebar"))
+
     def test_hello_lists_the_methods(self):
         app = App()
         app.method("a.one")(lambda ctx, p: 1)

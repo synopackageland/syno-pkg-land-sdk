@@ -74,3 +74,12 @@ test('a method the App does not have is internal', async () => {
   assert.deepEqual((await rt.result('a.two')).error, internal)
   assert.doesNotMatch(String(errors[0]), /a\.two/)
 })
+
+
+test('client results and public errors preserve credential-like content', async () => {
+  const payload = {token:'t',password:'p',sid:'s',tokenCount:7,sidebar:'left',secretName:'label',otpEnabled:true}
+  const result = runtime(new App().method('a.fields', () => payload))
+  assert.deepEqual((await result.result('a.fields')).data, payload)
+  const failure = runtime(new App().method('a.fail', () => {throw new AppError('token_count', 'password sid tokenCount sidebar')}))
+  assert.deepEqual((await failure.result('a.fail')).error, {code:'token_count',message:'password sid tokenCount sidebar'})
+})
