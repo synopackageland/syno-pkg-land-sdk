@@ -86,5 +86,8 @@
   "upgradePolicyLabel": "Politique",
   "upgradeChanges": "Modifications des autorisations et paramètres",
   "upgradeUnknown": "L’environnement protégé précédent n’a pas fourni de données de comparaison. Les modifications et l’extension des autorisations sont inconnues. Une nouvelle approbation administrateur est requise",
-  "upgradeConsentTitle": "Approuver cette mise à jour"
+  "upgradeConsentTitle": "Approuver cette mise à jour",
+  "schedulerDenied": "DSM a refusé l’accès au Planificateur de tâches. Déconnectez-vous de DSM, reconnectez-vous au bureau DSM, puis sélectionnez Réessayer. Si l’accès est toujours refusé, contactez votre administrateur",
+  "approvalRestoreFailed": "L’autorisation précédente n’a pas pu être restaurée. Sélectionnez Réessayer pour vérifier l’état actuel avant d’autoriser à nouveau",
+  "approvalWithdrawFailed": "Les tâches créées par cette autorisation n’ont pas pu être retirées. Sélectionnez Réessayer pour vérifier l’état actuel avant d’autoriser à nouveau"
 }

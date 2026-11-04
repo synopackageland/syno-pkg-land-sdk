@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.50.5
+
+- Executor approval keeps the DSM Task Scheduler denial and rollback outcome visible instead of replacing them with a generic unavailable state
+- Show recovery guidance with a read-only Retry when Task Scheduler access is denied or a previous approval cannot be restored or withdrawn
+- Reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.50.4
 
 - Keep the current DSM desktop session carrier when refresh fails or returns the same token, so later writes and streams still send credentials

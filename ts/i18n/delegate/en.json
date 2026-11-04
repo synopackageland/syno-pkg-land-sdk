@@ -86,5 +86,8 @@
   "upgradePolicyLabel": "Policy",
   "upgradeChanges": "Permission and parameter changes",
   "upgradeUnknown": "The previous protected runtime did not provide comparison details. Changes and permission expansion cannot be determined. Administrator approval is required",
-  "upgradeConsentTitle": "Approve this update"
+  "upgradeConsentTitle": "Approve this update",
+  "schedulerDenied": "DSM denied Task Scheduler access. Sign out of DSM, sign in again from the DSM desktop, then select Retry. If access is still denied, contact your administrator",
+  "approvalRestoreFailed": "The previous approval could not be restored. Select Retry to check the current state before approving again",
+  "approvalWithdrawFailed": "The tasks created by this approval could not be withdrawn. Select Retry to check the current state before approving again"
 }

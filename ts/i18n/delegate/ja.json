@@ -86,5 +86,8 @@
   "upgradePolicyLabel": "ポリシー",
   "upgradeChanges": "権限とパラメーターの変更",
   "upgradeUnknown": "以前の保護された実行環境から比較情報を取得できません。変更内容や権限の拡張は不明です。管理者の再承認が必要です",
-  "upgradeConsentTitle": "この更新を承認"
+  "upgradeConsentTitle": "この更新を承認",
+  "schedulerDenied": "DSM がタスクスケジューラへのアクセスを拒否しました。DSM からサインアウトし、DSM デスクトップに再度サインインしてから「再試行」を選択してください。拒否が続く場合は管理者にお問い合わせください",
+  "approvalRestoreFailed": "以前の承認を復元できませんでした。「再試行」で現在の状態を確認してから、再度承認してください",
+  "approvalWithdrawFailed": "今回の承認で作成したタスクを削除できませんでした。「再試行」で現在の状態を確認してから、再度承認してください"
 }

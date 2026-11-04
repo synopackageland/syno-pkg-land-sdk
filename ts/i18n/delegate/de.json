@@ -86,5 +86,8 @@
   "upgradePolicyLabel": "Richtlinie",
   "upgradeChanges": "Änderungen an Berechtigungen und Parametern",
   "upgradeUnknown": "Die bisherige geschützte Laufzeit hat keine Vergleichsdaten bereitgestellt. Änderungen und Berechtigungserweiterungen sind unbekannt. Eine erneute Administratorgenehmigung ist erforderlich",
-  "upgradeConsentTitle": "Dieses Update genehmigen"
+  "upgradeConsentTitle": "Dieses Update genehmigen",
+  "schedulerDenied": "DSM hat den Zugriff auf den Aufgabenplaner verweigert. Melden Sie sich von DSM ab und am DSM-Desktop erneut an. Wählen Sie dann „Erneut versuchen“. Wird der Zugriff weiterhin verweigert, wenden Sie sich an Ihren Administrator",
+  "approvalRestoreFailed": "Die frühere Genehmigung konnte nicht wiederhergestellt werden. Prüfen Sie mit „Erneut versuchen“ den aktuellen Status, bevor Sie erneut genehmigen",
+  "approvalWithdrawFailed": "Die bei dieser Genehmigung erstellten Aufgaben konnten nicht zurückgenommen werden. Prüfen Sie mit „Erneut versuchen“ den aktuellen Status, bevor Sie erneut genehmigen"
 }
