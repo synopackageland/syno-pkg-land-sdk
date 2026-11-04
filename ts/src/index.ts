@@ -44,3 +44,5 @@ export {createClient, type Batch, type BatchCall, type BatchResult, type ClientO
 
 export {readDsmPorts, type DsmPort, type DsmPortRange} from './dsm/service-ports'
 export {readDsmHttpsURL} from './dsm/https'
+
+export {requestSecret, RequestSecret, redactSecrets} from './secret'

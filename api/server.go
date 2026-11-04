@@ -216,7 +216,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w = transfer
 		writeFailure = func(_ http.ResponseWriter, err error) {
 			if transfer.started {
-				log.Printf("transfer failed after response started: %v", err)
+				log.Print("transfer failed after response started: [redacted]")
 				return
 			}
 			writeStreamError(transfer, err)
@@ -227,7 +227,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if p == http.ErrAbortHandler {
 				panic(p)
 			}
-			log.Printf("handler panic: %v", p)
+			log.Print("handler panic: [redacted]")
 			writeFailure(w, internalError)
 		}
 	}()
@@ -353,7 +353,7 @@ func (s *Server) authorize(r *http.Request, method string) (Caller, Route, *Erro
 		return Caller{}, Route{}, &Error{"app_privilege_denied", "DSM Application Privileges do not allow this account to use this app"}
 	}
 	if err != nil {
-		log.Printf("authentication unavailable: %v", err)
+		log.Print("authentication unavailable: [redacted]")
 		return Caller{}, Route{}, &Error{"auth_unavailable", "DSM authentication is unavailable"}
 	}
 	// Signed-in callers learn that a method is unregistered; method names
@@ -468,13 +468,37 @@ func CheckOrigin(r *http.Request) *Error {
 		}
 		return &Error{"origin_required", "the browser did not say which page sent the request; open the app again in a current browser"}
 	}
-	u, err := url.Parse(source)
-	if err != nil || u.Host == "" {
+	// Origin is a serialized origin, not an arbitrary URL. Referer can have
+	// a path/query, but neither may carry userinfo or a non-HTTP scheme.
+	if len(r.Header.Values("Origin")) > 1 || len(r.Header.Values("Referer")) > 1 || strings.ContainsAny(source, " \t\r\n\\") {
 		return crossOrigin
 	}
-	forwarded, _, _ := strings.Cut(r.Header.Get("X-Forwarded-Host"), ",")
-	if u.Host != r.Host && (forwarded == "" || u.Host != strings.TrimSpace(forwarded)) {
+	u, err := url.Parse(source)
+	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil || u.Opaque != "" || u.Fragment != "" || strings.Contains(source, "#") {
 		return crossOrigin
+	}
+	if r.Header.Get("Origin") != "" && (u.Path != "" || u.RawQuery != "" || u.ForceQuery) {
+		return crossOrigin
+	}
+	if u.Hostname() == "" || strings.HasSuffix(u.Host, ":") {
+		return crossOrigin
+	}
+	if port := u.Port(); port != "" {
+		n, err := strconv.Atoi(port)
+		if err != nil || n < 1 || n > 65535 {
+			return crossOrigin
+		}
+	}
+	forwarded, _, _ := strings.Cut(r.Header.Get("X-Forwarded-Host"), ",")
+	if !strings.EqualFold(u.Host, r.Host) && (forwarded == "" || !strings.EqualFold(u.Host, strings.TrimSpace(forwarded))) {
+		return crossOrigin
+	}
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	if u.Scheme != scheme {
+		log.Print("origin scheme differs from request transport; HTTP remains allowed")
 	}
 	return nil
 }

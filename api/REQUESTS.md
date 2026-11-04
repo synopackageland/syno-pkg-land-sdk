@@ -33,9 +33,12 @@ body or authenticates:
 2. Otherwise `Origin`, else `Referer`, MUST name the request's host: the
    `Host` the CGI received, or the first `X-Forwarded-Host` value a reverse
    proxy set. A page cannot send either header cross-site without the
-   preflight. The scheme is not compared, since a proxy that terminates TLS
-   hides it. An opaque `Origin: null` or an unparsable value is
-   `cross_origin`.
+   preflight. The source must use HTTP(S), without userinfo or a fragment, and
+   match the complete host and port. Origin must not carry a path or query;
+   Referer may. Repeated source headers and invalid ports are refused. A
+   scheme difference emits a fixed warning and remains allowed because a
+   TLS-terminating proxy can hide it. HTTP remains available. An opaque
+   `Origin: null` or an unparsable value is `cross_origin`.
 3. A request with none of the three headers is `origin_required` unless its
    method is GET or HEAD. Every current browser sends `Origin` on a POST; a
    script that calls the CGI MUST send it too. A GET download without them

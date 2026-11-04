@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"log"
+
+	"github.com/synopackageland/syno-pkg-land-sdk/secret"
 )
 
 // Error is an API error the browser may see. Any other error a handler
@@ -34,7 +36,7 @@ func (e *detailedError) Unwrap() error { return e.err }
 func errorDetails(err error) any {
 	var detailed *detailedError
 	if errors.As(err, &detailed) {
-		return detailed.details
+		return secret.Redact(detailed.details)
 	}
 	return nil
 }
@@ -57,7 +59,7 @@ func asError(err error) *Error {
 	if errors.As(err, &apiErr) {
 		return apiErr
 	}
-	log.Printf("handler error: %v", err)
+	log.Print("handler error: [redacted]")
 	return internalError
 }
 

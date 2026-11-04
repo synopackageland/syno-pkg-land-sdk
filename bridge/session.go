@@ -56,7 +56,7 @@ func AppUnavailable() *api.Error {
 }
 
 func unavailable(cause error) error {
-	log.Printf("bridge: app unavailable: %v", cause)
+	log.Print("bridge: app unavailable: [redacted]")
 	return AppUnavailable()
 }
 
@@ -274,7 +274,7 @@ func (s *Session) serve(ctx context.Context, call *Call, f frame) map[string]any
 	if err != nil {
 		var apiErr *api.Error
 		if !errors.As(err, &apiErr) {
-			log.Printf("bridge: service %s: %v", f.Op, err)
+			log.Print("bridge: service failed: [redacted]")
 			apiErr = &api.Error{Code: "internal", Message: "internal error"}
 		}
 		reply["ok"], reply["error"] = false, appError{serviceCode(apiErr.Code), apiErr.Message}

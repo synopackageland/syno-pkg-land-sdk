@@ -1,3 +1,4 @@
+import {encodeSecretRequest,redactSecrets} from './secret'
 import {createBatch} from './batch.js'
 import {clientTimeout, type CallOptions} from './context'
 import type {createDsmSession} from './dsm/session.js'
@@ -32,6 +33,7 @@ export function createClient(options: ClientOptions) {
  const retryReads = new Set(Object.entries(options.sessionRetry?.operations ?? {})
   .filter(([, operation]) => operation?.effect === 'read' && operation.kind === 'rpc').map(([method]) => method))
  async function send(envelope: object, callOptions?: CallOptions, retryMethod?: string): Promise<unknown> {
+  const credentials: string[] = []
   const controller = new AbortController()
   const canceled = {code: 'request_canceled', message: 'request canceled'}
   let failure: typeof canceled | undefined
@@ -48,24 +50,30 @@ export function createClient(options: ClientOptions) {
   const wait = <T>(work: Promise<T>) => Promise.race([work, interrupted])
   try {
    // Freeze params once: recovery must never replay a caller's later edits.
-   const body = JSON.stringify(envelope)
+   const body = encodeSecretRequest(envelope,credentials)
+   const requestOnly = credentials.length > 0
    if(ready && !token?.()) await wait(ready())
    for(let attempt = 0; attempt < 2; attempt++) {
     if(failure) throw failure
     const sentToken = token?.()
+    if(sentToken)credentials.push(sentToken)
     const response = await wait(request(options.endpoint, {method: 'POST', mode: 'same-origin', credentials: 'same-origin', redirect: 'error', cache: 'no-store', headers: {'Content-Type': 'application/json', ...(sentToken ? {'X-SYNO-TOKEN': sentToken} : {})}, body, signal: controller.signal}))
     const value: unknown = await wait(response.json())
     if(response.ok === false || !value || typeof value !== 'object' || !('success' in value)) throw {code: 'bad_response', message: 'unexpected response'}
     const reply = value as {success: boolean; data?: unknown; error?: {code?: unknown}}
     if(reply.success === true) return reply.data
     const error = reply.error ?? {code: 'bad_response', message: 'unexpected response'}
-    if(reply.success !== false || error.code !== 'session_required' || attempt !== 0 || !session || !retryMethod || !retryReads.has(retryMethod)) throw error
+    if(requestOnly || reply.success !== false || error.code !== 'session_required' || attempt !== 0 || !session || !retryMethod || !retryReads.has(retryMethod)) throw error
     let fresh: string | undefined
     try {fresh = await wait(session.refresh(sentToken))} catch {throw failure ?? error}
     if(failure) throw failure
     if(!fresh || fresh === sentToken) throw error
    }
-  } catch(error) {throw failure ?? error}
+  } catch(error) {
+   if(failure)throw failure
+   if(error && typeof error==='object' && 'code' in error)throw redactSecrets(error,credentials)
+   throw {code: 'network', message: 'request failed'}
+  }
   finally {
    clearTimeout(timer)
    signal?.removeEventListener('abort', stop)

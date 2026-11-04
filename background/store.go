@@ -22,6 +22,8 @@ import (
 	"unicode/utf8"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/synopackageland/syno-pkg-land-sdk/secret"
 )
 
 // Product limits, not DSM limits.
@@ -256,6 +258,9 @@ func validName(name string) bool {
 // withJournal runs fn on the journal under the spool lock. fn reports whether
 // it changed anything; only then is the journal rewritten.
 func (s *Store) withJournal(ctx context.Context, fn func(root *os.Root, j *journal) (bool, error)) error {
+	if err := secret.RefusePersistence(ctx); err != nil {
+		return err
+	}
 	if err := ctx.Err(); err != nil {
 		return err
 	}

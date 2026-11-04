@@ -8,12 +8,13 @@
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::value::RawValue;
+use std::cell::Cell;
 use std::collections::{BTreeMap, HashMap};
 use std::ffi::OsString;
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, mpsc};
+use std::sync::{Arc, Mutex, Once, mpsc};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -101,8 +102,8 @@ impl Context {
         params: &impl Serialize,
     ) -> Result<T, Error> {
         let raw = self.channel.service(op, params, self.batch_id)?;
-        serde_json::from_str(raw.get()).map_err(|e| {
-            eprintln!("{op}: unexpected service result: {e}");
+        serde_json::from_str(raw.get()).map_err(|_| {
+            eprintln!("unexpected service result: [redacted]");
             Error::new("internal", "internal error")
         })
     }
@@ -333,7 +334,7 @@ impl App {
             };
             let params = Params(params.unwrap_or_else(null));
             let outcome = match self.methods.get(&method) {
-                Some(h) => catch_unwind(AssertUnwindSafe(|| h(&ctx, &params)))
+                Some(h) => guarded_handler(|| h(&ctx, &params))
                     .unwrap_or_else(|_| Err(Error::new("internal", "internal error"))),
                 None => Err(Error::new("internal", "internal error")),
             };
@@ -372,6 +373,29 @@ impl App {
         self.serve(io::stdin(), io::stdout());
         Ok(())
     }
+}
+
+// Keep the process's existing panic hook for non-SDK work. While an SDK
+// handler runs, Rust's hook must not print its payload before catch_unwind.
+thread_local! {
+    static IN_HANDLER: Cell<bool> = const { Cell::new(false) };
+}
+static PANIC_DIAGNOSTICS: Once = Once::new();
+fn guarded_handler<T>(handler: impl FnOnce() -> T) -> std::thread::Result<T> {
+    PANIC_DIAGNOSTICS.call_once(|| {
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            if IN_HANDLER.get() {
+                eprintln!("app handler panic: [redacted]");
+            } else {
+                previous(info);
+            }
+        }));
+    });
+    let previous = IN_HANDLER.replace(true);
+    let result = catch_unwind(AssertUnwindSafe(handler));
+    IN_HANDLER.set(previous);
+    result
 }
 
 /// The arguments are exactly `--describe`.
