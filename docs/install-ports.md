@@ -25,6 +25,22 @@ Declared defaults remain build/inspection metadata and are never substituted for
 a missing selected runtime value. A failed conflict check aborts installation
 before those generated files are rewritten.
 
+Checks invoke `/usr/syno/bin/servicetool` directly, including with DSM's restricted
+package-account PATH. A confirmed conflict remains `INSTALL_PORT_INVALID`; the
+exact service ID registered for this package and this port key is allowed during
+an upgrade. A missing/unexecutable tool, nonzero exit, oversized or malformed
+response instead returns `INSTALL_PORT_CHECK_FAILED`. Retry installation and,
+if it persists, have the administrator check the DSM tool and service registry.
+Changing the selected port does not repair a failed registry check.
+
+`PortCheckError` retains the exit code (`-1` if execution never started or was
+interrupted), bounded stderr summary, elapsed duration and underlying error.
+`errors.Is(err, ErrPortCheck)` distinguishes these failures from `ErrPort`, even
+after the installer appends the affected setting key. Output is captured with a
+fixed memory limit and diagnostic control characters are escaped. The check adds
+no elapsed-time timeout; a loaded NAS may keep working until the caller explicitly
+cancels or its own context deadline expires.
+
 Supported keys are `gateway_http`, `gateway_https` and `oidc_issuer` when declared.
 Container-internal and fixed discovery ports retain their upstream contract.
 Port checks cannot reserve a listener atomically; DSM resource acquisition and

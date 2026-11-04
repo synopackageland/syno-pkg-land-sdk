@@ -561,6 +561,35 @@ failure; correlate the script's actual error, service-unit state and Docker
 server response. Keep administrative diagnostics separate from the App, which
 continues to run as its package account without Docker socket access.
 
+### Stop followed immediately by Start
+
+A successful SDK `prestart` does not establish that DSM acquired its startup
+resources. One observed failure chain was: SDK stop returned successfully, DSM
+released docker-project, the next prestart returned zero, and docker-project
+acquisition failed before the SDK start hook ran. The matching worker log said
+`container [...]'s profile should exist!`; Container Manager's event watcher also
+reported `failed to read profile`. Package Center's startup-worker error and a
+Control API wrapper alone do not distinguish this from other worker failures.
+
+On an explicit START, the installed Compose preflight now waits for nonempty,
+regular Container Manager profile files for every declared service before DSM
+tries to enable the existing project. It only inspects file metadata, including
+root-owned private profiles; it does not read profile contents, change DSM files
+or open Docker's control socket. Missing or empty profiles remain pending, with
+one actionable message, until registration appears or the operation is canceled.
+There is no total elapsed-time failure timer. INSTALL and UPGRADE retain their
+profile-generating worker path and do not wait before generation.
+
+This guards asynchronous registration, not permanent profile corruption or
+profile/container identity. If registration never recovers, cancel the pending
+operation and repair the App through Package Center. Merely adding a delay to
+the SDK stop hook cannot recreate missing DSM metadata. A device fixture
+reproduced the missing-profile error during upgrade halt, with worker code 299,
+and passed immediate stop/start after DSM regenerated the project. Repeated
+upgrade/stop/start cycles also passed. Recovery from startup-worker code 272 with
+permanently missing profiles remains a separate device acceptance requirement.
+Do not claim that a metadata wait repairs every startup-worker failure.
+
 An additional DSM 7.3.2 / Container Manager 24.0.2-1606 fixture passed Header
 and Vaultwarden install/start/upgrade. This does not certify the failing DSM
 7.4 / 24.0.2-1706 environment. Its explicit test configuration used immutable
