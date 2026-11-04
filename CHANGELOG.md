@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.50.9
+
+- Invoke DSM `servicetool` through `/usr/syno/bin/servicetool` and report tool failures separately from port conflicts, preserving exit code, bounded stderr and elapsed diagnostics
+- Wait for Container Manager profile metadata before explicit Compose START, with cancellation and no total timeout; preserve INSTALL/UPGRADE profile generation
+- Reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.50.8
 
 - Add opt-in `identity_gateway.secure_context: required` for Compose and standalone Apps that need HTTPS, without changing upstream App code
