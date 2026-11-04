@@ -535,6 +535,31 @@ and uninstall on a working official worker before claiming DSM support.
 
 ### Diagnose official worker failures without changing the NAS
 
+#### Duplicate project during reinstall or repair
+
+A failed installation can leave a stopped package project in Container Manager
+while DSM loses the package worker's project IDs. A later same-version repair
+then attempts to create the same project name and fails with duplicate-project
+code 2102. Full project definition reads may independently fail with 2105.
+The SDK App runs as its package account and cannot edit DSM's root-owned worker
+state or catch an acquisition error that occurs after its preinst hook.
+
+Incoming preflight logs therefore include conditional recovery guidance naming
+the App, its project and its expected Compose directory. This does not claim a
+conflict exists. Use an administrator's `synopkgland install <package> --repair`
+with a CLI that supports owned-project recovery. For Package Center-only
+recovery, inspect the stopped project in Container Manager and verify both its
+package ownership and its exact App Compose directory before removing the
+registration and repairing again. Preserve named volumes, data files and images;
+never remove another App's same-name project. If Container Manager cannot read
+or remove the project, stop and obtain administrator support rather than
+deleting DSM configuration or granting the App root/Docker access.
+
+Container Manager's native project removal may also remove stopped containers
+and their networks. Its image-preservation option is version-dependent: the
+older Docker implementation can force image removal. Do not assume that an
+unchecked or unavailable option preserves images on every version.
+
 Package Center's postinst-worker error is a wrapper. Read only the failed
 package's worker messages and the matching timestamp/PID in DSM logs, removing
 session, token, cookie and password fields before displaying or saving output.
