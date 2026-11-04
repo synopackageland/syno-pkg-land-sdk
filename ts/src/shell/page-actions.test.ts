@@ -6,27 +6,34 @@ import PageActions from './PageActions.vue'
 import * as vue from '../vue'
 
 // A page registered as a component cannot fill the shell's #actions slot; it
-// puts its own buttons in the header with PageActions, before the app's.
-test('a page component puts its own actions in the page header, before the app actions',async()=>{
+// puts its own buttons where the header's actions are with PageActions, before
+// the app's: in the page header (header: true) or the page bar above the page.
+test.each([
+ {header:true,where:'[data-ui-page-header]'},
+ {header:undefined,where:'[data-app-page-bar] .app-page-bar-actions'},
+])('a page component puts its own actions in $where, before the app actions',async({header,where})=>{
  const Page=defineComponent({render:()=>[h(PageActions,null,()=>h('button',{class:'rescan'},'Rescan')),h('p','Body')]})
  const root=document.createElement('div');document.body.append(root)
- const app=createApp({render:()=>h(AppShell,{locale:'en',modelValue:'packages',pages:[{id:'packages',title:'Packages',component:Page}]},{actions:()=>h('button',{class:'new-scan'},'New scan')})})
+ const app=createApp({render:()=>h(AppShell,{locale:'en',modelValue:'packages',pages:[{id:'packages',title:'Packages',component:Page,header}]},{actions:()=>h('button',{class:'new-scan'},'New scan')})})
  app.mount(root);await nextTick();await nextTick()
- const header=root.querySelector('[data-ui-page-header]')!
- expect(Array.from(header.querySelectorAll('button')).map(button=>button.className)).toEqual(['rescan','new-scan'])
+ const target=root.querySelector(where)!
+ expect(Array.from(target.querySelectorAll('button')).map(button=>button.className)).toEqual(['rescan','new-scan'])
  expect(root.querySelector('.app-page-content .rescan')).toBeNull()
  app.unmount();root.remove()
 })
 
-test('the actions leave the header with their page',async()=>{
+test('the actions leave the page bar with their page, and the empty bar hides',async()=>{
  const Page=defineComponent({render:()=>h(PageActions,null,()=>h('button',{class:'rescan'},'Rescan'))})
  const current=ref('packages')
  const root=document.createElement('div');document.body.append(root)
  const app=createApp({render:()=>h(AppShell,{locale:'en',modelValue:current.value,pages:[{id:'packages',title:'Packages',component:Page},{id:'settings',title:'Settings'}]})})
  app.mount(root);await nextTick();await nextTick()
- expect(root.querySelector('[data-ui-page-header] .rescan')).not.toBeNull()
+ const bar=()=>root.querySelector<HTMLElement>('[data-app-page-bar]')!
+ expect(bar().querySelector('.rescan')).not.toBeNull()
+ expect(bar().hidden).toBe(false)
  current.value='settings';await nextTick();await nextTick()
  expect(root.querySelector('.rescan')).toBeNull()
+ expect(bar().hidden).toBe(true)
  app.unmount();root.remove()
 })
 
@@ -56,7 +63,7 @@ test('the package exports the target, so a page can be mounted without the shell
 // the shell passes PageHeader's meta slot on, beside the title.
 test('the shell forwards the page header meta slot',async()=>{
  const root=document.createElement('div');document.body.append(root)
- const app=createApp({render:()=>h(AppShell,{locale:'en',modelValue:'packages',pages:[{id:'packages',title:'Packages'}]},{meta:({page}:{page:string})=>h('span',{class:'scanned'},page)})})
+ const app=createApp({render:()=>h(AppShell,{locale:'en',modelValue:'packages',pages:[{id:'packages',title:'Packages',header:true}]},{meta:({page}:{page:string})=>h('span',{class:'scanned'},page)})})
  app.mount(root);await nextTick()
  expect(root.querySelector('[data-ui-page-header] .scanned')?.textContent).toBe('packages')
  app.unmount();root.remove()

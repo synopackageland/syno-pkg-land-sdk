@@ -20,13 +20,20 @@ export interface AppShellPage {
   hidden?: boolean
   /** 'bottom': listed after every other page, in a group of its own (an App's settings). */
   placement?: 'bottom'
-  /** A subtitle under this page's title. Most pages need none; leave it out. */
+  /** @deprecated Not shown: a page has no subtitle. */
   description?: string
-  /** false: the page draws its own header. */
+  /**
+   * Omitted: no visible title (the sidebar names the page) and a visually
+   * hidden h1; the page's actions and notes sit in a bar above it.
+   * true: the shell's PageHeader with the title, its notes and actions.
+   * false: the page draws its own header; the shell adds no title.
+   */
   header?: boolean
   /**
-   * The body fills the height under the header and the page does not scroll:
+   * The body fills the height under the notices and the page does not scroll:
    * the content scrolls itself (a treemap, a table paged by height, a log).
+   * Omitted: a page that shows a SettingsPage or a SectionTabs fill fills,
+   * any other page scrolls as a whole. false: the page always scrolls.
    */
   fill?: boolean
 }

@@ -18,16 +18,29 @@ function mount(render:()=>unknown){
  return {root,app}
 }
 afterEach(async()=>{for(const app of apps.splice(0))app.unmount();await settle();document.body.replaceChildren()})
-const shell=(page:Component,props:Record<string,unknown>={},slots:Record<string,unknown>={})=>()=>h(AppShell,{locale:'en',modelValue:'snapshots',pages:[{id:'snapshots',title:'Snapshots',component:page},{id:'settings',title:'Settings'}],...props},slots)
+const shell=(page:Component,props:Record<string,unknown>={},slots:Record<string,unknown>={},header?:boolean)=>()=>h(AppShell,{locale:'en',modelValue:'snapshots',pages:[{id:'snapshots',title:'Snapshots',component:page,header},{id:'settings',title:'Settings'}],...props},slots)
 const button=(root:ParentNode)=>root.querySelector<HTMLButtonElement>('button[aria-label^="Notes"],button[aria-label^="附註"]')
 
 // Reclaim teleported its notes to the shell's #meta slot itself.
 test('a page puts its notes on the title line, after the title and before the App meta',async()=>{
  const Page=defineComponent({render:()=>[h(PageInfo,{notes}),h('p','Body')]})
- const {root}=mount(shell(Page,{},{meta:()=>h('span',{class:'scanned'},'Scanned')}))
+ const {root}=mount(shell(Page,{},{meta:()=>h('span',{class:'scanned'},'Scanned')},true))
  await settle()
  const meta=root.querySelector('[data-ui-page-header] [data-ui-page-header-meta]')!
  expect(meta.parentElement!.firstElementChild!.tagName).toBe('H1')
+ expect(button(meta)).not.toBeNull()
+ expect(button(meta)!.compareDocumentPosition(meta.querySelector('.scanned')!)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+ expect(button(root.querySelector('.app-page-content')!)).toBeNull()
+})
+
+// Without the shell's header the notes start the page bar, before the App meta.
+test('a page without the header puts its notes at the start of the page bar',async()=>{
+ const Page=defineComponent({render:()=>[h(PageInfo,{notes}),h('p','Body')]})
+ const {root}=mount(shell(Page,{},{meta:()=>h('span',{class:'scanned'},'Scanned')}))
+ await settle()
+ const bar=root.querySelector<HTMLElement>('[data-app-page-bar]')!
+ expect(bar.hidden).toBe(false)
+ const meta=bar.querySelector('.app-page-meta')!
  expect(button(meta)).not.toBeNull()
  expect(button(meta)!.compareDocumentPosition(meta.querySelector('.scanned')!)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
  expect(button(root.querySelector('.app-page-content')!)).toBeNull()
@@ -45,7 +58,7 @@ test('the notes leave the header with their page',async()=>{
 
 test('an inline PageInfo stays beside the control its notes explain',async()=>{
  const Page=defineComponent({render:()=>h('div',{class:'search'},h(PageInfo,{notes,inline:true}))})
- const {root}=mount(shell(Page))
+ const {root}=mount(shell(Page,{},{},true))
  await settle()
  expect(button(root.querySelector('.search')!)).not.toBeNull()
  expect(button(root.querySelector('[data-ui-page-header]')!)).toBeNull()

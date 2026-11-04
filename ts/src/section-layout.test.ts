@@ -167,7 +167,8 @@ test('no SDK component draws its own heading; sub-groups are nested sections',as
  const {readFileSync,readdirSync}=await import('node:fs')
  const {resolve}=await import('node:path')
  const vue=(dir:string):string[]=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?vue(resolve(dir,e.name)):e.name.endsWith('.vue')?[resolve(dir,e.name)]:[])
- expect(vue(__dirname).filter(file=>/<h[1-6][\s>]/.test(readFileSync(file,'utf8')))).toEqual([])
+ // AppShell's visually hidden page name is the one heading: it draws nothing.
+ expect(vue(__dirname).filter(file=>/<h[1-6][\s>]/.test(readFileSync(file,'utf8').replace('<h1 v-else-if="headerMode === \'hidden\'" class="app-page-title">','')))).toEqual([])
 })
 test('a status summary that ends its section leaves the gap to the next section to the page',async()=>{
  const {readFileSync}=await import('node:fs')

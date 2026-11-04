@@ -17,8 +17,9 @@ test('SDK dialogs size to their content; only the NAS picker, wider than the cap
  const fixed=vue(src).filter(file=>/<Dialog\b[^>]*\swidth=/.test(readFileSync(file,'utf8'))).map(file=>relative(src,file))
  expect(fixed).toEqual(['nas/NasPicker.vue'])
 })
-test('AppShell has no shell-wide description: a subtitle is only a page that sets its own',()=>{
+// Pages carry no subtitle: neither the shell nor a page's own description draws one.
+test('AppShell draws no subtitle',()=>{
  const shell=read('shell/AppShell.vue')
  expect(shell).not.toMatch(/^\s*description\?:/m)
- expect(shell).toMatch(/:description="page\?\.description"/)
+ expect(shell).not.toMatch(/:description=/)
 })
