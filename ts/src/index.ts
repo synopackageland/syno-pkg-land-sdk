@@ -40,8 +40,9 @@ export {encodeRequest, decodeResponse, type ProtocolAuth, type ProtocolResponse}
 export {appDenial,appRefusal,type AppDenial} from './authorization/refusal'
 export {createEntryCheck, type EntryCheck, type EntryFailure, type EntryMode} from './entry/check'
 
-export {createClient, type Batch, type BatchCall, type BatchResult, type ClientOptions} from './client'
+export {createClient, type Batch, type BatchCall, type BatchResult, type ClientOptions, type SessionRetryOptions, type SessionRetryOperation} from './client'
 
 export {readDsmPorts, type DsmPort, type DsmPortRange} from './dsm/service-ports'
+export {readDsmHttpsURL} from './dsm/https'
 
 export {requestSecret, RequestSecret, redactSecrets} from './secret'

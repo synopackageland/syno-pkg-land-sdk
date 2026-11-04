@@ -43,8 +43,8 @@ try {
 }
 ```
 
-Require an available host endpoint before enabling this form. The client sends
-one request and does not replay it. Encoding consumes the wrapper before the
+Require an available host endpoint before enabling this form. A request containing a Secret sends
+once, including when optional session read recovery would otherwise retry it. Encoding consumes the wrapper before the
 network attempt, including a failed or timed-out attempt. A later explicit retry
 requires a fresh credential. A request canceled before encoding sends nothing;
 clear the wrapper when abandoning the form. The wrapper's `toJSON`, string
@@ -80,7 +80,8 @@ route := api.WithRequestSecrets(api.Handle("service.connect",
 Declare every custom credential field name. Names apply recursively, including
 nested objects and arrays. Common password, OTP, token, secret, authorization,
 cookie and DSM token names are included automatically on declared routes.
-Results and public error messages/details are redacted before SDK serialization;
+Results and public error messages/details are redacted before SDK serialization,
+including credential header values and session cookie values from the request;
 unknown errors and panic payloads never reach the SDK's error log. `secret.Value`
 also redacts ordinary JSON/text/Gob serialization, formatting (including debug
 verbs), and structured logging. A serialized redaction marker cannot restore a

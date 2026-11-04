@@ -48,6 +48,11 @@ an SDK policy that differs from the digest the CLI binds with
 
 For bounded public HTTP(S) subprocess probes, see [Outbound probe proxy](docs/outbound-probe-proxy.md).
 
+For optional HTTPS requirements, administrator-only HTTPS links and opt-in
+read RPC recovery after a stale DSM token, see
+[HTTPS and session recovery](docs/https-and-session-recovery.md).
+Ordinary HTTP Apps remain supported; writes, AI and streams never auto-replay.
+
 For owner-bound asynchronous Go work, structured results and ctl integration, see
 [Structured background jobs](docs/background-results.md).
 

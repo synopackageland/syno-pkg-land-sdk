@@ -47,6 +47,36 @@ func NewRedactor(raw json.RawMessage, fields ...string) *Redactor {
 	sort.Slice(r.values, func(i, j int) bool { return len(r.values[i]) > len(r.values[j]) })
 	return r
 }
+
+// IncludeRequestCredentials keeps session/header credentials out of the same
+// request's public errors. It retains no request pointer and never reads a body.
+func (r *Redactor) IncludeRequestCredentials(req *http.Request) {
+	if req == nil {
+		return
+	}
+	for key, values := range req.Header {
+		if !SensitiveKey(key) {
+			continue
+		}
+		for _, value := range values {
+			if value != "" {
+				r.values = append(r.values, value)
+			}
+			if strings.EqualFold(key, "Authorization") {
+				if _, credential, ok := strings.Cut(value, " "); ok && credential != "" {
+					r.values = append(r.values, credential)
+				}
+			}
+		}
+	}
+	for _, cookie := range req.Cookies() {
+		if cookie.Value != "" {
+			r.values = append(r.values, cookie.Value)
+		}
+	}
+	sort.Slice(r.values, func(i, j int) bool { return len(r.values[i]) > len(r.values[j]) })
+}
+
 func (r *Redactor) sensitive(key string) bool {
 	if SensitiveKey(key) {
 		return true

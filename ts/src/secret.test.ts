@@ -46,3 +46,12 @@ test('public error fields and credential echoes are redacted recursively',async(
  expect(JSON.stringify(error)).not.toContain('123456')
  expect(error.code).toBe('refused')
 })
+
+test('request-only credentials disable opted-in read recovery and replay',async()=>{
+ const refresh=vi.fn(async()=> 'fresh')
+ const fetch=vi.fn(async()=>new Response('{"success":false,"error":{"code":"session_required","message":"sign in"}}'))
+ const client=createClient({endpoint:'/api',fetch,sessionRetry:{session:{token:()=> 'stale',ready:async()=> 'stale',refresh},operations:{'demo.connect':{effect:'read',kind:'rpc'}}}})
+ await expect(client.call('demo.connect',{credential:requestSecret('canary')})).rejects.toMatchObject({code:'session_required'})
+ expect(fetch).toHaveBeenCalledTimes(1)
+ expect(refresh).not.toHaveBeenCalled()
+})

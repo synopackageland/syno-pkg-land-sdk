@@ -145,3 +145,17 @@ func TestOriginFallbackRefererPortAndSchemeWarning(t *testing.T) {
 		t.Fatal("multiple origins accepted")
 	}
 }
+
+func TestDeclaredRequestSecretErrorsAlsoRedactSessionHeaders(t *testing.T) {
+	route := WithRequestSecrets(HandleRequest("demo.crash", func(_ context.Context, _ Caller, r *http.Request, _ json.RawMessage) (any, error) {
+		return nil, BadRequest(r.Header.Get("X-SYNO-TOKEN") + " bearer-canary cookie-canary")
+	}), "credential")
+	rec, _ := post(t, newTestServer(t, &fakeAuth{admin: true}, route), `{"method":"demo.crash","params":{}}`, func(r *http.Request) {
+		r.Header.Set("X-SYNO-TOKEN", "session-canary")
+		r.Header.Set("Authorization", "Bearer bearer-canary")
+		r.AddCookie(&http.Cookie{Name: "session", Value: "cookie-canary"})
+	})
+	if strings.Contains(rec.Body.String(), "canary") {
+		t.Fatal(rec.Body.String())
+	}
+}

@@ -22,6 +22,7 @@ func WithRequestSecrets(route Route, fields ...string) Route {
 	original := route
 	invoke := func(ctx context.Context, c Caller, r *http.Request, params json.RawMessage) (any, error) {
 		redactor := secret.NewRedactor(params, fields...)
+		redactor.IncludeRequestCredentials(r)
 		data, err := original.Invoke(redactor.WithScope(ctx), c, r, params)
 		if err != nil {
 			var public *Error
