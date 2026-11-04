@@ -712,5 +712,11 @@
     "statement": "if cfg.TTL < time.Second || cfg.TTL > MaxTTL {",
     "class": "B",
     "reason": "Credential validity must fit browser cookie expiry precision; no work is timed out"
+  },
+  {
+    "file": "compose/worker_profiles.go",
+    "statement": "timer := time.NewTimer(time.Second)",
+    "class": "B",
+    "reason": "Poll spacing for read-only Container Manager profile metadata; missing registration has no total elapsed failure timer"
   }
 ]

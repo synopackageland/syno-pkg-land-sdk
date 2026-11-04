@@ -5,10 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -105,28 +103,6 @@ func portValue(raw string) (int, error) {
 	return n, nil
 }
 
-// CheckPort consults DSM's registered service definitions. A successful command
-// exit alone is not a clearance: servicetool documents IsConflict on stdout.
-func CheckPort(ctx context.Context, pkg, key string, p Port, n int) error {
-	ctx, cancel := context.WithTimeout(ctx, runtimebudget.Remaining(ctx, runtimebudget.Operation))
-	defer cancel()
-	tool, err := exec.LookPath("servicetool")
-	if err != nil {
-		return ErrPort
-	}
-	out, err := exec.CommandContext(ctx, tool, "--conf-port-conflict-check", "--"+p.Protocol, strconv.Itoa(n)).Output()
-	if err != nil || len(out) > 16384 {
-		return ErrPort
-	}
-	match := regexp.MustCompile(`IsConflict:\s*(true|false)\s+Port:\s*([0-9]+)\s+Protocol:\s*(tcp|udp)\s+ServiceName:\s*(\S+)`).FindStringSubmatch(string(out))
-	if len(match) != 5 || match[2] != strconv.Itoa(n) || match[3] != p.Protocol {
-		return ErrPort
-	}
-	if match[1] == "false" || match[4] == portServiceID(pkg, key) {
-		return nil
-	}
-	return ErrPort
-}
 func writePortFile(root *os.Root, path string, content []byte) error {
 	st, err := root.Lstat(path)
 	if err != nil {

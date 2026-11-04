@@ -12,6 +12,29 @@ import (
 	"github.com/synopackageland/syno-pkg-land-sdk/sharedfolder"
 )
 
+func TestWorkerProfileWaitDoesNotBlockProfileGeneratingWorkers(t *testing.T) {
+	incoming := t.TempDir()
+	project := filepath.Join(incoming, "compose")
+	if err := os.Mkdir(project, 0700); err != nil {
+		t.Fatal(err)
+	}
+	for _, status := range []string{"INSTALL", "UPGRADE", "UNINSTALL", "STOP", ""} {
+		if workerProfileWaitRequired(project, "", status) {
+			t.Fatalf("profile generation would deadlock for %q", status)
+		}
+	}
+	if workerProfileWaitRequired(project, incoming, "START") || !workerProfileWaitRequired(project, "", "START") {
+		t.Fatal("START must wait only in the installed project")
+	}
+	alias := filepath.Join(t.TempDir(), "alias")
+	if err := os.Symlink(incoming, alias); err != nil {
+		t.Fatal(err)
+	}
+	if workerProfileWaitRequired(project, alias, "START") {
+		t.Fatal("incoming alias must not wait for profiles")
+	}
+}
+
 func TestPreflightSkipsOnlyIncomingWizardNotInstallMarkedStart(t *testing.T) {
 	incoming := t.TempDir()
 	project := filepath.Join(incoming, "compose")

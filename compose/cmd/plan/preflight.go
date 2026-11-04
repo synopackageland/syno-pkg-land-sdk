@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 
 	"github.com/synopackageland/syno-pkg-land-sdk/compose"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/containerpreflight"
@@ -18,7 +22,25 @@ func preflight() error {
 		return err
 	}
 	project := filepath.Dir(executable)
-	return preflightProject(project, os.Getenv("SYNOPKG_PKGINST_TEMP_DIR"), os.Getenv("SYNOPKG_PKGVAR"))
+	incoming := os.Getenv("SYNOPKG_PKGINST_TEMP_DIR")
+	if err := preflightProject(project, incoming, os.Getenv("SYNOPKG_PKGVAR")); err != nil {
+		return err
+	}
+	// INSTALL/UPGRADE workers generate profiles themselves. Waiting before that
+	// worker would deadlock a clean install. A subsequent explicit START uses
+	// the existing project and requires its profiles to have caught up first.
+	if !workerProfileWaitRequired(project, incoming, os.Getenv("SYNOPKG_PKG_STATUS")) {
+		return nil
+	}
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer cancel()
+	return compose.WaitForWorkerProfiles(ctx, project, func() {
+		fmt.Fprintln(os.Stderr, "[COMPOSE_WORKER_PROFILE_PENDING] Waiting for Container Manager to register this App; keep this operation running. If registration does not recover, cancel and repair this App in Package Center")
+	})
+}
+
+func workerProfileWaitRequired(project, incoming, status string) bool {
+	return status == "START" && (incoming == "" || !sameDirectory(project, filepath.Join(incoming, "compose")))
 }
 
 func preflightProject(project, incoming, dataDir string) error {
