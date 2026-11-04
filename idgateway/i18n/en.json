@@ -75,5 +75,9 @@
   "menu_settings": "Open the App's external access settings",
   "stopped_title": "App is not running",
   "stopped": "Open Package Center and choose Run or Repair for this App",
-  "open_dsm": "Open DSM"
+  "open_dsm": "Open DSM",
+  "https_title": "HTTPS required",
+  "https_required": "Open this app using HTTPS to sign in",
+  "https_open": "Open using HTTPS",
+  "https_unknown": "Open DSM using HTTPS, then reopen this App or ask your administrator for the HTTPS address"
 }

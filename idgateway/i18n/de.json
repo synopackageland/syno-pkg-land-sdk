@@ -75,5 +75,9 @@
   "menu_settings": "Einstellungen für externen Zugriff der App öffnen",
   "stopped_title": "App wird nicht ausgeführt",
   "stopped": "Öffnen Sie das Paket-Zentrum und wählen Sie für diese App Ausführen oder Reparieren",
-  "open_dsm": "DSM öffnen"
+  "open_dsm": "DSM öffnen",
+  "https_title": "HTTPS erforderlich",
+  "https_required": "Öffnen Sie diese App über HTTPS, um sich anzumelden",
+  "https_open": "Mit HTTPS öffnen",
+  "https_unknown": "Öffnen Sie DSM über HTTPS und danach diese App erneut oder fragen Sie Ihren Administrator nach der HTTPS-Adresse"
 }

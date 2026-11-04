@@ -75,5 +75,9 @@
   "menu_settings": "Abrir los ajustes de acceso externo de la App",
   "stopped_title": "La aplicación está detenida",
   "stopped": "Abra el Centro de paquetes y elija Ejecutar o Reparar para esta aplicación",
-  "open_dsm": "Abrir DSM"
+  "open_dsm": "Abrir DSM",
+  "https_title": "Se requiere HTTPS",
+  "https_required": "Abra esta aplicación con HTTPS para iniciar sesión",
+  "https_open": "Abrir con HTTPS",
+  "https_unknown": "Abra DSM con HTTPS y vuelva a abrir esta aplicación o pida la dirección HTTPS al administrador"
 }

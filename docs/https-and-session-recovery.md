@@ -8,6 +8,10 @@ policy. Browser feature availability still depends on its own permissions.
 See the CLI's [HTTPS skill](https://github.com/synopackageland/syno-pkg-land-cli/blob/main/skills/SKILL.md#https-與舊-dsm-token)
 for the App workflow and test guidance.
 
+For wrapped upstream Apps, the gateway can enforce this policy without App
+changes: declare `identity_gateway.secure_context: required`. See
+[identity gateway HTTPS guidance](identity-gateway.md#apps-requiring-a-secure-context).
+
 ## Optional HTTPS guard and presentation
 
 Go `api.RequireSecureOrigin(request)` returns `*api.Error` with code

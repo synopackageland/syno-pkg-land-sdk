@@ -170,3 +170,28 @@ hash. App identity comes from local package metadata; its PNG icon is embedded
 so a signed-out page does not need to fetch protected frontend assets. Rebuild
 packages to pick up gateway changes: the SDK does not update installed helpers
 at runtime.
+
+## Apps requiring a secure context
+
+An App that needs WebCrypto or other secure context features can declare
+`identity_gateway.secure_context: required` in its package manifest. This works
+for Compose and standalone gateways without changing upstream App code. Use
+the latest SDK and CLI; `check` and `build` reject a selected SDK source that
+lacks HTTPS guidance support. Omit the field to preserve ordinary HTTP access.
+
+HTTP top-level GET navigations receive a localized SDK page with status 403
+and an explicit HTTPS link, without an automatic redirect or sign-in attempt.
+Other HTTP App requests, including resources, APIs and iframe navigations,
+receive status 403 and JSON error `https_required`. HTTPS requests retain the
+normal entry and upstream authentication behavior. The package health ping
+remains available for launcher readiness checks.
+
+The gateway uses its authenticated ingress scheme, or the public listener's
+scheme for a direct connection. It never trusts client-supplied forwarded
+scheme headers or mistakes the private ingress TLS connection for browser TLS.
+A path ingress link keeps the current hostname and uses only an actual,
+unambiguous DSM HTTPS port declaration, opening `/webman/` with the package's
+`launchApp`. A direct gateway link uses its declared HTTPS listener. Neither
+link forwards the request query or fragment. If the HTTPS port is unavailable,
+the page shows instructions to reopen DSM over HTTPS and ask an administrator
+for the address; it never guesses a port or calls administrator-only APIs.

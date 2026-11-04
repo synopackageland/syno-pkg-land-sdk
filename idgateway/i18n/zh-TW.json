@@ -75,5 +75,9 @@
   "menu_settings": "開啟 App 的外網設定",
   "stopped_title": "應用程式未執行",
   "stopped": "請開啟套件中心，對此應用程式選擇「執行」或「修復」",
-  "open_dsm": "開啟 DSM"
+  "open_dsm": "開啟 DSM",
+  "https_title": "需要 HTTPS",
+  "https_required": "請使用 HTTPS 開啟此 App 以登入",
+  "https_open": "使用 HTTPS 開啟",
+  "https_unknown": "請使用 HTTPS 開啟 DSM 後重新開啟此 App，或向管理員詢問 HTTPS 位址"
 }
