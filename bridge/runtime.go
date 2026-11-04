@@ -104,7 +104,7 @@ func NewRuntime(cfg Config) (http.Handler, error) {
 		return nil, err
 	}
 	if cfg.OperationsDigest != "" {
-		operations, err := readBound(filepath.Join(cfg.AppDir, "synopkgland-operations.json"), cfg.OperationsDigest, api.MaxRequestBytes)
+		operations, err := readMetadata(filepath.Join(cfg.AppDir, "synopkgland-operations.json"), cfg.OperationsDigest)
 		if err != nil {
 			return nil, err
 		}
@@ -163,6 +163,18 @@ func (cfg Config) withDefaults() Config {
 		cfg.Auth = dsm.NewAuthenticator()
 	}
 	return cfg
+}
+
+// readMetadata loads a trusted build artifact without a request-body byte cap.
+func readMetadata(name, digest string) ([]byte, error) {
+	raw, err := os.ReadFile(name)
+	if err != nil {
+		return nil, fmt.Errorf("bridge: %w", err)
+	}
+	if digest != "" && fmt.Sprintf("%x", sha256.Sum256(raw)) != digest {
+		return nil, fmt.Errorf("bridge: %s does not match the package build", name)
+	}
+	return raw, nil
 }
 
 // readBound reads a file the build validated, refusing other contents.
