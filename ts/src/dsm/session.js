@@ -3,24 +3,47 @@
  * This plain JavaScript factory is also embedded by the CLI into DSM's
  * generated window, so Go-only Apps need no frontend build toolchain.
  * @param {{read: () => string | undefined, write?: (token: string) => void, fetch: typeof globalThis.fetch}} options
- * @returns {{token: () => string | undefined, ready: () => Promise<string | undefined>}}
+ * @returns {{token: () => string | undefined, ready: () => Promise<string | undefined>, refresh: (rejected?: string) => Promise<string | undefined>}}
  */
 export function createDsmSession(options) {
   /** @type {string | undefined} */
   var recovered;
   /** @type {Promise<string | undefined> | undefined} */
   var pending;
+  /** @type {string | undefined} */
+  var ignored;
+  var attempted = false;
   /** @param {unknown} value @returns {string | undefined} */
   function valid(value) {
     return typeof value === 'string' && value.length > 0 && value.length <= 4096 && !/[\u0000-\u001f\u007f-\u009f]/.test(value) ? value : undefined;
   }
-  function token() { return valid(options.read()) || recovered; }
+  function token() {
+    var current = valid(options.read());
+    return current && current !== ignored ? current : recovered;
+  }
   function ready() {
     var current = token();
     if (current) return Promise.resolve(current);
-    // One attempt per page instance, shared by all concurrent dispatches.
-    // Failure leaves the server's credential_not_ready response authoritative.
     if (pending) return pending;
+    // Bootstrap is attempted only once. Explicit refresh is bounded by the
+    // caller's read-only retry policy, never an automatic authentication loop.
+    if (attempted) return Promise.resolve(undefined);
+    return recover();
+  }
+  /** @param {string | undefined} rejected */
+  function refresh(rejected) {
+    var current = token();
+    if (current && current !== rejected) return Promise.resolve(current);
+    if (pending) return pending;
+    // A desktop can keep reporting its rejected token. Suppress that carrier
+    // until it changes, even when the host supplies no write callback.
+    ignored = valid(options.read());
+    recovered = undefined;
+    return recover(rejected);
+  }
+  /** @param {string | undefined} [rejected] */
+  function recover(rejected) {
+    attempted = true;
     pending = new Promise(function (resolve) {
       var controller = new AbortController(), done = false;
       /** @param {string | undefined} value */
@@ -43,9 +66,10 @@ export function createDsmSession(options) {
         }).then(function (reply) {
           if (done) return;
           // DSM may have supplied a newer token while the request ran.
-          var current = valid(options.read());
-          if (current) { finish(current); return; }
+          var current = token();
+          if (current && current !== rejected) { finish(current); return; }
           var value = reply && reply.success === true ? valid(reply.SynoToken) : undefined;
+          if (value === rejected) value = undefined;
           if (value) {
             if (options.write) options.write(value);
             recovered = value;
@@ -53,8 +77,8 @@ export function createDsmSession(options) {
           finish(value);
         }).catch(function () { finish(undefined); });
       } catch (_) { finish(undefined); }
-    });
+    }).finally(function () { pending = undefined; });
     return pending;
   }
-  return {token: token, ready: ready};
+  return {token: token, ready: ready, refresh: refresh};
 }

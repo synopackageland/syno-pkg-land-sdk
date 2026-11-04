@@ -17,13 +17,30 @@ App's `backend/go.mod`.
 
 `createDsmSession({read, write, fetch})` provides DSM session carriers for a
 desktop window or an Application Portal page. `ready()` returns the desktop's
-current token, or makes one shared, five-second, same-origin request to
+current token, or makes one shared, bounded, same-origin request to
 `webman/login.cgi?enable_syno_token=yes`. `token()` reads the current carrier.
 The optional `write` updates DSM's in-memory session for its own WebAPI client.
 Nothing is persisted. Recovery failure leaves the backend's existing
 `credential_not_ready` response intact; root and delegate calls still require
 both the cookie and token. The CLI embeds this factory from the selected SDK
 into every generated native window, including Go-only Apps.
+
+An old page can retain a rejected token after another tab signs in again.
+`refresh(rejectedToken)` forces same-origin recovery while sharing concurrent
+requests. `createClient({sessionRetry: {session, operations}})` opts in to one
+retry for trusted `effect: read`, `kind: rpc` operations only. Writes, AI,
+streams and batches never replay; the default remains off because the client
+cannot infer operation effects. Existing `ctx.call` is not automatically wrapped.
+See [HTTPS and session recovery](../docs/https-and-session-recovery.md) for the
+API, cancellation/deadline behavior and the CLI skill link.
+
+Many Apps can use HTTP. Only Apps needing secure context, pairing or a strict
+HTTPS Origin policy should require it. Opt-in Go `api.RequireSecureOrigin`
+returns `https_required`; render `identityCopy(locale).httpsTitle` and
+`errors.https_required` with instructions to reopen through HTTPS.
+`readDsmHttpsURL(ctx, location.href)` discovers `dms_https` through
+`readDsmPorts` only for an administrator. Ordinary/unknown users get no
+PortInfo request and should see instructions only. No port is guessed.
 
 ## DSM WebAPI
 
@@ -48,7 +65,8 @@ native download form, which cannot set a header, puts it in its same-origin
 query.
 
 `readDsmPorts(ctx)` already prefers this channel and returns `[]` on refusal,
-unavailable data or its five-second deadline. It uses a same-origin token
+unavailable data or its request deadline. Call it only for an administrator;
+PortInfo can refuse ordinary sessions or close their DSM window. It uses a same-origin token
 request only without a window channel. `createNasProvider(ctx)` and executor
 scope selection also use `ctx.webApi` for File Station JSON calls, retaining
 App admission, validation, cancellation and deadlines. A channel refusal never

@@ -96,3 +96,41 @@ test('slow session recovery succeeds after sixty seconds',async()=>{
  await vi.advanceTimersByTimeAsync(60000)
  expect(await pending).toBe('recovered')
 })
+
+test('refresh replaces a rejected desktop token without needing a write callback',async()=>{
+ let token='stale'
+ const fetch=vi.fn(async()=>response({success:true,SynoToken:'fresh'}))
+ const session=createDsmSession({read:()=>token,fetch})
+ expect(await session.refresh('stale')).toBe('fresh')
+ expect(await session.ready()).toBe('fresh')
+ expect(session.token()).toBe('fresh')
+ token='later-login'
+ expect(session.token()).toBe('later-login')
+ expect(fetch).toHaveBeenCalledOnce()
+})
+
+test('concurrent and late refusals share recovery and do not overwrite a newer desktop token',async()=>{
+ let resolve!:(value:Response)=>void,token='stale'
+ const fetch=vi.fn(()=>new Promise<Response>(r=>{resolve=r})),write=vi.fn()
+ const session=createDsmSession({read:()=>token,write,fetch})
+ const first=session.refresh('stale'),second=session.refresh('stale')
+ expect(fetch).toHaveBeenCalledOnce()
+ token='newer-desktop'
+ resolve(response({success:true,SynoToken:'old-reply'}))
+ expect(await first).toBe('newer-desktop')
+ expect(await second).toBe('newer-desktop')
+ expect(await session.refresh('stale')).toBe('newer-desktop')
+ expect(write).not.toHaveBeenCalled()
+ expect(fetch).toHaveBeenCalledOnce()
+})
+
+test('separate future logins can refresh again; a rejected token reply is never published',async()=>{
+ const fetch=vi.fn().mockResolvedValueOnce(response({success:true,SynoToken:'fresh'}))
+  .mockResolvedValueOnce(response({success:true,SynoToken:'newest'}))
+  .mockResolvedValueOnce(response({success:true,SynoToken:'newest'}))
+ const write=vi.fn(),session=createDsmSession({read:()=> 'stale',write,fetch})
+ expect(await session.refresh('stale')).toBe('fresh')
+ expect(await session.refresh('fresh')).toBe('newest')
+ expect(await session.refresh('newest')).toBeUndefined()
+ expect(write).toHaveBeenCalledTimes(2)
+})
