@@ -40,6 +40,48 @@ test('the panel shows loading until the first status arrives',async()=>{
   expect(root.querySelector('[data-executor-status="ready"]')).not.toBeNull()
  }finally{app.unmount();root.remove()}
 })
+test('the password stays editable during status reloads and locks only for submit',async()=>{
+ const needs:CapabilityStatus={state:'needs-admin-approval'}
+ let answer:(s:CapabilityStatus)=>void=()=>{},approve:(s:CapabilityStatus)=>void=()=>{},refresh=()=>Promise.resolve()
+ const setup={status:async()=>needs,authorize:()=>new Promise<CapabilityStatus>(r=>{approve=r}),control:async()=>needs}
+ const root=document.createElement('div');document.body.append(root)
+ const app=createApp({render:()=>h(AppRoot,{},()=>h(ExecutorSettings,{admin:true,locale:'en',ref:(r:unknown)=>{refresh=()=>(r as {refresh():Promise<void>}).refresh()}}))})
+ app.provide(ExecutorSetupKey,setup)
+ try{
+  app.mount(root);await settle()
+  setup.status=()=>new Promise<CapabilityStatus>(r=>{answer=r})
+  const reload=refresh();await settle()
+  const input=root.querySelector<HTMLInputElement>('#delegate-password')!
+  expect(root.querySelector('[aria-busy=true]')).not.toBeNull()
+  expect(input.disabled).toBe(false)
+  input.value='entered-during-reload';input.dispatchEvent(new Event('input'));await settle()
+  answer(needs);await reload;await settle()
+  expect(input.value).toBe('entered-during-reload')
+  root.querySelector('form')!.dispatchEvent(new Event('submit'));await settle()
+  expect(input.disabled).toBe(true)
+  expect(root.querySelector<HTMLButtonElement>('button[type=submit]')!.disabled).toBe(true)
+  approve({state:'blocked',code:'password_rejected',retry:true});await settle()
+  expect(input.disabled).toBe(false)
+ }finally{app.unmount();root.remove()}
+})
+
+test('an initial approval keeps the password editable while scope readback is pending or fails',async()=>{
+ const needs:CapabilityStatus={state:'needs-admin-approval'}
+ let reject:(error:unknown)=>void=()=>{}
+ const setup={status:async()=>needs,authorize:async()=>needs,control:async()=>needs}
+ const ctx={call:<T,>()=>new Promise<T>((_,r)=>{reject=r})}
+ const root=document.createElement('div');document.body.append(root)
+ const app=createApp({render:()=>h(AppRoot,{},()=>h(ExecutorSettings,{admin:true,locale:'en',initial:needs,ctx}))})
+ app.provide(ExecutorSetupKey,setup)
+ try{
+  app.mount(root);await settle()
+  const input=root.querySelector<HTMLInputElement>('#delegate-password')!
+  expect(input.disabled).toBe(false)
+  reject({code:'EXECUTOR_PROTOCOL'});await settle()
+  expect(root.querySelector('[role=alert]')).not.toBeNull()
+  expect(input.disabled).toBe(false)
+ }finally{app.unmount();root.remove()}
+})
 // state badge, vertical form, one action row. the regression test: an approval to
 // give explains itself instead of a badge, and its button sits at the field.
 async function settings(status:CapabilityStatus,ctx?:{call<T>(method:string):Promise<T>}){

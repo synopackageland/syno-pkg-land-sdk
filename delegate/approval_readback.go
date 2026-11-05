@@ -27,6 +27,19 @@ func protectedApproval(c ExecutorClient) json.RawMessage {
 	}
 	return readProtectedApproval(dir, pkg)
 }
+
+// A protected comparison with a changed policy explains why a missing socket
+// awaits approval. An unchanged policy can be starting an INFO-anchored
+// executor upgrade without any new approval, so its diagnostics must not
+// bypass the normal start grace. This is a readiness hint, never a grant.
+func approvalPending(c ExecutorClient) bool {
+	var diff struct {
+		Old string `json:"old_policy_digest"`
+		New string `json:"new_policy_digest"`
+	}
+	return json.Unmarshal(protectedApproval(c), &diff) == nil && diff.Old != diff.New
+}
+
 func readProtectedApproval(dir, pkg string) json.RawMessage {
 	parent, err := os.OpenFile(dir, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
 	if err != nil {

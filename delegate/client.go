@@ -253,7 +253,9 @@ func decodeReply(line []byte, result any) error {
 // dial connects to the executor. A stopped package is APP_STOPPED at once,
 // before a dial: while it stops, its executor can hold the socket without
 // answering. A package start requested less than StartGrace ago waits for the
-// executor to listen, and ends APP_STARTING. Neither sent a byte.
+// executor to listen, and ends APP_STARTING. A protected policy comparison
+// indicating pending approval returns EXECUTOR_UNAVAILABLE without waiting
+// for a socket that cannot open until approval. Neither sent a byte.
 func (c *Client) dial(ctx context.Context) (net.Conn, error) {
 	if action, _ := c.lifecycle(); action == "stop" {
 		return nil, fail(CodeAppStopped)
@@ -268,6 +270,8 @@ func (c *Client) dial(ctx context.Context) (net.Conn, error) {
 		switch {
 		case action == "stop":
 			return nil, fail(CodeAppStopped)
+		case approvalPending(c):
+			return nil, fail(CodeExecutorUnavailable)
 		case action != "start":
 			return nil, err
 		case left <= 0 && waited:

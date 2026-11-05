@@ -33,6 +33,16 @@ only a regular, non-symlink file in a root-owned directory, rejects writable fil
 and returns it to administrators through `executor.status`. The CLI window accepts
 the explanation only when it matches the current package's pins.
 
+If the socket is absent and the protected comparison shows a changed policy,
+the client immediately reports the executor as unavailable for approval. A
+recent lifecycle `start` does not delay this result: `delegate.status` reports
+`needs-admin-approval`, and `executor.status` returns the paused state with the
+comparison visible to administrators. An explicit stop still takes precedence.
+An unchanged policy retains the normal start grace, including INFO-anchored
+executor upgrades, and a listening executor always supplies its own status.
+The password field stays editable during status reloads and locks only while
+approval is being submitted; loading remains visible on the settings section.
+
 This file is diagnostic data, never a grant, task inventory or handover input.
 No approval, digest, scheduler, PasswordConfirm or root execution rule uses it.
 Missing, oversized or unverifiable diagnostics fall back to an explicit unknown
