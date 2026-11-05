@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.50.16
+
+- At desktop and tablet widths, `AppShell` keeps the App name in DSM's standalone header clear of the account button: a name that would run under it ends with an ellipsis 12px before the button, on DSM 7.3 and 7.4. Apps can drop their own header workaround
+- With less than an icon's width free the name shows no text, only the App icon; the full name stays the window's accessible name and, while cut, its tooltip
+- The fit follows window resizes and DSM filling in the account button late, measured once per animation frame without timers
+- Names that fit, windows without the account button and the mobile layout keep DSM's header exactly as before
+- Reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.50.15
 
 - On mobile, tapping the account icon in DSM's standalone header now shows the signed-in DSM user name as a small non-interactive heading above Help, on DSM 7.3 and 7.4; DSM's menu shows no user name by itself

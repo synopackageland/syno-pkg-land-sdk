@@ -13,7 +13,7 @@ import {AppLayout, AppRoot, AppSidebar, AppSidebarUser, AppToolbar, Callout, Ico
 import {isFullPage, type ShellContext} from '../context'
 import {appRefusal} from '../authorization/refusal'
 import {shellCopy} from './i18n'
-import {fitPortalHeader, readPortalChrome, type PortalChrome} from './portal-chrome'
+import {fitPortalHeader, readPortalChrome, watchPortalName, type PortalChrome} from './portal-chrome'
 import {uiLocale} from '../i18n'
 import {fillState, hasContent, rendersContent, rendersOwnContent} from './slot-content'
 import type {ShellPage} from './pages'
@@ -136,6 +136,8 @@ watch([fullPage,layout], (_, __, onCleanup) => {
     undoFit=fitPortalHeader(root, root.getAttribute('data-ui-layout-mode')==='mobile')
   }
   read()
+  // At wider layouts a long App name ends before DSM's account button.
+  const stopName=watchPortalName(root)
   const mode=new MutationObserver(read)
   mode.observe(root,{attributes:true,attributeFilter:['data-ui-layout-mode']})
   // DSM finishes its header after mounting the App. Watch host changes too;
@@ -146,7 +148,7 @@ watch([fullPage,layout], (_, __, onCleanup) => {
   observer.observe(root.ownerDocument.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style','hidden'],characterData:true})
   const view=root.ownerDocument.defaultView
   view?.addEventListener('resize',read)
-  onCleanup(()=>{observer.disconnect();mode.disconnect();view?.removeEventListener('resize',read);undoFit()})
+  onCleanup(()=>{observer.disconnect();mode.disconnect();view?.removeEventListener('resize',read);undoFit();stopName()})
 }, {flush:'post',immediate:true})
 const user = computed(() => !portalChrome.value.user && pageCtx.value?.user?.name ? pageCtx.value.user : undefined)
 // Where DSM draws no account (ui.banner: hidden), the shell's account also signs out.
@@ -309,6 +311,16 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
   box-sizing: border-box; inline-size: 32px; block-size: 32px; margin: -6px; padding: 0; overflow: hidden; white-space: nowrap; text-indent: 100%; cursor: pointer;
   /* DSM's text colour through the icon's shape: the header is not themed by the UI. */
   background: currentColor; -webkit-mask: center / 20px 20px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Ccircle cx='12' cy='10' r='3'/%3E%3Cpath d='M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662'/%3E%3C/svg%3E"); mask: center / 20px 20px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Ccircle cx='12' cy='10' r='3'/%3E%3Cpath d='M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662'/%3E%3C/svg%3E");
+}
+/* Wider layouts: watchPortalName marks the window while the App name would
+   run under the account button. The name ends with an ellipsis 12px before
+   the button, or, with less than an icon's width left, draws no text; it
+   stays the element's text and its tooltip. A name that fits is untouched. */
+.sds-standalone-main-window[data-synopkgland-portal-name]:not([data-synopkgland-portal-mobile]) .sds-standalone-main-window-header-text > .x-window-header-text {
+  display: inline-block; box-sizing: border-box; max-inline-size: var(--synopkgland-portal-name-room, none); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; vertical-align: top;
+}
+.sds-standalone-main-window[data-synopkgland-portal-name="icon"]:not([data-synopkgland-portal-mobile]) .sds-standalone-main-window-header-text > .x-window-header-text {
+  box-sizing: content-box; inline-size: 0; max-inline-size: none; text-overflow: clip;
 }
 /* A non-interactive heading above DSM's items (Help, Sign out). DSM measures
    and places the menu before the SDK names it: the heading takes the menu's
