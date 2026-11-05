@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.50.14
+
+- In the UI's mobile layout (app root 640px or narrower), `AppShell` shows DSM's standalone header with the App icon only, without the App name, and the account as an icon; the account menu names the account at its top. Long App and account names no longer run under each other on phones
+- Keep DSM's standalone header unchanged at desktop widths, without the account button and outside a standalone main window
+- Reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.50.13
 
 - An approval check no longer waits on an executor that is paused for administrator approval
