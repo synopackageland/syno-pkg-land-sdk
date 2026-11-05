@@ -134,6 +134,11 @@ also hides its default account footer while DSM's account menu is visible;
 a custom `sidebar-footer` stays. Detection reads only the containing DSM
 standalone window's DOM, with no settings API or administrator permission.
 Hidden, missing or unrecognized banner markup keeps the shell's own chrome.
+In the UI's mobile layout (an app root 640px wide or narrower, AppLayout
+`data-ui-layout-mode="mobile"`) the shell also lays out that banner: it shows
+the App icon without the App name and the account as an icon, and the account
+menu names the account at its top. Wider layouts keep DSM's banner unchanged.
+The rules ship in `@synopackageland/sdk/vue/style.css`.
 
 An App whose own frame already names it and shows the account (a full-page
 web App) can drop DSM's banner with the CLI's `ui.banner: hidden` in

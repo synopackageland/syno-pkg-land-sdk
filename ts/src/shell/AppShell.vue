@@ -13,7 +13,7 @@ import {AppLayout, AppRoot, AppSidebar, AppSidebarUser, AppToolbar, Callout, Ico
 import {isFullPage, type ShellContext} from '../context'
 import {appRefusal} from '../authorization/refusal'
 import {shellCopy} from './i18n'
-import {readPortalChrome, type PortalChrome} from './portal-chrome'
+import {fitPortalHeader, readPortalChrome, type PortalChrome} from './portal-chrome'
 import {uiLocale} from '../i18n'
 import {fillState, hasContent, rendersContent, rendersOwnContent} from './slot-content'
 import type {ShellPage} from './pages'
@@ -128,11 +128,16 @@ const portalChrome = ref<PortalChrome>({brand:false,user:false})
 watch([fullPage,layout], (_, __, onCleanup) => {
   const root=layout.value?.$el
   if(!fullPage.value || !root) {portalChrome.value={brand:false,user:false};return}
+  let undoFit=()=>{}
   const read=()=>{
     const next=readPortalChrome(root)
     if(next.brand!==portalChrome.value.brand || next.user!==portalChrome.value.user) portalChrome.value=next
+    // In the UI's mobile layout DSM's header keeps only the App icon and an account icon.
+    undoFit=fitPortalHeader(root, root.getAttribute('data-ui-layout-mode')==='mobile')
   }
   read()
+  const mode=new MutationObserver(read)
+  mode.observe(root,{attributes:true,attributeFilter:['data-ui-layout-mode']})
   // DSM finishes its header after mounting the App. Watch host changes too;
   // ignore mutations inside the App to avoid observing our own rendering.
   const observer=new MutationObserver(records=>{
@@ -141,7 +146,7 @@ watch([fullPage,layout], (_, __, onCleanup) => {
   observer.observe(root.ownerDocument.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style','hidden'],characterData:true})
   const view=root.ownerDocument.defaultView
   view?.addEventListener('resize',read)
-  onCleanup(()=>{observer.disconnect();view?.removeEventListener('resize',read)})
+  onCleanup(()=>{observer.disconnect();mode.disconnect();view?.removeEventListener('resize',read);undoFit()})
 }, {flush:'post',immediate:true})
 const user = computed(() => !portalChrome.value.user && pageCtx.value?.user?.name ? pageCtx.value.user : undefined)
 // Where DSM draws no account (ui.banner: hidden), the shell's account also signs out.
@@ -288,4 +293,25 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
 .app-page-fill .app-page-content:has([data-ui-section-tabs-fill], [data-ui-settings-page]) > :deep(:not([data-ui-section-tabs-fill], [data-ui-settings-page]):not(:has([data-ui-section-tabs-fill], [data-ui-settings-page]))) { flex: none; }
 /* A tab that is not a SettingsPage scrolls under the strip. */
 .app-page-fill .app-page-content :deep(.ui-section-tabs-fill > .ui-tab-panel:not(:has(> [data-ui-settings-page]))) { overflow-y: auto; overscroll-behavior: contain; }
+</style>
+
+<style>
+/* DSM's standalone header sits outside the App root, so these rules are not
+   scoped. fitPortalHeader marks it in the UI's mobile layout only: the App
+   name gives way to its icon and the account button to an account icon; the
+   account name heads the account menu. Desktop widths are unchanged. */
+.sds-standalone-main-window[data-synopkgland-portal-mobile] .sds-standalone-main-window-header-text > .x-window-header-text {
+  display: inline-block; box-sizing: content-box; inline-size: 0; overflow: hidden; white-space: nowrap; vertical-align: top;
+}
+.sds-standalone-main-window[data-synopkgland-portal-mobile] .sds-standalone-main-window-header__toolbar__btn .x-btn-arrow { padding-right: 0 !important; }
+.sds-standalone-main-window[data-synopkgland-portal-mobile] .sds-standalone-main-window-header__toolbar__btn .x-btn-arrow::after { display: none; }
+.sds-standalone-main-window[data-synopkgland-portal-mobile] .sds-standalone-main-window-header__toolbar__btn .x-btn-text {
+  box-sizing: border-box; inline-size: 32px; block-size: 32px; margin: -6px; padding: 0; overflow: hidden; white-space: nowrap; text-indent: 100%; cursor: pointer;
+  /* DSM's text colour through the icon's shape: the header is not themed by the UI. */
+  background: currentColor; -webkit-mask: center / 20px 20px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Ccircle cx='12' cy='10' r='3'/%3E%3Cpath d='M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662'/%3E%3C/svg%3E"); mask: center / 20px 20px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Ccircle cx='12' cy='10' r='3'/%3E%3Cpath d='M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662'/%3E%3C/svg%3E");
+}
+.sds-standalone-main-window-header__toolbar__menu[data-synopkgland-portal-account]::before {
+  content: attr(data-synopkgland-portal-account); display: block; box-sizing: border-box; max-inline-size: 100%; padding: 8px 16px;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--ui-font-size-sm, 13px); font-weight: 700; line-height: 20px;
+}
 </style>

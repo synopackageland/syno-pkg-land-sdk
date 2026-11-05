@@ -109,6 +109,28 @@ test('a visible DSM portal header removes duplicate branding and the default acc
  app.unmount();fixture.remove();vi.restoreAllMocks()
 })
 
+// The UI's mobile layout (AppLayout data-ui-layout-mode="mobile") marks DSM's
+// header for the icon-only stylesheet rules; unmounting clears the marks.
+test('the shell marks the portal header only while its layout is mobile',async()=>{
+ const {portalFixture}=await import('./portal-chrome.test-fixture')
+ const fixture=portalFixture()
+ vi.spyOn(HTMLElement.prototype,'getBoundingClientRect').mockReturnValue({width:1400,height:39} as DOMRect)
+ const root=document.createElement('div');fixture.main.append(root)
+ const app=createApp({render:()=>h(AppShell,{locale:'en',modelValue:'home',pages:[{id:'home',title:'Home'}],ctx:{fullPage:true as const,displayName:'Portal App',user:{name:'alice',isAdmin:false}}})})
+ app.mount(root);await nextTick();await nextTick()
+ const layout=root.querySelector<HTMLElement>('[data-ui-layout-mode]')!
+ const marked=()=>fixture.main.hasAttribute('data-synopkgland-portal-mobile')
+ expect(marked()).toBe(layout.getAttribute('data-ui-layout-mode')==='mobile')
+ layout.setAttribute('data-ui-layout-mode','mobile');await new Promise(resolve=>setTimeout(resolve,0))
+ expect(marked()).toBe(true)
+ layout.setAttribute('data-ui-layout-mode','web');await new Promise(resolve=>setTimeout(resolve,0))
+ expect(marked()).toBe(false)
+ layout.setAttribute('data-ui-layout-mode','mobile');await new Promise(resolve=>setTimeout(resolve,0))
+ app.unmount()
+ expect(marked()).toBe(false)
+ fixture.remove();vi.restoreAllMocks()
+})
+
 test.each([false,true])('portal detection preserves custom footer and respects fullPage=%s',async fullPage=>{
  const {portalFixture}=await import('./portal-chrome.test-fixture')
  const fixture=portalFixture()
