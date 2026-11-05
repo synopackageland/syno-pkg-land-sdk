@@ -297,8 +297,7 @@ tested on its own provides `PageInfoTarget` as it does `PageActionsTarget`.
 horizontal bar in web and DSM window layouts. The `sidebar-footer` slot (or
 the account supplied by `ctx`) follows the navigation; mobile keeps its drawer.
 Omit `navigation` to keep the installed UI's default sidebar, or pass
-`navigation="sidebar"` explicitly. Use a matching `@synopackageland/ui` release
-with top navigation support. Sidebar width and collapse preferences are unused in top mode.
+`navigation="sidebar"` explicitly. Sidebar width and collapse preferences are unused in top mode.
 
 ```vue
 <AppShell v-model="page" :locale="ctx.locale" :ctx="ctx" :pages="pages" navigation="top" />
@@ -316,9 +315,12 @@ surface at every width (web, DSM window and mobile):
 <AppShell v-model="page" :locale="ctx.locale" :ctx="ctx" :pages="pages" page-surface="none" />
 ```
 
-`none` requires a matching `@synopackageland/ui` release with no-surface support.
-Other shell spacing,
-including the body bottom padding, stays unchanged.
+Other shell spacing, including the body bottom padding, stays unchanged.
+
+On a phone, `AppLayout`'s bar shows the current page's title (`title`, or the
+built-in page's name), also for a page whose title is otherwise only in the
+sidebar. A page with `header: false` names itself: the bar takes the title of
+its own `PageHeader`.
 
 Moving to another page starts it at the top; `keep-scroll` keeps the
 position. The `toolbar` slot sits above the page (in `AppLayout`'s toolbar,

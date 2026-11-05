@@ -39,7 +39,7 @@ export interface AppShellPage {
 }
 export type AppShellPageEntry = ShellPage | AppShellPage
 
-/** PageContent surface for both the current page and the denied page. 'none' needs UI 0.12.5+. */
+/** PageContent surface for both the current page and the denied page. */
 export type AppShellPageSurface = 'auto' | 'flat' | 'card' | 'none'
 
 /** The page a denied shell shows; each field falls back to the shell's own words. */
