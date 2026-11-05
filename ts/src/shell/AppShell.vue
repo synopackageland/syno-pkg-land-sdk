@@ -310,8 +310,13 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
   /* DSM's text colour through the icon's shape: the header is not themed by the UI. */
   background: currentColor; -webkit-mask: center / 20px 20px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Ccircle cx='12' cy='10' r='3'/%3E%3Cpath d='M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662'/%3E%3C/svg%3E"); mask: center / 20px 20px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Ccircle cx='12' cy='10' r='3'/%3E%3Cpath d='M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662'/%3E%3C/svg%3E");
 }
+/* A non-interactive heading above DSM's items (Help, Sign out). DSM measures
+   and places the menu before the SDK names it: the heading takes the menu's
+   width (inline-size 0, min 100%) instead of widening it past the button, and
+   a long name wraps so it shows in full. */
 .sds-standalone-main-window-header__toolbar__menu[data-synopkgland-portal-account]::before {
-  content: attr(data-synopkgland-portal-account); display: block; box-sizing: border-box; max-inline-size: 100%; padding: 8px 16px;
-  overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--ui-font-size-sm, 13px); font-weight: 700; line-height: 20px;
+  content: attr(data-synopkgland-portal-account); display: block; box-sizing: border-box; inline-size: 0; min-inline-size: 100%; padding: 8px 16px 6px;
+  white-space: normal; overflow-wrap: anywhere; font-size: var(--ui-font-size-sm, 13px); font-weight: 700; line-height: 20px;
+  cursor: default; pointer-events: none; box-shadow: 0 1px 0 color-mix(in srgb, currentColor 12%, transparent);
 }
 </style>

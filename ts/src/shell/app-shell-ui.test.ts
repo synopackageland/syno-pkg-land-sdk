@@ -123,11 +123,20 @@ test('the shell marks the portal header only while its layout is mobile',async()
  expect(marked()).toBe(layout.getAttribute('data-ui-layout-mode')==='mobile')
  layout.setAttribute('data-ui-layout-mode','mobile');await new Promise(resolve=>setTimeout(resolve,0))
  expect(marked()).toBe(true)
+ // DSM renders the account menu into the body on the first tap: it is named then.
+ const menu=document.createElement('div');menu.className='x-menu sds-standalone-main-window-header__toolbar__menu'
+ menu.innerHTML='<ul class="x-menu-list"><a class="x-menu-list-item sds-standalone-help">Help</a></ul>'
+ document.body.append(menu);await new Promise(resolve=>setTimeout(resolve,0))
+ expect(menu.getAttribute('data-synopkgland-portal-account')).toBe('alice')
+ expect(fixture.account.querySelector('button')?.textContent).toBe('alice')
  layout.setAttribute('data-ui-layout-mode','web');await new Promise(resolve=>setTimeout(resolve,0))
  expect(marked()).toBe(false)
+ expect(menu.hasAttribute('data-synopkgland-portal-account')).toBe(false)
  layout.setAttribute('data-ui-layout-mode','mobile');await new Promise(resolve=>setTimeout(resolve,0))
  app.unmount()
  expect(marked()).toBe(false)
+ expect(menu.hasAttribute('data-synopkgland-portal-account')).toBe(false)
+ menu.remove()
  fixture.remove();vi.restoreAllMocks()
 })
 

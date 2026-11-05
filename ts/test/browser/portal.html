@@ -2,8 +2,9 @@
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Portal header</title>
 <style>
-/* A stand-in for DSM's standalone main window (ExtJS markup and the header
-   rules that place the App name and the account button). */
+/* A stand-in for DSM 7.3/7.4's standalone main window: its ExtJS markup (the
+   account toolbar is the window's child before the header) and the header
+   rules that place the App name and the account button. */
 html,body{height:100%;margin:0;font-family:Arial,sans-serif}
 .sds-standalone-main-window{position:absolute;inset:0;display:flex;flex-direction:column;background:#fff}
 .sds-standalone-main-window .x-window-header{position:relative;flex:none;height:40px;box-sizing:border-box;background-repeat:no-repeat;background-position:4px center;background-size:24px 24px;border-bottom:1px solid #e3e7eb}
@@ -20,13 +21,14 @@ html,body{height:100%;margin:0;font-family:Arial,sans-serif}
 .sds-standalone-main-window .x-window-body{position:absolute;inset:0}
 .x-menu{position:absolute;z-index:20;background:#fff;border:1px solid #c6d4e0;box-shadow:0 2px 8px rgba(0,0,0,.15);font:13px Arial,sans-serif;min-width:120px}
 .x-menu-list{list-style:none;margin:0;padding:4px 0}
-.x-menu-list-item{padding:6px 16px;color:#414b55;white-space:nowrap}
+.x-menu-list-item{display:block;padding:4px 16px;color:#414b55;white-space:nowrap;text-decoration:none}
+.x-hide-display{display:none!important}
 </style></head>
 <body>
 <div class="x-window sds-window sds-window-v5 sds-standalone-main-window">
+ <div class="sds-standalone-main-window-header" id="toolbar"></div>
  <div class="x-window-header x-panel-icon" id="header">
   <div class="sds-standalone-main-window-header-text"><span class="x-window-header-text" id="name"></span></div>
-  <div class="sds-standalone-main-window-header" id="toolbar"></div>
  </div>
  <div class="x-window-bwrap"><div class="x-window-body"><div id="app" class="dsmapp-vue-root" style="height:100%"></div></div></div>
 </div>

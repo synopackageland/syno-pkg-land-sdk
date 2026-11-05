@@ -20,16 +20,20 @@ if(user){
  button.textContent=user
  let menu: HTMLElement|undefined
  button.addEventListener('click',()=>{
+  // As SYNO.ux.Menu: rendered into the body on the first open, the list's
+  // height fixed and the menu placed by its size at that moment ('tr-br').
   if(!menu){
    menu=document.createElement('div')
-   menu.className='x-menu x-menu-floating x-layer sds-standalone-main-window-header__toolbar__menu syno-ux-menu'
-   menu.innerHTML='<ul class="x-menu-list"><li class="x-menu-list-item sds-standalone-help">Help</li></ul>'
+   menu.className='x-menu x-menu-floating x-layer sds-standalone-main-window-header__toolbar__menu syno-ux-menu syno-ux-button-menu'
+   menu.innerHTML='<a class="x-menu-focus" tabindex="-1"></a><ul class="x-menu-list" role="menu"><a class="x-menu-list-item sds-standalone-logout x-hide-display" href="#" role="menuitem"><div class="x-menu-item"><span class="x-menu-item-text">Sign out</span></div></a><a class="x-menu-list-item sds-standalone-help" href="#" role="menuitem"><div class="x-menu-item"><span class="x-menu-item-text">Help</span></div></a></ul>'
    menu.style.visibility='hidden'
    document.body.append(menu)
   }
   const shown=menu.style.visibility!=='hidden'
+  const list=menu.querySelector<HTMLElement>('.x-menu-list')!
+  list.style.height='auto';list.style.height=`${list.offsetHeight}px`
   const rect=button.closest('.x-btn')!.getBoundingClientRect()
-  menu.style.top=`${rect.bottom+4}px`;menu.style.right=`${Math.max(4,innerWidth-rect.right)}px`
+  menu.style.top=`${rect.bottom}px`;menu.style.left=`${rect.right-menu.offsetWidth}px`
   menu.style.visibility=shown?'hidden':'visible'
  })
 }

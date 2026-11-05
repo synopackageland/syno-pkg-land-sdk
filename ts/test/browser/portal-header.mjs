@@ -26,6 +26,7 @@ const names={
 const cases=[
  ...[360,390,1280].flatMap(width=>Object.keys(names).map(locale=>({width,locale,user:'administrator'}))),
  {width:360,locale:'en',user:''},
+ {width:360,locale:'en',user:'household.media.administrator.account'},
  {width:1280,locale:'en',user:''},
 ]
 const header=page=>page.evaluate(()=>{
@@ -49,7 +50,7 @@ try{
   await page.waitForSelector('[data-ready]')
   await page.waitForTimeout(300)
   assert.deepEqual(errors,[])
-  const label=`${width}-${locale}${user?'':'-no-account'}`
+  const label=`${width}-${locale}${user?user==='administrator'?'':'-long-account':'-no-account'}`
   const before=await header(page)
   if(!baseline){
    assert.equal(before.mode,mobile?'mobile':'web',label)
@@ -81,7 +82,14 @@ try{
    await page.locator('.sds-standalone-main-window-header__toolbar__btn .x-btn-text').click()
    await page.waitForTimeout(150)
    const heading=await page.evaluate(()=>{const menu=document.querySelector('.sds-standalone-main-window-header__toolbar__menu');return menu&&getComputedStyle(menu,'::before').content})
-   if(!baseline)assert.equal(heading,mobile?JSON.stringify(user):'none',`${label}: account menu heading`)
+   if(!baseline){
+    assert.equal(heading,mobile?JSON.stringify(user):'none',`${label}: account menu heading`)
+    // The heading sits above Help inside the menu, and the menu stays on screen.
+    const menu=await page.evaluate(()=>{const m=document.querySelector('.sds-standalone-main-window-header__toolbar__menu'),r=m.getBoundingClientRect(),help=m.querySelector('.sds-standalone-help').getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,helpTop:help.top,helpBottom:help.bottom}})
+    assert.ok(menu.left>=0&&menu.right<=width,`${label}: menu on screen (${menu.left}..${menu.right})`)
+    assert.ok(menu.helpBottom<=menu.bottom+0.5,`${label}: Help inside the menu`)
+    if(mobile)assert.ok(menu.helpTop-menu.top>=30,`${label}: name above Help`)
+   }
    if(shots&&locale==='en')await page.screenshot({path:join(shots,`${baseline?'before':'after'}-${label}-menu.png`)})
    await page.locator('.sds-standalone-main-window-header__toolbar__btn .x-btn-text').click()
   }
