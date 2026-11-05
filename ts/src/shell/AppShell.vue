@@ -30,12 +30,12 @@ const props = defineProps<{
   // A full page (Portal/standalone) takes the web layout, a device-width
   // viewport and the account from it; a DSM window keeps its own. Both take
   // the brand: a window narrowed to the mobile layout shows it in the phone
-  // bar, where AppLayout would otherwise show DSM's document.title. With
+  // drawer, where AppLayout would otherwise show DSM's document.title. With
   // ctx.executor, every page shows ExecutorNotice while it is not approved;
   // with ctx.uiUpdate, UiUpdateNotice once the installed UI replaced this page's.
   ctx?: ShellContext
   wideLayout?: WideLayout
-  /** Forwarded to AppLayout; omitted keeps its sidebar default. 'top' needs UI 0.13.1+. */
+  /** Forwarded to AppLayout; omitted keeps its sidebar default. */
   navigation?: 'sidebar' | 'top'
   sidebarStorageKey?: string
   brandName?: string
@@ -44,7 +44,7 @@ const props = defineProps<{
   // A shell of only the built-in pages always keeps it, as it always did.
   keepScroll?: boolean
   pageWidth?: 'fill' | 'readable' | (string & {})
-  /** Forwarded to both PageContent branches; omitted keeps the UI default. 'none' needs UI 0.12.5+. */
+  /** Forwarded to both PageContent branches; omitted keeps the UI default. */
   pageSurface?: AppShellPageSurface
   // The account may not use the App: one page says so in place of the App's pages.
   denied?: boolean | AppShellDenied
@@ -63,9 +63,6 @@ function onBrand(event: MouseEvent) {
   if(!event.defaultPrevented && first) emit('update:modelValue', first.id)
 }
 const copy = computed(() => shellCopy(props.locale))
-// Older supported UI declarations do not include 'none'. Forward it unchanged:
-// UI 0.12.5+ supplies its rendering; leave the default to the installed UI.
-const contentSurface = computed(() => props.pageSurface as InstanceType<typeof PageContent>['$props']['surface'])
 const pages = computed(() => resolvePages(props.pages, copy.value))
 const groups = computed(() => sidebarGroups(pages.value))
 const current = computed(() => pages.value.find(page => page.id === props.modelValue))
@@ -92,6 +89,9 @@ watchEffect(onCleanup => {
 }, {flush: 'post'})
 const fill = computed(() => !!props.loading || page.value?.fill === true || (page.value?.fill !== false && detected.value.fill))
 const title = computed(() => page.value?.title ?? copy.value[props.modelValue as ShellPage] ?? copy.value.status)
+// The phone bar names the current page. A page that draws its own header names
+// itself: AppLayout reads that PageHeader's title.
+const barTitle = computed(() => headerMode.value === 'own' ? undefined : title.value)
 const scroller = useTemplateRef<{$el: HTMLElement}>('scroller')
 const ownPages = computed(() => props.pages.some(page => typeof page !== 'string'))
 watch(() => props.modelValue, () => {
@@ -181,12 +181,12 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
 <template>
   <component :is="appRoot ? AppRoot : Bare" v-bind="appRoot ? {modalScope: 'app', dialogBounds: inWindow ? 'viewport' : 'app', style: 'height: 100%;', onActivate: toFront} : {}">
   <component :is="appRoot ? ConfigProvider : Bare" v-bind="appRoot ? {locale: uiLocale(locale)} : {}">
-  <PageContent v-if="denied" class="app-denied" :width="pageWidth" :surface="contentSurface">
+  <PageContent v-if="denied" class="app-denied" :width="pageWidth" :surface="pageSurface">
     <PageHeader v-if="denied.header !== false" :title="denied.title ?? refusal?.title ?? copy.deniedTitle" />
     <slot name="denied"><Callout tone="danger"><span role="alert">{{ denied.message ?? refusal?.message ?? copy.deniedMessage }}</span></Callout></slot>
   </PageContent>
   <AppLayout v-else ref="layout" :class="['app-shell', {'app-shell-fill': fill, 'app-shell-portal-brand': portalChrome.brand}]" min-height="0" :wide-layout="wideLayout ?? (fullPage ? 'web' : 'window')" :sidebar-storage-key="sidebarStorageKey"
-    :navigation="navigation" :brand-name="brandName ?? ctx?.displayName" :brand-icon="brandIcon ?? ctx?.appIcon" @brand="onBrand">
+    :navigation="navigation" :title="barTitle" :brand-name="brandName ?? ctx?.displayName" :brand-icon="brandIcon ?? ctx?.appIcon" @brand="onBrand">
     <template #sidebar>
       <AppSidebar :model-value="modelValue" :groups="groups" @update:model-value="emit('update:modelValue', $event)" />
     </template>
@@ -202,7 +202,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
         </AppToolbar>
       </div>
     </template>
-    <PageContent ref="scroller" :class="['app-page', {'app-page-fill': fill, 'app-page-untitled': headerMode === 'hidden', 'app-page-flush': detected.footer}]" :width="pageWidth" :surface="contentSurface">
+    <PageContent ref="scroller" :class="['app-page', {'app-page-fill': fill, 'app-page-untitled': headerMode === 'hidden', 'app-page-flush': detected.footer}]" :width="pageWidth" :surface="pageSurface">
       <PageHeader v-if="headerMode === 'shown'" :title="title">
         <template #meta><span ref="page-info" class="app-page-info" /><slot name="meta" :page="modelValue" /></template>
         <template #actions><div ref="page-actions" class="app-page-actions" /><slot v-if="!loading" name="actions" :page="modelValue" /></template>

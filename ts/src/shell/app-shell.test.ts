@@ -13,7 +13,7 @@ vi.mock('@synopackageland/ui',async importOriginal=>{
  const {defineComponent,h}=await import('vue')
  return {...ui,
   ensureDeviceViewport:()=>{seen.viewport++;return ()=>{seen.restored++}},
-  AppLayout:defineComponent({props:['wideLayout','navigation','sidebarStorageKey','brandName','brandIcon','minHeight'],emits:['brand'],setup(props,{slots,emit}){
+  AppLayout:defineComponent({props:['wideLayout','navigation','sidebarStorageKey','brandName','brandIcon','minHeight','title'],emits:['brand'],setup(props,{slots,emit}){
    return ()=>{
     seen.layout={...props};seen.footer=!!slots['sidebar-footer']
     return h('section',[h('button',{'data-test-brand':'',onClick:(event:MouseEvent)=>emit('brand',event)},'App'),slots.sidebar?.(),slots['sidebar-footer']&&h('footer',slots['sidebar-footer']()),slots.toolbar&&h('header',slots.toolbar()),slots.default?.()])
@@ -218,6 +218,31 @@ test('a page that draws its own header gets no title from the shell',async()=>{
  expect(shell.root.querySelector('h1,h2')).toBeNull()
  expect(shell.root.querySelector('.app-page')!.classList.contains('app-page-untitled')).toBe(false)
  shell.unmount()
+})
+
+// The phone bar shows the page title, which otherwise only the sidebar shows.
+test.each([
+ ['a built-in page',{modelValue:'status',pages:['status','background']},'Status'],
+ ['a hidden title',{modelValue:'scan',pages:[{id:'home',title:'Home'},{id:'scan',title:'Scanning',hidden:true}]},'Scanning'],
+ ['a shown header',{modelValue:'home',pages:[{id:'home',title:'Home',header:true}]},'Home'],
+ ['a page that draws its own header',{modelValue:'home',pages:[{id:'home',title:'Home',header:false}]},undefined],
+])('the phone bar takes the title of %s',async(_,props,title)=>{
+ const shell=await mount(props)
+ expect(seen.layout.title).toBe(title)
+ shell.unmount()
+})
+
+test('the phone bar follows the current page',async()=>{
+ const page=ref('home')
+ const pages=[{id:'home',title:'Home'},{id:'list',title:'Orders'}]
+ const root=document.createElement('div');document.body.append(root)
+ const app=createApp({render:()=>h(AppShell,{locale:'en',modelValue:page.value,pages})})
+ app.mount(root);await nextTick()
+ try{
+  expect(seen.layout.title).toBe('Home')
+  page.value='list';await nextTick()
+  expect(seen.layout.title).toBe('Orders')
+ }finally{app.unmount();root.remove()}
 })
 
 // The actions and notes a header would hold stay reachable without it.

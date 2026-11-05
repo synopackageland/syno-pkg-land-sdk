@@ -26,8 +26,10 @@ test.each([
   const top=navigation==='top'&&!mobile
   expect(layout.getAttribute('data-ui-navigation')).toBe(top?'top':null)
   expect(layout.getAttribute('data-ui-layout-mode')).toBe(mobile?'mobile':fullPage?'web':'window')
-  expect(root.querySelector('nav')?.getAttribute('data-ui-navigation')).toBe(top?'top':null)
   expect(root.querySelector('[data-ui-mobile-menu]')!==null).toBe(mobile)
+  // A phone shows the page in its bar and renders the navigation in the drawer once it opens.
+  if(mobile) expect(root.querySelector('[data-ui-mobile-title]')?.textContent).toBe('Home')
+  else expect(root.querySelector('nav')?.getAttribute('data-ui-navigation')).toBe(top?'top':null)
   if(top){
    if(fullPage) expect(root.querySelector('[data-ui-sidebar-footer]')?.textContent).toContain('alice')
    else expect(root.querySelector('[data-ui-sidebar-footer]')).toBeNull()
@@ -35,13 +37,17 @@ test.each([
   }
   if(mobile){
    root.querySelector<HTMLButtonElement>('[data-ui-mobile-menu]')!.click();await nextTick()
-   expect(root.querySelector('[role="dialog"]')?.getAttribute('aria-hidden')).not.toBe('true')
+   expect(document.querySelector('[data-ui-nav-drawer]')?.getAttribute('data-state')).toBe('open')
+   expect(document.querySelector('[data-ui-nav-drawer] nav')?.getAttribute('data-ui-navigation')).toBeNull()
   }
-  const logs=Array.from(root.querySelectorAll<HTMLElement>('nav button')).find(button=>button.textContent?.includes('Logs'))!
+  const logs=Array.from(document.querySelectorAll<HTMLElement>('nav button')).find(button=>button.textContent?.includes('Logs'))!
   logs.click();await nextTick();await nextTick()
   expect(page.value).toBe('logs')
   expect(root.querySelector('h1.app-page-title')?.textContent).toContain('Logs')
-  if(mobile) expect(root.querySelector('[role="dialog"]')?.getAttribute('aria-hidden')).toBe('true')
+  if(mobile){
+   expect(root.querySelector('[data-ui-mobile-title]')?.textContent).toBe('Logs')
+   expect(document.querySelector('[data-ui-nav-drawer]')?.getAttribute('data-state')??'closed').toBe('closed')
+  }
  }finally{app.unmount();root.remove();vi.restoreAllMocks()}
 })
 
@@ -64,9 +70,10 @@ test.each([undefined,true])('in the real page (header %s) the notices sit beside
  app.unmount();root.remove()
 })
 
-// A DSM window narrowed to the mobile layout shows a phone bar; DSM's own page
-// title ("vtnas - Synology NAS") and icon are not the App's.
-test('a narrow DSM window names the App in the phone bar, not the DSM page title',async()=>{
+// A DSM window narrowed to the mobile layout shows a phone bar with the page
+// and a drawer with the App; DSM's own page title ("vtnas - Synology NAS") and
+// icon are not the App's.
+test('a narrow DSM window shows the page in the phone bar and the App in its drawer, not the DSM page title',async()=>{
  document.title='vtnas - Synology NAS'
  vi.spyOn(HTMLElement.prototype,'getBoundingClientRect').mockReturnValue({width:390} as DOMRect)
  const host={platform:()=>({web:true,host:'dsm' as const,dsmStandalone:false,dsmLanguage:null,appLocale:null,systemVersion:null,fullVersion:null,theme:null})}
@@ -74,9 +81,12 @@ test('a narrow DSM window names the App in the phone bar, not the DSM page title
  const root=document.createElement('div');document.body.append(root)
  const app=createApp({render:()=>h(AppShell,{ctx,locale:'en',modelValue:'home',pages:[{id:'home',title:'Home'}]})})
  app.mount(root);await nextTick();await nextTick()
- expect(root.textContent).toContain('Connect')
- expect(root.textContent).not.toContain('Synology NAS')
- expect(root.querySelector('img')?.getAttribute('src')).toBe('webman/3rdparty/Connect/images/icon_64.png')
+ expect(root.querySelector('[data-ui-mobile-title]')?.textContent).toBe('Home')
+ root.querySelector<HTMLButtonElement>('[data-ui-mobile-menu]')!.click();await nextTick()
+ const brand=document.querySelector('[data-ui-nav-drawer] [data-ui-sidebar-brand]')!
+ expect(brand.textContent).toContain('Connect')
+ expect(document.body.textContent).not.toContain('Synology NAS')
+ expect(brand.querySelector('img')?.getAttribute('src')).toBe('webman/3rdparty/Connect/images/icon_64.png')
  app.unmount();root.remove();document.title='';vi.restoreAllMocks()
 })
 
@@ -147,14 +157,18 @@ test.each([1365,390])('the published UI brand selects home and allows an App ove
  })})
  try{
   app.mount(root);await nextTick();await nextTick()
-  const selector=width===390?'[data-ui-mobile-navigation] [data-ui-brand-action]':'[data-ui-layout-sidebar] [data-ui-brand-action]'
-  const brand=root.querySelector<HTMLButtonElement>(selector)!
-  expect(brand).not.toBeNull()
-  brand.click();await nextTick()
+  // A phone's brand heads its navigation drawer, which renders once it opens.
+  const brand=async()=>{
+   if(width===390){root.querySelector<HTMLButtonElement>('[data-ui-mobile-menu]')!.click();await nextTick()}
+   const button=document.querySelector<HTMLButtonElement>('[data-ui-layout-sidebar] [data-ui-brand-action]')
+   expect(button).not.toBeNull()
+   return button!
+  }
+  ;(await brand()).click();await nextTick()
   expect(page.value).toBe('home')
   expect(root.querySelector('h1.app-page-title')?.textContent).toContain('Home')
   page.value='logs';override.value=true;await nextTick()
-  brand.click();await nextTick()
+  ;(await brand()).click();await nextTick()
   expect(page.value).toBe('custom')
   expect(root.querySelector('h1.app-page-title')?.textContent).toContain('Custom home')
  }finally{app.unmount();root.remove();vi.restoreAllMocks()}
