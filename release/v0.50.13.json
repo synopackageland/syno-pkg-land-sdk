@@ -1,0 +1,44 @@
+{
+  "version": "0.50.13",
+  "executorVersion": "0.49.5",
+  "executorRootSDK": "v0.49.4-0.20261103141054-34994683c7b8",
+  "packages": {
+    "@synopackageland/sdk": "0.50.13",
+    "@synopackageland/app": "0.50.13",
+    "syno-pkg-land-app": "0.50.13",
+    "synopkgland_app": "0.50.13"
+  },
+  "executorDigests": {
+    "x86_64": "1a2dbb1c93a5d7cf5c4d5cafd2526c152e1cc21611649875db8e1c23837c2874",
+    "aarch64": "faabdeb1db9467d82997d8398e90203799c6ca5dddaaa383ed8bdb75534a6b2d",
+    "armv7": "6a0256fd2e2f093c154421bbc6323b715c324411b25c7794be92c73bbc59271f",
+    "lifecycle": {
+      "x86_64": "3b2720a4d093aeaa82674a75f16e3adc0bfaa76b8357e58ef591d1f15a73a5c0",
+      "aarch64": "f8a9bb0e69dd380d993fcc89cf19e9e3a526a76bdc24c97d53f01001953aad0d",
+      "armv7": "118edf2426e8aaeeea66d1b3b114c86d0aa680c02449755fc37b0d5a288dc430"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Focused delegate Go and TypeScript tests, native Go and Rust builds, Node/frontend type checking and builds, package content scans and generated release metadata checks cover this patch preparation. Executor sources and build inputs are unchanged since the previous SDK release; the immutable executor/v0.49.5 inventory is reused. No publication or NAS acceptance is implied."
+  },
+  "ui": {
+    "builtAgainst": "0.20.5",
+    "peer": ">=0.20.5 <0.21.0"
+  },
+  "node": {
+    "build": "24.22.1",
+    "compatibility": "22.23.4",
+    "minimum": "22"
+  },
+  "changes": [
+    "An approval check no longer waits on an executor that is paused for administrator approval.",
+    "Keep the password field usable while the approval status reloads.",
+    "Reuse the immutable executor/v0.49.5 release and its six digests."
+  ]
+}
