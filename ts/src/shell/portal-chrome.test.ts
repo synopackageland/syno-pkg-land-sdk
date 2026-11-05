@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import {afterEach,expect,test,vi} from 'vitest'
-import {readPortalChrome} from './portal-chrome'
+import {fitPortalHeader,portalAccountAttr,portalMobileAttr,readPortalChrome} from './portal-chrome'
 import {portalFixture} from './portal-chrome.test-fixture'
 afterEach(()=>{document.body.replaceChildren();vi.restoreAllMocks()})
 function fixture(){
@@ -35,4 +35,34 @@ test('desktop windows, detached roots and other apps do not borrow a portal head
 test('unreadable DOM fails open',()=>{
  const f=fixture();vi.spyOn(f.app,'closest').mockImplementation(()=>{throw new Error('unavailable')})
  expect(readPortalChrome(f.app)).toEqual({brand:false,user:false})
+})
+
+// In the UI's mobile layout DSM's header keeps only the App icon and an account
+// icon; the stylesheet keys on these marks, desktop widths get none.
+test('the mobile layout marks the portal header and names the account in its menu',()=>{
+ const f=fixture(),menu=document.createElement('div')
+ menu.className='x-menu sds-standalone-main-window-header__toolbar__menu';document.body.append(menu)
+ const undo=fitPortalHeader(f.app,true)
+ expect(f.main.hasAttribute(portalMobileAttr)).toBe(true)
+ expect(menu.getAttribute(portalAccountAttr)).toBe('alice')
+ undo()
+ expect(f.main.hasAttribute(portalMobileAttr)).toBe(false)
+ expect(menu.hasAttribute(portalAccountAttr)).toBe(false)
+ fitPortalHeader(f.app,false)
+ expect(f.main.hasAttribute(portalMobileAttr)).toBe(false)
+ expect(menu.hasAttribute(portalAccountAttr)).toBe(false)
+})
+test('a header without the account button still hides the name; no banner and other windows stay unmarked',()=>{
+ const f=fixture(),menu=document.createElement('div')
+ menu.className='sds-standalone-main-window-header__toolbar__menu';document.body.append(menu)
+ f.account.remove()
+ fitPortalHeader(f.app,true)
+ expect(f.main.hasAttribute(portalMobileAttr)).toBe(true)
+ expect(menu.hasAttribute(portalAccountAttr)).toBe(false)
+ f.main.classList.add('sds-standalone-main-window--no-banner')
+ fitPortalHeader(f.app,true)
+ expect(f.main.hasAttribute(portalMobileAttr)).toBe(false)
+ const other=document.createElement('div');document.body.append(other)
+ fitPortalHeader(other,true)
+ expect(document.querySelector(`[${portalMobileAttr}]`)).toBe(null)
 })

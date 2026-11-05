@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Portal header</title>
+<style>
+/* A stand-in for DSM 7.3/7.4's standalone main window: its ExtJS markup (the
+   account toolbar is the window's child before the header) and the header
+   rules that place the App name and the account button. */
+html,body{height:100%;margin:0;font-family:Arial,sans-serif}
+.sds-standalone-main-window{position:absolute;inset:0;display:flex;flex-direction:column;background:#fff}
+.sds-standalone-main-window .x-window-header{position:relative;flex:none;height:40px;box-sizing:border-box;background-repeat:no-repeat;background-position:4px center;background-size:24px 24px;border-bottom:1px solid #e3e7eb}
+.sds-standalone-main-window .x-window-header-text{line-height:20px;font-size:16px;font-weight:700;color:#282828;text-align:left;padding-left:20px;white-space:normal;cursor:default}
+.sds-standalone-main-window .x-window-header.x-panel-icon .x-window-header-text{padding-left:34px}
+.sds-standalone-main-window-header-text{padding:10px 0;line-height:20px}
+.sds-standalone-main-window .sds-standalone-main-window-header{position:absolute;top:0;right:0;box-sizing:border-box;padding:10px 18px;height:100%;z-index:2}
+.sds-standalone-main-window .sds-standalone-main-window-header__toolbar__btn{display:inline-block;border:none;padding:0;height:20px;line-height:20px;background:transparent}
+.sds-standalone-main-window .sds-standalone-main-window-header__toolbar__btn em{position:relative;display:block;font-style:normal}
+.sds-standalone-main-window .sds-standalone-main-window-header__toolbar__btn .x-btn-text{height:inherit;line-height:inherit;padding:0;border:0;background:none;font:13px Arial,sans-serif;color:#282828}
+.sds-standalone-main-window .sds-standalone-main-window-header__toolbar__btn .x-btn-arrow{padding-right:24px}
+.sds-standalone-main-window .sds-standalone-main-window-header__toolbar__btn .x-btn-arrow:after{content:'';position:absolute;top:-2px;right:0;width:24px;height:24px;background:center/10px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0h10L5 6z' fill='%23414b55'/%3E%3C/svg%3E")}
+.sds-standalone-main-window .x-window-bwrap{flex:1 1 auto;min-height:0;position:relative}
+.sds-standalone-main-window .x-window-body{position:absolute;inset:0}
+.x-menu{position:absolute;z-index:20;background:#fff;border:1px solid #c6d4e0;box-shadow:0 2px 8px rgba(0,0,0,.15);font:13px Arial,sans-serif;min-width:120px}
+.x-menu-list{list-style:none;margin:0;padding:4px 0}
+.x-menu-list-item{display:block;padding:4px 16px;color:#414b55;white-space:nowrap;text-decoration:none}
+.x-hide-display{display:none!important}
+</style></head>
+<body>
+<div class="x-window sds-window sds-window-v5 sds-standalone-main-window">
+ <div class="sds-standalone-main-window-header" id="toolbar"></div>
+ <div class="x-window-header x-panel-icon" id="header">
+  <div class="sds-standalone-main-window-header-text"><span class="x-window-header-text" id="name"></span></div>
+ </div>
+ <div class="x-window-bwrap"><div class="x-window-body"><div id="app" class="dsmapp-vue-root" style="height:100%"></div></div></div>
+</div>
+<script type="module" src="./portal.ts"></script>
+</body>
+</html>
