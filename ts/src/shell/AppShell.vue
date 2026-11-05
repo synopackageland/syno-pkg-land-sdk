@@ -9,7 +9,7 @@
 // is the current page.
 import {computed, provide, ref, useTemplateRef, watch, watchEffect, type FunctionalComponent} from 'vue'
 import {LogOut} from '@lucide/vue'
-import {AppLayout, AppRoot, AppSidebar, AppSidebarUser, AppToolbar, Callout, IconButton, ConfigProvider, LoadingArea, PageContent, PageHeader, ensureDeviceViewport, type WideLayout} from '@synopackageland/ui'
+import {AppLayout, AppRoot, AppSidebar, AppSidebarUser, AppToolbar, Callout, IconButton, ConfigProvider, LoadingArea, PageContent, PageHeader, ensureDeviceViewport, type DropdownMenuEntry, type WideLayout} from '@synopackageland/ui'
 import {isFullPage, type ShellContext} from '../context'
 import {appRefusal} from '../authorization/refusal'
 import {shellCopy} from './i18n'
@@ -20,6 +20,7 @@ import type {ShellPage} from './pages'
 import {resolvePages, sidebarGroups, type AppShellDenied, type AppShellPageEntry, type AppShellPageSurface} from './app-pages'
 import ExecutorNotice from '../delegate/ExecutorNotice.vue'
 import UiUpdateNotice from './UiUpdateNotice.vue'
+import ShellPhone from './ShellPhone.vue'
 import {PageActionsTarget} from './page-actions'
 import {PageInfoTarget, ShellLocale} from './page-info'
 
@@ -37,6 +38,10 @@ const props = defineProps<{
   wideLayout?: WideLayout
   /** Forwarded to AppLayout; omitted keeps its sidebar default. */
   navigation?: 'sidebar' | 'top'
+  /** Override the phone bar title; omitted keeps the current page title. */
+  title?: string
+  /** Phone bar actions, forwarded to AppLayout; emits headerAction on selection. */
+  headerActions?: DropdownMenuEntry[]
   sidebarStorageKey?: string
   brandName?: string
   brandIcon?: string
@@ -55,7 +60,7 @@ const props = defineProps<{
   // the page body shows a loading area and the App's actions wait for them.
   loading?: boolean
 }>()
-const emit = defineEmits<{'update:modelValue': [value: string]; brand: [event: MouseEvent]}>()
+const emit = defineEmits<{'update:modelValue': [value: string]; brand: [event: MouseEvent]; headerAction: [key: string]}>()
 // Apps can use @brand.prevent to replace the default home selection.
 function onBrand(event: MouseEvent) {
   emit('brand', event)
@@ -98,14 +103,16 @@ watch(() => props.modelValue, () => {
   if(ownPages.value && !props.keepScroll && scroller.value) scroller.value.$el.scrollTop = 0
 }, {flush:'post'})
 const slots = defineSlots<{
-  default?: (scope: {page: string}) => unknown
-  actions?: (scope: {page: string}) => unknown
+  default?: (scope: {page: string; phone: boolean}) => unknown
+  actions?: (scope: {page: string; phone: boolean}) => unknown
   // Beside the page title, such as when a page was last scanned.
-  meta?: (scope: {page: string}) => unknown
-  toolbar?: (scope: {page: string}) => unknown
-  notices?: (scope: {page: string}) => unknown
-  'sidebar-footer'?: () => unknown
-  denied?: () => unknown
+  meta?: (scope: {page: string; phone: boolean}) => unknown
+  toolbar?: (scope: {page: string; phone: boolean}) => unknown
+  notices?: (scope: {page: string; phone: boolean}) => unknown
+  /** Forwarded only when supplied, so AppLayout retains its menu fallback. */
+  tabbar?: (scope: {page: string; phone: boolean}) => unknown
+  'sidebar-footer'?: (scope: {phone: boolean}) => unknown
+  denied?: (scope: {phone: boolean}) => unknown
 }>()
 const denied = computed<AppShellDenied | undefined>(() => props.denied === true ? {} : props.denied || undefined)
 const refusal = computed(() => appRefusal(denied.value, props.locale, props.brandName ?? props.ctx?.displayName))
@@ -181,39 +188,42 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
 <template>
   <component :is="appRoot ? AppRoot : Bare" v-bind="appRoot ? {modalScope: 'app', dialogBounds: inWindow ? 'viewport' : 'app', style: 'height: 100%;', onActivate: toFront} : {}">
   <component :is="appRoot ? ConfigProvider : Bare" v-bind="appRoot ? {locale: uiLocale(locale)} : {}">
+  <ShellPhone v-slot="{phone}">
   <PageContent v-if="denied" class="app-denied" :width="pageWidth" :surface="pageSurface">
     <PageHeader v-if="denied.header !== false" :title="denied.title ?? refusal?.title ?? copy.deniedTitle" />
-    <slot name="denied"><Callout tone="danger"><span role="alert">{{ denied.message ?? refusal?.message ?? copy.deniedMessage }}</span></Callout></slot>
+    <slot name="denied" :phone="phone"><Callout tone="danger"><span role="alert">{{ denied.message ?? refusal?.message ?? copy.deniedMessage }}</span></Callout></slot>
   </PageContent>
   <AppLayout v-else ref="layout" :class="['app-shell', {'app-shell-fill': fill, 'app-shell-portal-brand': portalChrome.brand}]" min-height="0" :wide-layout="wideLayout ?? (fullPage ? 'web' : 'window')" :sidebar-storage-key="sidebarStorageKey"
-    :navigation="navigation" :title="barTitle" :brand-name="brandName ?? ctx?.displayName" :brand-icon="brandIcon ?? ctx?.appIcon" @brand="onBrand">
+    :navigation="navigation" :title="props.title ?? barTitle" :header-actions="headerActions" @header-action="emit('headerAction', $event)" :brand-name="brandName ?? ctx?.displayName" :brand-icon="brandIcon ?? ctx?.appIcon" @brand="onBrand">
     <template #sidebar>
       <AppSidebar :model-value="modelValue" :groups="groups" @update:model-value="emit('update:modelValue', $event)" />
     </template>
     <template v-if="slots['sidebar-footer'] || user" #sidebar-footer>
-      <slot name="sidebar-footer"><div v-if="user" class="app-shell-account"><AppSidebarUser :name="user.name" :detail="user.isAdmin ? copy.administrator : copy.dsmUser" /><IconButton v-if="canSignOut" class="app-shell-sign-out" variant="ghost" :label="copy.signOut" @click="signOut"><LogOut :size="16" aria-hidden="true" /></IconButton></div></slot>
+      <slot name="sidebar-footer" :phone="phone"><div v-if="user" class="app-shell-account"><AppSidebarUser :name="user.name" :detail="user.isAdmin ? copy.administrator : copy.dsmUser" /><IconButton v-if="canSignOut" class="app-shell-sign-out" variant="ghost" :label="copy.signOut" @click="signOut"><LogOut :size="16" aria-hidden="true" /></IconButton></div></slot>
     </template>
+    <template v-if="slots.tabbar" #tabbar><slot name="tabbar" :page="modelValue" :phone="phone" /></template>
     <template v-if="slots.toolbar || headerMode !== 'shown'" #toolbar>
-      <slot name="toolbar" :page="modelValue" />
+      <slot name="toolbar" :page="modelValue" :phone="phone" />
       <div v-if="headerMode !== 'shown'" ref="page-bar" class="app-page-bar" :hidden="pageBarEmpty" data-app-page-bar>
         <AppToolbar>
-          <div class="app-page-slot app-page-meta"><span ref="page-info" class="app-page-slot app-page-info" /><slot name="meta" :page="modelValue" /></div>
-          <template #actions><div class="app-page-slot app-page-bar-actions"><div ref="page-actions" class="app-page-slot app-page-actions" /><slot v-if="!loading" name="actions" :page="modelValue" /></div></template>
+          <div class="app-page-slot app-page-meta"><span ref="page-info" class="app-page-slot app-page-info" /><slot name="meta" :page="modelValue" :phone="phone" /></div>
+          <template #actions><div class="app-page-slot app-page-bar-actions"><div ref="page-actions" class="app-page-slot app-page-actions" /><slot v-if="!loading" name="actions" :page="modelValue" :phone="phone" /></div></template>
         </AppToolbar>
       </div>
     </template>
     <PageContent ref="scroller" :class="['app-page', {'app-page-fill': fill, 'app-page-untitled': headerMode === 'hidden', 'app-page-flush': detected.footer}]" :width="pageWidth" :surface="pageSurface">
       <PageHeader v-if="headerMode === 'shown'" :title="title">
-        <template #meta><span ref="page-info" class="app-page-info" /><slot name="meta" :page="modelValue" /></template>
-        <template #actions><div ref="page-actions" class="app-page-actions" /><slot v-if="!loading" name="actions" :page="modelValue" /></template>
+        <template #meta><span ref="page-info" class="app-page-info" /><slot name="meta" :page="modelValue" :phone="phone" /></template>
+        <template #actions><div ref="page-actions" class="app-page-actions" /><slot v-if="!loading" name="actions" :page="modelValue" :phone="phone" /></template>
       </PageHeader>
       <h1 v-else-if="headerMode === 'hidden'" class="app-page-title">{{ title }}</h1>
       <UiUpdateNotice v-if="ctx?.uiUpdate" :ctx="ctx" :locale="locale" />
       <ExecutorNotice v-if="ctx?.executor" :ctx="ctx" :locale="locale" />
-      <div v-if="hasContent(slots.notices?.({page: modelValue}))" ref="notices" class="app-notices" :hidden="noticesEmpty"><slot name="notices" :page="modelValue" /></div>
-      <div ref="content" class="app-page-content"><LoadingArea v-if="loading" :text="copy.loading" /><template v-else><component :is="page.component" v-if="page?.component" :key="page.id" /><slot :page="modelValue" /></template></div>
+      <div v-if="hasContent(slots.notices?.({page: modelValue, phone}))" ref="notices" class="app-notices" :hidden="noticesEmpty"><slot name="notices" :page="modelValue" :phone="phone" /></div>
+      <div ref="content" class="app-page-content"><LoadingArea v-if="loading" :text="copy.loading" /><template v-else><component :is="page.component" v-if="page?.component" :key="page.id" /><slot :page="modelValue" :phone="phone" /></template></div>
     </PageContent>
   </AppLayout>
+  </ShellPhone>
   </component>
   </component>
 </template>

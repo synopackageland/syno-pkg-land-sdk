@@ -317,10 +317,45 @@ surface at every width (web, DSM window and mobile):
 
 Other shell spacing, including the body bottom padding, stays unchanged.
 
-On a phone, `AppLayout`'s bar shows the current page's title (`title`, or the
+On a phone, `AppLayout`'s bar shows the current page entry's `title` (or the
 built-in page's name), also for a page whose title is otherwise only in the
 sidebar. A page with `header: false` names itself: the bar takes the title of
-its own `PageHeader`.
+its own `PageHeader`. The shell's `title` prop overrides that phone bar title
+without changing the page heading. `header-actions` takes the UI's
+`DropdownMenuEntry[]`: the phone bar shows the first action and puts the rest
+under More; `@header-action` receives the selected key. These props add no
+desktop or DSM window header.
+
+Place an `AppTabBar` in `#tabbar`; the shell forwards this slot to `AppLayout`,
+which renders it only in the mobile presentation. Its More tab opens the
+shell's navigation drawer and replaces the phone bar's menu button. Without
+a tabbar, or with `AppTabBar :more="false"`, the menu button remains available.
+The App controls its tabs and selection; bind the tab bar to the same page
+model as the shell.
+
+The `default`, `actions`, `meta`, `toolbar`, `notices` and `tabbar` slot scopes
+include `{page, phone}`. The `sidebar-footer` and `denied` scopes include
+`{phone}`. `phone` is the reactive boolean from the UI's `usePhone()`: true
+when the enclosing `AppRoot` is narrow and the pointer is coarse. A narrow
+window used with a mouse keeps it false, even though `AppLayout` can show its
+mobile navigation there. `app-root` supplies that root inside the shell; when
+omitted, use the App's existing enclosing `AppRoot`. A caller outside that
+root can use the slot parameter directly.
+
+```vue
+<AppShell app-root v-model="page" :ctx="ctx" :locale="ctx.locale" :pages="pages"
+  :title="phoneTitle" :header-actions="phoneActions" @header-action="runPhoneAction">
+  <template #tabbar="{page: current}">
+    <AppTabBar :items="tabs" :model-value="current" @update:model-value="page = $event" />
+  </template>
+  <template #default="{page: current, phone}">
+    <LibraryPage v-show="current === 'library'" :phone="phone" />
+  </template>
+</AppShell>
+```
+
+`AppTabBar` and its item types come from `@synopackageland/ui`. Existing
+`#actions` and `PageActions` retain their page bar or page header placement.
 
 Moving to another page starts it at the top; `keep-scroll` keeps the
 position. The `toolbar` slot sits above the page (in `AppLayout`'s toolbar,
