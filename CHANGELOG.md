@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.50.12
+
+- Forward `AppShell`'s `#tabbar` to `AppLayout` so `AppTabBar` More opens the mobile drawer without a duplicate menu button
+- Expose `title`, `headerActions` and `@header-action` for the phone bar, keeping the current page title by default
+- Add the reactive `phone` slot parameter from the UI's `usePhone()`, including callers outside the shell's `AppRoot`
+- Keep desktop and DSM window layouts unchanged and reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.50.11
 
 - Add actionable repair guidance to package hook logs when a same-name Compose project registration remains from an earlier failed installation, preserving volumes, data and images
