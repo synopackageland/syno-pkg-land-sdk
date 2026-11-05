@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.50.15
+
+- On mobile, tapping the account icon in DSM's standalone header now shows the signed-in DSM user name as a small non-interactive heading above Help, on DSM 7.3 and 7.4; DSM's menu shows no user name by itself
+- The heading keeps the menu's width and place beside the button and wraps a long name so it shows in full; the account button keeps its accessible name
+- Keep DSM's standalone header and account menu unchanged at desktop widths
+- Reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.50.14
 
 - In the UI's mobile layout (app root 640px or narrower), `AppShell` shows DSM's standalone header with the App icon only, without the App name, and the account as an icon; the account menu names the account at its top. Long App and account names no longer run under each other on phones
