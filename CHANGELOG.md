@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.50.13
+
+- An approval check no longer waits on an executor that is paused for administrator approval
+- Keep the password field usable while the approval status reloads
+
 ## 0.50.12
 
 - Forward `AppShell`'s `#tabbar` to `AppLayout` so `AppTabBar` More opens the mobile drawer without a duplicate menu button
