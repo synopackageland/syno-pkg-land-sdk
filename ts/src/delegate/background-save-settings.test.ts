@@ -204,6 +204,19 @@ test('the folder action reserves its place while scope permission loads',async()
  }finally{p.done()}
 })
 // the confirm button looked pressable while the approval ran.
+test('the approval password stays editable while its readback is pending',async()=>{
+ let read:(v:unknown)=>void=()=>{}
+ const p=await mount({admin:true,status:{state:'needs-admin-approval'},capability:{state:'needs-admin-approval'},scopeRead:new Promise(r=>{read=r})})
+ try{
+  const input=p.root.querySelector<HTMLInputElement>('#save-password')!
+  expect(input.disabled).toBe(false)
+  await p.type('#save-password','entered-during-reload')
+  read({state:'needs-admin-approval'});await settle()
+  expect(input.value).toBe('entered-during-reload')
+  expect(p.calls.authorize).toEqual([])
+ }finally{p.done()}
+})
+
 test('the confirm button shows it is working while the approval runs',async()=>{
  const p=await mount({admin:true,status:{state:'needs-admin-approval'},capability:{state:'needs-admin-approval'},authorize:()=>new Promise<CapabilityStatus>(()=>{})})
  try{
@@ -212,6 +225,7 @@ test('the confirm button shows it is working while the approval runs',async()=>{
   const submit=p.root.querySelector<HTMLButtonElement>('button[type=submit]')!
   expect(submit.disabled).toBe(true)
   expect(submit.getAttribute('data-loading')).not.toBeNull()
+  expect(p.root.querySelector<HTMLInputElement>('#save-password')!.disabled).toBe(true)
  }finally{p.done()}
 })
 // while Download Hub was stopped the section showed the approval

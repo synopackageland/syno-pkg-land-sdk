@@ -88,9 +88,9 @@ func executorControl(caller api.Caller, raw json.RawMessage, mailbox string) (an
 
 // The executor closes its socket while paused: the package is stopped, or an
 // upgrade changed the pins and awaits administrator approval. A stopped
-// package, and one that asked to start less than StartGrace ago, refuse with
-// APP_STOPPED or APP_STARTING, as the root services do; only a paused
-// executor answers its status.
+// package refuses with APP_STOPPED. A recent start without a protected pending
+// approval refuses with APP_STARTING, as the root services do; a paused
+// executor answers its status without waiting for approval to open the socket.
 func executorStatus(ctx context.Context, c ExecutorClient, mailbox string) (any, error) {
 	var status json.RawMessage
 	err := c.Call(ctx, "status", nil, nil, &status)
@@ -101,7 +101,7 @@ func executorStatus(ctx context.Context, c ExecutorClient, mailbox string) (any,
 		switch {
 		case action == "stop":
 			return nil, fail(CodeAppStopped)
-		case action == "start" && time.Since(at) < StartGrace:
+		case action == "start" && time.Since(at) < StartGrace && !approvalPending(c):
 			return nil, fail(CodeAppStarting)
 		case action == "start":
 			next = "The package is running: an administrator approves background access again in Administrator setup; the executor log names the cause."

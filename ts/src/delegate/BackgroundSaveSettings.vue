@@ -135,7 +135,7 @@ onBeforeUnmount(()=>{disposed=true})
     <p v-if="changing" class="save-help">{{ copy.changeHelp }}</p>
     <FormItem v-if="dynamic" :label="copy.folder" :description="consent?copy.approveHelp:undefined" data-save-row="folder"><Select id="save-scope" v-model="chosen" :options="options" :disabled="approving" /></FormItem>
     <FormItem :label="copy.password" :description="confirming?executorCopy.confirmingHelp:consent?executorCopy.passwordNote:undefined" :help="passwordError" :validate-status="passwordError?'error':undefined" validate-message-display-mode="text">
-     <Input id="save-password" v-model="password" type="password" autocomplete="current-password" :invalid="!!passwordError" :disabled="approving" />
+     <Input id="save-password" v-model="password" type="password" autocomplete="current-password" :invalid="!!passwordError" :disabled="confirming" />
      <template #after="{classes}"><Button :class="classes.afterItem" type="submit" variant="primary" :loading="confirming" :disabled="submitDisabled">{{ changing?copy.confirmChange:copy.approve }}</Button><Button v-if="changing" :class="classes.afterItem" type="button" variant="secondary" :disabled="approving" @click="cancelChange">{{ copy.cancelChange }}</Button></template>
     </FormItem>
    </Form>

@@ -47,7 +47,7 @@ defineExpose({refresh})
     <Form direction="vertical" class="executor-form" @submit.prevent="submit">
      <FormItem v-if="dynamic" :label="copy.scopeLabel" :description="copy.preselectionHelp"><Select id="delegate-scope" v-model="chosen" :options="options" :disabled="busy||error" /></FormItem>
      <FormItem :label="copy.password" :description="confirming?copy.confirmingHelp:copy.passwordNote" :help="passwordError" :validate-status="passwordError?'error':undefined" validate-message-display-mode="text">
-      <Input id="delegate-password" v-model="password" type="password" autocomplete="current-password" :invalid="!!passwordError" :disabled="busy||error" />
+      <Input id="delegate-password" v-model="password" type="password" autocomplete="current-password" :invalid="!!passwordError" :disabled="confirming" />
       <template #after="{classes}"><Button :class="classes.afterItem" type="submit" variant="primary" :loading="confirming" :disabled="busy||error||!canConfirm">{{ dynamic?copy.confirmShare:copy.authorize }}</Button></template>
      </FormItem>
     </Form>
