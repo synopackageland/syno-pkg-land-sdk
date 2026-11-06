@@ -1,6 +1,6 @@
 export interface HostPlatformSnapshot {
  readonly web: boolean
- readonly host: 'dsm' | 'standalone-web' | 'unavailable'
+ readonly host: 'dsm' | 'standalone-web' | 'native-shell' | 'unavailable'
  readonly dsmStandalone: boolean | null
  readonly dsmLanguage: string | null
  readonly appLocale: string | null

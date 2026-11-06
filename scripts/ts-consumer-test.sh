@@ -19,9 +19,26 @@ import {expect, test} from 'vitest'
 test('the packed SDK loads as an App test imports it', async () => {
 	expect((await import('@synopackageland/sdk/vue')).AppShell).toBeDefined()
 	expect((await import('@synopackageland/sdk')).isFullPage).toBeDefined()
+	expect((await import('@synopackageland/sdk/mobile')).saveBlob).toBeTypeOf('function')
+	const shell = await import('@synopackageland/sdk/mobile/shell')
+	expect(shell.NATIVE_PROTOCOL).toBe(1)
+	expect(shell.isNativeMessage({v: 1, type: 'ready', fcp: 1})).toBe(true)
 	const native = await import('@synopackageland/sdk/native')
 	expect(new Function(native.ROOT_RUNTIME + ';return createRootAccess;')()).toBeTypeOf('function')
 	expect(new Function(native.AUTHORIZATION_RUNTIME + ';return createAuthorizationAccess;')()).toBeTypeOf('function')
 })
 TEST
 (cd "$work" && "$ts/node_modules/.bin/vitest" run --root "$work")
+
+cat >"$work/consumer.ts" <<'TYPES'
+import {saveBlob, createNativeHost} from '@synopackageland/sdk/mobile'
+import {NATIVE_PROTOCOL, type NativeBridge, type NativeMessage, type NativeEvent} from '@synopackageland/sdk/mobile/shell'
+const message: NativeMessage = {v: NATIVE_PROTOCOL, type: 'intake.take', id: 'handle'}
+const launch: NativeEvent = {v: NATIVE_PROTOCOL, type: 'launch', link: '/add', intake: 'handle'}
+declare const bridge: NativeBridge
+bridge.post(message)
+void launch
+void saveBlob(new Blob(['csv']), 'report.csv')
+void createNativeHost()
+TYPES
+(cd "$work" && "$ts/node_modules/.bin/tsc" --noEmit --module NodeNext --moduleResolution NodeNext --target ES2022 --skipLibCheck consumer.ts)

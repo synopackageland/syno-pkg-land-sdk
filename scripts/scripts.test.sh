@@ -77,6 +77,7 @@ check "ts tarball: install order" "ci install run" "$(awk '{print $1}' "$work/np
 plan() { printf '%s\n' "$@" | "$root/scripts/gate-plan.sh" | tr '\n' ' ' | sed 's/ $//'; }
 all="go-conformance go-executor go-root node python rust ts"
 check "plan ts" ts "$(plan ts/src/index.ts)"
+check "plan native contract" ts "$(plan spec/native/v1/contract.json scripts/native-contract.mjs)"
 check "plan delegate DTO spec" "go-root ts" "$(plan spec/delegate/v1/dtos.schema.json)"
 check "plan delegate DTO generator" "go-root ts" "$(plan internal/delegategen/main.go)"
 check "plan delegate DTO TS artifact: Go checks it" "go-root ts" "$(plan ts/src/delegate/dtos-gen.ts)"
