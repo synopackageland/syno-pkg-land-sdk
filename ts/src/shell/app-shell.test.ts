@@ -7,13 +7,13 @@ import type {Context,HostAdapter,HostPlatformSnapshot,ShellContext} from '../con
 import type {AppShellPageSurface} from '../vue'
 
 // The shell's AppLayout, recorded: its layout props and the sidebar footer it was given.
-const seen=vi.hoisted(()=>({layout:{} as Record<string,unknown>,footer:false,viewport:0,restored:0,groups:[] as unknown[],width:undefined as unknown,surface:undefined as unknown,root:undefined as Record<string,unknown>|undefined,config:undefined as unknown,activate:undefined as (()=>void)|undefined}))
+const seen=vi.hoisted(()=>({layout:{} as Record<string,unknown>,footer:false,viewport:0,restored:0,groups:[] as unknown[],width:undefined as unknown,surface:undefined as unknown,hideOnScroll:undefined as unknown,root:undefined as Record<string,unknown>|undefined,config:undefined as unknown,activate:undefined as (()=>void)|undefined}))
 vi.mock('@synopackageland/ui',async importOriginal=>{
  const ui=await importOriginal<typeof import('@synopackageland/ui')>()
  const {defineComponent,h}=await import('vue')
  return {...ui,
   ensureDeviceViewport:()=>{seen.viewport++;return ()=>{seen.restored++}},
-  AppLayout:defineComponent({props:['wideLayout','navigation','sidebarStorageKey','brandName','brandIcon','minHeight','title'],emits:['brand'],setup(props,{slots,emit}){
+  AppLayout:defineComponent({props:{wideLayout:null,navigation:null,sidebarStorageKey:null,brandName:null,brandIcon:null,minHeight:null,title:null,hideOnScroll:{type:Boolean,default:true}},emits:['brand'],setup(props,{slots,emit}){
    return ()=>{
     seen.layout={...props};seen.footer=!!slots['sidebar-footer']
     return h('section',[h('button',{'data-test-brand':'',onClick:(event:MouseEvent)=>emit('brand',event)},'App'),slots.sidebar?.(),slots['sidebar-footer']&&h('footer',slots['sidebar-footer']()),slots.toolbar&&h('header',slots.toolbar()),slots.default?.()])
@@ -23,7 +23,7 @@ vi.mock('@synopackageland/ui',async importOriginal=>{
    return ()=>{seen.root={...props,style:attrs.style};seen.activate=()=>emit('activate');return h('div',{'data-app-root':''},slots.default?.())}
   }}),
   ConfigProvider:defineComponent({props:['locale'],setup(props,{slots}){return ()=>{seen.config=props.locale;return h('div',{'data-config':''},slots.default?.())}}}),
-  PageContent:defineComponent({props:['width','surface'],setup(props,{slots}){return ()=>{seen.width=props.width;seen.surface=props.surface;return h('div',slots.default?.())}}}),
+  PageContent:defineComponent({props:{width:null,surface:null,hideOnScroll:{type:Boolean,default:true}},setup(props,{slots}){return ()=>{seen.width=props.width;seen.surface=props.surface;seen.hideOnScroll=props.hideOnScroll;return h('div',slots.default?.())}}}),
   AppSidebar:defineComponent({props:['modelValue','groups'],emits:['update:modelValue'],setup(props,{emit}){
    return ()=>{
     seen.groups=props.groups
@@ -32,7 +32,7 @@ vi.mock('@synopackageland/ui',async importOriginal=>{
   }}),
  }
 })
-afterEach(()=>{Object.assign(seen,{layout:{},footer:false,viewport:0,restored:0,groups:[],width:undefined,surface:undefined,root:undefined,config:undefined,activate:undefined})})
+afterEach(()=>{Object.assign(seen,{layout:{},footer:false,viewport:0,restored:0,groups:[],width:undefined,surface:undefined,hideOnScroll:undefined,root:undefined,config:undefined,activate:undefined})})
 
 function ctx(fields:Partial<Context>,platform:Partial<HostPlatformSnapshot>={host:'dsm',dsmStandalone:false}):Context{
  const host={platform:()=>({web:true,host:'dsm',dsmStandalone:false,dsmLanguage:null,appLocale:null,systemVersion:null,fullVersion:null,theme:null,...platform})} as unknown as HostAdapter
@@ -552,4 +552,48 @@ test('the public surface prop includes none while rejecting unknown surfaces',()
  // @ts-expect-error A surface is a known PageContent mode, not arbitrary CSS.
  const invalid:AppShellPageSurface='rounded'
  void invalid
+})
+
+test('hide-on-scroll defaults on, opts out for one page and restores on navigation',async()=>{
+ const page=ref('home')
+ const pages=[{id:'home',title:'Home'},{id:'live',title:'Live',hideOnScroll:false},'status'] as const
+ const root=document.createElement('div');document.body.append(root)
+ const app=createApp({render:()=>h(AppShell,{locale:'en',modelValue:page.value,pages})})
+ try{
+  app.mount(root);await nextTick()
+  expect(seen.layout.hideOnScroll).toBe(true)
+  expect(seen.hideOnScroll).toBe(true)
+  page.value='live';await nextTick()
+  expect(seen.layout.hideOnScroll).toBe(true)
+  expect(seen.hideOnScroll).toBe(false)
+  for(const id of ['home','status','unknown']){
+   page.value=id;await nextTick()
+   expect(seen.hideOnScroll).toBe(true)
+  }
+ }finally{app.unmount();root.remove()}
+})
+
+test('the App-wide hide-on-scroll prop is reactive and preserves the UI default when omitted',async()=>{
+ const hideOnScroll=ref<boolean|undefined>(false)
+ const page=ref('home')
+ const root=document.createElement('div');document.body.append(root)
+ const pages=[{id:'home',title:'Home'},{id:'live',title:'Live',hideOnScroll:false},{id:'logs',title:'Logs',hideOnScroll:true}]
+ const app=createApp({render:()=>h(AppShell,{locale:'en',modelValue:page.value,pages,hideOnScroll:hideOnScroll.value})})
+ try{
+  app.mount(root);await nextTick()
+  expect(seen.layout.hideOnScroll).toBe(false)
+  for(const id of ['live','logs','home']){
+   page.value=id;await nextTick()
+   expect(seen.layout.hideOnScroll).toBe(false)
+  }
+  hideOnScroll.value=true;await nextTick()
+  expect(seen.layout.hideOnScroll).toBe(true)
+  hideOnScroll.value=undefined;await nextTick()
+  expect(seen.layout.hideOnScroll).toBe(true)
+ }finally{app.unmount();root.remove()}
+})
+
+test('the public shell and page hide-on-scroll options accept booleans',()=>{
+ expectTypeOf<InstanceType<typeof AppShell>['$props']['hideOnScroll']>().toEqualTypeOf<boolean|undefined>()
+ expectTypeOf<import('../vue').AppShellPage['hideOnScroll']>().toEqualTypeOf<boolean|undefined>()
 })

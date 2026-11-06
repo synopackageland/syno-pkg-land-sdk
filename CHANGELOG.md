@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.52.1
+
+- Add `AppShellPage.hideOnScroll` so a page can keep the phone bars visible, restoring the default on navigation
+- Forward `AppShell`'s `hideOnScroll` prop to `AppLayout` for App-wide control
+- Reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.52.0
 
 - Let DSM recreate Compose worker profiles on START; stop the gateway before releasing lifecycle state and report unconfirmed local teardown

@@ -53,14 +53,23 @@ test('phone header title and actions update without changing the page title or p
   expect(root.querySelector('[data-ui-mobile-title]')?.textContent).toBe('Details')
   expect(root.querySelector('h1.app-page-title')?.textContent).toBe('Home')
   expect(root.querySelector('[data-page-action]')?.textContent).toBe('Refresh')
-  root.querySelector<HTMLButtonElement>('[data-ui-mobile-action]')!.click()
+  // With page actions in the bar, the UI places header actions in More.
+  const directAction=!!root.querySelector('[data-ui-mobile-action]')
+  const selectAction=async(label:string)=>{
+   const primary=root.querySelector<HTMLButtonElement>('[data-ui-mobile-action]')
+   if(primary){primary.click();return}
+   root.querySelector<HTMLButtonElement>('[data-ui-mobile-more]')!.click();await settle()
+   const item=Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find(item=>item.textContent?.trim()===label)
+   expect(item).toBeDefined();item!.click();await settle()
+  }
+  await selectAction('Save')
   expect(selected).toHaveBeenCalledExactlyOnceWith('save')
   expect(root.querySelector('[data-ui-mobile-more]')).not.toBeNull()
   title.value=undefined;actions.value=[{key:'retry',label:'Retry'}];await settle()
   expect(root.querySelector('[data-ui-mobile-title]')?.textContent).toBe('Home')
-  root.querySelector<HTMLButtonElement>('[data-ui-mobile-action]')!.click()
+  await selectAction('Retry')
   expect(selected).toHaveBeenLastCalledWith('retry')
-  expect(root.querySelector('[data-ui-mobile-more]')).toBeNull()
+  expect(!!root.querySelector('[data-ui-mobile-more]')).toBe(!directAction)
  }finally{app.unmount();root.remove();vi.unstubAllGlobals()}
 })
 

@@ -234,7 +234,7 @@ a `title` the App has already translated, and optionally an `icon`, a `group`
 label (pages with the same label sit together), a `badge`, a `component` to
 render while it is the current page, `hidden` (reachable through `v-model`
 but not in the sidebar), `placement: 'bottom'` for a page the sidebar lists
-last, after every group (an App's settings), `header` and `fill`. The built-in
+last, after every group (an App's settings), `header`, `fill` and `hideOnScroll`. The built-in
 `'status'` and `'background'` may sit in the same list.
 
 ### Page title and actions
@@ -250,6 +250,25 @@ page that draws its own header: the shell adds no title, and its actions still
 go to the bar.
 
 ### Scrolling
+
+On phones, the bars hide as content scrolls down and return on scroll up.
+Set `hideOnScroll: false` on an `AppShellPage` to keep them visible for that
+page, such as a live recording screen. The shell passes it to its own
+`PageContent`; leaving that page restores the default. This works for both
+page components and pages rendered through the default slot.
+
+```ts
+const pages = [
+  {id: 'home', title: 'Home'},
+  {id: 'live', title: 'Live recording', hideOnScroll: false},
+]
+```
+
+To keep the bars visible throughout the App, pass
+`<AppShell :hide-on-scroll="false" ... />`. This forwards to `AppLayout` and
+applies to every page; a page cannot re-enable hiding while the App disables
+it. Omit the prop and page option to keep the UI defaults. These options do
+not change desktop or DSM window layouts.
 
 The navigation, the page bar, a page's tabs and a settings footer stay in
 place; only the content scrolls, so no scrollbar runs past them. A page

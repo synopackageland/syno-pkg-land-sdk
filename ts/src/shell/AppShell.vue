@@ -24,7 +24,7 @@ import ShellPhone from './ShellPhone.vue'
 import {PageActionsTarget} from './page-actions'
 import {PageInfoTarget, ShellLocale} from './page-info'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   locale: string
   modelValue: string
   pages: readonly AppShellPageEntry[]
@@ -38,6 +38,8 @@ const props = defineProps<{
   wideLayout?: WideLayout
   /** Forwarded to AppLayout; omitted keeps its sidebar default. */
   navigation?: 'sidebar' | 'top'
+  /** Forwarded to AppLayout; false keeps the phone bars visible throughout the App. */
+  hideOnScroll?: boolean
   /** Override the phone bar title; omitted keeps the current page title. */
   title?: string
   /** Phone bar actions, forwarded to AppLayout; emits headerAction on selection. */
@@ -59,7 +61,7 @@ const props = defineProps<{
   // The App's first reads are still loading: the sidebar and page title stand,
   // the page body shows a loading area and the App's actions wait for them.
   loading?: boolean
-}>()
+}>(), {hideOnScroll: undefined})
 const emit = defineEmits<{'update:modelValue': [value: string]; brand: [event: MouseEvent]; headerAction: [key: string]}>()
 // Apps can use @brand.prevent to replace the default home selection.
 function onBrand(event: MouseEvent) {
@@ -201,7 +203,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
     <slot name="denied" :phone="phone"><Callout tone="danger"><span role="alert">{{ denied.message ?? refusal?.message ?? copy.deniedMessage }}</span></Callout></slot>
   </PageContent>
   <AppLayout v-else ref="layout" :class="['app-shell', {'app-shell-fill': fill, 'app-shell-portal-brand': portalChrome.brand}]" min-height="0" :wide-layout="wideLayout ?? (fullPage ? 'web' : 'window')" :sidebar-storage-key="sidebarStorageKey"
-    :navigation="navigation" :title="props.title ?? barTitle" :header-actions="headerActions" @header-action="emit('headerAction', $event)" :brand-name="brandName ?? ctx?.displayName" :brand-icon="brandIcon ?? ctx?.appIcon" @brand="onBrand">
+    :navigation="navigation" :hide-on-scroll="hideOnScroll" :title="props.title ?? barTitle" :header-actions="headerActions" @header-action="emit('headerAction', $event)" :brand-name="brandName ?? ctx?.displayName" :brand-icon="brandIcon ?? ctx?.appIcon" @brand="onBrand">
     <template #sidebar>
       <AppSidebar :model-value="modelValue" :groups="groups" @update:model-value="emit('update:modelValue', $event)" />
     </template>
@@ -218,7 +220,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
         </AppToolbar>
       </div>
     </template>
-    <PageContent ref="scroller" :class="['app-page', {'app-page-fill': fill, 'app-page-untitled': headerMode === 'hidden', 'app-page-flush': detected.footer}]" :width="pageWidth" :surface="pageSurface">
+    <PageContent ref="scroller" :class="['app-page', {'app-page-fill': fill, 'app-page-untitled': headerMode === 'hidden', 'app-page-flush': detected.footer}]" :width="pageWidth" :surface="pageSurface" :hide-on-scroll="page?.hideOnScroll">
       <PageHeader v-if="headerMode === 'shown'" :title="title">
         <template #meta><span ref="page-info" class="app-page-info" /><slot name="meta" :page="modelValue" :phone="phone" /></template>
         <template #actions><div ref="page-actions" class="app-page-actions" /><slot v-if="!loading" name="actions" :page="modelValue" :phone="phone" /></template>
