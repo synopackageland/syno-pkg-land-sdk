@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/synopackageland/syno-pkg-land-sdk/compose"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"github.com/synopackageland/syno-pkg-land-sdk/supervision"
 	"io"
@@ -233,12 +232,12 @@ func (c *controller) run(action string) (int, error) {
 			if err := c.stop(until); err != nil {
 				return 1, fmt.Errorf("COMPOSE_STOP_UNCONFIRMED: gateway teardown failed; use Package Center Manual Install with this App's same-version SPK while retaining App data: %w", err)
 			}
-			if err := compose.CheckWorkerStop(filepath.Join(c.dest, "compose"), os.Getenv("SYNOPKG_PKG_STATUS")); err != nil {
-				return 1, err
-			}
 		}
 		err := c.recordAcquire(action == "acquire")
 		if err != nil {
+			if action == "release" {
+				return 1, fmt.Errorf("COMPOSE_STOP_UNCONFIRMED: lifecycle release failed after gateway teardown; inspect package-owned lifecycle state and retry Stop: %w", err)
+			}
 			return 1, err
 		}
 		return 0, nil

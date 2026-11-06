@@ -12,10 +12,14 @@ import (
 )
 
 func preflight() error {
-	if err := containerpreflight.Check(); err != nil {
+	return preflightWith(containerpreflight.Check, os.Executable)
+}
+
+func preflightWith(provider func() error, executablePath func() (string, error)) error {
+	if err := provider(); err != nil {
 		return err
 	}
-	executable, err := os.Executable()
+	executable, err := executablePath()
 	if err != nil {
 		return err
 	}
@@ -33,28 +37,9 @@ func preflight() error {
 			}
 		}
 	}
-	if err := preflightProject(project, incoming, os.Getenv("SYNOPKG_PKGVAR")); err != nil {
-		return err
-	}
-	// INSTALL/UPGRADE workers generate profiles themselves. Waiting before that
-	// worker would deadlock a clean install. A subsequent explicit START uses
-	// the existing project and requires its profiles to have caught up first.
-	if !workerProfileWaitRequired(project, incoming, os.Getenv("SYNOPKG_PKG_STATUS")) {
-		return nil
-	}
-	return compose.CheckWorkerProfiles(project)
-}
-
-func workerProfileWaitRequired(project, incoming, status string) bool {
-	return status == "START" && (incoming == "" || !sameDirectory(project, filepath.Join(incoming, "compose")))
-}
-
-func stopCheck() error {
-	executable, err := os.Executable()
-	if err != nil {
-		return err
-	}
-	return compose.CheckWorkerStop(filepath.Dir(executable), os.Getenv("SYNOPKG_PKG_STATUS"))
+	// Container Manager can remove profiles on STOP and recreate them in the
+	// START worker. Waiting for those profiles here prevents that worker running.
+	return preflightProject(project, incoming, os.Getenv("SYNOPKG_PKGVAR"))
 }
 
 func preflightProject(project, incoming, dataDir string) error {

@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-func TestReleaseAfterUpgradeRejectsMissingProfilesWithoutUsingStaleGeneration(t *testing.T) {
+func TestReleaseAfterUpgradeAcceptsMissingProfilesAndStaleGeneration(t *testing.T) {
 	t.Setenv("SYNOPKG_PKG_STATUS", "STOP")
 	c, close := readinessController(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) }))
 	defer close()
@@ -34,19 +34,19 @@ func TestReleaseAfterUpgradeRejectsMissingProfilesWithoutUsingStaleGeneration(t 
 	if err := c.checkReadiness(); err == nil || !strings.Contains(err.Error(), "COMPOSE_ACQUIRE_GENERATION_INVALID") {
 		t.Fatalf("fixture did not reproduce generation mismatch: %v", err)
 	}
-	rc, err := c.run("release")
-	if rc == 0 || err == nil || !strings.Contains(err.Error(), "COMPOSE_STOP_UNCONFIRMED") || !strings.Contains(err.Error(), "COMPOSE_WORKER_PROFILE_MISSING") || !strings.Contains(err.Error(), "Manual Install") {
-		t.Fatalf("stop falsely succeeded or lost recovery: %d %v", rc, err)
+	for _, status := range []string{"STOP", "UPGRADE", "INSTALL", "UNINSTALL"} {
+		t.Setenv("SYNOPKG_PKG_STATUS", status)
+		if rc, err := c.run("release"); rc != 0 || err != nil {
+			t.Fatalf("%s stop was blocked by missing profiles or stale generation: %d %v", status, rc, err)
+		}
 	}
 	if _, err := os.Stat(filepath.Join(c.dir, "stop.request")); err != nil {
 		t.Fatalf("stale generation bypassed gateway teardown: %v", err)
 	}
-	// Manual reinstall must remain available even though ordinary STOP fails.
-	for _, status := range []string{"UPGRADE", "INSTALL", "UNINSTALL"} {
-		t.Setenv("SYNOPKG_PKG_STATUS", status)
-		if rc, err := c.run("release"); rc != 0 || err != nil {
-			t.Fatalf("blocked %s recovery on the stale generation: %d %v", status, rc, err)
-		}
+	raw, err := os.ReadFile(filepath.Join(c.dir, "compose-acquire.json"))
+	var released acquireRecord
+	if err != nil || json.Unmarshal(raw, &released) != nil || released.Active {
+		t.Fatalf("generation was not released after teardown: %s %v", raw, err)
 	}
 }
 
