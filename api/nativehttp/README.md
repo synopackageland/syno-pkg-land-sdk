@@ -38,7 +38,8 @@ a nullable schema, arrays repeat query/form keys. Static binding keys cannot
 inject credential/identity headers or URL components. Action tokens may appear
 only as form `T: {actionToken:true}` under greader auth.
 
-Read/preview AI classes require read effect; effects remain explicitly authored. Drafts reference an existing
+Read/preview AI classes require read effect; effects remain explicitly authored
+and are never inferred from the HTTP verb. Drafts reference an existing
 nonmutating preview command. Admin-only entry requires administrator permissions
 throughout the registry. Upload/download are stream, human-only, with finite
 byte/MIME caps; raw upload has no multipart part or form body. Pagination is GET,

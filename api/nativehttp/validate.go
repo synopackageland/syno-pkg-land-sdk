@@ -186,9 +186,6 @@ func validateRegistry(r *Registry, entry string, prefixes []string) error {
 				return errors.New("draft requires an existing nonmutating preview")
 			}
 		}
-		if op.Effect != "read" && op.HTTP.Method == "GET" {
-			return errors.New("GET operation must have read effect")
-		}
 		if op.Preview != "" && op.AI != "draft" {
 			return errors.New("preview reference requires draft AI class")
 		}

@@ -18,7 +18,8 @@
     "valid/ndjson.json",
     "valid/post-read.json",
     "valid/greader-action.json",
-    "valid/raw-upload.json"
+    "valid/raw-upload.json",
+    "valid/authored-effect.json"
   ],
   "invalid": [
     {
