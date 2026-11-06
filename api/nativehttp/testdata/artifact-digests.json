@@ -1,0 +1,8 @@
+{
+  "entryPolicyJSON": "{\"entry\":\"\",\"access\":\"dsm-users\",\"upstream_access\":\"protected\",\"groups\":[],\"compose_blocked\":false,\"upstream_auth_paths\":[\"/api/\"],\"passthrough\":[],\"optional_passthrough\":{}}",
+  "entryPolicyDigest": "1fd1fd51f2f3ffeab66d37c5b16b59247c91c3721099f01023f61fcd48306c75",
+  "registrySha256": "bdf96ef77f0bf3428c8966d75cf1d140f7105ff8be43f845b2593920f8ebffd6",
+  "authSha256": "e096c2fe31ce5ae39083812815d0248c165fd986b3595491e3c51ed9956d818d",
+  "inventorySha256": "2ba5735359465468b67eab69079ae0c9c22976c6bf11b4a100439196223afbcc",
+  "descriptionSha256": "d1d8e0b55f7c8e4bb075a7d705a1c631e1f9b32b0320923c44bd60e02e443e1e"
+}

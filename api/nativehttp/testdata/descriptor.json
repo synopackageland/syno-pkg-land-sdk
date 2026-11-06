@@ -1,0 +1,436 @@
+{
+  "format": "synopkgland.api",
+  "version": 3,
+  "payload": {
+    "package": {
+      "id": "ExampleApp",
+      "version": "1.0.0-1",
+      "displayName": "Example App"
+    },
+    "aliases": [
+      "example"
+    ],
+    "provenance": {
+      "developedBy": "third-party",
+      "generator": "metadata-fixture"
+    },
+    "entry": "policy",
+    "transport": {
+      "path": "/webman/3rdparty/ExampleApp/cgi/api.cgi",
+      "auth": "dsm-session"
+    },
+    "execution": {
+      "type": "native-http",
+      "basePath": "/synopkgland/ExampleApp/",
+      "auth": {
+        "type": "header",
+        "header": "Authorization",
+        "prefix": "Token ",
+        "credentialPage": "dashboard",
+        "instructions": "Open the native profile and copy your API token",
+        "verify": {
+          "method": "GET",
+          "path": "/api/profile/",
+          "response": {
+            "statuses": [
+              200
+            ],
+            "decode": "json",
+            "maxBytes": 65536,
+            "contentTypes": [
+              "application/json"
+            ],
+            "project": {
+              "fields": {
+                "email": "/email",
+                "firstName": "/first_name",
+                "lastName": "/last_name"
+              }
+            }
+          }
+        }
+      },
+      "limits": {
+        "maxResponseBytes": 1048576,
+        "maxTransferBytes": 268435456
+      }
+    },
+    "features": [
+      "native-http-v1",
+      "auth-header-v1",
+      "auth-greader-client-login-v1",
+      "paginate-http-v1",
+      "ndjson-http-v1",
+      "upload-http-v1",
+      "download-file-v1"
+    ],
+    "entryPolicyDigest": "1fd1fd51f2f3ffeab66d37c5b16b59247c91c3721099f01023f61fcd48306c75",
+    "registrySha256": "bdf96ef77f0bf3428c8966d75cf1d140f7105ff8be43f845b2593920f8ebffd6",
+    "inventorySha256": "2ba5735359465468b67eab69079ae0c9c22976c6bf11b4a100439196223afbcc",
+    "authSha256": "e096c2fe31ce5ae39083812815d0248c165fd986b3595491e3c51ed9956d818d",
+    "bindings": {
+      "documents.list": {
+        "effect": "read",
+        "permission": "authenticated",
+        "kind": "rpc",
+        "flow": {
+          "type": "paginate-http",
+          "method": "documents.list",
+          "pagination": {
+            "mode": "page",
+            "pageParam": "page",
+            "sizeParam": "page_size",
+            "items": "/results",
+            "next": "/next",
+            "pageSize": 25,
+            "maxPages": 40,
+            "maxItems": 1000,
+            "maxBytes": 16777216
+          }
+        },
+        "http": {
+          "method": "GET",
+          "path": "/api/documents/",
+          "query": {
+            "ordering": {
+              "literal": "id"
+            }
+          },
+          "headers": {
+            "Accept": "application/json; version=10"
+          },
+          "response": {
+            "statuses": [
+              200
+            ],
+            "decode": "json",
+            "maxBytes": 1048576,
+            "contentTypes": [
+              "application/json"
+            ]
+          }
+        }
+      },
+      "documents.upload": {
+        "effect": "write",
+        "permission": "authenticated",
+        "kind": "stream",
+        "flow": {
+          "type": "upload-http",
+          "method": "documents.upload",
+          "fileParam": "file",
+          "encoding": "multipart",
+          "part": "document",
+          "maxBytes": 268435456,
+          "contentTypes": [
+            "application/pdf",
+            "image/jpeg",
+            "image/png"
+          ]
+        },
+        "http": {
+          "method": "POST",
+          "path": "/api/documents/post_document/",
+          "headers": {
+            "Accept": "application/json; version=10"
+          },
+          "body": {
+            "encoding": "form",
+            "fields": {
+              "title": {
+                "param": "title"
+              }
+            }
+          },
+          "response": {
+            "statuses": [
+              200
+            ],
+            "decode": "json",
+            "maxBytes": 65536,
+            "contentTypes": [
+              "application/json"
+            ],
+            "project": {
+              "fields": {
+                "taskId": ""
+              }
+            }
+          }
+        }
+      },
+      "documents.download": {
+        "effect": "read",
+        "permission": "authenticated",
+        "kind": "stream",
+        "flow": {
+          "type": "download-file",
+          "method": "documents.download",
+          "outputParam": "output",
+          "maxBytes": 268435456,
+          "contentTypes": [
+            "application/pdf",
+            "image/jpeg",
+            "image/png",
+            "application/octet-stream"
+          ]
+        },
+        "http": {
+          "method": "GET",
+          "path": "/api/documents/{id}/download/",
+          "query": {
+            "original": {
+              "literal": "true"
+            }
+          },
+          "response": {
+            "statuses": [
+              200
+            ],
+            "decode": "binary",
+            "maxBytes": 268435456,
+            "contentTypes": [
+              "application/pdf",
+              "image/jpeg",
+              "image/png",
+              "application/octet-stream"
+            ]
+          }
+        }
+      }
+    },
+    "commands": {
+      "documents.list": {
+        "summary": "List documents",
+        "cli": [
+          "documents",
+          "list"
+        ],
+        "effect": "read",
+        "permission": "authenticated",
+        "ai": "read",
+        "kind": "rpc",
+        "paramsSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {},
+          "required": []
+        },
+        "resultSchema": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "flow": {
+          "type": "paginate-http",
+          "method": "documents.list",
+          "pagination": {
+            "mode": "page",
+            "pageParam": "page",
+            "sizeParam": "page_size",
+            "items": "/results",
+            "next": "/next",
+            "pageSize": 25,
+            "maxPages": 40,
+            "maxItems": 1000,
+            "maxBytes": 16777216
+          }
+        },
+        "http": {
+          "method": "GET",
+          "path": "/api/documents/",
+          "query": {
+            "ordering": {
+              "literal": "id"
+            }
+          },
+          "headers": {
+            "Accept": "application/json; version=10"
+          },
+          "response": {
+            "statuses": [
+              200
+            ],
+            "decode": "json",
+            "maxBytes": 1048576,
+            "contentTypes": [
+              "application/json"
+            ]
+          }
+        }
+      },
+      "documents.upload": {
+        "summary": "Upload one document",
+        "cli": [
+          "documents",
+          "upload"
+        ],
+        "effect": "write",
+        "permission": "authenticated",
+        "ai": "human-only",
+        "kind": "stream",
+        "paramsSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "file": {
+              "type": "string",
+              "minLength": 1,
+              "writeOnly": true
+            },
+            "title": {
+              "type": "string",
+              "maxLength": 256
+            }
+          },
+          "required": [
+            "file"
+          ]
+        },
+        "resultSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "taskId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "taskId"
+          ]
+        },
+        "flow": {
+          "type": "upload-http",
+          "method": "documents.upload",
+          "fileParam": "file",
+          "encoding": "multipart",
+          "part": "document",
+          "maxBytes": 268435456,
+          "contentTypes": [
+            "application/pdf",
+            "image/jpeg",
+            "image/png"
+          ]
+        },
+        "http": {
+          "method": "POST",
+          "path": "/api/documents/post_document/",
+          "headers": {
+            "Accept": "application/json; version=10"
+          },
+          "body": {
+            "encoding": "form",
+            "fields": {
+              "title": {
+                "param": "title"
+              }
+            }
+          },
+          "response": {
+            "statuses": [
+              200
+            ],
+            "decode": "json",
+            "maxBytes": 65536,
+            "contentTypes": [
+              "application/json"
+            ],
+            "project": {
+              "fields": {
+                "taskId": ""
+              }
+            }
+          }
+        }
+      },
+      "documents.download": {
+        "summary": "Download an original document",
+        "cli": [
+          "documents",
+          "download"
+        ],
+        "effect": "read",
+        "permission": "authenticated",
+        "ai": "human-only",
+        "kind": "stream",
+        "paramsSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            "output": {
+              "type": "string",
+              "minLength": 1,
+              "writeOnly": true
+            }
+          },
+          "required": [
+            "id",
+            "output"
+          ]
+        },
+        "resultSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 268435456
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          },
+          "required": [
+            "bytes",
+            "sha256"
+          ]
+        },
+        "flow": {
+          "type": "download-file",
+          "method": "documents.download",
+          "outputParam": "output",
+          "maxBytes": 268435456,
+          "contentTypes": [
+            "application/pdf",
+            "image/jpeg",
+            "image/png",
+            "application/octet-stream"
+          ]
+        },
+        "http": {
+          "method": "GET",
+          "path": "/api/documents/{id}/download/",
+          "query": {
+            "original": {
+              "literal": "true"
+            }
+          },
+          "response": {
+            "statuses": [
+              200
+            ],
+            "decode": "binary",
+            "maxBytes": 268435456,
+            "contentTypes": [
+              "application/pdf",
+              "image/jpeg",
+              "image/png",
+              "application/octet-stream"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "sha256": "d1d8e0b55f7c8e4bb075a7d705a1c631e1f9b32b0320923c44bd60e02e443e1e"
+}

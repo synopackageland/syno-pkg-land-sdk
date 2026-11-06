@@ -1,0 +1,872 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Syno Package Land native HTTP registry v3",
+  "description": "Client execution metadata only. Semantic validation is also required; see README.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "synopkgland.api"
+    },
+    "version": {
+      "const": 3
+    },
+    "nativeHttp": {
+      "$ref": "#/$defs/nativeHttp"
+    },
+    "operations": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1024,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/operation"
+      }
+    }
+  },
+  "required": [
+    "format",
+    "version",
+    "nativeHttp",
+    "operations"
+  ],
+  "$defs": {
+    "binding": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "param": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "param"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "literal": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "literal"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "actionToken": {
+              "const": true
+            }
+          },
+          "required": [
+            "actionToken"
+          ]
+        }
+      ]
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "statuses": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 200,
+            "maximum": 299
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "decode": {
+          "enum": [
+            "json",
+            "text",
+            "binary"
+          ]
+        },
+        "maxBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 17179869184
+        },
+        "contentTypes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        },
+        "project": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "pointer": {
+                  "type": "string",
+                  "maxLength": 512,
+                  "pattern": "^(?:/(?:[^~/]|~[01])*)*$"
+                }
+              },
+              "required": [
+                "pointer"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "fields": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "additionalProperties": {
+                    "type": "string",
+                    "maxLength": 512,
+                    "pattern": "^(?:/(?:[^~/]|~[01])*)*$"
+                  }
+                }
+              },
+              "required": [
+                "fields"
+              ]
+            }
+          ]
+        }
+      },
+      "required": [
+        "statuses",
+        "decode",
+        "maxBytes",
+        "contentTypes"
+      ]
+    },
+    "flow": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "invoke"
+            },
+            "method": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            }
+          },
+          "required": [
+            "type",
+            "method"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "paginate-http"
+            },
+            "method": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "pagination": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "mode": {
+                      "const": "page"
+                    },
+                    "pageParam": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 512
+                    },
+                    "sizeParam": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 512
+                    },
+                    "items": {
+                      "type": "string",
+                      "maxLength": 512,
+                      "pattern": "^(?:/(?:[^~/]|~[01])*)*$"
+                    },
+                    "next": {
+                      "type": "string",
+                      "maxLength": 512,
+                      "pattern": "^(?:/(?:[^~/]|~[01])*)*$"
+                    },
+                    "pageSize": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 1000
+                    },
+                    "maxPages": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 1000
+                    },
+                    "maxItems": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 10000
+                    },
+                    "maxBytes": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 67108864
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "pageParam",
+                    "sizeParam",
+                    "items",
+                    "next",
+                    "pageSize",
+                    "maxPages",
+                    "maxItems",
+                    "maxBytes"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "mode": {
+                      "const": "cursor"
+                    },
+                    "cursorParam": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 512
+                    },
+                    "sizeParam": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 512
+                    },
+                    "items": {
+                      "type": "string",
+                      "maxLength": 512,
+                      "pattern": "^(?:/(?:[^~/]|~[01])*)*$"
+                    },
+                    "next": {
+                      "type": "string",
+                      "maxLength": 512,
+                      "pattern": "^(?:/(?:[^~/]|~[01])*)*$"
+                    },
+                    "pageSize": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 1000
+                    },
+                    "maxPages": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 1000
+                    },
+                    "maxItems": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 10000
+                    },
+                    "maxBytes": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 67108864
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "cursorParam",
+                    "sizeParam",
+                    "items",
+                    "next",
+                    "pageSize",
+                    "maxPages",
+                    "maxItems",
+                    "maxBytes"
+                  ]
+                }
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "method",
+            "pagination"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "upload-http"
+            },
+            "method": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "fileParam": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "encoding": {
+              "enum": [
+                "multipart",
+                "raw"
+              ]
+            },
+            "part": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "maxBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 17179869184
+            },
+            "contentTypes": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              }
+            }
+          },
+          "required": [
+            "type",
+            "method",
+            "fileParam",
+            "encoding",
+            "maxBytes",
+            "contentTypes"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "encoding": {
+                    "const": "multipart"
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "part"
+                ]
+              },
+              "else": {
+                "not": {
+                  "required": [
+                    "part"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "download-file"
+            },
+            "method": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "outputParam": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "maxBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 17179869184
+            },
+            "contentTypes": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              }
+            }
+          },
+          "required": [
+            "type",
+            "method",
+            "outputParam",
+            "maxBytes",
+            "contentTypes"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "ndjson"
+            },
+            "method": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "maxLines": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000
+            },
+            "maxLineBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1048576
+            },
+            "maxBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 67108864
+            }
+          },
+          "required": [
+            "type",
+            "method",
+            "maxLines",
+            "maxLineBytes",
+            "maxBytes"
+          ]
+        }
+      ]
+    },
+    "headerAuth": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "header"
+        },
+        "header": {
+          "const": "Authorization"
+        },
+        "prefix": {
+          "enum": [
+            "Token ",
+            "Bearer "
+          ]
+        },
+        "credentialPage": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_/?=&.~-]*$",
+          "maxLength": 512
+        },
+        "instructions": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "verify": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "const": "GET"
+            },
+            "path": {
+              "type": "string",
+              "pattern": "^/[A-Za-z0-9_./~-]+$",
+              "maxLength": 512
+            },
+            "response": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "statuses": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 200,
+                    "maximum": 299
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
+                },
+                "decode": {
+                  "enum": [
+                    "json",
+                    "text"
+                  ]
+                },
+                "maxBytes": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65536
+                },
+                "contentTypes": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  }
+                },
+                "project": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "pointer": {
+                          "type": "string",
+                          "maxLength": 512,
+                          "pattern": "^(?:/(?:[^~/]|~[01])*)*$"
+                        }
+                      },
+                      "required": [
+                        "pointer"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "fields": {
+                          "type": "object",
+                          "minProperties": 1,
+                          "additionalProperties": {
+                            "type": "string",
+                            "maxLength": 512,
+                            "pattern": "^(?:/(?:[^~/]|~[01])*)*$"
+                          }
+                        }
+                      },
+                      "required": [
+                        "fields"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "statuses",
+                "decode",
+                "maxBytes",
+                "contentTypes"
+              ]
+            }
+          },
+          "required": [
+            "method",
+            "path",
+            "response"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "header",
+        "prefix",
+        "credentialPage",
+        "instructions",
+        "verify"
+      ]
+    },
+    "greaderAuth": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "greader-client-login"
+        },
+        "credentialPage": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_/?=&.~-]*$",
+          "maxLength": 512
+        },
+        "instructions": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "exchangePath": {
+          "type": "string",
+          "pattern": "^/[A-Za-z0-9_./~-]+$",
+          "maxLength": 512
+        },
+        "identityPath": {
+          "type": "string",
+          "pattern": "^/[A-Za-z0-9_./~-]+$",
+          "maxLength": 512
+        },
+        "actionTokenPath": {
+          "type": "string",
+          "pattern": "^/[A-Za-z0-9_./~-]+$",
+          "maxLength": 512
+        }
+      },
+      "required": [
+        "type",
+        "credentialPage",
+        "instructions",
+        "exchangePath",
+        "identityPath",
+        "actionTokenPath"
+      ]
+    },
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "cli": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          }
+        },
+        "effect": {
+          "enum": [
+            "read",
+            "write",
+            "destructive"
+          ]
+        },
+        "permission": {
+          "enum": [
+            "authenticated",
+            "administrators"
+          ]
+        },
+        "ai": {
+          "enum": [
+            "read",
+            "preview",
+            "draft",
+            "human-only",
+            "hidden"
+          ]
+        },
+        "preview": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "kind": {
+          "enum": [
+            "rpc",
+            "stream"
+          ]
+        },
+        "paramsSchema": {
+          "type": "object",
+          "minProperties": 1,
+          "properties": {
+            "type": {
+              "const": "object"
+            },
+            "additionalProperties": {
+              "const": false
+            },
+            "properties": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+                "maxLength": 128
+              }
+            }
+          },
+          "required": [
+            "type",
+            "additionalProperties",
+            "properties"
+          ]
+        },
+        "resultSchema": {
+          "type": "object",
+          "minProperties": 1
+        },
+        "flow": {
+          "$ref": "#/$defs/flow"
+        },
+        "http": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "enum": [
+                "GET",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE"
+              ]
+            },
+            "path": {
+              "type": "string",
+              "pattern": "^/[A-Za-z0-9_./{}~-]+$",
+              "maxLength": 512
+            },
+            "query": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/binding"
+              }
+            },
+            "headers": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "Accept": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512,
+                  "pattern": "^[ -~]+$"
+                },
+                "Content-Type": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512,
+                  "pattern": "^[ -~]+$"
+                }
+              }
+            },
+            "body": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "encoding": {
+                  "enum": [
+                    "json",
+                    "form"
+                  ]
+                },
+                "fields": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/$defs/binding"
+                  }
+                }
+              },
+              "required": [
+                "encoding",
+                "fields"
+              ]
+            },
+            "response": {
+              "$ref": "#/$defs/response"
+            }
+          },
+          "required": [
+            "method",
+            "path",
+            "response"
+          ]
+        }
+      },
+      "required": [
+        "summary",
+        "cli",
+        "effect",
+        "permission",
+        "ai",
+        "kind",
+        "paramsSchema",
+        "resultSchema",
+        "flow",
+        "http"
+      ]
+    },
+    "nativeHttp": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "basePath": {
+          "type": "string",
+          "pattern": "^/[^?#%]*/$",
+          "maxLength": 512
+        },
+        "auth": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/headerAuth"
+            },
+            {
+              "$ref": "#/$defs/greaderAuth"
+            }
+          ]
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maxResponseBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16777216
+            },
+            "maxTransferBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 17179869184
+            }
+          },
+          "required": [
+            "maxResponseBytes",
+            "maxTransferBytes"
+          ]
+        }
+      },
+      "required": [
+        "basePath",
+        "auth",
+        "limits"
+      ]
+    }
+  },
+  "$id": "https://synopkgland.org/schema/api/v3/registry.schema.json"
+}

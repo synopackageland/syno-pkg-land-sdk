@@ -1,0 +1,70 @@
+{
+  "format": "synopkgland.api",
+  "version": 3,
+  "nativeHttp": {
+    "basePath": "/synopkgland/ExampleApp/",
+    "auth": {
+      "type": "greader-client-login",
+      "credentialPage": "i/?c=user&a=profile",
+      "instructions": "Open Profile and set an API password",
+      "exchangePath": "/api/greader.php/accounts/ClientLogin",
+      "identityPath": "/api/greader.php/reader/api/0/user-info",
+      "actionTokenPath": "/api/greader.php/reader/api/0/token"
+    },
+    "limits": {
+      "maxResponseBytes": 1048576,
+      "maxTransferBytes": 1048576
+    }
+  },
+  "operations": {
+    "feeds.list": {
+      "summary": "List subscriptions",
+      "cli": [
+        "feeds",
+        "list"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "ai": "read",
+      "kind": "stream",
+      "paramsSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {},
+        "required": []
+      },
+      "resultSchema": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "flow": {
+        "type": "ndjson",
+        "method": "feeds.list",
+        "maxLines": 1000,
+        "maxLineBytes": 65536,
+        "maxBytes": 1048576
+      },
+      "http": {
+        "method": "GET",
+        "path": "/api/greader.php/reader/api/0/subscription/list",
+        "query": {
+          "output": {
+            "literal": "json"
+          }
+        },
+        "response": {
+          "statuses": [
+            200
+          ],
+          "decode": "text",
+          "maxBytes": 1048576,
+          "contentTypes": [
+            "application/x-ndjson"
+          ]
+        }
+      }
+    }
+  }
+}

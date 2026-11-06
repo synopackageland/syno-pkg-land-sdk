@@ -1,0 +1,121 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "synopkgland.http-inventory"
+    },
+    "version": {
+      "const": 1
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_.+-]{0,127}$"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "displayName"
+      ]
+    },
+    "entry": {
+      "enum": [
+        "policy",
+        "admin-only",
+        "app-privilege"
+      ]
+    },
+    "entryPolicyDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "basePath": {
+      "$ref": "registry.schema.json#/$defs/nativeHttp/properties/basePath"
+    },
+    "registrySha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "authSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "bindings": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1024,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "effect": {
+            "$ref": "registry.schema.json#/$defs/operation/properties/effect"
+          },
+          "permission": {
+            "$ref": "registry.schema.json#/$defs/operation/properties/permission"
+          },
+          "kind": {
+            "$ref": "registry.schema.json#/$defs/operation/properties/kind"
+          },
+          "flow": {
+            "$ref": "registry.schema.json#/$defs/flow"
+          },
+          "http": {
+            "$ref": "registry.schema.json#/$defs/operation/properties/http"
+          }
+        },
+        "required": [
+          "effect",
+          "permission",
+          "kind",
+          "flow",
+          "http"
+        ]
+      }
+    },
+    "upstreamAuthPaths": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "maxLength": 512,
+        "pattern": "^/[A-Za-z0-9_./~-]+$"
+      }
+    }
+  },
+  "required": [
+    "format",
+    "version",
+    "package",
+    "entry",
+    "entryPolicyDigest",
+    "basePath",
+    "registrySha256",
+    "authSha256",
+    "bindings",
+    "upstreamAuthPaths"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synopkgland.org/schema/api/v3/inventory.schema.json",
+  "title": "Syno Package Land native HTTP binding inventory"
+}

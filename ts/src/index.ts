@@ -48,3 +48,4 @@ export {readDsmHttpsURL, type DsmHttpsURLOptions} from './dsm/https'
 export {requestSecret, RequestSecret, redactSecrets} from './secret'
 
 export {mediaUrl, type MediaGrant, type MediaOptions, type MediaURL} from './media'
+export type * from './native-http'

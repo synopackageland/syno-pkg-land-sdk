@@ -10,6 +10,8 @@ ignore (
 )
 
 require (
+	github.com/cyberphone/json-canonicalization v0.0.0-20261011152517-32a48195b9b2
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	go.yaml.in/yaml/v4 v4.0.0-rc.4
 	golang.org/x/sys v0.44.0
 )
@@ -22,7 +24,6 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/mattn/go-shellwords v1.0.12 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1 // indirect
 	github.com/sirupsen/logrus v1.10.1 // indirect
 	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect

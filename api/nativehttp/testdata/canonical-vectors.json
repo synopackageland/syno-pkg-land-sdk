@@ -1,0 +1,27 @@
+[
+  {
+    "input": "{\"b\":2,\"a\":1}",
+    "canonical": "{\"a\":1,\"b\":2}",
+    "sha256": "43258cff783fe7036d8a43033f830adfc60ec037382473548ac742b888292777"
+  },
+  {
+    "input": "{\"numbers\":[333333333.33333329,1E30,4.50,2e-3,0.000000000000000000000000001,-0,1e-6,1e-7,1e20,1e21]}",
+    "canonical": "{\"numbers\":[333333333.3333333,1e+30,4.5,0.002,1e-27,0,0.000001,1e-7,100000000000000000000,1e+21]}",
+    "sha256": "4fdb883f97e3bd520b9989b9ed820983424c5ae657a92c6cd9e017d4a9a2fee8"
+  },
+  {
+    "input": "{\"\\u20ac\":\"Euro Sign\",\"\\r\":\"Carriage Return\",\"\\ufb33\":\"Hebrew\",\"1\":\"One\",\"\\ud83d\\ude00\":\"Emoji\",\"\\u0080\":\"Control\",\"\\u00f6\":\"Latin\"}",
+    "canonical": "{\"\\r\":\"Carriage Return\",\"1\":\"One\",\"\":\"Control\",\"ö\":\"Latin\",\"€\":\"Euro Sign\",\"😀\":\"Emoji\",\"דּ\":\"Hebrew\"}",
+    "sha256": "9dbe5e7e9ec825f81b1e10eb13de8a1d34ce90d5d5b3f072b62bf2ec148643ea"
+  },
+  {
+    "input": "{\"text\":\"繁體中文 <>& \\u2028 \\n \\\" \\\\\"}",
+    "canonical": "{\"text\":\"繁體中文 <>&   \\n \\\" \\\\\"}",
+    "sha256": "34da9d222de501665f863eee8eef4313f6d2e57fc6ebb3c7a5d855562aec22f5"
+  },
+  {
+    "input": "{\"z\":[null,true,false],\"a\":{\"y\":2,\"x\":1}}",
+    "canonical": "{\"a\":{\"x\":1,\"y\":2},\"z\":[null,true,false]}",
+    "sha256": "54d3ad5de0415d68c32d7974f157097c171f497558d4e4ae399135a0d2a9ad25"
+  }
+]

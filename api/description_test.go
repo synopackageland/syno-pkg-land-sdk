@@ -93,3 +93,24 @@ func TestDescribeRoutesIncludesOnlyActualBindingsAndEffectivePolicies(t *testing
 		t.Fatalf("bad registry export: %v", out)
 	}
 }
+
+func TestDescriptionDataBindsPackagedEntryMode(t *testing.T) {
+	old := expectedEntryMode
+	t.Cleanup(func() { expectedEntryMode = old })
+	for _, mode := range []string{"admin-only", "app-privilege"} {
+		expectedEntryMode = mode
+		for _, auth := range []Authenticator{&descriptionAuth{id: Identity{User: "fixture-user", Admin: true}}, entryAuth{&fakeAuth{user: "fixture-user", admin: true}, ""}} {
+			h := WithDescriptionData(http.NotFoundHandler(), auth, []byte(`{"fixture":"must-not-disclose"}`))
+			r := httptest.NewRequest("POST", "https://dsm.example/cgi/api.cgi", bytes.NewBufferString(`{"method":"synopkgland.describe","params":{}}`))
+			r.Header.Set("Content-Type", "application/json")
+			r.Header.Set("Origin", "https://dsm.example")
+			r.Header.Set("Cookie", "id=fixture")
+			r.Header.Set("X-SYNO-TOKEN", "fixture")
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, r)
+			if !bytes.Contains(w.Body.Bytes(), []byte(`"auth_unavailable"`)) || bytes.Contains(w.Body.Bytes(), []byte("must-not-disclose")) {
+				t.Fatalf("%s accepted mismatched entry gate: %s", mode, w.Body.String())
+			}
+		}
+	}
+}
