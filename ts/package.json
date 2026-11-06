@@ -30,6 +30,10 @@
       "types": "./dist/src/native.d.ts",
       "import": "./dist/native.js"
     },
+    "./entry": {
+      "types": "./dist/src/entry.d.ts",
+      "import": "./dist/entry.js"
+    },
     "./i18n/*": "./dist/i18n/*",
     "./executor-manifest.json": "./executor-manifest.json",
     "./mobile": {
