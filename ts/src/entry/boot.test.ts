@@ -13,6 +13,7 @@ const options = () => ({packageId: 'ExampleApp', build: 'build-a', token: 'sign-
 
 beforeEach(() => {
  localStorage.clear()
+ document.head.innerHTML = ''
  document.body.innerHTML = '<div class="dsmapp-root"></div>'
  history.replaceState(null, '', entryURL)
 })
@@ -181,4 +182,45 @@ test('mount errors propagate and launch params reject reserved, invalid and over
  expect(parsed).not.toHaveProperty('bad')
  expect(parsed).not.toHaveProperty('long')
  expect(parsed).not.toHaveProperty('route')
+})
+
+
+test('preloads the declared bundle before token or identity resolves, mounting only after both succeed', async () => {
+ const opts = {...options(), token: undefined, appBundle: './app.js?v=build-a'}
+ let token!: (response: Response) => void, identity!: (response: Response) => void
+ const request = vi.fn<typeof globalThis.fetch>((url) => {
+  const preload = document.querySelector<HTMLLinkElement>('link[rel=modulepreload]')
+  expect(preload?.href).toBe('https://localhost/webman/3rdparty/ExampleApp/app/app.js?v=build-a')
+  expect(preload?.crossOrigin).toBe('anonymous')
+  return new Promise(resolve => {if(String(url).includes('login.cgi')) token = resolve; else identity = resolve})
+ })
+ const pending = bootEntryPage({...opts, fetch: request})
+ expect(request).toHaveBeenCalledTimes(1)
+ expect(opts.mount).not.toHaveBeenCalled()
+ expect(document.querySelector('script[src]')).toBeNull()
+ token(new Response(JSON.stringify({success: true, SynoToken: 'token'})))
+ await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(2))
+ expect(opts.mount).not.toHaveBeenCalled()
+ identity(json(account))
+ const ctx = await pending
+ expect(opts.mount).toHaveBeenCalledOnce()
+ ctx!.host.dispose()
+})
+
+test.each(['token', 'identity'] as const)('a failed %s never mounts a preloaded bundle', async failure => {
+ const opts = {...options(), token: undefined, appBundle: './app.js?v=build-a'}
+ const request = vi.fn<typeof globalThis.fetch>(async url => String(url).includes('login.cgi') && failure !== 'token'
+  ? new Response(JSON.stringify({success: true, SynoToken: 'token'})) : json({user: '', admin: false}))
+ expect(await bootEntryPage({...opts, fetch: request})).toBeUndefined()
+ expect(document.querySelector('link[rel=modulepreload]')).not.toBeNull()
+ expect(opts.mount).not.toHaveBeenCalled()
+ expect(opts.navigate).toHaveBeenCalledOnce()
+})
+
+test.each(['https://outside.example/app.js', '//outside.example/app.js', 'javascript:alert(1)', 'data:text/javascript,alert(1)', 'https://user:pass@localhost/app.js'])('refuses an unsafe bundle URL before preload or identity: %s', async appBundle => {
+ const opts = options(), request = statusFetch()
+ await expect(bootEntryPage({...opts, appBundle, fetch: request})).rejects.toThrow('Invalid App bundle URL')
+ expect(document.querySelector('link[rel=modulepreload]')).toBeNull()
+ expect(request).not.toHaveBeenCalled()
+ expect(opts.mount).not.toHaveBeenCalled()
 })

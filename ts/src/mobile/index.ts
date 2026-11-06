@@ -34,9 +34,31 @@ function httpURL(input: string): URL {
  if(!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw {code: 'invalid_url'}
  return url
 }
+// Bound native basenames by UTF-8 bytes too, without cutting a Unicode character.
+function filenamePrefix(value: string, limit: number): string {
+ let result = '', size = 0
+ const encoder = new TextEncoder()
+ for(const char of value) {
+  const bytes = encoder.encode(char).length
+  if(size + bytes > limit) break
+  result += char; size += bytes
+ }
+ return result
+}
+function saveFilename(input: string): string {
+ const name = input.replace(/[/\\\u0000-\u001f\u007f-\u009f]/g, ' ')
+  .replace(/\s+/gu, ' ').replace(/\s*\.\s*/g, '.').replace(/\.+/g, '.')
+  .replace(/^[.\s]+|[.\s]+$/g, '') || 'download'
+ const dot = name.lastIndexOf('.')
+ const extension = dot > 0 ? name.slice(dot) : ''
+ const budget = 255 - new TextEncoder().encode(extension).length
+ // Keep the final extension when it leaves room for at least one stem character.
+ const stem = filenamePrefix(name.slice(0, dot > 0 ? dot : name.length), budget)
+ return (stem ? stem.replace(/[.\s]+$/g, '') + extension : filenamePrefix(name, 255)).replace(/[.\s]+$/g, '') || 'download'
+}
 function saveOptions(options: SaveOptions): {filename: string; mime: string} {
- if(!options.filename || options.filename.length > 255 || /[/\\\u0000-\u001f\u007f]/.test(options.filename) || (options.mime?.length ?? 0) > 255 || /[\r\n]/.test(options.mime ?? '')) throw {code: 'invalid_filename'}
- return {filename: options.filename, mime: options.mime ?? 'application/octet-stream'}
+ if((options.mime?.length ?? 0) > 255 || /[\r\n]/.test(options.mime ?? '')) throw {code: 'invalid_filename'}
+ return {filename: saveFilename(options.filename), mime: options.mime ?? 'application/octet-stream'}
 }
 let serial = 0
 function requestId(): string {return `download-${Date.now().toString(36)}-${++serial}`}
@@ -66,7 +88,7 @@ export async function saveBlob(blob: Blob, filename: string): Promise<MobileActi
   try {createNativeClient(bridge).post({v: 1, type: 'download', id, ...options, base64}); return {mode: 'native', id}} catch { /* Browser fallback on a synchronous dispatch failure. */ }
  }
  const url = URL.createObjectURL(blob)
- try {return downloadLink(url, filename)} finally {
+ try {return downloadLink(url, options.filename)} finally {
   // Keep the object URL alive until the browser has consumed the click; a
   // fixed revocation delay races slow downloads. Release on page departure.
   window.addEventListener('pagehide', () => URL.revokeObjectURL(url), {once: true})

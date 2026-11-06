@@ -16,10 +16,10 @@ function install(overrides: Partial<NativeCapabilities> = {}) {
  return bridge
 }
 function emit(detail: NativeEvent | unknown) {window.dispatchEvent(new CustomEvent('synopkgnative', {detail}))}
-let clicks: string[]
+let clicks: string[], filenames: string[]
 beforeEach(() => {
- clicks = []
- vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function(this: HTMLAnchorElement) {clicks.push(this.href)})
+ clicks = []; filenames = []
+ vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function(this: HTMLAnchorElement) {clicks.push(this.href); filenames.push(this.download)})
  vi.spyOn(window, 'open').mockReturnValue(null)
  Object.defineProperty(URL, 'createObjectURL', {configurable: true, value: vi.fn(() => 'blob:browser-download')})
  Object.defineProperty(URL, 'revokeObjectURL', {configurable: true, value: vi.fn()})
@@ -71,13 +71,12 @@ test('oversize blobs, individually missing download caps, foreign URLs and faile
  expect(clicks).toHaveLength(6)
 })
 
-test('unsafe URLs and filenames never reach native or browser actions', async () => {
+test('unsafe URLs never reach native or browser actions', async () => {
  const bridge = install()
  for(const url of ['javascript:alert(1)', 'data:text/plain,secret', 'https://user:password@outside.example/']) {
   expect(() => openExternal(url)).toThrow()
   await expect(saveUrl(url, {filename: 'file'})).rejects.toEqual({code: 'invalid_url'})
  }
- await expect(saveBlob(new Blob(['a']), '../file')).rejects.toEqual({code: 'invalid_filename'})
  expect(bridge.post).not.toHaveBeenCalled(); expect(window.open).not.toHaveBeenCalled(); expect(clicks).toEqual([])
 })
 
@@ -208,4 +207,48 @@ test('wire validators refuse mixed download modes, unknown keys, paths, malforme
  expect(isNativeMessage({...download, base64: 'not base64'})).toBe(false)
  expect(isNativeEvent({v: 1, type: 'transfer', id: 'd', state: 'downloading', progress: 2})).toBe(false)
  expect(isNativeMessage({v: 1, type: 'openExternal', url: 'https://outside.example/', token: 'forbidden'})).toBe(false)
+})
+
+
+const filenameCases: [string, string][] = [
+ ['folder/report.csv', 'folder report.csv'],
+ ['folder\\report.csv', 'folder report.csv'],
+ ...Array.from({length: 32}, (_, i): [string, string] => [`report${String.fromCharCode(i)}draft.csv`, 'report draft.csv']),
+ ['report\u007fdraft.csv', 'report draft.csv'],
+ ...Array.from({length: 32}, (_, i): [string, string] => [`report${String.fromCharCode(128 + i)}draft.csv`, 'report draft.csv']),
+ ['  .. report  draft ... csv . ', 'report draft.csv'],
+ ['report . . csv', 'report.csv'],
+ ['', 'download'], [' .. . /\\\t\n ', 'download'],
+ ['報表 設計稿.csv', '報表 設計稿.csv'],
+ ['筆記😀.txt', '筆記😀.txt'],
+ ['a'.repeat(300) + '.csv', 'a'.repeat(251) + '.csv'],
+ ['報'.repeat(100) + '.csv', '報'.repeat(83) + '.csv'],
+ ['😀'.repeat(100) + '.txt', '😀'.repeat(62) + '.txt'],
+ ['a'.repeat(300), 'a'.repeat(255)],
+ ['a'.repeat(250) + '.draft.csv', 'a'.repeat(250) + '.csv'],
+ ['report.' + 'x'.repeat(300), 'report.' + 'x'.repeat(248)],
+]
+for(const mode of ['browser', 'native', 'dispatch-failure', 'oversize'] as const) {
+ test.each(filenameCases)(`download filenames are safe basenames in ${mode}: %j`, async (input, expected) => {
+  const bridge = mode === 'browser' ? undefined : install(mode === 'oversize' ? {download: {base64: true, url: true, maxBase64: 0}} : {})
+  if(mode === 'dispatch-failure') vi.mocked(bridge!.post).mockImplementation(() => {throw Error('gone')})
+  await saveBlob(new Blob(['csv']), input)
+  await saveUrl('/file', {filename: input})
+  for(const [message] of vi.mocked(bridge?.post ?? vi.fn()).mock.calls) {
+   expect(message).toMatchObject({filename: expected})
+   expect(isNativeMessage(message)).toBe(true)
+  }
+  const browserNames = mode === 'native' ? [] : mode === 'oversize' ? [expected] : [expected, expected]
+  expect(filenames).toEqual(browserNames)
+  expect(expected).not.toMatch(/[/\\\u0000-\u001f\u007f-\u009f]/)
+  expect(new TextEncoder().encode(expected).length).toBeLessThanOrEqual(255)
+ })
+}
+
+test('invalid MIME metadata still cannot reach either download transport', async () => {
+ const bridge = install()
+ for(const mime of ['text/plain\r\nInjected: yes', 'a'.repeat(256)]) {
+  await expect(saveUrl('/file', {filename: '../report.csv', mime})).rejects.toEqual({code: 'invalid_filename'})
+ }
+ expect(bridge.post).not.toHaveBeenCalled(); expect(clicks).toEqual([])
 })
