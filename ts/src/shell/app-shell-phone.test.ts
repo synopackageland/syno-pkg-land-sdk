@@ -16,7 +16,7 @@ function viewport(width:number,coarse=false){
  return (matches:boolean)=>{Object.assign(media,{matches});media.dispatchEvent(Object.assign(new Event('change'),{matches}))}
 }
 
-test.each([false,true])('the forwarded tabbar owns the drawer and releases the menu fallback (appRoot=%s)',async appRoot=>{
+test.each([false,true])('the forwarded tabbar owns phone navigation and hiding it restores the menu (appRoot=%s)',async appRoot=>{
  viewport(390,true)
  const page=ref('home'),tabbar=ref(true),more=ref(true)
  const root=document.createElement('div');document.body.append(root)
@@ -35,7 +35,8 @@ test.each([false,true])('the forwarded tabbar owns the drawer and releases the m
   expect(document.querySelector('[data-ui-nav-drawer]')?.getAttribute('data-state')).toBe('open')
   document.querySelector<HTMLButtonElement>('[data-ui-nav-drawer] button[aria-label="Close"]')?.click();await settle()
   more.value=false;await settle()
-  expect(root.querySelector('[data-ui-mobile-menu]')).not.toBeNull()
+  expect(root.querySelector('[data-ui-tab-bar-more]')).toBeNull()
+  expect(root.querySelector('[data-ui-mobile-menu]')).toBeNull()
   tabbar.value=false;await settle()
   expect(root.querySelector('[data-ui-tab-bar]')).toBeNull()
   expect(root.querySelector('[data-ui-mobile-menu]')).not.toBeNull()

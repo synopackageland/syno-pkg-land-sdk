@@ -822,3 +822,13 @@ store from `@synopackageland/sdk/mobile/shell`. The bridge is injected only
 for a registered App at its NAS origin, in the main frame. See the
 [wire contract and integration guide](../spec/native/v1/README.md) for
 message shapes, transfer events, fallbacks and the shell's trust boundary.
+
+## Native HTTP metadata
+
+The headless entry exports the v3 native HTTP registry, descriptor and inventory
+TypeScript types. The formal schemas are available through
+`@synopackageland/sdk/spec/api/v3/*`. They describe explicit
+`ctl.transport: native-http` bindings for Compose and native Apps; the CLI owns
+upstream credentials, HTTP execution and file transfers. The SDK serves validated
+metadata through the existing authenticated DSM CGI entry. See the
+[native HTTP contract](https://github.com/synopackageland/syno-pkg-land-sdk/blob/main/api/nativehttp/README.md).

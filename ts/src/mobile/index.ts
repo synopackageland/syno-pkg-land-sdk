@@ -51,9 +51,9 @@ function saveFilename(input: string): string {
   .replace(/^[.\s]+|[.\s]+$/g, '') || 'download'
  const dot = name.lastIndexOf('.')
  const extension = dot > 0 ? name.slice(dot) : ''
- const budget = 255 - new TextEncoder().encode(extension).length
+ const stemByteLimit = 255 - new TextEncoder().encode(extension).length
  // Keep the final extension when it leaves room for at least one stem character.
- const stem = filenamePrefix(name.slice(0, dot > 0 ? dot : name.length), budget)
+ const stem = filenamePrefix(name.slice(0, dot > 0 ? dot : name.length), stemByteLimit)
  return (stem ? stem.replace(/[.\s]+$/g, '') + extension : filenamePrefix(name, 255)).replace(/[.\s]+$/g, '') || 'download'
 }
 function saveOptions(options: SaveOptions): {filename: string; mime: string} {

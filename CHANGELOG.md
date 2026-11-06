@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.52.0
+
+- Let DSM recreate Compose worker profiles on START; stop the gateway before releasing lifecycle state and report unconfirmed local teardown
+
+- Widen the UI peer range to `>=0.20.5 <0.22.0` for the additive native phone shell API; keep release tests pinned to UI 0.20.20
+
+- Add native HTTP v3 registries, descriptors and inventories for Compose and native backends, with shared Go/TypeScript types and JSON schemas
+- Export canonical metadata and serve authenticated metadata descriptions through the existing DSM CGI entry
+- Enforce authored effects, entry policy, upstream path coverage, auth declarations, digests and capability compatibility
+- Reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.51.1
 
 - Sanitize `saveBlob` and `saveUrl` filenames in both native and browser downloads: replace separators/control characters, normalize whitespace/dots, preserve Unicode and the final extension, cap at 255 UTF-8 bytes and use `download` for an empty result

@@ -184,7 +184,7 @@ For credential-authorized IPC between package accounts, use
 
 ## Single operation registry
 
-Native Apps declare operation metadata in a `synopkgland.api` v2 JSON registry.
+Native RPC Apps declare operation metadata in a `synopkgland.api` v2 JSON registry.
 The CLI generates permissions, runtime bindings, the private API descriptor,
 ctl commands, AI/MCP tools and the App reference from that one source. English
 summaries are not maintained in a second skill or document. Each operation needs
@@ -220,3 +220,9 @@ shared context and sign-in display caches; Go Apps can expose language fields
 with `api.AppStatusHandler`. Native mobile Apps use
 [`@synopackageland/sdk/mobile`](spec/native/v1/README.md) for actions and browser
 fallbacks; shell implementations use the DOM-free `./mobile/shell` contract.
+
+Native HTTP Apps declare a `synopkgland.api` v3 registry with
+`ctl.transport: native-http`. The SDK exports validated descriptors and HTTP
+inventories, shared Go/TypeScript types and JSON schemas, and serves authenticated
+metadata through the existing DSM CGI entry. The CLI handles upstream credentials,
+HTTP execution and bounded file transfers. See the [native HTTP contract](api/nativehttp/README.md).

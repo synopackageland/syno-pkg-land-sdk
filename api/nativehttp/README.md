@@ -81,5 +81,4 @@ admin-only additionally requires a verified administrator. No native request run
 The frontend SDK package also ships the formal schemas under the
 `@synopackageland/sdk/spec/api/v3/*` export, copied from these same embedded sources
 at build time. Client types are exported from the headless SDK entry. Schema and
-feature matching still requires an actual matching release; no release is made by
-this change.
+feature matching requires compatible SDK and CLI releases.
