@@ -26,7 +26,7 @@ fi
 # a .css import: the packed entries must load there.
 "$root/scripts/ts-consumer-test.sh"
 # spec/protocol/v1 ships whole: consumers read node_modules/@synopackageland/sdk/spec/protocol/v1.
-spec=$(cd "$root" && git ls-files spec/protocol/v1 spec/native/v1)
+spec=$(cd "$root" && { git ls-files spec/protocol/v1 spec/native/v1 spec/api; git ls-files api/nativehttp/schema | sed 's|^api/nativehttp/|spec/api/v3/|'; })
 npm pack --dry-run --json --ignore-scripts 2>/dev/null | SPEC="$spec" node -e '
 const files = JSON.parse(require("fs").readFileSync(0, "utf8"))[0].files.map(f => f.path)
 const spec = process.env.SPEC.split("\n")
