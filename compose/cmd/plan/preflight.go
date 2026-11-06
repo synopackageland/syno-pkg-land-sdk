@@ -1,10 +1,8 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"syscall"
 
@@ -44,11 +42,7 @@ func preflight() error {
 	if !workerProfileWaitRequired(project, incoming, os.Getenv("SYNOPKG_PKG_STATUS")) {
 		return nil
 	}
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer cancel()
-	return compose.WaitForWorkerProfiles(ctx, project, func() {
-		fmt.Fprintln(os.Stderr, "[COMPOSE_WORKER_PROFILE_PENDING] Waiting for Container Manager to register this App; keep this operation running. If registration does not recover, cancel and repair this App in Package Center")
-	})
+	return compose.CheckWorkerProfiles(project)
 }
 
 func workerProfileWaitRequired(project, incoming, status string) bool {

@@ -596,24 +596,59 @@ acquisition failed before the SDK start hook ran. The matching worker log said
 reported `failed to read profile`. Package Center's startup-worker error and a
 Control API wrapper alone do not distinguish this from other worker failures.
 
-On an explicit START, the installed Compose preflight now waits for nonempty,
-regular Container Manager profile files for every declared service before DSM
-tries to enable the existing project. It only inspects file metadata, including
-root-owned private profiles; it does not read profile contents, change DSM files
-or open Docker's control socket. Missing or empty profiles remain pending, with
-one actionable message, until registration appears or the operation is canceled.
-There is no total elapsed-time failure timer. INSTALL and UPGRADE retain their
-profile-generating worker path and do not wait before generation.
+On an explicit START, the installed Compose preflight checks for nonempty,
+regular Container Manager profile files for every declared service. If any are
+missing or empty, it returns `COMPOSE_WORKER_PROFILE_MISSING` immediately.
+This START path enables an existing project; it cannot run the install worker
+that recreates its registration. A running upstream endpoint does not make a
+missing profile safe. The check only inspects file metadata; it does not read
+profile contents, change DSM files or open Docker's control socket.
 
-This guards asynchronous registration, not permanent profile corruption or
-profile/container identity. If registration never recovers, cancel the pending
-operation and repair the App through Package Center. Merely adding a delay to
-the SDK stop hook cannot recreate missing DSM metadata. A device fixture
-reproduced the missing-profile error during upgrade halt, with worker code 299,
-and passed immediate stop/start after DSM regenerated the project. Repeated
-upgrade/stop/start cycles also passed. Recovery from startup-worker code 272 with
-permanently missing profiles remains a separate device acceptance requirement.
-Do not claim that a metadata wait repairs every startup-worker failure.
+INSTALL and UPGRADE retain their profile-generating worker path and do not wait
+before generation. `WaitForWorkerProfiles` remains available to registration
+callers that can actually make progress: it waits for every service, announces
+once and permits explicit cancellation, without an elapsed-time failure timer.
+The installed START hook uses `CheckWorkerProfiles` instead. This intentionally
+fails a START even if a delayed Container Manager watcher might later recover;
+retry START after registration has recovered rather than hold Package Center in
+`starting` indefinitely.
+
+The generated gateway lifecycle invokes `daemon/control release` before
+`daemon/control stop`. Release now fences and stops the gateway before writing
+an inactive acquire generation. Previously a concurrent readiness probe could
+observe that inactive record and exit with `COMPOSE_ACQUIRE_GENERATION_INVALID`.
+That message concerns SDK gateway readiness, not the Docker worker's stop result.
+On an ordinary STOP, release also checks the worker profiles and returns
+`COMPOSE_STOP_UNCONFIRMED` with recovery instructions if they are unavailable.
+Teardown does not require the outgoing acquire generation to match the new plan
+or installed version. INSTALL, UPGRADE and UNINSTALL bypass the profile check so
+that recovery and removal remain possible, while still stopping the gateway.
+
+If Repair is absent, use Package Center **Manual Install** with this App's
+same-version SPK, retaining App data. This reruns the official registration path
+without requiring a Repair button. If that operation reports a duplicate project,
+use an administrator's `synopkgland install <package> --repair` with a CLI that
+supports owned-project recovery. Preserve volumes, data and images, and never
+remove a same-name project with a different owner/path. The SDK does not attempt
+privileged self-repair. Device acceptance must verify this recovery on the
+specific DSM/Container Manager combination.
+
+These checks do not attest Docker container state. The official
+[docker-project worker](https://help.synology.com/developer-guide/resource_acquisition/docker-project.html)
+owns project start/stop. A successful SDK gateway stop cannot prove its containers
+stopped, and a present profile cannot prove the worker's later Release succeeds.
+Headless Apps without the generated gateway release hook need their CLI lifecycle
+to invoke `CheckWorkerProfiles` on STOP as well; updating that generator is outside
+this SDK change. Metadata-only package-account code cannot reconstruct missing
+DSM project IDs or establish the cause of DSM's lost profile.
+
+The filename convention is still `<project>-<service>-1.config`. Recorded
+install/start/upgrade evidence includes DSM 7.3.2 / Container Manager
+24.0.2-1606 and DSM 7.4 / 24.0.2-1706; it does not verify this filename on
+every version or establish a universal DSM 7.2/7.3 naming contract.
+A fixture reproduced missing-profile error 299 during upgrade halt and passed
+immediate stop/start after DSM regenerated the project. Missing-profile recovery
+and actual container stop remain device acceptance requirements.
 
 An additional DSM 7.3.2 / Container Manager 24.0.2-1606 fixture passed Header
 and Vaultwarden install/start/upgrade. This does not certify the failing DSM

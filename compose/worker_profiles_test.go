@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io/fs"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -104,8 +105,65 @@ func TestWorkerProfilesRefuseUnreadableAndNonregularEvidence(t *testing.T) {
 		fstest.MapFS{"broker": {Mode: fs.ModeDir}},
 	} {
 		err := waitWorkerProfiles(context.Background(), f, []string{"broker"}, nil)
-		if err == nil || !strings.Contains(err.Error(), "COMPOSE_WORKER_PROFILE_UNAVAILABLE") || !strings.Contains(err.Error(), "repair this App") {
+		if err == nil || !strings.Contains(err.Error(), "COMPOSE_WORKER_PROFILE_UNAVAILABLE") || !strings.Contains(err.Error(), "Manual Install") {
 			t.Fatalf("unknown profile evidence admitted: %v", err)
 		}
+	}
+}
+
+func TestInstalledStartMissingProfilesFailsEvenWhileContainerEndpointRuns(t *testing.T) {
+	// A reachable upstream cannot substitute for DSM worker metadata.
+	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	for _, root := range []fstest.MapFS{{}, {"web": {Data: nil}}, {"web": {Data: []byte("ready")}}} {
+		err := checkWorkerProfiles(root, []string{"web", "broker"})
+		if !errors.Is(err, errWorkerProfilePending) || !strings.Contains(err.Error(), "Manual Install") || !strings.Contains(err.Error(), "same-version SPK") {
+			t.Fatalf("registered project with missing profiles must fail with recovery: %v", err)
+		}
+	}
+}
+
+func TestInstalledProfileCheckUsesOwnedLockAndNeverWaits(t *testing.T) {
+	project := t.TempDir()
+	lock := filepath.Join(project, "compose.lock.json")
+	if err := os.WriteFile(lock, []byte(`{"schema":1,"package":"ExampleApp","project_name":"exampleapp","services":[{"service":"web"}]}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := CheckWorkerProfiles(project); !errors.Is(err, errWorkerProfilePending) {
+		t.Fatalf("missing installed profile must return directly: %v", err)
+	}
+	if err := os.Remove(lock); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("outside", lock); err != nil {
+		t.Fatal(err)
+	}
+	if err := CheckWorkerProfiles(project); err == nil || errors.Is(err, errWorkerProfilePending) {
+		t.Fatalf("symlinked lock accepted: %v", err)
+	}
+}
+
+type metadataOnlyProfiles struct {
+	fstest.MapFS
+}
+
+func (f metadataOnlyProfiles) Open(string) (fs.File, error) {
+	panic("DSM profile contents must never be opened")
+}
+
+func (f metadataOnlyProfiles) Stat(name string) (fs.FileInfo, error) {
+	return fs.Stat(f.MapFS, name)
+}
+
+func TestWorkerProfilesUseMetadataOnly(t *testing.T) {
+	root := metadataOnlyProfiles{fstest.MapFS{"web": {Data: []byte("private"), Mode: 0600}}}
+	if err := checkWorkerProfiles(root, []string{"web"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := waitWorkerProfiles(context.Background(), root, []string{"web"}, nil); err != nil {
+		t.Fatal(err)
 	}
 }

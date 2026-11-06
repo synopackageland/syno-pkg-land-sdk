@@ -8,11 +8,36 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"testing"
 	"time"
 )
+
+func TestCompiledReleaseStopsGatewayBeforeReportingBrokenWorker(t *testing.T) {
+	t.Setenv("SYNOPKG_PKG_STATUS", "STOP")
+	control, dest, data := fixture(t, "normal")
+	if err := os.Mkdir(filepath.Join(dest, "compose"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	// The container worker is outside the gateway supervisor. A broken worker
+	// must not keep the gateway alive, or turn gateway teardown into App success.
+	if err := os.WriteFile(filepath.Join(dest, "compose/compose.lock.json"), []byte(`{"schema":1,"package":"ExampleApp","project_name":"exampleapp","services":[{"service":"web"}]}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if rc, out := runControl(control, "start", dest, data); rc != 0 {
+		t.Fatalf("start: %d %s", rc, out)
+	}
+	r := readFixtureRecord(t, data)
+	if rc, out := runControl(control, "release", dest, data); rc != 1 || !strings.Contains(out, "COMPOSE_STOP_UNCONFIRMED") || !strings.Contains(out, "Manual Install") {
+		t.Fatalf("release: %d %s", rc, out)
+	}
+	waitDead(t, r.Child, r.Birth)
+	if rc, out := runControl(control, "status", dest, data); rc != 3 {
+		t.Fatalf("gateway remained alive after failed release: %d %s", rc, out)
+	}
+}
 
 func waitDead(t *testing.T, pid int, birth string) {
 	t.Helper()

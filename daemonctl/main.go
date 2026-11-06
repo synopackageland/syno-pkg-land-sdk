@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/compose"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"github.com/synopackageland/syno-pkg-land-sdk/supervision"
 	"io"
@@ -202,7 +203,7 @@ func (c *controller) run(action string) (int, error) {
 	if action == "start" {
 		budget = c.Timeouts.Start
 	}
-	if action == "stop" || action == "restart" || action == "uninstall" {
+	if action == "stop" || action == "restart" || action == "uninstall" || action == "release" {
 		budget = c.Timeouts.Stop
 	}
 	if action == "restart" {
@@ -224,6 +225,24 @@ func (c *controller) run(action string) (int, error) {
 		return c.statusJSON(until)
 	}
 	if action == "acquire" || action == "release" {
+		if action == "release" {
+			// The generated hook releases before its subsequent stop command.
+			// Stop the gateway first: invalidating a live supervisor's acquire
+			// record turns its next readiness probe into a fatal generation error.
+			// Teardown must not depend on readiness or the outgoing plan/version.
+			if err := c.stop(until); err != nil {
+				return 1, fmt.Errorf("COMPOSE_STOP_UNCONFIRMED: gateway teardown failed; use Package Center Manual Install with this App's same-version SPK while retaining App data: %w", err)
+			}
+			// Do not block the supported recovery itself, or uninstall. These
+			// operations replace/remove the official worker registration.
+			switch os.Getenv("SYNOPKG_PKG_STATUS") {
+			case "INSTALL", "UPGRADE", "UNINSTALL":
+			default:
+				if err := compose.CheckWorkerProfiles(filepath.Join(c.dest, "compose")); err != nil {
+					return 1, fmt.Errorf("COMPOSE_STOP_UNCONFIRMED: gateway stopped but Container Manager's project stop cannot be confirmed: %w", err)
+				}
+			}
+		}
 		err := c.recordAcquire(action == "acquire")
 		if err != nil {
 			return 1, err
