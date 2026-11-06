@@ -18,7 +18,7 @@ npm run typecheck
 npm test
 npm run build
 node ../scripts/check-internal-content.mjs --package .
-if grep -Eq "from ['\"](vue|@synopackageland/ui|@lucide/vue)['\"/]" dist/index.js dist/native.js dist/mobile.js dist/mobile/shell.js; then
+if grep -Eq "from ['\"](vue|@synopackageland/ui|@lucide/vue)['\"/]" dist/entry.js dist/index.js dist/native.js dist/mobile.js dist/mobile/shell.js; then
 	echo "ts: the headless or native entry imports vue or a UI package" >&2
 	exit 1
 fi
@@ -30,8 +30,8 @@ spec=$(cd "$root" && git ls-files spec/protocol/v1 spec/native/v1)
 npm pack --dry-run --json --ignore-scripts 2>/dev/null | SPEC="$spec" node -e '
 const files = JSON.parse(require("fs").readFileSync(0, "utf8"))[0].files.map(f => f.path)
 const spec = process.env.SPEC.split("\n")
-const allowed = p => /^(LICENSE|README\.md|package\.json|executor-manifest\.json)$/.test(p) || /^dist\/(index\.js|vue\.js|native\.js|mobile\.js|mobile\/shell\.js|[\w.-]+-[\w-]+\.js|style\.css|src\/.+\.d\.ts|i18n\/[a-z]+\/[a-zA-Z-]+\.json)$/.test(p) || spec.includes(p)
+const allowed = p => /^(LICENSE|README\.md|package\.json|executor-manifest\.json)$/.test(p) || /^dist\/(entry\.js|index\.js|vue\.js|native\.js|mobile\.js|mobile\/shell\.js|[\w.-]+-[\w-]+\.js|style\.css|src\/.+\.d\.ts|i18n\/[a-z]+\/[a-zA-Z-]+\.json)$/.test(p) || spec.includes(p)
 const bad = files.filter(p => !allowed(p) || /node_modules|\.test\./.test(p))
-const missing = ["LICENSE", "README.md", "executor-manifest.json", "dist/index.js", "dist/vue.js", "dist/native.js", "dist/mobile.js", "dist/mobile/shell.js", "dist/src/mobile.d.ts", "dist/src/mobile/shell.d.ts", "dist/style.css", "dist/src/index.d.ts", "dist/src/vue.d.ts", "dist/src/native.d.ts", "dist/i18n/files/en.json", ...spec].filter(p => !files.includes(p))
+const missing = ["LICENSE", "README.md", "executor-manifest.json", "dist/entry.js", "dist/src/entry.d.ts", "dist/index.js", "dist/vue.js", "dist/native.js", "dist/mobile.js", "dist/mobile/shell.js", "dist/src/mobile.d.ts", "dist/src/mobile/shell.d.ts", "dist/style.css", "dist/src/index.d.ts", "dist/src/vue.d.ts", "dist/src/native.d.ts", "dist/i18n/files/en.json", ...spec].filter(p => !files.includes(p))
 if (bad.length || missing.length) { console.error("ts: unexpected pack contents", {bad, missing}); process.exit(1) }
 console.log("ts: " + files.length + " files packed")'

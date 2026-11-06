@@ -202,4 +202,4 @@ export function isFullPage(ctx: LaunchContext): boolean {
  const platform = ctx.host.platform()
  return platform.host !== 'dsm' || platform.dsmStandalone === true
 }
-export interface AppStatus {package: string; version: string; user: string; admin: boolean}
+export interface AppStatus {package: string; version: string; user: string; admin: boolean; lang?: string; locale?: string}

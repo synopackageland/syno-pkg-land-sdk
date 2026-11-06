@@ -1,5 +1,17 @@
 [
   {
+    "file": "ts/src/entry/token.ts",
+    "statement": "export const TOKEN_HEDGE_DELAY_MS = 4000",
+    "class": "B",
+    "reason": "Hedge spacing: sends a parallel cookie-backed token read; neither request is aborted or failed by the clock"
+  },
+  {
+    "file": "ts/src/entry/token.ts",
+    "statement": "const TOKEN_HEDGE_DELAY_MS = 4000",
+    "class": "B",
+    "reason": "Hedge spacing: sends a parallel cookie-backed token read; neither request is aborted or failed by the clock"
+  },
+  {
     "file": "api/ingress.go",
     "statement": "srv := &http.Server{Handler: h, ReadHeaderTimeout: 30 * time.Second}",
     "class": "B",

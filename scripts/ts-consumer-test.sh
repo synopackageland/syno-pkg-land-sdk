@@ -19,6 +19,10 @@ import {expect, test} from 'vitest'
 test('the packed SDK loads as an App test imports it', async () => {
 	expect((await import('@synopackageland/sdk/vue')).AppShell).toBeDefined()
 	expect((await import('@synopackageland/sdk')).isFullPage).toBeDefined()
+	const entry = await import('@synopackageland/sdk/entry')
+	expect(entry.bootEntryPage).toBeTypeOf('function')
+	expect(entry.createAppContext).toBeTypeOf('function')
+	expect(entry.createSignInCache).toBeTypeOf('function')
 	expect((await import('@synopackageland/sdk/mobile')).saveBlob).toBeTypeOf('function')
 	const shell = await import('@synopackageland/sdk/mobile/shell')
 	expect(shell.NATIVE_PROTOCOL).toBe(1)
@@ -31,6 +35,7 @@ TEST
 (cd "$work" && "$ts/node_modules/.bin/vitest" run --root "$work")
 
 cat >"$work/consumer.ts" <<'TYPES'
+import {bootEntryPage, createAppContext, createSignInCache} from '@synopackageland/sdk/entry'
 import {saveBlob, createNativeHost} from '@synopackageland/sdk/mobile'
 import {NATIVE_PROTOCOL, type NativeBridge, type NativeMessage, type NativeEvent} from '@synopackageland/sdk/mobile/shell'
 const message: NativeMessage = {v: NATIVE_PROTOCOL, type: 'intake.take', id: 'handle'}
@@ -40,5 +45,8 @@ bridge.post(message)
 void launch
 void saveBlob(new Blob(['csv']), 'report.csv')
 void createNativeHost()
+void bootEntryPage
+void createAppContext
+void createSignInCache
 TYPES
 (cd "$work" && "$ts/node_modules/.bin/tsc" --noEmit --module NodeNext --moduleResolution NodeNext --target ES2022 --skipLibCheck consumer.ts)
