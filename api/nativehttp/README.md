@@ -38,7 +38,7 @@ a nullable schema, arrays repeat query/form keys. Static binding keys cannot
 inject credential/identity headers or URL components. Action tokens may appear
 only as form `T: {actionToken:true}` under greader auth.
 
-Read/preview AI classes require read effect and GET. Drafts reference an existing
+Read/preview AI classes require read effect; effects remain explicitly authored. Drafts reference an existing
 nonmutating preview command. Admin-only entry requires administrator permissions
 throughout the registry. Upload/download are stream, human-only, with finite
 byte/MIME caps; raw upload has no multipart part or form body. Pagination is GET,
@@ -47,7 +47,8 @@ bounded text stream. Client runtime rules (no redirect, no mutation replay,
 response validation and incomplete pagination) remain mandatory CLI work.
 
 `Export` produces the descriptor and HTTP inventory from the same parsed registry
-for either backend. `ValidateArtifacts` checks schema, semantics, fixed CGI path,
+for either backend. The inventory includes the unscoped `upstreamAuthPaths`
+so installed metadata can recheck path coverage. `ValidateArtifacts` checks schema, semantics, fixed CGI path,
 package identity, capabilities, every digest and exact inventory/command equality.
 Gateway policy hashing reuses `idgateway.Config.EntryPolicyDigest()` on the
 **unscoped** gateway config, including empty collection normalization and fixed
@@ -60,8 +61,8 @@ All other digests use RFC 8785 JCS UTF-8 JSON and SHA-256 lowercase hex:
 - inventorySha256: complete exported inventory
 - descriptor sha256: `{format,version,payload}`, excluding top-level sha256
 
-Hash the original JSON values, retaining explicit empty optional objects. Never
-hash reserialized typed structs that may omit explicit empty fields. Invalid
+Hash the original JSON values, retaining explicit empty optional objects. The
+exporter verifies that its pure-data serialization preserves these values. Invalid
 Unicode, duplicate keys, nonfinite numbers and nesting beyond 32 are refused.
 `testdata/canonical-vectors.json` includes ECMAScript numbers, Unicode, UTF-16 key
 ordering and independent expected hashes. Hashes identify content; they are not
@@ -75,3 +76,9 @@ inventory files, then reuses SDK DSM/session/origin/entry guards. Unknown method
 query dispatch, batches and native credential input are refused. App-privilege
 requires an existing DSM EntryAuthenticator with the exact matching mode;
 admin-only additionally requires a verified administrator. No native request runs.
+
+The frontend SDK package also ships the formal schemas under the
+`@synopackageland/sdk/spec/api/v3/*` export, copied from these same embedded sources
+at build time. Client types are exported from the headless SDK entry. Schema and
+feature matching still requires an actual matching release; no release is made by
+this change.

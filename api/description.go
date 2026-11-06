@@ -20,6 +20,38 @@ const DescriptionFile = "synopkgland-api.json"
 // App-authored description files have no byte-size cap; request limits still
 // apply to the incoming discovery request.
 func WithDescription(next http.Handler, auth Authenticator, filename string) http.Handler {
+	return withDescription(next, auth, false, func() ([]byte, *Error) {
+		file, err := os.Open(filename)
+		if err != nil {
+			return nil, &Error{"unknown_method", "API description not installed"}
+		}
+		defer file.Close()
+		info, err := file.Stat()
+		if err != nil || !info.Mode().IsRegular() {
+			return nil, &Error{"description_invalid", "API description unavailable"}
+		}
+		raw, err := io.ReadAll(file)
+		if err != nil || !json.Valid(raw) {
+			return nil, &Error{"description_invalid", "API description unavailable"}
+		}
+		return raw, nil
+	})
+}
+
+// WithDescriptionData serves an immutable copy of trusted, prevalidated packaged
+// metadata under the same DSM session, origin and entry guards as WithDescription.
+// It is intended for metadata-only CGI entries; it never registers business routes.
+func WithDescriptionData(next http.Handler, auth Authenticator, raw []byte) http.Handler {
+	snapshot := bytes.Clone(raw)
+	return withDescription(next, auth, true, func() ([]byte, *Error) {
+		if !json.Valid(snapshot) {
+			return nil, &Error{"description_invalid", "API description unavailable"}
+		}
+		return snapshot, nil
+	})
+}
+
+func withDescription(next http.Handler, auth Authenticator, strictEntry bool, load func() ([]byte, *Error)) http.Handler {
 	return &routeWrapper{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if HTTPRouteMethod(next, r) != "" {
 			next.ServeHTTP(w, r)
@@ -53,6 +85,13 @@ func WithDescription(next http.Handler, auth Authenticator, filename string) htt
 			writeError(w, &Error{"auth_unavailable", "DSM authentication unavailable"})
 			return
 		}
+		if strictEntry && expectedEntryMode != "" {
+			gate, ok := auth.(EntryAuthenticator)
+			if !ok || gate.EntryMode() != expectedEntryMode {
+				writeError(w, &Error{"auth_unavailable", "DSM entry policy differs from package build"})
+				return
+			}
+		}
 		_, err = authenticateEntry(auth, expectedEntryMode, r)
 		switch {
 		case errors.Is(err, ErrNoSession):
@@ -73,22 +112,12 @@ func WithDescription(next http.Handler, auth Authenticator, filename string) htt
 			writeError(w, BadRequest("describe params must be {}"))
 			return
 		}
-		file, err := os.Open(filename)
-		if err != nil {
-			writeError(w, &Error{"unknown_method", "API description not installed"})
+		raw, loadErr := load()
+		if loadErr != nil {
+			writeError(w, loadErr)
 			return
 		}
-		defer file.Close()
-		info, err := file.Stat()
-		if err != nil || !info.Mode().IsRegular() {
-			writeError(w, &Error{"description_invalid", "API description unavailable"})
-			return
-		}
-		raw, err := io.ReadAll(file)
-		if err != nil || !json.Valid(raw) {
-			writeError(w, &Error{"description_invalid", "API description unavailable"})
-			return
-		}
+
 		WriteData(w, json.RawMessage(raw))
 	}), next: next}
 }

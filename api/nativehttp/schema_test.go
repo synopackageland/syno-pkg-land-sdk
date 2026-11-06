@@ -30,7 +30,7 @@ func TestSchemaConformance(t *testing.T) {
 		})
 	}
 	for _, tc := range cases.Invalid {
-		if tc.Stage != "schema" {
+		if tc.Stage != "schema" && tc.Stage != "json" {
 			continue
 		}
 		t.Run(tc.File, func(t *testing.T) {

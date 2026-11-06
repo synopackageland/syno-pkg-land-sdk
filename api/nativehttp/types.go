@@ -131,6 +131,7 @@ type InventoryBinding struct {
 	HTTP       HTTPBinding `json:"http"`
 }
 type Inventory struct {
+	UpstreamAuthPaths []string                    `json:"upstreamAuthPaths"`
 	Format            string                      `json:"format"`
 	Version           int                         `json:"version"`
 	Package           Package                     `json:"package"`
@@ -184,4 +185,24 @@ type BuildConfig struct {
 type Artifacts struct {
 	Descriptor Descriptor `json:"descriptor"`
 	Inventory  Inventory  `json:"inventory"`
+}
+
+// MarshalJSON retains explicit empty optional maps, which participate in JCS hashes.
+func (h HTTPBinding) MarshalJSON() ([]byte, error) {
+	type wire struct {
+		Method   string              `json:"method"`
+		Path     string              `json:"path"`
+		Query    *map[string]Binding `json:"query,omitempty"`
+		Headers  *map[string]string  `json:"headers,omitempty"`
+		Body     *Body               `json:"body,omitempty"`
+		Response Response            `json:"response"`
+	}
+	w := wire{Method: h.Method, Path: h.Path, Body: h.Body, Response: h.Response}
+	if h.Query != nil {
+		w.Query = &h.Query
+	}
+	if h.Headers != nil {
+		w.Headers = &h.Headers
+	}
+	return json.Marshal(w)
 }

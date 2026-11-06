@@ -1,0 +1,14 @@
+{
+ "package":{"id":"ExampleApp","version":"1.0.0-1","displayName":"Example App"},
+ "aliases":["example"],
+ "provenance":{"developedBy":"third-party","generator":"metadata-fixture"},
+ "backend":"compose",
+ "transport":"native-http",
+ "gateway":{
+  "package":"ExampleApp",
+  "ingress_path":"/synopkgland/ExampleApp/",
+  "access":"dsm-users",
+  "upstream_access":"protected",
+  "upstream_auth_paths":["/api/"]
+ }
+}

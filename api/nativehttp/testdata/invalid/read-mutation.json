@@ -43,7 +43,7 @@
         "documents",
         "list"
       ],
-      "effect": "read",
+      "effect": "write",
       "permission": "authenticated",
       "ai": "read",
       "kind": "rpc",
@@ -75,7 +75,7 @@
         }
       },
       "http": {
-        "method": "POST",
+        "method": "GET",
         "path": "/api/documents/",
         "query": {
           "ordering": {

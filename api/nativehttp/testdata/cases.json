@@ -15,7 +15,10 @@
     "valid/header-page-files.json",
     "valid/greader-invoke.json",
     "valid/greader-cursor.json",
-    "valid/ndjson.json"
+    "valid/ndjson.json",
+    "valid/post-read.json",
+    "valid/greader-action.json",
+    "valid/raw-upload.json"
   ],
   "invalid": [
     {
@@ -121,6 +124,46 @@
     {
       "file": "invalid/action-token-with-header-auth.json",
       "stage": "semantic"
+    },
+    {
+      "file": "invalid/unsupported-version.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/unknown-auth-field.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/unknown-flow-field.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/multipart-missing-part.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/pointer-escape.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/auth-encoded-traversal.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/auth-cross-path.json",
+      "stage": "semantic"
+    },
+    {
+      "file": "invalid/greader-auth-as-operation.json",
+      "stage": "semantic"
+    },
+    {
+      "file": "invalid/duplicate-key.json",
+      "stage": "json"
+    },
+    {
+      "file": "invalid/lone-surrogate.json",
+      "stage": "json"
     }
   ]
 }

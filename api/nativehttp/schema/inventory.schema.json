@@ -90,6 +90,17 @@
           "http"
         ]
       }
+    },
+    "upstreamAuthPaths": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "maxLength": 512,
+        "pattern": "^/[A-Za-z0-9_./~-]+$"
+      }
     }
   },
   "required": [
@@ -101,7 +112,8 @@
     "basePath",
     "registrySha256",
     "authSha256",
-    "bindings"
+    "bindings",
+    "upstreamAuthPaths"
   ],
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://synopkgland.org/schema/api/v3/inventory.schema.json",

@@ -1,0 +1,88 @@
+{
+  "format": "synopkgland.api",
+  "version": 3,
+  "nativeHttp": {
+    "basePath": "/synopkgland/ExampleApp/",
+    "auth": {
+      "type": "greader-client-login",
+      "credentialPage": "i/?c=user&a=profile",
+      "instructions": "Open Profile and set an API password",
+      "exchangePath": "/api/greader.php/accounts/ClientLogin",
+      "identityPath": "/api/greader.php/reader/api/0/user-info",
+      "actionTokenPath": "/api/greader.php/reader/api/0/token"
+    },
+    "limits": {
+      "maxResponseBytes": 1048576,
+      "maxTransferBytes": 1048576
+    }
+  },
+  "operations": {
+    "feeds.list": {
+      "summary": "List subscriptions",
+      "cli": [
+        "feeds",
+        "list"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "ai": "read",
+      "kind": "rpc",
+      "paramsSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 25
+          }
+        },
+        "required": [
+          "ids"
+        ]
+      },
+      "resultSchema": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "flow": {
+        "type": "invoke",
+        "method": "feeds.list"
+      },
+      "http": {
+        "method": "POST",
+        "path": "/api/greader.php/reader/api/0/subscription/list",
+        "query": {
+          "output": {
+            "literal": "json"
+          }
+        },
+        "response": {
+          "statuses": [
+            200
+          ],
+          "decode": "json",
+          "maxBytes": 1048576,
+          "contentTypes": [
+            "application/json"
+          ],
+          "project": {
+            "pointer": "/subscriptions"
+          }
+        },
+        "body": {
+          "encoding": "form",
+          "fields": {
+            "ids": {
+              "param": "ids"
+            }
+          }
+        }
+      }
+    }
+  }
+}

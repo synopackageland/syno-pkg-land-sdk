@@ -16,7 +16,7 @@ export type NativeAuth = {
  prefix: 'Token ' | 'Bearer '
  credentialPage: string
  instructions: string
- verify: {method: 'GET'; path: string; response: NativeResponse}
+ verify: {method: 'GET'; path: string; response: Omit<NativeResponse, 'decode'> & {decode: 'json' | 'text'}}
 } | {
  type: 'greader-client-login'
  credentialPage: string
@@ -79,6 +79,7 @@ export type NativeEntry = 'policy' | 'admin-only' | 'app-privilege'
 export type NativeFeature = 'native-http-v1' | 'auth-header-v1' | 'auth-greader-client-login-v1'
  | 'paginate-http-v1' | 'ndjson-http-v1' | 'upload-http-v1' | 'download-file-v1'
 export interface NativeInventory {
+ upstreamAuthPaths: string[]
  format: 'synopkgland.http-inventory'
  version: 1
  package: NativePackage
