@@ -12,26 +12,31 @@ import (
 	"github.com/synopackageland/syno-pkg-land-sdk/sharedfolder"
 )
 
-func TestWorkerProfileWaitDoesNotBlockProfileGeneratingWorkers(t *testing.T) {
-	incoming := t.TempDir()
-	project := filepath.Join(incoming, "compose")
-	if err := os.Mkdir(project, 0700); err != nil {
+func TestStartProceedsAfterStopRemovesWorkerProfile(t *testing.T) {
+	project, data := t.TempDir(), t.TempDir()
+	if err := os.WriteFile(filepath.Join(project, "compose.lock.json"), []byte(`{"schema":1,"package":"Fixture","project_name":"fixture","services":[{"service":"web"}]}`), 0600); err != nil {
 		t.Fatal(err)
 	}
-	for _, status := range []string{"INSTALL", "UPGRADE", "UNINSTALL", "STOP", ""} {
-		if workerProfileWaitRequired(project, "", status) {
-			t.Fatalf("profile generation would deadlock for %q", status)
+	// Model the observed worker-owned profile lifecycle in a disposable directory.
+	profile := filepath.Join(t.TempDir(), "fixture-web-1.config")
+	if err := os.WriteFile(profile, []byte("registered"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(profile); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("SYNOPKG_PKGINST_TEMP_DIR", "")
+	t.Setenv("SYNOPKG_PKGVAR", data)
+	for _, status := range []string{"START", "INSTALL", "UPGRADE"} {
+		t.Setenv("SYNOPKG_PKG_STATUS", status)
+		checked := false
+		err := preflightWith(func() error { checked = true; return nil }, func() (string, error) { return filepath.Join(project, "control"), nil })
+		if err != nil || !checked {
+			t.Fatalf("%s required an absent worker profile or bypassed the provider: %v", status, err)
 		}
 	}
-	if workerProfileWaitRequired(project, incoming, "START") || !workerProfileWaitRequired(project, "", "START") {
-		t.Fatal("START must wait only in the installed project")
-	}
-	alias := filepath.Join(t.TempDir(), "alias")
-	if err := os.Symlink(incoming, alias); err != nil {
-		t.Fatal(err)
-	}
-	if workerProfileWaitRequired(project, alias, "START") {
-		t.Fatal("incoming alias must not wait for profiles")
+	if _, err := os.Stat(profile); !os.IsNotExist(err) {
+		t.Fatal("preflight recreated worker-owned metadata", err)
 	}
 }
 

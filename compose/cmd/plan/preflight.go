@@ -1,10 +1,8 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"syscall"
 
@@ -14,10 +12,14 @@ import (
 )
 
 func preflight() error {
-	if err := containerpreflight.Check(); err != nil {
+	return preflightWith(containerpreflight.Check, os.Executable)
+}
+
+func preflightWith(provider func() error, executablePath func() (string, error)) error {
+	if err := provider(); err != nil {
 		return err
 	}
-	executable, err := os.Executable()
+	executable, err := executablePath()
 	if err != nil {
 		return err
 	}
@@ -35,24 +37,9 @@ func preflight() error {
 			}
 		}
 	}
-	if err := preflightProject(project, incoming, os.Getenv("SYNOPKG_PKGVAR")); err != nil {
-		return err
-	}
-	// INSTALL/UPGRADE workers generate profiles themselves. Waiting before that
-	// worker would deadlock a clean install. A subsequent explicit START uses
-	// the existing project and requires its profiles to have caught up first.
-	if !workerProfileWaitRequired(project, incoming, os.Getenv("SYNOPKG_PKG_STATUS")) {
-		return nil
-	}
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer cancel()
-	return compose.WaitForWorkerProfiles(ctx, project, func() {
-		fmt.Fprintln(os.Stderr, "[COMPOSE_WORKER_PROFILE_PENDING] Waiting for Container Manager to register this App; keep this operation running. If registration does not recover, cancel and repair this App in Package Center")
-	})
-}
-
-func workerProfileWaitRequired(project, incoming, status string) bool {
-	return status == "START" && (incoming == "" || !sameDirectory(project, filepath.Join(incoming, "compose")))
+	// Container Manager can remove profiles on STOP and recreate them in the
+	// START worker. Waiting for those profiles here prevents that worker running.
+	return preflightProject(project, incoming, os.Getenv("SYNOPKG_PKGVAR"))
 }
 
 func preflightProject(project, incoming, dataDir string) error {

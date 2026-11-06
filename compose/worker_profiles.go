@@ -19,6 +19,9 @@ import (
 // It observes file metadata only, never reads private profile contents, opens a
 // Docker socket, or repairs DSM-owned files. Presence is not identity attestation.
 // Missing profiles remain pending until cancellation; elapsed time is no failure.
+//
+// Deprecated: Container Manager may remove profiles on STOP and recreate them
+// during START. Never use this helper as a package lifecycle precondition.
 func WaitForWorkerProfiles(ctx context.Context, project string, waiting func()) error {
 	if os.Getuid() == 0 || os.Getuid() != os.Geteuid() {
 		return problem("COMPOSE_ROOT_FORBIDDEN", "worker preparation must run as the package account")

@@ -8,11 +8,55 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"testing"
 	"time"
 )
+
+func TestCompiledReleaseStopsGatewayWithoutWorkerProfiles(t *testing.T) {
+	t.Setenv("SYNOPKG_PKG_STATUS", "STOP")
+	control, dest, data := fixture(t, "normal")
+	if err := os.Mkdir(filepath.Join(dest, "compose"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	// Profiles can be absent after a normal worker stop; local teardown
+	// must succeed without requiring or recreating that metadata.
+	if err := os.WriteFile(filepath.Join(dest, "compose/compose.lock.json"), []byte(`{"schema":1,"package":"ExampleApp","project_name":"exampleapp","services":[{"service":"web"}]}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if rc, out := runControl(control, "start", dest, data); rc != 0 {
+		t.Fatalf("start: %d %s", rc, out)
+	}
+	r := readFixtureRecord(t, data)
+	if rc, out := runControl(control, "release", dest, data); rc != 0 {
+		t.Fatalf("release: %d %s", rc, out)
+	}
+	waitDead(t, r.Child, r.Birth)
+	if rc, out := runControl(control, "status", dest, data); rc != 3 {
+		t.Fatalf("gateway remained alive after failed release: %d %s", rc, out)
+	}
+}
+
+func TestCompiledReleaseReportsUnconfirmedOnTeardownFailure(t *testing.T) {
+	control, dest, data := fixture(t, "normal")
+	if rc, out := runControl(control, "start", dest, data); rc != 0 {
+		t.Fatalf("start: %d %s", rc, out)
+	}
+	r := readFixtureRecord(t, data)
+	if rc, out := runControl(control, "stop", dest, data); rc != 0 {
+		t.Fatalf("stop: %d %s", rc, out)
+	}
+	r.Digest = strings.Repeat("0", 64)
+	raw, _ := json.Marshal(r)
+	if err := os.WriteFile(filepath.Join(data, "daemon/daemon.pid"), raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if rc, out := runControl(control, "release", dest, data); rc != 1 || !strings.Contains(out, "COMPOSE_STOP_UNCONFIRMED") {
+		t.Fatalf("teardown failure was hidden: %d %s", rc, out)
+	}
+}
 
 func waitDead(t *testing.T, pid int, birth string) {
 	t.Helper()

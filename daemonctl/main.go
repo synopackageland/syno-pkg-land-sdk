@@ -202,7 +202,7 @@ func (c *controller) run(action string) (int, error) {
 	if action == "start" {
 		budget = c.Timeouts.Start
 	}
-	if action == "stop" || action == "restart" || action == "uninstall" {
+	if action == "stop" || action == "restart" || action == "uninstall" || action == "release" {
 		budget = c.Timeouts.Stop
 	}
 	if action == "restart" {
@@ -224,8 +224,20 @@ func (c *controller) run(action string) (int, error) {
 		return c.statusJSON(until)
 	}
 	if action == "acquire" || action == "release" {
+		if action == "release" {
+			// The generated hook releases before its subsequent stop command.
+			// Stop the gateway first: invalidating a live supervisor's acquire
+			// record turns its next readiness probe into a fatal generation error.
+			// Teardown must not depend on readiness or the outgoing plan/version.
+			if err := c.stop(until); err != nil {
+				return 1, fmt.Errorf("COMPOSE_STOP_UNCONFIRMED: gateway teardown failed; use Package Center Manual Install with this App's same-version SPK while retaining App data: %w", err)
+			}
+		}
 		err := c.recordAcquire(action == "acquire")
 		if err != nil {
+			if action == "release" {
+				return 1, fmt.Errorf("COMPOSE_STOP_UNCONFIRMED: lifecycle release failed after gateway teardown; inspect package-owned lifecycle state and retry Stop: %w", err)
+			}
 			return 1, err
 		}
 		return 0, nil

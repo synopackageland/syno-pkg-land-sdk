@@ -12,6 +12,44 @@ import (
 	"testing"
 )
 
+func TestReleaseAfterUpgradeAcceptsMissingProfilesAndStaleGeneration(t *testing.T) {
+	t.Setenv("SYNOPKG_PKG_STATUS", "STOP")
+	c, close := readinessController(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(204) }))
+	defer close()
+	c.dest = t.TempDir()
+	c.Timeouts = deadlines{Stop: 5, Status: 1}
+	if err := os.Mkdir(filepath.Join(c.dest, "compose"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(c.dest, "compose/compose.lock.json"), []byte(`{"schema":1,"package":"Fixture","project_name":"fixture","services":[{"service":"web"}]}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.recordAcquire(true); err != nil {
+		t.Fatal(err)
+	}
+	// The outgoing generation no longer matches either the installed version
+	// or the new lock. Teardown must still fence the gateway before diagnosis.
+	c.Network.Readiness.Version = "2.0.0-0002"
+	c.Network.Readiness.PlanSHA256 = strings.Repeat("b", 64)
+	if err := c.checkReadiness(); err == nil || !strings.Contains(err.Error(), "COMPOSE_ACQUIRE_GENERATION_INVALID") {
+		t.Fatalf("fixture did not reproduce generation mismatch: %v", err)
+	}
+	for _, status := range []string{"STOP", "UPGRADE", "INSTALL", "UNINSTALL"} {
+		t.Setenv("SYNOPKG_PKG_STATUS", status)
+		if rc, err := c.run("release"); rc != 0 || err != nil {
+			t.Fatalf("%s stop was blocked by missing profiles or stale generation: %d %v", status, rc, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(c.dir, "stop.request")); err != nil {
+		t.Fatalf("stale generation bypassed gateway teardown: %v", err)
+	}
+	raw, err := os.ReadFile(filepath.Join(c.dir, "compose-acquire.json"))
+	var released acquireRecord
+	if err != nil || json.Unmarshal(raw, &released) != nil || released.Active {
+		t.Fatalf("generation was not released after teardown: %s %v", raw, err)
+	}
+}
+
 func readinessController(t *testing.T, handler http.Handler) (*controller, func()) {
 	t.Helper()
 	server := httptest.NewServer(handler)
