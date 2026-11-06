@@ -22,10 +22,11 @@ function block(source:string,tag:string){
 }
 
 /** User-visible English that bypasses the translation catalogs. */
-function hardcoded(file:string):string[]{
- const source=readFileSync(file,'utf8')
+function hardcoded(file:string,source=readFileSync(file,'utf8')):string[]{
  const scripts=file.endsWith('.vue')?[...source.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]).join('\n'):source
- const found=literals(withoutComments(scripts)).filter(text=>PROSE.test(text))
+ // API argument exceptions are developer diagnostics, not displayed UI copy.
+ const displayed=withoutComments(scripts).replace(/\bthrow\s+new\s+(?:Error|TypeError|RangeError)\(\s*(['"])(?:\\.|(?!\1)[^\\])*?\1\s*\)/g,'')
+ const found=literals(displayed).filter(text=>PROSE.test(text))
  if(!file.endsWith('.vue'))return found
  const markup=block(source,'template').replace(/<!--[\s\S]*?-->/g,'')
  for(const [,,value] of markup.matchAll(VISIBLE_ATTRIBUTES))if(/[A-Za-z]/.test(value))found.push(value)
@@ -35,6 +36,15 @@ function hardcoded(file:string):string[]{
  found.push(...text.split('\n').map(line=>line.trim()).filter(line=>/[A-Za-z]/.test(line)))
  return found
 }
+
+test('argument exceptions are diagnostics while identical displayed text still needs a catalog',()=>{
+ for(const kind of ['Error','TypeError','RangeError']){
+  expect(hardcoded('fixture.ts',`throw new ${kind}('Invalid native message')`)).toEqual([])
+ }
+ expect(hardcoded('fixture.ts',"const message='Invalid native message'")).toEqual(['Invalid native message'])
+ expect(hardcoded('fixture.vue','<template><p>Invalid native message</p></template>')).toEqual(['Invalid native message'])
+ expect(hardcoded('fixture.ts',"throw new CustomError('Invalid native message')")).toEqual(['Invalid native message'])
+})
 
 test('component text goes through the translation catalogs',()=>{
  expect(sources().flatMap(file=>hardcoded(file).map(text=>`${relative(src,file)}: ${text}`))).toEqual([])

@@ -145,16 +145,13 @@ test('reads that start together share one admission check, and a refused App sti
  provider.dispose()
 })
 
-test('picker text ends without a closing period in all nine languages',async()=>{
+test.each(Object.keys(nasCatalogs) as UiLocale[])('picker text ends without a closing period in %s',async(locale)=>{
  expect(Object.keys(nasCatalogs).sort()).toHaveLength(9)
- for(const locale of Object.keys(nasCatalogs) as UiLocale[]){
-  const g=gated();mount(g.provider,{destination:{key:'save',selectDestination:vi.fn()}},locale);await settle()
-  dblclick(row('/projects')!);await settle();dblclick(row('/projects/design')!);await settle()
-  const texts=Array.from(dialog().querySelectorAll('*')).flatMap(e=>Array.from(e.childNodes).filter(n=>n.nodeType===3).map(n=>n.textContent!.trim())).filter(Boolean)
-  const labels=Array.from(dialog().querySelectorAll('[aria-label],[title]')).flatMap(e=>[e.getAttribute('aria-label'),e.getAttribute('title')]).filter(Boolean) as string[]
-  expect([...texts,...labels].filter(t=>/[.。．]$/.test(t)&&!/\.\.\.$/.test(t)),locale).toEqual([])
-  cleanup.splice(0).forEach(fn=>fn())
- }
+ const g=gated();mount(g.provider,{destination:{key:'save',selectDestination:vi.fn()}},locale);await settle()
+ dblclick(row('/projects')!);await settle();dblclick(row('/projects/design')!);await settle()
+ const texts=Array.from(dialog().querySelectorAll('*')).flatMap(e=>Array.from(e.childNodes).filter(n=>n.nodeType===3).map(n=>n.textContent!.trim())).filter(Boolean)
+ const labels=Array.from(dialog().querySelectorAll('[aria-label],[title]')).flatMap(e=>[e.getAttribute('aria-label'),e.getAttribute('title')]).filter(Boolean) as string[]
+ expect([...texts,...labels].filter(t=>/[.。．]$/.test(t)&&!/\.\.\.$/.test(t)),locale).toEqual([])
 })
 
 test('the picker styles never force a scrollbar or a minimum wider than the dialog',()=>{

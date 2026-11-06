@@ -10,6 +10,8 @@ App's `backend/go.mod`.
 | `@synopackageland/sdk/vue` | Everything above plus the components (`AppShell`, `PageActions`, `PageInfo`, `FilesPage`, `NasPicker`, `LoginPage`, `PortalSettings`, `BackgroundPanel`, `ExecutorSettings`, `ExecutorApproval`, `ExecutorNotice`, `UiUpdateNotice`, `DelegatePanel`, `BackgroundSavePanel`, `BackgroundSaveSettings`, `AuthorizationGate`, `AuthorizationSettings`, `EntryGuard`) and composables (`createSession`, `useExecutorSetup`, `ExecutorSetupKey`, `useAuthorization`). |
 | `@synopackageland/sdk/vue/style.css` | The component stylesheet. Import it once next to `@synopackageland/ui`'s theme in the App entry. |
 | `@synopackageland/sdk/entry` | [Full-page entry boot](../docs/entry-page.md), shared App context and sign-in display caches |
+| `@synopackageland/sdk/mobile` | [Native mobile actions](../spec/native/v1/README.md#page-integration), launch events and host adapter, with browser fallbacks |
+| `@synopackageland/sdk/mobile/shell` | DOM-free native wire types, validators and read-once intake store for shell implementations |
 | `@synopackageland/sdk/native` | For a native product with its own pinned root tasks: `ROOT_RUNTIME` (`createRootAccess`) and `AUTHORIZATION_RUNTIME` (`createAuthorizationAccess`), plain ES5 source the product renders into its own DSM window; `AuthorizationGate` shows the result. Generated Apps use the executor instead. Never imports Vue. |
 | `@synopackageland/sdk/i18n/<capability>/<locale>.json` | Copy in `en`, `zh-TW`, `zh-CN`, `ja`, `ko`, `de`, `fr`, `es`, `it`. |
 | `@synopackageland/sdk/spec/protocol/v1/` | The executor protocol (`errors.json`, `schema/`, `vectors/`), a file copy of the repository's `spec/protocol/v1`. Read it from `node_modules/@synopackageland/sdk/spec/protocol/v1`. |

@@ -4,6 +4,7 @@ package bridge
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -249,8 +250,8 @@ func TestDelegateCapabilityServesTheBrowserRoutes(t *testing.T) {
 	}
 }
 
-// An older Python than the SDK supports leaves the App unavailable; why is
-// in the log only.
+// An older Python than the SDK supports is rejected before launch. The browser
+// and diagnostic log keep interpreter details redacted.
 func TestPythonOlderThan38IsUnavailable(t *testing.T) {
 	bin := t.TempDir()
 	probed := filepath.Join(bin, "python")
@@ -259,12 +260,16 @@ func TestPythonOlderThan38IsUnavailable(t *testing.T) {
 	os.WriteFile(named, []byte("#!/bin/sh\necho 3 12\n"), 0o700)
 	os.Symlink(named, filepath.Join(bin, "python3"))
 	for python, version := range map[string]string{probed: "3.7", filepath.Join(bin, "python3"): "3.6"} {
+		_, err := (pythonExec{&Exec{Path: python}}).Dial(context.Background())
+		if err == nil || !strings.Contains(err.Error(), "Python "+version) {
+			t.Fatalf("interpreter %s: want Python %s rejection, got %v", python, version, err)
+		}
 		var logged bytes.Buffer
 		log.SetOutput(&logged)
 		dir := appDir(t, `{"schema":1,"runtime":"python","entry":"app.py","mode":"exec","methods":["hello.greet","hello.save"]}`, helloPolicy, nil)
 		got := serve(t, runtimeFor(t, Config{AppDir: dir, Python: python}), `{"method":"hello.greet"}`, nil)
 		log.SetOutput(os.Stderr)
-		if !strings.Contains(got, `"code":"app_unavailable"`) || strings.Contains(got, version) || !strings.Contains(logged.String(), "Python "+version) {
+		if !strings.Contains(got, `"code":"app_unavailable"`) || strings.Contains(got, version) || !strings.Contains(logged.String(), "bridge: app unavailable: [redacted]") || strings.Contains(logged.String(), version) || strings.Contains(logged.String(), python) {
 			t.Errorf("%s: %s (log %q)", python, got, logged.String())
 		}
 	}

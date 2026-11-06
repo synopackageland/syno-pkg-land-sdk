@@ -79,7 +79,7 @@ api.HandleRequest("app.status", api.AppStatusHandler(packageID, version, nil))
 Keep `app.status` authenticated in `permissions.json`. The helper reports the
 verified caller, package/version and `lang`/`locale`. Its optional
 `api.AppLanguage` callback reads the App's trusted DSM language preference;
-a nil callback or an empty preference uses the first valid `Accept-Language`
+a nil callback or an empty preference uses the first `Accept-Language`
 tag. Browser language is a fallback, not a claim about DSM's saved setting.
 An App with additional status fields can return `api.AppStatus` embedded in
 its own response, preserving its existing fields.
