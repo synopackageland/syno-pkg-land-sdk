@@ -49,6 +49,14 @@ func workerProfileWaitRequired(project, incoming, status string) bool {
 	return status == "START" && (incoming == "" || !sameDirectory(project, filepath.Join(incoming, "compose")))
 }
 
+func stopCheck() error {
+	executable, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	return compose.CheckWorkerStop(filepath.Dir(executable), os.Getenv("SYNOPKG_PKG_STATUS"))
+}
+
 func preflightProject(project, incoming, dataDir string) error {
 	if err := preflightShares(project, incoming, dataDir); err != nil {
 		return err

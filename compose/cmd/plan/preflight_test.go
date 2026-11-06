@@ -5,12 +5,26 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/synopackageland/syno-pkg-land-sdk/idgateway"
 
 	"github.com/synopackageland/syno-pkg-land-sdk/sharedfolder"
 )
+
+func TestHeadlessStopCheckSharesFailureAndRecoverySemantics(t *testing.T) {
+	t.Setenv("SYNOPKG_PKG_STATUS", "STOP")
+	if err := stopCheck(); err == nil || !strings.Contains(err.Error(), "COMPOSE_STOP_UNCONFIRMED") || !strings.Contains(err.Error(), "Manual Install") {
+		t.Fatalf("missing worker inventory must fail with recovery: %v", err)
+	}
+	for _, status := range []string{"INSTALL", "UPGRADE", "UNINSTALL"} {
+		t.Setenv("SYNOPKG_PKG_STATUS", status)
+		if err := stopCheck(); err != nil {
+			t.Fatalf("stop check blocked %s recovery: %v", status, err)
+		}
+	}
+}
 
 func TestWorkerProfileWaitDoesNotBlockProfileGeneratingWorkers(t *testing.T) {
 	incoming := t.TempDir()

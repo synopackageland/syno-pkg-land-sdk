@@ -25,8 +25,12 @@ func main() {
 		}
 		return
 	}
-	if len(os.Args) == 2 && os.Args[1] == "preflight" {
-		if err := preflight(); err != nil {
+	if len(os.Args) == 2 && (os.Args[1] == "preflight" || os.Args[1] == "stop-check") {
+		check := preflight
+		if os.Args[1] == "stop-check" {
+			check = stopCheck
+		}
+		if err := check(); err != nil {
 			message := err.Error()
 			if errors.Is(err, sharedfolder.ErrPermissionPending) {
 				message = "[shared_folder_permission] " + sharedfolder.Message(err, os.Getenv("SYNOPKG_DSM_LANGUAGE"))

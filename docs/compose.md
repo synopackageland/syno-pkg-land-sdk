@@ -637,9 +637,12 @@ These checks do not attest Docker container state. The official
 [docker-project worker](https://help.synology.com/developer-guide/resource_acquisition/docker-project.html)
 owns project start/stop. A successful SDK gateway stop cannot prove its containers
 stopped, and a present profile cannot prove the worker's later Release succeeds.
-Headless Apps without the generated gateway release hook need their CLI lifecycle
-to invoke `CheckWorkerProfiles` on STOP as well; updating that generator is outside
-this SDK change. Metadata-only package-account code cannot reconstruct missing
+Gateway and headless Apps share `CheckWorkerStop`, including the same
+`COMPOSE_STOP_UNCONFIRMED` errors and registration-operation exemptions. The
+paired CLI generator runs the original headless cleanup first, then invokes
+`compose/control stop-check`; START retains the shared installed preflight.
+Headless restart runs STOP before START and propagates either failure. CLI builds
+reject SDK sources that lack this command instead of shipping incompatible hooks. Metadata-only package-account code cannot reconstruct missing
 DSM project IDs or establish the cause of DSM's lost profile.
 
 The filename convention is still `<project>-<service>-1.config`. Recorded

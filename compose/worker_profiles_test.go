@@ -135,6 +135,17 @@ func TestInstalledProfileCheckUsesOwnedLockAndNeverWaits(t *testing.T) {
 	if err := CheckWorkerProfiles(project); !errors.Is(err, errWorkerProfilePending) {
 		t.Fatalf("missing installed profile must return directly: %v", err)
 	}
+	for _, status := range []string{"", "STOP", "RESTART"} {
+		err := CheckWorkerStop(project, status)
+		if !errors.Is(err, errWorkerProfilePending) || !strings.Contains(err.Error(), "COMPOSE_STOP_UNCONFIRMED") {
+			t.Fatalf("ordinary %q stop lost shared failure semantics: %v", status, err)
+		}
+	}
+	for _, status := range []string{"INSTALL", "UPGRADE", "UNINSTALL"} {
+		if err := CheckWorkerStop(project, status); err != nil {
+			t.Fatalf("blocked %s recovery: %v", status, err)
+		}
+	}
 	if err := os.Remove(lock); err != nil {
 		t.Fatal(err)
 	}

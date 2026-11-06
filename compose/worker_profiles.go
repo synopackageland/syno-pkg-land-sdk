@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -38,6 +39,20 @@ func CheckWorkerProfiles(project string) error {
 		return err
 	}
 	return checkWorkerProfiles(os.DirFS("/"), paths)
+}
+
+// CheckWorkerStop checks the official worker prerequisites after local service
+// teardown, for gateway and headless Apps alike. Registration-changing DSM
+// operations must remain available to recover missing profiles.
+func CheckWorkerStop(project, status string) error {
+	switch status {
+	case "INSTALL", "UPGRADE", "UNINSTALL":
+		return nil
+	}
+	if err := CheckWorkerProfiles(project); err != nil {
+		return fmt.Errorf("COMPOSE_STOP_UNCONFIRMED: Container Manager's project stop cannot be confirmed; use Package Center Manual Install with this App's same-version SPK while retaining App data: %w", err)
+	}
+	return nil
 }
 
 func loadWorkerProfilePaths(project string) ([]string, error) {
