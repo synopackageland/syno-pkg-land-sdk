@@ -36,6 +36,8 @@ export interface AppShellPage {
    * any other page scrolls as a whole. false: the page always scrolls.
    */
   fill?: boolean
+  /** false keeps the phone bars visible on this page; omitted uses the layout default. */
+  hideOnScroll?: boolean
 }
 export type AppShellPageEntry = ShellPage | AppShellPage
 
