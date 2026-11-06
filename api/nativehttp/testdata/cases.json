@@ -1,0 +1,126 @@
+{
+  "context": {
+    "package": {
+      "id": "ExampleApp",
+      "version": "1.0.0-1",
+      "displayName": "Example App"
+    },
+    "ingressPath": "/synopkgland/ExampleApp/",
+    "upstreamAuthPaths": [
+      "/api/"
+    ],
+    "entry": "policy"
+  },
+  "valid": [
+    "valid/header-page-files.json",
+    "valid/greader-invoke.json",
+    "valid/greader-cursor.json",
+    "valid/ndjson.json"
+  ],
+  "invalid": [
+    {
+      "file": "invalid/unknown-root.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/auth-tag.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/auth-secret.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/absolute-url.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/credential-header.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/header-injection.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/flow-tag.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/public-permission.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/unknown-http.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/unbounded-response.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/unbounded-pages.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/upload-limit.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/schema-type.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/encoded-traversal.json",
+      "stage": "schema"
+    },
+    {
+      "file": "invalid/dot-traversal.json",
+      "stage": "semantic"
+    },
+    {
+      "file": "invalid/cross-auth-path.json",
+      "stage": "semantic"
+    },
+    {
+      "file": "invalid/basepath-drift.json",
+      "stage": "semantic"
+    },
+    {
+      "file": "invalid/missing-binding-param.json",
+      "stage": "semantic"
+    },
+    {
+      "file": "invalid/flow-method-drift.json",
+      "stage": "semantic"
+    },
+    {
+      "file": "invalid/read-mutation.json",
+      "stage": "semantic"
+    },
+    {
+      "file": "invalid/admin-floor.json",
+      "stage": "semantic-admin"
+    },
+    {
+      "file": "invalid/invalid-result-schema.json",
+      "stage": "semantic"
+    },
+    {
+      "file": "invalid/external-schema-ref.json",
+      "stage": "semantic"
+    },
+    {
+      "file": "invalid/local-file-leak.json",
+      "stage": "semantic"
+    },
+    {
+      "file": "invalid/binary-projection.json",
+      "stage": "semantic"
+    },
+    {
+      "file": "invalid/action-token-with-header-auth.json",
+      "stage": "semantic"
+    }
+  ]
+}

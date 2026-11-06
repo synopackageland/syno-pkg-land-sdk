@@ -14,6 +14,8 @@ require (
 	golang.org/x/sys v0.44.0
 )
 
+require github.com/cyberphone/json-canonicalization v0.0.0-20261011152517-32a48195b9b2 // indirect
+
 require (
 	github.com/compose-spec/compose-go/v2 v2.16.1
 	github.com/distribution/reference v0.5.0

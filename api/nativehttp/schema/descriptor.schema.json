@@ -1,0 +1,242 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "synopkgland.api"
+    },
+    "version": {
+      "const": 3
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "package": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9_.+-]{0,127}$"
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "displayName": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          },
+          "required": [
+            "id",
+            "version",
+            "displayName"
+          ]
+        },
+        "aliases": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 8,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-zA-Z][a-zA-Z0-9-]{0,63}$"
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "developedBy": {
+              "enum": [
+                "synopkgland",
+                "third-party",
+                "unknown"
+              ]
+            },
+            "generator": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          },
+          "required": [
+            "developedBy",
+            "generator"
+          ]
+        },
+        "entry": {
+          "enum": [
+            "policy",
+            "admin-only",
+            "app-privilege"
+          ]
+        },
+        "transport": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^/webman/3rdparty/[A-Za-z][A-Za-z0-9_.+-]{0,127}/cgi/api\\.cgi$"
+            },
+            "auth": {
+              "const": "dsm-session"
+            }
+          },
+          "required": [
+            "path",
+            "auth"
+          ]
+        },
+        "execution": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "basePath": {
+              "type": "string",
+              "pattern": "^/[^?#%]*/$",
+              "maxLength": 512
+            },
+            "auth": {
+              "oneOf": [
+                {
+                  "$ref": "registry.schema.json#/$defs/headerAuth"
+                },
+                {
+                  "$ref": "registry.schema.json#/$defs/greaderAuth"
+                }
+              ]
+            },
+            "limits": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "maxResponseBytes": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 16777216
+                },
+                "maxTransferBytes": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 17179869184
+                }
+              },
+              "required": [
+                "maxResponseBytes",
+                "maxTransferBytes"
+              ]
+            },
+            "type": {
+              "const": "native-http"
+            }
+          },
+          "required": [
+            "basePath",
+            "auth",
+            "limits",
+            "type"
+          ]
+        },
+        "features": {
+          "const": [
+            "native-http-v1",
+            "auth-header-v1",
+            "auth-greader-client-login-v1",
+            "paginate-http-v1",
+            "ndjson-http-v1",
+            "upload-http-v1",
+            "download-file-v1"
+          ]
+        },
+        "entryPolicyDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "registrySha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "inventorySha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "authSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "bindings": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 1024,
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "effect": {
+                "$ref": "registry.schema.json#/$defs/operation/properties/effect"
+              },
+              "permission": {
+                "$ref": "registry.schema.json#/$defs/operation/properties/permission"
+              },
+              "kind": {
+                "$ref": "registry.schema.json#/$defs/operation/properties/kind"
+              },
+              "flow": {
+                "$ref": "registry.schema.json#/$defs/flow"
+              },
+              "http": {
+                "$ref": "registry.schema.json#/$defs/operation/properties/http"
+              }
+            },
+            "required": [
+              "effect",
+              "permission",
+              "kind",
+              "flow",
+              "http"
+            ]
+          }
+        },
+        "commands": {
+          "$ref": "registry.schema.json#/properties/operations"
+        }
+      },
+      "required": [
+        "package",
+        "aliases",
+        "provenance",
+        "entry",
+        "transport",
+        "execution",
+        "features",
+        "entryPolicyDigest",
+        "registrySha256",
+        "inventorySha256",
+        "authSha256",
+        "bindings",
+        "commands"
+      ]
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "required": [
+    "format",
+    "version",
+    "payload",
+    "sha256"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synopkgland.org/schema/api/v3/descriptor.schema.json",
+  "title": "Syno Package Land native HTTP descriptor v3"
+}

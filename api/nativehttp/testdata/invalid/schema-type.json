@@ -1,0 +1,268 @@
+{
+  "format": "synopkgland.api",
+  "version": 3,
+  "nativeHttp": {
+    "basePath": "/synopkgland/ExampleApp/",
+    "auth": {
+      "type": "header",
+      "header": "Authorization",
+      "prefix": "Token ",
+      "credentialPage": "dashboard",
+      "instructions": "Open the native profile and copy your API token",
+      "verify": {
+        "method": "GET",
+        "path": "/api/profile/",
+        "response": {
+          "statuses": [
+            200
+          ],
+          "decode": "json",
+          "maxBytes": 65536,
+          "contentTypes": [
+            "application/json"
+          ],
+          "project": {
+            "fields": {
+              "email": "/email",
+              "firstName": "/first_name",
+              "lastName": "/last_name"
+            }
+          }
+        }
+      }
+    },
+    "limits": {
+      "maxResponseBytes": 1048576,
+      "maxTransferBytes": 268435456
+    }
+  },
+  "operations": {
+    "documents.list": {
+      "summary": "List documents",
+      "cli": [
+        "documents",
+        "list"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "ai": "read",
+      "kind": "rpc",
+      "paramsSchema": {
+        "type": "nonsense"
+      },
+      "resultSchema": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      },
+      "flow": {
+        "type": "paginate-http",
+        "method": "documents.list",
+        "pagination": {
+          "mode": "page",
+          "pageParam": "page",
+          "sizeParam": "page_size",
+          "items": "/results",
+          "next": "/next",
+          "pageSize": 25,
+          "maxPages": 40,
+          "maxItems": 1000,
+          "maxBytes": 16777216
+        }
+      },
+      "http": {
+        "method": "GET",
+        "path": "/api/documents/",
+        "query": {
+          "ordering": {
+            "literal": "id"
+          }
+        },
+        "headers": {
+          "Accept": "application/json; version=10"
+        },
+        "response": {
+          "statuses": [
+            200
+          ],
+          "decode": "json",
+          "maxBytes": 1048576,
+          "contentTypes": [
+            "application/json"
+          ]
+        }
+      }
+    },
+    "documents.upload": {
+      "summary": "Upload one document",
+      "cli": [
+        "documents",
+        "upload"
+      ],
+      "effect": "write",
+      "permission": "authenticated",
+      "ai": "human-only",
+      "kind": "stream",
+      "paramsSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "file": {
+            "type": "string",
+            "minLength": 1,
+            "writeOnly": true
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "file"
+        ]
+      },
+      "resultSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "taskId"
+        ]
+      },
+      "flow": {
+        "type": "upload-http",
+        "method": "documents.upload",
+        "fileParam": "file",
+        "encoding": "multipart",
+        "part": "document",
+        "maxBytes": 268435456,
+        "contentTypes": [
+          "application/pdf",
+          "image/jpeg",
+          "image/png"
+        ]
+      },
+      "http": {
+        "method": "POST",
+        "path": "/api/documents/post_document/",
+        "headers": {
+          "Accept": "application/json; version=10"
+        },
+        "body": {
+          "encoding": "form",
+          "fields": {
+            "title": {
+              "param": "title"
+            }
+          }
+        },
+        "response": {
+          "statuses": [
+            200
+          ],
+          "decode": "json",
+          "maxBytes": 65536,
+          "contentTypes": [
+            "application/json"
+          ],
+          "project": {
+            "fields": {
+              "taskId": ""
+            }
+          }
+        }
+      }
+    },
+    "documents.download": {
+      "summary": "Download an original document",
+      "cli": [
+        "documents",
+        "download"
+      ],
+      "effect": "read",
+      "permission": "authenticated",
+      "ai": "human-only",
+      "kind": "stream",
+      "paramsSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "output": {
+            "type": "string",
+            "minLength": 1,
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "id",
+          "output"
+        ]
+      },
+      "resultSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 268435456
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "bytes",
+          "sha256"
+        ]
+      },
+      "flow": {
+        "type": "download-file",
+        "method": "documents.download",
+        "outputParam": "output",
+        "maxBytes": 268435456,
+        "contentTypes": [
+          "application/pdf",
+          "image/jpeg",
+          "image/png",
+          "application/octet-stream"
+        ]
+      },
+      "http": {
+        "method": "GET",
+        "path": "/api/documents/{id}/download/",
+        "query": {
+          "original": {
+            "literal": "true"
+          }
+        },
+        "response": {
+          "statuses": [
+            200
+          ],
+          "decode": "binary",
+          "maxBytes": 268435456,
+          "contentTypes": [
+            "application/pdf",
+            "image/jpeg",
+            "image/png",
+            "application/octet-stream"
+          ]
+        }
+      }
+    }
+  }
+}
