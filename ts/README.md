@@ -803,6 +803,12 @@ playback. See [media grants](../docs/media.md) for backend hooks and cleanup.
 
 ## Native mobile shell
 
+`saveBlob` and `saveUrl` sanitize user-provided download names into bounded
+Unicode basenames for both native and browser downloads, retaining the final
+extension where it fits. See [filename rules](spec/native/v1/README.md#page-integration).
+Entry callers can declare `appBundle` to preload their module during identity
+requests without executing it; see [entry pages](../docs/entry-page.md).
+
 Registered mobile Apps use `@synopackageland/sdk/mobile` for `saveBlob`,
 `saveUrl`, `openExternal`, `routeExternalLinks` and read-once `takeIntake`.
 Each action has a browser fallback when the bridge or capability is absent.

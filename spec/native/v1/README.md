@@ -49,6 +49,18 @@ const stopRouting = routeExternalLinks(document)
 const items = await takeIntake('opaque-handle')
 ```
 
+`saveBlob` and `saveUrl` sanitize filenames before either native dispatch or a
+browser download. Separators (`/`, `\`) and C0/C1 control characters become
+spaces. Whitespace and repeated dots collapse; spaces around dots and leading
+or trailing spaces/dots are removed. Unicode names, including CJK and emoji,
+survive. Names are capped at 255 UTF-8 bytes without splitting a code point;
+the final extension is retained when it leaves room for a stem character. An
+extension that cannot fit is truncated with the name. An empty result becomes
+`download`. For example, `../報表\draft.csv` becomes `報表 draft.csv`.
+Invalid MIME metadata is still rejected. The shell must independently validate
+the wire filename as a basename, not accept paths; the strict wire contract is
+unchanged. Filename sanitization is a page API behaviour, not authorization.
+
 Action results are `{mode:'native'|'browser', id?}`. They mean the action was dispatched, not that a transfer completed. Use `onNativeTransfer(listener)` for native progress, and dispose its subscription when unmounting. URL downloads may also be initiated by `createFileTransfers().download(path)`: with native URL support it builds the same-origin FileStation GET URL using the current SynoToken; browsers retain the isolated POST form.
 
 With no valid bridge or missing capability, blobs use object-URL downloads, URLs use download anchors, external URLs use `window.open(..., '_blank', 'noopener')`, and intake returns `[]`. Oversize base64 or a foreign-origin download URL also uses the browser path. Object URLs stay alive until page departure to avoid revocation racing a slow download. Link routing leaves the browser's routing intact without the capability and preserves local links, download links and modifier clicks. Native dispatch failures fall back synchronously where possible; an uncertain intake read rejects without retrying. No request is aborted by a clock; `takeIntake(id, {signal})` permits caller cancellation of the wait and also cancels on page departure.

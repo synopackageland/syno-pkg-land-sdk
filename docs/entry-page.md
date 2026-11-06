@@ -12,6 +12,7 @@ await bootEntryPage({
  build: 'the-cli-build-hash',
  root: document.querySelector<HTMLElement>('.dsmapp-root')!,
  displayName: 'Example App',
+ appBundle: './app.module.js?v=the-cli-build-hash',
  mount: async (root, ctx) => {
   const app = await import('./app.module.js?v=the-cli-build-hash')
   return app.mount(root, ctx)
@@ -20,6 +21,18 @@ await bootEntryPage({
  portal: {defaultAlias: 'example-app'},
 })
 ```
+
+`appBundle` declares the same module URL imported by `mount`, including its
+build query. The SDK resolves it against the original entry URL and starts a
+`modulepreload` before waiting for the token or identity. Only HTTP(S) URLs at
+the entry origin without embedded credentials are allowed. Preloading fetches
+the module and may parse its dependencies; it does not execute them. `mount`
+still runs only after successful token and identity verification, and imports
+the already requested module. Failed identity never invokes `mount`.
+
+Pass this option from the App entry or generator to enable early loading. It
+is optional for existing callers; the SDK cannot infer a module URL hidden in
+a mount callback. A missing or failed preload keeps the ordinary import path.
 
 The generated HTML contains
 `<meta name="synopkgland-build" content="the-cli-build-hash">`. The same hash

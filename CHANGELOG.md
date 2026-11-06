@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.51.1
+
+- Sanitize `saveBlob` and `saveUrl` filenames in both native and browser downloads: replace separators/control characters, normalize whitespace/dots, preserve Unicode and the final extension, cap at 255 UTF-8 bytes and use `download` for an empty result
+- Add `bootEntryPage({appBundle})` to preload a declared same-origin module while token/identity requests run; App execution still waits for successful identity verification
+- Reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.51.0
 
 - Add `@synopackageland/sdk/mobile` and `./mobile/shell` for the native shell v1 contract: downloads, external links, read-once intake and launch events, with browser fallbacks when native capabilities are unavailable

@@ -9,6 +9,8 @@ import {fetchEntryToken} from './token'
 
 export interface EntryPageOptions extends AppContextOptions {
  root: HTMLElement
+ /** Same-origin module URL to preload without execution while identity is pending. */
+ appBundle?: string
  mount(root: HTMLElement, ctx: Context): unknown | Promise<unknown>
  /** Override navigation for an embedding host. */
  navigate?: (url: string) => void
@@ -28,6 +30,16 @@ export async function bootEntryPage(options: EntryPageOptions): Promise<Context 
  const navigate = options.navigate ?? (url => location.replace(url))
  const fallback = () => {navigate(dsmLaunchURL(at.origin, options.packageId, entryLaunchParams(at.search))); return undefined}
  if(options.portal && !/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(options.portal.defaultAlias)) throw new Error('Invalid portal alias')
+ if(options.appBundle !== undefined) {
+  let bundle: URL
+  try {bundle = new URL(options.appBundle, at)} catch {throw new Error('Invalid App bundle URL')}
+  if(!/^https?:$/.test(bundle.protocol) || bundle.origin !== at.origin || bundle.username || bundle.password) throw new Error('Invalid App bundle URL')
+  // modulepreload fetches (and may parse dependencies) but never evaluates the
+  // App. Only the authenticated mount below may import and execute it.
+  const preload = document.createElement('link')
+  preload.rel = 'modulepreload'; preload.href = bundle.href; preload.crossOrigin = 'anonymous'
+  document.head.append(preload)
+ }
  let token: string | undefined
  try {token = options.session ? await options.session.ready() : options.token ?? await fetchEntryToken(urls.token, request)}
  catch {return fallback()}
