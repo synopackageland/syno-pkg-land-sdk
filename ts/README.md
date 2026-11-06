@@ -797,3 +797,19 @@ reading on the backend independently. See [service ports](../docs/dsm-service-po
 For private native `<audio>` / `<video>` playback, use `mediaUrl(ctx, {asset})`
 with the Go media service. It renews a stable, session-bound URL without resetting
 playback. See [media grants](../docs/media.md) for backend hooks and cleanup.
+
+## Native mobile shell
+
+Registered mobile Apps use `@synopackageland/sdk/mobile` for `saveBlob`,
+`saveUrl`, `openExternal`, `routeExternalLinks` and read-once `takeIntake`.
+Each action has a browser fallback when the bridge or capability is absent.
+`createNativeHost` retains the existing host adapter shape and reports
+`native-shell` through `ctx.host.platform().host`. Context builders compose
+`onNativeLaunch` into `ctx.onLaunch` and use `nativeLaunchParams` for cold
+launch values.
+
+Shell implementations import the DOM-free wire types, validators and intake
+store from `@synopackageland/sdk/mobile/shell`. The bridge is injected only
+for a registered App at its NAS origin, in the main frame. See the
+[wire contract and integration guide](../spec/native/v1/README.md) for
+message shapes, transfer events, fallbacks and the shell's trust boundary.

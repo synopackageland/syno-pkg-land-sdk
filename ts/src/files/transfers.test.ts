@@ -71,3 +71,18 @@ test('a real browser AbortError after upload dispatch stays commit-uncertain',as
  await expect(pending).rejects.toEqual({code:'commit-uncertain'})
  t.dispose()
 })
+
+test('the native shell receives a same-origin FileStation GET with the current token and no hidden form',async()=>{
+ const post=vi.fn()
+ vi.stubGlobal('SynoPkgNative',{protocol:1,shell:{name:'Package Land',version:'1',platform:'android'},caps:{download:{base64:true,url:true,maxBase64:52428800},openExternal:true,intake:true,camera:false},post})
+ let token='first'
+ const t=createFileTransfers({endpoint:'https://untrusted.invalid/cgi',token:()=>token})
+ await t.download('/home/報告.txt');token='renewed';await t.download('/home/報告.txt')
+ expect(post).toHaveBeenCalledTimes(2)
+ const message=post.mock.calls[1][0],url=new URL(message.url)
+ expect(url.origin).toBe(location.origin);expect(url.pathname).toBe('/webapi/entry.cgi')
+ expect(Object.fromEntries(url.searchParams)).toEqual({api:'SYNO.FileStation.Download',method:'download',version:'2',path:JSON.stringify(['/home/報告.txt']),mode:'download',SynoToken:'renewed'})
+ expect(message).toMatchObject({v:1,type:'download',filename:'報告.txt'})
+ expect(document.querySelector('iframe')).toBeNull()
+ t.dispose()
+})

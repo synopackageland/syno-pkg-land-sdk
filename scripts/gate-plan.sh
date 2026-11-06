@@ -9,6 +9,7 @@ while IFS= read -r path; do
 	case $path in
 	'') ;;
 	# App-facing DTOs do not affect the executor, Rust or bridge App SDKs.
+	spec/native/* | scripts/native-contract.mjs | scripts/native-contract.test.mjs) echo ts ;;
 	spec/delegate/* | internal/delegategen/* | ts/src/delegate/dtos-gen.ts) echo go-root ts ;;
 	spec/* | scripts/*) echo "$all" ;;
 	README.md | CHANGELOG.md | LICENSE | docs/* | release/*) ;;

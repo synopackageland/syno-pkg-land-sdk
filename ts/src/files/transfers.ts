@@ -1,4 +1,5 @@
 import {createDsmFileStation,DSM_FILE_ENDPOINT,filePath} from '../dsm/filestation'
+import {canSaveNativeURL,saveUrl} from '../mobile'
 export interface FileTransport {
  /** Deprecated: ignored. File Station always uses the fixed DSM same-origin endpoint. */
  endpoint?:string
@@ -15,6 +16,11 @@ export function createFileTransfers(transport:FileTransport={}){
    if(disposed)throw {code:'canceled'}
    const token=await dsm.token()
    if(disposed)throw {code:'canceled'}
+   if(canSaveNativeURL()){
+    const params=new URLSearchParams({api:'SYNO.FileStation.Download',method:'download',version:'2',path:JSON.stringify([path]),mode:'download',SynoToken:token})
+    await saveUrl(`${location.origin}${DSM_FILE_ENDPOINT}?${params}`,{filename:path.split('/').pop()!})
+    return
+   }
    const frame=document.createElement('iframe')
    frame.hidden=true;frame.setAttribute('sandbox','allow-forms allow-same-origin allow-downloads')
    frames.add(frame);document.body.append(frame)
