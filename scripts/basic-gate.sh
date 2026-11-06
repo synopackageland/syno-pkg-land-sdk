@@ -16,7 +16,7 @@ for module in . executor; do
 done
 # Process lifetime and daemon/gateway suites belong to the optional integration gate.
 go test ./api ./dsm ./filestation ./jsonlimits ./identity
-python3 -B -m unittest discover -s python/tests
+(cd python && python3 -B -m unittest discover -s tests)
 bash scripts/ts-gate.sh
 node scripts/check-internal-content.mjs --package node
 node scripts/check-internal-content.mjs --package ts

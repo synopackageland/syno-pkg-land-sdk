@@ -6,7 +6,7 @@ SDK for DSM packages built with [synopkgland](https://github.com/synopackageland
 |---|---|
 | `/` | Go module `github.com/synopackageland/syno-pkg-land-sdk`: `api`, `appbackup`, `background`, `datamigrate`, `delegate`, `dsm`, `filestation`, `identity`, `ipc`, `jsonlimits`, `portal`, `sharedfolder` |
 | `executor/` | Go module `github.com/synopackageland/syno-pkg-land-sdk/executor`: the delegated executor; pins the root Go SDK for the shared DSM role provider |
-| `ts/` | npm package `@synopackageland/sdk` (`.` headless, `./vue` components) |
+| `ts/` | npm package `@synopackageland/sdk` (`.` headless, `./vue` components, `./native`, `./entry`, `./mobile`, `./mobile/shell`) |
 | `spec/protocol/v1/` | Executor protocol: rules (RFC 2119), op schemas, `errors.json`, vectors |
 | `spec/delegate/v1/` | App backend delegate DTOs: single schema generating Go and TypeScript wire types |
 | `bridge/`, `spec/bridge/v1/` | `bridge/cmd/runtime`, the package CGI that hands verified calls to a Python, Node or Rust App, one process per request; the channel and the App manifest (`bridge.json`) are frozen ([spec/bridge/v1](spec/bridge/v1/README.md), [docs/multilang/design.md](docs/multilang/design.md)). Each request starts the App: Node adds about 0.5 s on an ARM NAS, so latency-sensitive Apps should use Python or Rust |
@@ -214,3 +214,9 @@ External-service passwords and tokens should use the [request-only Secret contra
 Private native audio/video playback is available through the Go `media` service
 and TypeScript `mediaUrl` helper; see [media grants](docs/media.md) for owner hooks,
 session binding, renewal, and Range handling.
+
+Full-page Apps use [`@synopackageland/sdk/entry`](docs/entry-page.md) for boot,
+shared context and sign-in display caches; Go Apps can expose language fields
+with `api.AppStatusHandler`. Native mobile Apps use
+[`@synopackageland/sdk/mobile`](spec/native/v1/README.md) for actions and browser
+fallbacks; shell implementations use the DOM-free `./mobile/shell` contract.

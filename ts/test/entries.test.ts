@@ -1,4 +1,4 @@
-import {existsSync,readFileSync} from 'node:fs'
+import {existsSync,readFileSync,statSync} from 'node:fs'
 import {dirname,resolve} from 'node:path'
 import {expect,test} from 'vitest'
 import * as headless from '../src/index'
@@ -13,7 +13,7 @@ function reachable(file:string,seen=new Set<string>()):Set<string>{
   if(!spec!.startsWith('.')){seen.add(spec!);continue}
   if(spec!.endsWith('.json')||spec!.endsWith('.vue')){seen.add(resolve(dirname(file),spec!));continue}
   const target=resolve(dirname(file),spec!)
-  reachable(existsSync(target)?target:target.replace(/\.js$/,'')+'.ts',seen)
+  reachable(existsSync(target)&&statSync(target).isFile()?target:target.replace(/\.js$/,'')+'.ts',seen)
  }
  return seen
 }

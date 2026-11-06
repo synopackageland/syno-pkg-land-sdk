@@ -109,22 +109,22 @@ test('the notice dialog keeps the password error through status reads until it i
  }finally{p.done()}
 })
 
-// The DSM window's access reports a refusal in code; reason stays its English detail.
-test('a PasswordConfirm refusal reported in code shows its own text in every SDK language, never the English reason',async()=>{
- const cases:Array<[string,keyof ReturnType<typeof delegateCopy>]>=[['password_rejected','passwordRejected'],['password_required','passwordRequired'],['password_confirm_failed','passwordConfirmFailed']]
- for(const [code,key] of cases){
-  for(const locale of Object.keys(delegateCatalogs)){
-   const copy=delegateCopy(locale),access=windowAccess({state:'blocked',code,reason:'dsm_4100: DSM said something in English.',retry:true})
-   const p=mountIn(()=>h(AppRoot,{},()=>h(ExecutorSettings,{admin:true,locale})),access.setup)
-   try{
-    await settle();await submit(p.root,'pw')
-    await access.poll();await settle()
-    expect(p.root.querySelector('[role=alert]')?.textContent,`${code} ${locale}`).toContain(copy[key])
-    expect(p.root.textContent).not.toContain('said something')
-    expect(p.root.textContent).not.toContain(copy.setupError)
-   }finally{p.done()}
-  }
- }
+// Each refusal/locale owns its test allowance and cleanup, even on a busy host.
+const passwordRefusals:Array<[string,keyof ReturnType<typeof delegateCopy>]>=[['password_rejected','passwordRejected'],['password_required','passwordRequired'],['password_confirm_failed','passwordConfirmFailed']]
+test.each(passwordRefusals.flatMap(([code,key])=>Object.keys(delegateCatalogs).map(locale=>({code,key,locale}))))(
+ 'a PasswordConfirm $code shows its own text in $locale, never the English reason',async({code,key,locale})=>{
+ const copy=delegateCopy(locale),access=windowAccess({state:'blocked',code,reason:'dsm_4100: DSM said something in English.',retry:true})
+ const p=mountIn(()=>h(AppRoot,{},()=>h(ExecutorSettings,{admin:true,locale})),access.setup)
+ try{
+  await settle();await submit(p.root,'pw')
+  await access.poll();await settle()
+  expect(p.root.querySelector('[role=alert]')?.textContent,`${code} ${locale}`).toContain(copy[key])
+  expect(p.root.textContent).not.toContain('said something')
+  expect(p.root.textContent).not.toContain(copy.setupError)
+ }finally{p.done()}
+})
+
+test('password confirmation guidance has distinct translations',()=>{
  for(const key of ['passwordRequired','passwordConfirmFailed'] as const){
   const texts=Object.values(delegateCatalogs).map(c=>c[key])
   expect(new Set(texts).size,key).toBe(texts.length)

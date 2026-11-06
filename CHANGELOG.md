@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.51.0
+
+- Add `@synopackageland/sdk/mobile` and `./mobile/shell` for the native shell v1 contract: downloads, external links, read-once intake and launch events, with browser fallbacks when native capabilities are unavailable
+- Add `@synopackageland/sdk/entry` for full-page boot without DSM desktop scripts, shared App context and package/sign-in-scoped display caches that never authorize requests
+- Add Go `api.AppStatusHandler` and `api.AppLanguage` for authenticated `app.status` identity and `lang`/`locale` fields, using a trusted DSM language preference with browser-language fallback
+- Reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.50.16
 
 - At desktop and tablet widths, `AppShell` keeps the App name in DSM's standalone header clear of the account button: a name that would run under it ends with an ellipsis 12px before the button, on DSM 7.3 and 7.4. Apps can drop their own header workaround
