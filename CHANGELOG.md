@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.52.2
+
+- Widen the UI peer range to `>=0.20.5 <0.23.0` and build against published UI 0.22.0
+- Forward AppShell's `#accessory` slot with `{page, phone}` for running task bars and mini players
+- Reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.52.1
 
 - Add `AppShellPage.hideOnScroll` so a page can keep the phone bars visible, restoring the default on navigation

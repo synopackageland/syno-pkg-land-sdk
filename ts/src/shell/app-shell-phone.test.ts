@@ -103,6 +103,39 @@ test('public shell types expose the UI header contract and phone slot scope',()=
  expectTypeOf<Shell['$props']['title']>().toEqualTypeOf<string|undefined>()
  expectTypeOf<Shell['$props']['headerActions']>().toEqualTypeOf<DropdownMenuEntry[]|undefined>()
  expectTypeOf<Parameters<NonNullable<Shell['$slots']['tabbar']>>[0]>().toEqualTypeOf<{page:string;phone:boolean}>()
+ expectTypeOf<Parameters<NonNullable<Shell['$slots']['accessory']>>[0]>().toEqualTypeOf<{page:string;phone:boolean}>()
+})
+
+test.each([390,1280])('the accessory stays outside the page, follows navigation and draws nothing when empty at %s',async width=>{
+ viewport(width,true)
+ const page=ref('home'),running=ref(true),supplied=ref(true),denied=ref(false)
+ const root=document.createElement('div');document.body.append(root)
+ const accessory=({page,phone}:{page:string;phone:boolean})=>running.value?h('button',{'data-running-task':''},`${page}:${phone}`):null
+ const app=createApp({render:()=>h(AppShell,{appRoot:true,locale:'en',pages,modelValue:page.value,denied:denied.value},{
+  default:()=>h('p','Page body'),
+  ...(supplied.value?{accessory}:{}),
+ })})
+ const bar=()=>root.querySelector('[data-ui-bottom-accessory]')
+ try{
+  app.mount(root);await settle()
+  expect(bar()?.textContent).toBe(`home:${width===390}`)
+  expect(bar()?.closest('.app-page')).toBeNull()
+  expect(root.querySelectorAll('[data-running-task]')).toHaveLength(1)
+  const task=root.querySelector('[data-running-task]')
+  page.value='logs';await settle()
+  expect(bar()?.textContent).toBe(`logs:${width===390}`)
+  expect(root.querySelector('[data-running-task]')).toBe(task)
+  running.value=false;await settle()
+  expect(bar()?.children).toHaveLength(0)
+  expect(bar()?.textContent?.trim()).toBe('')
+  running.value=true;await settle()
+  expect(bar()).not.toBeNull()
+  supplied.value=false;await settle()
+  expect(bar()).toBeNull()
+  supplied.value=true;await settle()
+  denied.value=true;await settle()
+  expect(bar()).toBeNull()
+ }finally{app.unmount();root.remove();vi.unstubAllGlobals()}
 })
 
 test.each([false,true])('footer and denied scopes read the app-local phone signal (denied=%s)',async denied=>{
