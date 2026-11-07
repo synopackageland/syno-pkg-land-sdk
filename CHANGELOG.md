@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.52.3
+
+- Mark SynoPkgNative protocol 1 and the mobile manifest stable with an immutable compatibility baseline checked during generation, build and gate
+- Accept optional receiver extensions while validating known wire fields and preserving strict outgoing messages
+- Document capability degradation, prompt queued transfer acknowledgement, shell filename sanitization and cold-launch splash fallback
+- Reuse the immutable executor release and its six digests
+
 ## 0.52.2
 
 - Widen the UI peer range to `>=0.20.5 <0.23.0` and build against published UI 0.22.0

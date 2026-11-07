@@ -1,15 +1,66 @@
 import {readFileSync, writeFileSync} from 'node:fs'
 import {fileURLToPath} from 'node:url'
 import {resolve, dirname} from 'node:path'
+import {isDeepStrictEqual} from 'node:util'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const contract = JSON.parse(readFileSync(resolve(root, 'spec/native/v1/contract.json'), 'utf8'))
+// Frozen once at stabilization. Never regenerate this baseline from the candidate.
+const baseline = JSON.parse(readFileSync(resolve(root, 'spec/native/v1/baseline.json'), 'utf8'))
+const annotations = new Set(['title', 'description', '$comment', 'examples', 'default', 'deprecated'])
+const lowerBounds = new Set(['minimum', 'exclusiveMinimum', 'minLength', 'minItems', 'minProperties'])
+const upperBounds = new Set(['maximum', 'exclusiveMaximum', 'maxLength', 'maxItems', 'maxProperties'])
+/** Conservative schema inclusion: every baseline shape must remain accepted. */
+function compatibility(before, after, path = '$') {
+ if(isDeepStrictEqual(before, after)) return []
+ if(!before || !after || typeof before !== 'object' || typeof after !== 'object' || Array.isArray(before) || Array.isArray(after)) return [`${path}: changed schema`]
+ const errors = []
+ const fail = (key, reason) => errors.push(`${path}.${key}: ${reason}`)
+ for(const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+  const old = before[key], next = after[key]
+  if(annotations.has(key) || isDeepStrictEqual(old, next)) continue
+  if(key === '$defs' || key === 'properties') {
+   for(const [name, rule] of Object.entries(old ?? {})) {
+    if(!Object.hasOwn(next ?? {}, name)) fail(`${key}.${name}`, 'removed or renamed')
+    else errors.push(...compatibility(rule, next[name], `${path}.${key}.${name}`))
+   }
+  } else if(key === 'required') {
+   // Existing requirements retain their meaning; new fields must be optional.
+   if((next ?? []).some(name => !(old ?? []).includes(name))) fail(key, 'new required field')
+   if((old ?? []).some(name => !(next ?? []).includes(name))) fail(key, 'removed requirement')
+  } else if(key === 'anyOf') {
+   if(!old || !next || old.some(branch => !next.some(candidate => compatibility(branch, candidate, path).length === 0))) fail(key, 'removed or narrowed union branch')
+  } else if(key === 'enum') {
+   if(!old || !next || old.some(value => !next.some(candidate => isDeepStrictEqual(value, candidate)))) fail(key, 'removed enum value or narrowed type')
+  } else if(key === 'type') {
+   if(!(old === 'integer' && next === 'number')) fail(key, 'changed or narrowed type')
+  } else if(key === 'items') {
+   errors.push(...compatibility(old, next, `${path}.items`))
+  } else if(lowerBounds.has(key)) {
+   if(next !== undefined && (old === undefined || next > old)) fail(key, 'narrowed lower bound')
+  } else if(upperBounds.has(key)) {
+   if(next !== undefined && (old === undefined || next < old)) fail(key, 'narrowed upper bound')
+  } else if(key === 'additionalProperties' && old === false && next === true) {
+   // Widening object acceptance preserves every baseline value.
+  } else {
+   // Includes constants, refs, patterns and unrecognized validation keywords.
+   // A new constraint must not silently bypass this deliberately bounded checker.
+   fail(key, 'changed contract constraint')
+  }
+ }
+ return errors
+}
+const breaking = compatibility(baseline, contract)
+if(breaking.length) {
+ console.error(`Native v1 compatibility: incompatible change; use protocol 2 instead.\n${breaking.join('\n')}`)
+ process.exit(1)
+}
 function type(schema) {
  if(schema.$ref) return schema.$ref.split('/').at(-1)
  if('const' in schema) return JSON.stringify(schema.const)
  if(schema.enum) return schema.enum.map(value => JSON.stringify(value)).join(' | ')
  if(schema.anyOf) return schema.anyOf.map(type).join(' | ')
- if(schema.type === 'object') return `{ ${Object.entries(schema.properties).map(([name, value]) => `readonly ${name}${schema.required.includes(name) ? '' : '?'}: ${type(value)}`).join('; ')} }`
+ if(schema.type === 'object') return `{ ${Object.entries(schema.properties).map(([name, value]) => `readonly ${name}${(schema.required ?? []).includes(name) ? '' : '?'}: ${type(value)}`).join('; ')} }`
  if(schema.type === 'array') return `readonly (${type(schema.items)})[]`
  if(schema.type === 'integer' || schema.type === 'number') return 'number'
  if(['string', 'boolean'].includes(schema.type)) return schema.type
@@ -32,18 +83,22 @@ interface Rule {
  properties?: Record<string, Rule>; required?: string[]; additionalProperties?: boolean
  items?: Rule; minimum?: number; maximum?: number; minLength?: number; maxLength?: number; pattern?: string
 }
-function matches(rule: Rule, value: unknown): boolean {
- if(rule.$ref) return matches(schema[rule.$ref.split('/').pop()!], value)
+export interface NativeValidationOptions {readonly allowUnknownFields?: boolean}
+function dereference(rule: Rule): Rule {return rule.$ref ? dereference(schema[rule.$ref.split('/').pop()!]) : rule}
+function matches(rule: Rule, value: unknown, allowUnknownFields = false): boolean {
+ if(rule.$ref) return matches(dereference(rule), value, allowUnknownFields)
  if('const' in rule) return value === rule.const
  if(rule.enum) return rule.enum.includes(value)
- if(rule.anyOf) return rule.anyOf.some(item => matches(item, value))
+ if(rule.anyOf) return rule.anyOf.some(item => matches(item, value, allowUnknownFields))
  if(rule.type === 'object') {
   if(value === null || typeof value !== 'object' || Array.isArray(value)) return false
   const record = value as Record<string, unknown>, properties = rule.properties!
-  return rule.required!.every(key => Object.hasOwn(record, key)) && Object.keys(record).every(key =>
-   Object.hasOwn(properties, key) ? matches(properties[key], record[key]) : rule.additionalProperties !== false)
+  // Download modes stay exclusive even when a receiver ignores extensions.
+  if(properties.type?.const === 'download' && Object.hasOwn(record, 'base64') && Object.hasOwn(record, 'url')) return false
+  return (rule.required ?? []).every(key => Object.hasOwn(record, key)) && Object.keys(record).every(key =>
+   Object.hasOwn(properties, key) ? matches(properties[key], record[key], allowUnknownFields) : allowUnknownFields || rule.additionalProperties !== false)
  }
- if(rule.type === 'array') return Array.isArray(value) && value.every(item => matches(rule.items!, item))
+ if(rule.type === 'array') return Array.isArray(value) && value.every(item => matches(rule.items!, item, allowUnknownFields))
  if(rule.type === 'string') return typeof value === 'string' &&
   (rule.minLength === undefined || value.length >= rule.minLength) &&
   (rule.maxLength === undefined || value.length <= rule.maxLength) && (!rule.pattern || new RegExp(rule.pattern).test(value))
@@ -51,7 +106,7 @@ function matches(rule: Rule, value: unknown): boolean {
  return typeof value === 'number' && Number.isFinite(value) && (rule.type !== 'integer' || Number.isInteger(value)) &&
   (rule.minimum === undefined || value >= rule.minimum) && (rule.maximum === undefined || value <= rule.maximum)
 }
-${Object.keys(contract.$defs).map(name => `export function is${name}(value: unknown): value is ${name} {return matches(schema.${name}, value)}`).join('\n')}
+${Object.keys(contract.$defs).map(name => `export function is${name}(value: unknown, options: NativeValidationOptions = {}): value is ${name} {return matches(schema.${name}, value, options.allowUnknownFields)}`).join('\n')}
 /** Typed wire client; the host must first enforce the NAS-origin, main-frame injection policy. */
 export function createNativeClient(bridge: NativeBridge) {
  return {post(message: NativeMessage): void {

@@ -220,6 +220,8 @@ shared context and sign-in display caches; Go Apps can expose language fields
 with `api.AppStatusHandler`. Native mobile Apps use
 [`@synopackageland/sdk/mobile`](spec/native/v1/README.md) for actions and browser
 fallbacks; shell implementations use the DOM-free `./mobile/shell` contract.
+SynoPkgNative protocol 1 and the `mobile:` manifest are stable, with optional
+additions and capability-based degradation under the documented compatibility policy.
 
 Native HTTP Apps declare a `synopkgland.api` v3 registry with
 `ctl.transport: native-http`. The SDK exports validated descriptors and HTTP

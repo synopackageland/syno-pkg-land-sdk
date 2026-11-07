@@ -8,6 +8,7 @@ import {
 } from './contract.gen.js'
 
 export type {NativeBridge, NativeIntakeItem, NativeTransfer} from './contract.gen.js'
+const receiver = {allowUnknownFields: true} as const
 export interface MobileAction {readonly mode: 'native' | 'browser'; readonly id?: string}
 export interface SaveOptions {readonly filename: string; readonly mime?: string}
 
@@ -17,7 +18,7 @@ export function nativeBridge(): NativeBridge | undefined {
  try {
   if(window.top !== window || !/^https?:$/.test(window.location.protocol)) return undefined
   const bridge = (window as Window & {SynoPkgNative?: NativeBridge}).SynoPkgNative
-  if(bridge?.protocol === NATIVE_PROTOCOL && typeof bridge.post === 'function' && isNativeShell(bridge.shell) && isNativeCapabilities(bridge.caps)) return bridge
+  if(bridge?.protocol === NATIVE_PROTOCOL && typeof bridge.post === 'function' && isNativeShell(bridge.shell, receiver) && isNativeCapabilities(bridge.caps, receiver)) return bridge
  } catch { /* An inaccessible frame is a browser host. */ }
  return undefined
 }
@@ -156,7 +157,7 @@ export async function takeIntake(id: string, options: {signal?: AbortSignal} = {
   const cancel = () => {dispose(); reject({code: 'canceled'})}
   const listener = (event: Event) => {
    const detail: unknown = (event as CustomEvent).detail
-   if(!isNativeEvent(detail) || detail.type !== 'reply' || detail.id !== id) return
+   if(!isNativeEvent(detail, receiver) || detail.type !== 'reply' || detail.id !== id) return
    dispose()
    if(detail.ok) resolve(detail.items)
    else reject(detail.error)
@@ -181,7 +182,7 @@ export function onNativeLaunch(listener: (params: LaunchParams) => void): () => 
  if(!nativeBridge()) return () => {}
  const handler = (event: Event) => {
   const detail: unknown = (event as CustomEvent).detail
-  if(!nativeBridge() || !isNativeEvent(detail) || detail.type !== 'launch') return
+  if(!nativeBridge() || !isNativeEvent(detail, receiver) || detail.type !== 'launch') return
   const params = nativeLaunchParams(detail)
   if(Object.keys(params).length) listener(params)
  }
@@ -194,7 +195,7 @@ export function onNativeTransfer(listener: (transfer: NativeTransfer) => void): 
  if(!nativeBridge()) return () => {}
  const handler = (event: Event) => {
   const detail: unknown = (event as CustomEvent).detail
-  if(nativeBridge() && isNativeEvent(detail) && detail.type === 'transfer') listener(detail)
+  if(nativeBridge() && isNativeEvent(detail, receiver) && detail.type === 'transfer') listener(detail)
  }
  window.addEventListener(NATIVE_EVENT_NAME, handler)
  return () => window.removeEventListener(NATIVE_EVENT_NAME, handler)

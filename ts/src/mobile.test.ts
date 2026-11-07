@@ -252,3 +252,35 @@ test('invalid MIME metadata still cannot reach either download transport', async
  }
  expect(bridge.post).not.toHaveBeenCalled(); expect(clicks).toEqual([])
 })
+
+
+test('future optional shell and capability fields preserve detection and supported actions', async () => {
+ const bridge = install()
+ Object.assign(bridge.shell, {theme: 'system'})
+ Object.assign(bridge.caps, {haptics: true})
+ Object.assign(bridge.caps.download, {resume: true})
+ expect(nativeBridge()).toBe(bridge)
+ expect(await saveUrl('/file', {filename: 'report.csv'})).toMatchObject({mode: 'native'})
+ const listener = vi.fn(), dispose = onNativeTransfer(listener)
+ emit({v: 1, type: 'transfer', id: 'download', state: 'queued', estimatedBytes: 10})
+ expect(listener).toHaveBeenCalledWith(expect.objectContaining({state: 'queued'}))
+ emit({v: 1, type: 'future-event'})
+ expect(listener).toHaveBeenCalledTimes(1)
+ dispose()
+})
+
+test('receiver mode ignores optional fields while retaining known-field and download-mode checks', () => {
+ const receiver = {allowUnknownFields: true}
+ expect(isNativeMessage({v: 1, type: 'ready', fcp: 1, optionalHint: true}, receiver)).toBe(true)
+ expect(isNativeMessage({v: 1, type: 'ready', fcp: -1, optionalHint: true}, receiver)).toBe(false)
+ expect(isNativeMessage({v: 1, type: 'future-message'}, receiver)).toBe(false)
+ const download = {v: 1, type: 'download', id: 'd', filename: 'a', mime: 'text/plain', base64: 'YQ=='}
+ expect(isNativeMessage({...download, optionalHint: true}, receiver)).toBe(true)
+ expect(isNativeMessage({...download, url: 'https://nas.example/file'}, receiver)).toBe(false)
+ expect(isNativeMessage({...download, optionalHint: true})).toBe(false)
+})
+
+test('optional receiver fields may reuse a name from a different message type', () => {
+ const message = {v: 1, type: 'download', id: 'd', filename: 'a', mime: 'text/plain', base64: 'YQ==', fcp: 1}
+ expect(isNativeMessage(message, {allowUnknownFields: true})).toBe(true)
+})

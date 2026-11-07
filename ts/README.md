@@ -844,6 +844,10 @@ playback. See [media grants](../docs/media.md) for backend hooks and cleanup.
 
 ## Native mobile shell
 
+SynoPkgNative protocol 1 and the `mobile:` manifest are stable. Optional additions
+retain existing behaviour; incompatible changes require a new protocol and shell
+negotiation. See the [compatibility policy](../spec/native/v1/README.md#stability-and-compatibility).
+
 `saveBlob` and `saveUrl` sanitize user-provided download names into bounded
 Unicode basenames for both native and browser downloads, retaining the final
 extension where it fits. See [filename rules](spec/native/v1/README.md#page-integration).
