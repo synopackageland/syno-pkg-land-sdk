@@ -258,7 +258,7 @@ a `title` the App has already translated, and optionally an `icon`, a `group`
 label (pages with the same label sit together), a `badge`, a `component` to
 render while it is the current page, `hidden` (reachable through `v-model`
 but not in the sidebar), `placement: 'bottom'` for a page the sidebar lists
-last, after every group (an App's settings), `header`, `fill` and `hideOnScroll`. The built-in
+last, after every group (an App's settings), `header`, `fill`, `hideOnScroll` and `phoneTitle`. The built-in
 `'status'` and `'background'` may sit in the same list.
 
 ### Page title and actions
@@ -409,6 +409,23 @@ Other shell spacing, including the body bottom padding, stays unchanged. The
 space after a page's last row is the UI's `--ui-page-end-space` (24px; only
 the safe area while the phone bars are hidden on a fill page).
 
+A page drops that space where its own bar is the bottom edge: a page that shows
+a `SettingsPage` footer, and a fill page whose last element is a docked bar.
+A docked bar is a UI footer bar (`AppActionBar`) or any element the App marks
+`data-ui-page-bar`, at any depth, as long as it is the last element that draws
+something (empty and hidden nodes after it do not count). The App needs no CSS
+of its own:
+
+```vue
+<div class="recorder">
+  <TranscriptView />
+  <div class="recorder-controls" data-ui-page-bar>…</div>
+</div>
+```
+
+A page that scrolls as a whole, or whose bar is followed by other content,
+keeps the space.
+
 #### Phone top bar
 
 On a phone outside a DSM window, a tab page draws no title row: the tab bar
@@ -419,6 +436,18 @@ icon or page name is repeated, and the shell's `title` prop and a page's
 screen readers). The one top bar holds only the account and the App's
 `header-actions`; with neither, the shell draws no bar at all. The navigation
 drawer (the tab bar's More) stays headed by the App's name and icon.
+
+A tab page that must stay titled, such as a recording or live screen shown
+as a tab while it runs, sets `phoneTitle: true` on its `AppShellPage`: the bar
+keeps its title (and a `header: true` heading) as on any other page, so the
+App does not draw a title of its own. Omitted, a tab page has no title row.
+
+```ts
+const pages = [
+  {id: 'home', title: 'Home'},
+  {id: 'live', title: 'Recording', phoneTitle: true, fill: true, hideOnScroll: false},
+]
+```
 
 Every other page keeps the bar as below: a page reached from the tab bar's
 More, a page that is not in the tab bar at all (a hidden detail or live page,

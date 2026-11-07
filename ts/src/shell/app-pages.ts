@@ -38,6 +38,12 @@ export interface AppShellPage {
   fill?: boolean
   /** false keeps the phone bars visible on this page; omitted uses the layout default. */
   hideOnScroll?: boolean
+  /**
+   * true keeps the phone's title bar on this page while it is a tab page (a
+   * recording or live screen shown as a tab). Omitted: a tab page has no title
+   * row on a phone, since the tab bar already names it.
+   */
+  phoneTitle?: boolean
 }
 export type AppShellPageEntry = ShellPage | AppShellPage
 

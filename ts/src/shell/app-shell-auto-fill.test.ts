@@ -6,7 +6,7 @@ import {readFileSync} from 'node:fs'
 import {compileStyle,parse} from '@vue/compiler-sfc'
 import {afterEach,expect,test} from 'vitest'
 import {createApp,defineComponent,h,nextTick,ref,vShow,withDirectives,type Component} from 'vue'
-import {SectionTabs,SettingsPage} from '@synopackageland/ui'
+import {AppActionBar,SectionTabs,SettingsPage} from '@synopackageland/ui'
 import AppShell from './AppShell.vue'
 import type {AppShellPageEntry} from './app-pages'
 
@@ -71,6 +71,41 @@ test('a settings page kept mounted and hidden by v-show or hidden does not count
  expect(shell.flush()).toBe(true)
  shell.current.value='status';await nextTick();await nextTick()
  expect(shell.fill()).toBe(false)
+})
+
+// A fill page that ends with its own docked bar (a recorder's controls) has no
+// end space under it: the bar is the bottom edge, as a settings footer is.
+const Log=()=>h('div',{class:'log'},'Transcript')
+const actionBar=()=>h(AppActionBar,null,{default:()=>h('button','Stop')})
+const pageBar=()=>h('div',{class:'controls','data-ui-page-bar':''},[h('button','Pause')])
+test.each([
+ ['an AppActionBar',()=>h('div',{class:'recorder'},[Log(),actionBar()])],
+ ['an element marked data-ui-page-bar',()=>h('div',{class:'recorder'},[h('section',[Log(),h('div',{class:'dock'},[pageBar()])])])],
+ ['a docked bar followed by an empty or hidden node',()=>[h('div',{class:'recorder'},[Log(),pageBar()]),h('div',{class:'toasts'}),h('p',{hidden:true},'Off')]],
+])('a fill page that ends with %s drops the end space',async(_,render)=>{
+ const shell=await mount([{id:'live',title:'Live',fill:true,hideOnScroll:false,component:defineComponent({render})}],'live')
+ expect(shell.fill()).toBe(true)
+ expect(shell.flush()).toBe(true)
+})
+
+test('a docked bar that is not last, is hidden, or sits on a scrolling page keeps the end space',async()=>{
+ const notLast=await mount([{id:'live',title:'Live',fill:true,component:defineComponent({render:()=>h('div',[pageBar(),Log()])})}],'live')
+ expect(notLast.flush()).toBe(false)
+ const hidden=await mount([{id:'live',title:'Live',fill:true,component:defineComponent({render:()=>h('div',[Log(),withDirectives(pageBar(),[[vShow,false]])])})}],'live')
+ expect(hidden.flush()).toBe(false)
+ const scrolling=await mount([{id:'live',title:'Live',component:defineComponent({render:()=>h('div',[Log(),pageBar()])})}],'live')
+ expect(scrolling.fill()).toBe(false)
+ expect(scrolling.flush()).toBe(false)
+})
+
+test('the end space follows the bar as it comes and goes',async()=>{
+ const running=ref(false)
+ const shell=await mount([{id:'live',title:'Live',fill:true,component:defineComponent({render:()=>h('div',[Log(),running.value?pageBar():null])})}],'live')
+ expect(shell.flush()).toBe(false)
+ running.value=true;await nextTick();await nextTick()
+ expect(shell.flush()).toBe(true)
+ running.value=false;await nextTick();await nextTick()
+ expect(shell.flush()).toBe(false)
 })
 
 // jsdom has no layout: read what AppShell's scoped style assigns to the App's

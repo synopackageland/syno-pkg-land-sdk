@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.53.3
+
+- `AppShellPage.phoneTitle: true` keeps a tab page's title bar on a phone (a recording or live screen shown as a tab). Omitted, a tab page still has no title row
+- A fill page whose last element is a docked bar (a UI footer bar such as `AppActionBar`, or an element marked `data-ui-page-bar`) has no end space under it, as a page with a `SettingsPage` footer; a scrolling page keeps it
+- Keep the UI 0.23.2 dependency and peer range `>=0.23.2 <0.24.0`, and reuse the immutable executor release and its six digests
+
 ## 0.53.2
 
 - Raw TCP listeners default to `tcp4` on `127.0.0.1` when `scope` is omitted or `loopback`; explicit `scope: all` binds `tcp4` on `0.0.0.0` on every IPv4 interface. Use the DSM firewall to restrict access
