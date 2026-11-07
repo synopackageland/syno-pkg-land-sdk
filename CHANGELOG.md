@@ -7,6 +7,8 @@
 - On a phone, only a page whose own tab is current in the `#tabbar` is a tab page. A page outside the tab bar (a hidden detail or live page) keeps its title bar and Back, even while the App keeps its parent tab marked current
 - A phone tab page passes no brand to the bar, so UI 0.23.0's bar icon beside the title is not drawn there
 - `AppShell` pads a page's end with the UI's `--ui-page-end-space`: only the safe area while the phone bars are hidden on a fill page
+- Raw TCP listeners bind only loopback (127.0.0.1): a policy's `scope` is `loopback` or absent, and `ipc.ListenTCP` refuses a policy with `scope: "all"` with an error naming the listener. Use a CLI that no longer emits `all`
+- Add `packageCenterUrl(origin?)`, the DSM link that opens Package Center, and docs/install-another-package.md on offering another Package Land package (package source, administrator install, detect → open → act → re-check)
 
 ## 0.53.0
 

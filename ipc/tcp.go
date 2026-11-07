@@ -22,7 +22,7 @@ var tcpListenersPolicy string
 var tcpListenerID = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
 
 type tcpDeclaration struct {
-	Scope     string `json:"scope"`
+	Scope     string `json:"scope,omitempty"`
 	Port      int    `json:"port"`
 	PortRange []int  `json:"port_range,omitempty"`
 }
@@ -50,7 +50,10 @@ func readTCPPolicy(encoded string) (tcpPolicy, error) {
 		return policy, errors.New("ipc: invalid TCP listener policy schema or size")
 	}
 	for id, item := range policy.Listeners {
-		if !tcpListenerID.MatchString(id) || item.Port < 1024 || item.Port > 65535 || (item.Scope != "loopback" && item.Scope != "all") {
+		if item.Scope == "all" {
+			return policy, fmt.Errorf("ipc: TCP listener %q: scope \"all\" is not supported; listeners bind only loopback (127.0.0.1)", id)
+		}
+		if !tcpListenerID.MatchString(id) || item.Port < 1024 || item.Port > 65535 || (item.Scope != "" && item.Scope != "loopback") {
 			return policy, errors.New("ipc: invalid TCP listener name, scope or port")
 		}
 		if item.PortRange != nil && (len(item.PortRange) != 2 || item.PortRange[0] < 1024 || item.PortRange[1] > 65535 || item.PortRange[0] > item.PortRange[1] || item.Port < item.PortRange[0] || item.Port > item.PortRange[1]) {
@@ -63,9 +66,10 @@ func readTCPPolicy(encoded string) (tcpPolicy, error) {
 // ListenTCP binds one manifest-declared raw IPv4 TCP listener. id must be a
 // literal declared tcp_listeners ID at each audited call site. port=0 selects
 // the declaration's default; another port must be explicitly allowed by its
-// port_range (absent means only the default port). Bind scope is fixed by the
-// declaration: loopback means exactly 127.0.0.1, all means 0.0.0.0. No DNS,
-// IPv6, ephemeral or privileged ports are accepted. A binary without the CLI's
+// port_range (absent means only the default port). The listener binds exactly
+// IPv4 127.0.0.1: scope is "loopback" or absent, and any other scope (such as
+// "all") makes the policy invalid. No DNS, IPv6, non-loopback, ephemeral or
+// privileged ports are accepted. A binary without the CLI's
 // package identity and compiled declaration refuses the call.
 //
 // Cancellation closes admission and unblocks Accept; Close is idempotent.
@@ -95,14 +99,9 @@ func ListenTCP(ctx context.Context, id string, port int) (net.Listener, error) {
 	if port < minPort || port > maxPort {
 		return nil, fmt.Errorf("ipc: TCP listener %q port is outside its declared range", id)
 	}
-	var raw net.Listener
-	if item.Scope == "loopback" {
-		// Reuse the reservation bind primitive, retaining the very same socket:
-		// no release/rebind window in which another process can steal the port.
-		raw, err = listenLoopback(ctx, uint16(port))
-	} else {
-		raw, err = (&net.ListenConfig{}).Listen(ctx, "tcp4", fmt.Sprintf("0.0.0.0:%d", port))
-	}
+	// Reuse the reservation bind primitive, retaining the very same socket:
+	// no release/rebind window in which another process can steal the port.
+	raw, err := listenLoopback(ctx, uint16(port))
 	if err != nil {
 		return nil, err
 	}

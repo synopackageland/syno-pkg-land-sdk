@@ -25,7 +25,7 @@
     "canonicalTaskDefinitionsUnchanged": true,
     "nasAcceptance": false,
     "rustCratePublished": false,
-    "validation": "AppShell unit tests (jsdom: tab page, page outside the tab bar with the parent tab current, header actions in one \"…\", primary header action, portal header), real-browser shell and portal fixtures at 390x844 (tab page, hidden live page with Back, header actions menu) plus the existing shell/portal/picker/entry browser checks, full frontend unit suite, typecheck, build, docs version check and npm pack content scan. No full gate, publication or NAS acceptance."
+    "validation": "AppShell unit tests (jsdom: tab page, page outside the tab bar with the parent tab current, header actions in one \"…\", primary header action, portal header), real-browser shell and portal fixtures at 390x844 (tab page, hidden live page with Back, header actions menu) plus the existing shell/portal/picker/entry browser checks, full frontend unit suite, typecheck, build, docs version check and npm pack content scan. No full gate, publication or NAS acceptance. Go ipc tests (scope all refused, absent scope binds 127.0.0.1) and the launch unit test."
   },
   "ui": {
     "builtAgainst": "0.23.0",
@@ -42,6 +42,8 @@
     "Only a page whose own tab is current is a phone tab page; pages outside the tab bar keep their title bar and Back.",
     "A phone tab page passes no brand, so the bar draws no App icon there.",
     "AppShell's page end padding reads --ui-page-end-space.",
+    "Raw TCP listeners are loopback-only; a policy with scope \"all\" is refused (RawTCPPolicyVersion stays 1).",
+    "Add packageCenterUrl() and the guide on offering another Package Land package.",
     "Reuse the immutable executor release and its six digests."
   ]
 }

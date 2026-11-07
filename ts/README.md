@@ -205,6 +205,11 @@ dsmLaunchURL('https://nas.example:5001', 'HelloGo', {route: '/a/notes/42'})
 DSM replays the opening launch's values when it restores the desktop's windows
 at sign-in, so a restored window opens on the same page.
 
+`packageCenterUrl(origin?)` is the link that opens DSM's Package Center
+(`/?launchApp=SYNO.SDS.PkgManApp.Instance`, or on `origin`), for an
+administrator who should install another package. DSM has no link to a single
+package. See [offering another package](../docs/install-another-package.md).
+
 ## Outside DSM
 
 A development page, a preview or a test owns the browser page and has no DSM

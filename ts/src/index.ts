@@ -2,7 +2,7 @@
 export type * from './context'
 export {DEFAULT_REQUEST_TIMEOUT, clientTimeout, isFullPage} from './context'
 export {createStandaloneHost, createStandaloneContext} from './standalone'
-export {launchRoute, followLaunchRoute, dsmLaunchURL, MAX_LAUNCH_ROUTE} from './launch'
+export {launchRoute, followLaunchRoute, dsmLaunchURL, packageCenterUrl, MAX_LAUNCH_ROUTE} from './launch'
 export {createDsmSession} from './dsm/session.js'
 export {createDsmFileStation} from './dsm/filestation'
 export type {DsmFileOptions,DsmFileEntry,DsmFilePage} from './dsm/filestation'

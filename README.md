@@ -229,8 +229,14 @@ inventories, shared Go/TypeScript types and JSON schemas, and serves authenticat
 metadata through the existing DSM CGI entry. The CLI handles upstream credentials,
 HTTP execution and bounded file transfers. See the [native HTTP contract](api/nativehttp/README.md).
 
+### Offering another package
+
+An App can offer another Package Land package: detect it, open it, or send an
+administrator to Package Center with `packageCenterUrl()`. See [offering
+another package](docs/install-another-package.md).
+
 ### Raw TCP protocols
 
-Use manifest-declared `ipc.ListenTCP` for raw TCP services; bind scope and allowed
-ports are compiled by the CLI. See [declared TCP listeners](docs/raw-tcp-listeners.md)
+Use manifest-declared `ipc.ListenTCP` for raw TCP services on loopback
+(127.0.0.1); allowed ports are compiled by the CLI. See [declared TCP listeners](docs/raw-tcp-listeners.md)
 for policy, lifetime, audit and authentication boundaries.
