@@ -32,13 +32,31 @@ try{
   const label=`${width}-${fullPage?'web':'window'}`
   if(shots)await page.screenshot({path:join(shots,`${baseline?'baseline-':''}${label}.png`)})
   if(width===390){
-   // A tab page draws no title, the App's title included: the bar holds its actions.
+   // A tab page draws no title, the App's title included: the bar holds its
+   // actions, all in one "…" (none is primary).
    assert.equal(await page.locator('[data-ui-mobile-title]').innerText(),'')
-   await page.locator('[data-ui-mobile-action]').tap()
+   assert.equal(await page.locator('[data-ui-mobile-action]').count(),0)
+   assert.equal(await page.locator('[data-ui-mobile-more]').count(),1)
+   await page.locator('[data-ui-mobile-more]').tap()
+   await page.getByRole('menuitem',{name:'Refresh library',exact:true}).waitFor()
+   if(shots)await page.screenshot({path:join(shots,`${label}-actions.png`)})
+   await page.getByRole('menuitem',{name:'Refresh library',exact:true}).tap()
    assert.equal(await page.evaluate(()=>document.documentElement.dataset.headerAction),'refresh')
    await page.locator('[data-ui-mobile-more]').tap()
    await page.getByRole('menuitem',{name:'Settings',exact:true}).tap()
    assert.equal(await page.evaluate(()=>document.documentElement.dataset.headerAction),'settings')
+   // A hidden page outside the tab bar keeps its title bar and Back, though
+   // the App keeps Overview's tab current.
+   await page.evaluate(()=>{window.shellPage.value='live'})
+   await page.locator('[data-ui-mobile-back]').waitFor()
+   assert.equal(await page.locator('[data-ui-tab-bar-item="home"]').getAttribute('aria-current'),'page')
+   assert.equal(await page.locator('[data-ui-mobile-title]').innerText(),'Live reading')
+   assert.equal(await page.locator('[data-ui-mobile-more]').count(),1)
+   await page.waitForTimeout(300)
+   if(shots)await page.screenshot({path:join(shots,`${label}-live.png`)})
+   await page.locator('[data-ui-mobile-back]').tap()
+   await page.waitForFunction(()=>document.querySelector('[data-ui-mobile-title]')?.textContent==='')
+   assert.equal(await page.locator('[data-ui-mobile-back]').count(),0)
    await page.locator('[data-ui-tab-bar-item="books"]').tap()
    assert.equal(await page.locator('[data-ui-tab-bar-item="books"]').getAttribute('aria-current'),'page')
    await page.locator('[data-ui-tab-bar-more]').tap()

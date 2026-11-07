@@ -71,7 +71,7 @@ test('no banner, a root outside the window body or a detached root collapse noth
 
 const pages=[{id:'home',title:'Home'},{id:'meetings',title:'Meetings'},{id:'about',title:'About'}]
 const tabs=pages.slice(0,2).map(p=>({key:p.id,label:p.title}))
-function mountShell(target:HTMLElement,{fullPage=true,user='alice',actions=[] as {key:string;label:string}[]}={}){
+function mountShell(target:HTMLElement,{fullPage=true,user='alice',actions=[] as {key:string;label:string;primary?:boolean}[]}={}){
  const page=ref('home'),detail=ref(false),signOut=vi.fn(),selected=vi.fn()
  const app=createApp({render:()=>h(AppShell,{
   appRoot:true,locale:'en',pages,modelValue:page.value,'onUpdate:modelValue':(v:string)=>{page.value=v},
@@ -123,7 +123,7 @@ test('a phone tab page in the portal: DSM\'s compact row is the one bar; a sub-p
  expect(f.main.hasAttribute(portalMobileAttr)).toBe(false)
 })
 
-test('App header actions in the portal: one bar with the actions and the account after them in "…"',async()=>{
+test('App header actions in the portal: one bar, the actions and the account after them in its one "…"',async()=>{
  viewport(390)
  const f=dsmWindow(),s=mountShell(f.app,{actions:[{key:'share',label:'Share'},{key:'export',label:'Export'}]})
  try{
@@ -131,6 +131,19 @@ test('App header actions in the portal: one bar with the actions and the account
   expect(bar(f.app)).not.toBeNull()
   expect(f.main.getAttribute(portalCollapsedAttr)).toBe('bar')
   expect(bar(f.app)!.querySelector('[data-ui-mobile-title]')?.textContent).toBe('')
+  // No entry is a bar button for being first: the bar shows one "…" only.
+  expect(bar(f.app)!.querySelectorAll('[data-ui-mobile-more], [data-ui-mobile-action]')).toHaveLength(1)
+  bar(f.app)!.querySelector<HTMLButtonElement>('[data-ui-mobile-more]')!.click();await settle()
+  const items=Array.from(document.querySelectorAll('[role="menuitem"]')).map(item=>item.textContent?.trim())
+  expect(items).toEqual(['Share','Export','alice'])
+ }finally{s.app.unmount()}
+})
+
+test('a header action marked primary is the bar button; the rest and the account stay in "…"',async()=>{
+ viewport(390)
+ const f=dsmWindow(),s=mountShell(f.app,{actions:[{key:'export',label:'Export'},{key:'share',label:'Share',primary:true}]})
+ try{
+  await settle()
   bar(f.app)!.querySelector<HTMLButtonElement>('[data-ui-mobile-action]')!.click()
   expect(s.selected).toHaveBeenCalledWith('share')
   bar(f.app)!.querySelector<HTMLButtonElement>('[data-ui-mobile-more]')!.click();await settle()
@@ -178,6 +191,34 @@ test('outside the portal a tab page draws a bar only for the account or actions;
    else expect(bar(root)?.querySelector('[data-ui-mobile-title]')?.textContent).toBe('Home')
   }finally{s.app.unmount();root.remove()}
  }
+})
+
+test('a page outside the tab bar keeps its title bar and Back while the App marks its parent tab current',async()=>{
+ viewport(390)
+ const root=document.createElement('div');document.body.append(root)
+ // 'live' is hidden (not in the sidebar) and not a tab; the App keeps Home's tab lit on it.
+ const shown=[...pages,{id:'live',title:'Live',hidden:true}]
+ const page=ref('home'),back=ref(false)
+ const app=createApp({render:()=>h(AppShell,{
+  appRoot:true,locale:'en',pages:shown,modelValue:page.value,'onUpdate:modelValue':(v:string)=>{page.value=v},
+  ctx:{fullPage:true,displayName:'Meeting Notes',host:{platform:()=>({host:'dsm',dsmStandalone:true})} as never},
+ },{
+  tabbar:({page:current}:{page:string})=>h(AppTabBar,{items:tabs,modelValue:current==='live'?'home':current,'onUpdate:modelValue':(v:string)=>{page.value=v}}),
+  default:({page:current}:{page:string})=>current==='live'&&back.value?h(PageHeader,{title:'Live',back:true,onBack:()=>{page.value='home'}}):h('p',current),
+ })})
+ try{
+  app.mount(root);await settle()
+  // The tab page: no title row and, with nothing for it, no bar.
+  expect(bar(root)).toBeNull()
+  page.value='live';await settle()
+  expect(root.querySelector('[data-ui-tab-bar-item="home"]')?.getAttribute('aria-current')).toBe('page')
+  expect(bar(root)?.querySelector('[data-ui-mobile-title]')?.textContent).toBe('Live')
+  back.value=true;await settle()
+  expect(bar(root)?.querySelector('[data-ui-mobile-title]')?.textContent).toBe('Live')
+  bar(root)!.querySelector<HTMLButtonElement>('[data-ui-mobile-back]')!.click();await settle()
+  expect(page.value).toBe('home')
+  expect(bar(root)).toBeNull()
+ }finally{app.unmount();root.remove()}
 })
 
 test.each([

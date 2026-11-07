@@ -148,8 +148,9 @@ stays the window's accessible name and, while cut, its tooltip.
 On a phone (that mobile layout with a coarse pointer) the page has one top
 bar. On one of the tab bar's pages DSM's compact banner is that bar; the
 App draws no title row under it (see "Phone top bar"). When the App's own
-bar is shown instead (a sub-page with Back, an App with `header-actions`, or
-an App without a tab bar, whose bar holds the menu button), it takes the
+bar is shown instead (a page outside the tab bar, a sub-page with Back, an
+App with `header-actions`, or an App without a tab bar, whose bar holds the
+menu button), it takes the
 banner's place: the banner moves up out of the window and the App gets its
 height. The account then moves into the App's bar (below). The banner also
 hides with the App's bars when the page scrolls down and comes back with
@@ -390,20 +391,26 @@ surface at every width (web, DSM window and mobile):
 <AppShell v-model="page" :locale="ctx.locale" :ctx="ctx" :pages="pages" page-surface="none" />
 ```
 
-Other shell spacing, including the body bottom padding, stays unchanged.
+Other shell spacing, including the body bottom padding, stays unchanged. The
+space after a page's last row is the UI's `--ui-page-end-space` (24px; only
+the safe area while the phone bars are hidden on a fill page).
 
 #### Phone top bar
 
-On a phone outside a DSM window, a page that is one of the `#tabbar`'s tabs
-draws no title row: the tab bar already shows where the user is. No App
+On a phone outside a DSM window, a tab page draws no title row: the tab bar
+already shows where the user is. A tab page is a page whose own tab is drawn
+in the `#tabbar` and is current, so the tab keys must be the page ids. No App
 icon or page name is repeated, and the shell's `title` prop and a page's
 `header: true` heading are not shown there (the page keeps a heading for
 screen readers). The one top bar holds only the account and the App's
-`header-actions`; with neither, the shell draws no bar at all. A page reached
-from the tab bar's More, a sub-page (a `PageHeader` with `back`, which shows
-Back, its title and actions), an App without a tab bar and a DSM window keep
-the bar as below. A page with `header: false` names itself through its own
-`PageHeader`, which stays.
+`header-actions`; with neither, the shell draws no bar at all.
+
+Every other page keeps the bar as below: a page reached from the tab bar's
+More, a page that is not in the tab bar at all (a hidden detail or live page,
+even while the App keeps its parent tab marked current), a sub-page (a
+`PageHeader` with `back`, which shows Back, its title and actions), an App
+without a tab bar and a DSM window. A page with `header: false` names itself
+through its own `PageHeader`, which stays.
 
 The account joins that bar where it would otherwise be a second control: on
 a DSM full page whose host can sign out (`ctx.host.signOut()`), the bar shows
@@ -419,10 +426,23 @@ Elsewhere, `AppLayout`'s bar shows the current page entry's `title` (or the
 built-in page's name), also for a page whose title is otherwise only in the
 sidebar. A page with `header: false` names itself: the bar takes the title of
 its own `PageHeader`. The shell's `title` prop overrides that phone bar title
-without changing the page heading. `header-actions` takes the UI's
-`DropdownMenuEntry[]`: the phone bar shows the first action and puts the rest
-under More; `@header-action` receives the selected key. These props add no
-desktop or DSM window header.
+without changing the page heading. These props add no desktop or DSM window
+header.
+
+`header-actions` takes the UI's `DropdownMenuEntry[]`; `@header-action`
+receives the selected key. The phone bar shows one "…" for them. When the
+page puts its own menu in the bar (a sub-page's "…"), they join the end of
+that menu after a separator instead of a second "…". An entry is a bar
+button of its own only with `primary: true`, or when it is the only entry
+and has an icon (the account on its own), and only while the page puts no
+actions or menu in the bar:
+
+```ts
+const phoneActions: DropdownMenuEntry[] = [
+  {key: 'share', label: 'Share', icon: Share2, primary: true},
+  {key: 'export', label: 'Export'},
+]
+```
 
 Place an `AppTabBar` in `#tabbar`; the shell forwards this slot to `AppLayout`,
 which renders it only in the mobile presentation. Its More tab opens the
@@ -466,9 +486,9 @@ through `v-model`:
 ### Moving an existing App to these defaults
 
 - A page that should keep its visible title sets `header: true`. Pages carry no
-  subtitle: drop `description` from the page entries (it is no longer shown).
+  subtitle: drop `description` from the page entries (it is not shown).
 - An App that set `header: false` only to hide the title, and added its own
-  hidden `h1`, can drop both: the shell now names the page itself. Buttons it
+  hidden `h1`, can drop both: the shell names the page itself. Buttons it
   moved into its own `#toolbar` `AppToolbar` can go back to `#actions`.
 - Remove CSS that passed the height to a settings page, such as
   `.integration-app > [data-page][data-fill] { flex: 1 1 0%; min-height: 0 }`
