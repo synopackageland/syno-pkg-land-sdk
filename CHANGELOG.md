@@ -2,10 +2,10 @@
 
 ## 0.53.1
 
-- The Vue entry accepts `@synopackageland/ui` 0.23 (peer `>=0.20.5 <0.24.0`) and is built and tested against 0.23.0
+- The Vue entry needs `@synopackageland/ui` 0.23.1 or a later 0.23 (peer `>=0.23.1 <0.24.0`) and is built and tested against 0.23.1. An App moves its UI to 0.23.1 with the SDK
 - On a phone, `header-actions` follow UI 0.23.0: they share the page's one "…" in the bar, and an entry is a bar button of its own only with `primary: true` (or as the only entry with an icon, such as the account). An App that relied on its first entry being a button marks that entry `primary: true`
 - On a phone, only a page whose own tab is current in the `#tabbar` is a tab page. A page outside the tab bar (a hidden detail or live page) keeps its title bar and Back, even while the App keeps its parent tab marked current
-- A phone tab page passes no brand to the bar, so UI 0.23.0's bar icon beside the title is not drawn there
+- A phone tab page's bar draws no title, App icon or brand (UI `phone-bar-title="none"`); the navigation drawer keeps the App's name and icon, and screen readers keep the page title
 - `AppShell` pads a page's end with the UI's `--ui-page-end-space`: only the safe area while the phone bars are hidden on a fill page
 - Raw TCP listeners bind only loopback (127.0.0.1): a policy's `scope` is `loopback` or absent, and `ipc.ListenTCP` refuses a policy with `scope: "all"` with an error naming the listener. Use a CLI that no longer emits `all`
 - Add `packageCenterUrl(origin?)`, the DSM link that opens Package Center, and docs/install-another-package.md on offering another Package Land package (package source, administrator install, detect → open → act → re-check)

@@ -199,14 +199,14 @@ function onHeaderAction(key: string) {
   else emit('headerAction', key)
 }
 watch(accountInBar, shown => {if(!shown) accountOpen.value = false})
-// AppLayout has no tab-page mode: it draws its phone bar for a title, a brand,
-// Back or header actions, and next to a title it shows the brand's icon. So a
-// tab page passes no brand, and an empty title only while actions need the bar
-// (without one, AppLayout would title it "Application navigation"). Without
-// actions there is no bar; Back brings its own title.
-const layoutTitle = computed(() => phoneTab.value ? (barActions.value.length ? '' : undefined) : props.title ?? barTitle.value)
-const layoutBrandName = computed(() => phoneTab.value ? '' : props.brandName ?? props.ctx?.displayName)
-const layoutBrandIcon = computed(() => phoneTab.value ? '' : props.brandIcon ?? props.ctx?.appIcon)
+// A tab page's bar draws no title, App icon or brand (phone-bar-title="none");
+// the drawer keeps the brand and screen readers the title. AppLayout still
+// draws a bar for a title or a brand, so a tab page with nothing for the bar
+// (no actions, no Back) passes neither: then there is no bar at all.
+const emptyTabBar = computed(() => phoneTab.value && !barActions.value.length && !phoneShell.value.back)
+const layoutTitle = computed(() => emptyTabBar.value ? undefined : props.title ?? barTitle.value)
+const layoutBrandName = computed(() => emptyTabBar.value ? '' : props.brandName ?? props.ctx?.displayName)
+const layoutBrandIcon = computed(() => emptyTabBar.value ? '' : props.brandIcon ?? props.ctx?.appIcon)
 watch([fullPage,layout,accountMergeable], (_, __, onCleanup) => {
   const root=layout.value?.$el
   if(!fullPage.value || !root) {portalChrome.value={brand:false,user:false};return}
@@ -286,7 +286,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
     <slot name="denied" :phone="phone"><Callout tone="danger"><span role="alert">{{ denied.message ?? refusal?.message ?? copy.deniedMessage }}</span></Callout></slot>
   </PageContent>
   <AppLayout v-else ref="layout" :class="['app-shell', {'app-shell-fill': fill, 'app-shell-portal-brand': portalChrome.brand}]" min-height="0" :wide-layout="wideLayout ?? (fullPage ? 'web' : 'window')" :sidebar-storage-key="sidebarStorageKey"
-    :navigation="navigation" :hide-on-scroll="hideOnScroll" :title="layoutTitle" :header-actions="barActions" @header-action="onHeaderAction" :brand-name="layoutBrandName" :brand-icon="layoutBrandIcon" @brand="onBrand">
+    :navigation="navigation" :hide-on-scroll="hideOnScroll" :title="layoutTitle" :phone-bar-title="phoneTab ? 'none' : 'auto'" :header-actions="barActions" @header-action="onHeaderAction" :brand-name="layoutBrandName" :brand-icon="layoutBrandIcon" @brand="onBrand">
     <template #sidebar>
       <AppSidebar :model-value="modelValue" :groups="groups" @update:model-value="emit('update:modelValue', $event)" />
     </template>

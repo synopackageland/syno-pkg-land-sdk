@@ -408,7 +408,8 @@ in the `#tabbar` and is current, so the tab keys must be the page ids. No App
 icon or page name is repeated, and the shell's `title` prop and a page's
 `header: true` heading are not shown there (the page keeps a heading for
 screen readers). The one top bar holds only the account and the App's
-`header-actions`; with neither, the shell draws no bar at all.
+`header-actions`; with neither, the shell draws no bar at all. The navigation
+drawer (the tab bar's More) stays headed by the App's name and icon.
 
 Every other page keeps the bar as below: a page reached from the tab bar's
 More, a page that is not in the tab bar at all (a hidden detail or live page,

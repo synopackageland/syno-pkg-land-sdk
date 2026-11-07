@@ -130,7 +130,10 @@ test('App header actions in the portal: one bar, the actions and the account aft
   await settle()
   expect(bar(f.app)).not.toBeNull()
   expect(f.main.getAttribute(portalCollapsedAttr)).toBe('bar')
-  expect(bar(f.app)!.querySelector('[data-ui-mobile-title]')?.textContent).toBe('')
+  // A tab page's bar draws no title or brand; screen readers keep the page title.
+  expect(bar(f.app)!.getAttribute('data-ui-mobile-bar-title')).toBe('none')
+  expect(bar(f.app)!.querySelector('[data-ui-mobile-title], [data-ui-mobile-app-icon], [data-ui-sidebar-brand]')).toBeNull()
+  expect(bar(f.app)!.querySelector('[data-ui-mobile-title-hidden]')?.textContent).toBe('Home')
   // No entry is a bar button for being first: the bar shows one "…" only.
   expect(bar(f.app)!.querySelectorAll('[data-ui-mobile-more], [data-ui-mobile-action]')).toHaveLength(1)
   bar(f.app)!.querySelector<HTMLButtonElement>('[data-ui-mobile-more]')!.click();await settle()
