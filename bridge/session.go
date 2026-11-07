@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/wirelimits"
 	"log"
 	"net"
 	"net/http"
@@ -30,8 +31,8 @@ import (
 const Version = 1
 
 // MaxFrame bounds one frame in either direction, newline included: the
-// largest JSON request body (api.MaxRequestBytesCeiling) plus the envelope.
-const MaxFrame = api.MaxRequestBytesCeiling + 64<<10
+// largest JSON request or WebAPI reply plus envelope overhead.
+const MaxFrame = max(api.MaxRequestBytesCeiling+64<<10, wirelimits.MaxReplyFrame)
 
 // CancelGrace is how long the App may take to stop after cancel.
 const CancelGrace = time.Second

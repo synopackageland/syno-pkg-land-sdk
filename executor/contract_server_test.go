@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -44,12 +45,42 @@ func (d contractDSM) API(context.Context, string, string, map[string]any) (json.
 
 // WebAPI answers with the time the executor left the call, so a client test
 // sees whether the request's deadline_ms bounded it.
-func (d contractDSM) WebAPI(ctx context.Context, _, _, _ string, _ int, _ map[string]any) (json.RawMessage, error) {
+func (d contractDSM) WebAPI(ctx context.Context, runner, api, method string, version int, params map[string]any) (json.RawMessage, error) {
+	if raw, ok := params["reply_bytes"].(json.Number); ok {
+		size, err := raw.Int64()
+		if err != nil || size < 0 || size > maxWebAPIReply+1 {
+			return nil, errors.New("invalid fixture size")
+		}
+		live := liveDSM{Command: contractJSONCommand{int(size)}}
+		return live.WebAPI(ctx, runner, api, method, version, params)
+	}
 	deadline, ok := ctx.Deadline()
 	if !ok {
 		return nil, errors.New("unbounded WebAPI call")
 	}
 	return json.RawMessage(`{"success":true,"data":{"remaining_ms":` + strconv.FormatInt(time.Until(deadline).Milliseconds(), 10) + `}}`), nil
+}
+
+type contractJSONCommand struct{ size int }
+
+func (contractJSONCommand) Exec(context.Context, string, []string) ([]byte, error) {
+	return nil, errors.New("stream required")
+}
+func (c contractJSONCommand) Stream(_ context.Context, _ string, _ []string, w io.Writer) error {
+	const prefix, suffix = `{"success":true,"data":"`, `"}`
+	if _, err := io.WriteString(w, prefix); err != nil {
+		return err
+	}
+	chunk := strings.Repeat("<", 32768)
+	for left := c.size - len(prefix) - len(suffix); left > 0; {
+		n := min(left, len(chunk))
+		if _, err := io.WriteString(w, chunk[:n]); err != nil {
+			return err
+		}
+		left -= n
+	}
+	_, err := io.WriteString(w, suffix)
+	return err
 }
 
 type contractWriter struct{ control string }

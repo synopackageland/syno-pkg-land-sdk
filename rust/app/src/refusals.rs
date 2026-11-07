@@ -67,7 +67,7 @@ pub const ROOT_FAILED: &str = "ROOT_FAILED";
 /// The root program ran past its policy timeout and was killed.
 pub const ROOT_TIMEOUT: &str = "ROOT_TIMEOUT";
 
-/// The package already runs as many root programs as it may.
+/// The package already runs as many root programs or WebAPI reply transfers as it may.
 pub const ROOT_BUSY: &str = "ROOT_BUSY";
 
 /// Root output waiting in the staging folder already fills its quota.
@@ -100,7 +100,7 @@ pub const APP_STARTING: &str = "APP_STARTING";
 /// The executor did not answer in time.
 pub const EXECUTOR_TIMEOUT: &str = "EXECUTOR_TIMEOUT";
 
-/// The request or reply is larger than 64 KiB.
+/// The request or reply exceeds its protocol byte limit.
 pub const EXECUTOR_TOO_LARGE: &str = "EXECUTOR_TOO_LARGE";
 
 /// The executor reply is not a valid v1 response.
@@ -108,3 +108,6 @@ pub const EXECUTOR_PROTOCOL: &str = "EXECUTOR_PROTOCOL";
 
 /// The WebAPI outcome is unknown: execution, reply validation or audit completion failed. Do not automatically retry a mutation.
 pub const WEBAPI_UNCERTAIN: &str = "WEBAPI_UNCERTAIN";
+
+/// The compact WebAPI JSON reply exceeds the shared reply limit. The message gives the observed minimum size and limit in bytes. Do not automatically retry a mutation.
+pub const WEBAPI_REPLY_TOO_LARGE: &str = "WEBAPI_REPLY_TOO_LARGE";

@@ -1,6 +1,7 @@
 import { createInterface } from 'node:readline'
 import type { Readable, Writable } from 'node:stream'
 import type { Frame } from './frames.js'
+import { MAX_REPLY_FRAME } from './limits.js'
 
 // A frame as it arrives: a JSON object with a string t. Its other members are
 // checked where they are read.
@@ -24,6 +25,7 @@ export class Channel {
     try {
       const { value, done } = await this.#lines.next()
       if (done) return null
+      if (Buffer.byteLength(value) > MAX_REPLY_FRAME) return null
       const frame: unknown = JSON.parse(value)
       return isReceived(frame) ? frame : null
     } catch {

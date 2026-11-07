@@ -23,6 +23,7 @@ const webAPIRawTimeout = budget.WebAPIRawTimeout
 const maxWebAPIStaging = maxWebAPIRaw + maxRootStaging
 const inlineWebAPIRaw = 32 << 10
 const maxCGIHeaders = 8 << 10
+const maxWebAPIControlReply = 48 << 10
 
 var errCGI = errors.New("invalid WebAPI CGI response")
 var errRawSpace = errors.New("insufficient raw destination space")
@@ -364,7 +365,7 @@ func (d *liveDSM) WebAPIRaw(ctx context.Context, runner, api, method string, ver
 				Code int `json:"code"`
 			} `json:"error"`
 		}
-		if len(control) > maxWebAPIReply || strictJSON(control, &map[string]json.RawMessage{}) != nil || json.Unmarshal(control, &envelope) != nil || envelope.Success == nil {
+		if len(control) > maxWebAPIControlReply || strictJSON(control, &map[string]json.RawMessage{}) != nil || json.Unmarshal(control, &envelope) != nil || envelope.Success == nil {
 			return errCGI
 		}
 		if !*envelope.Success && !(envelope.Error.Code == 117 && count.n > 0) {

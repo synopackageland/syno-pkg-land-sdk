@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
+	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/wirelimits"
 	"io"
 	"regexp"
 	"strconv"
@@ -18,7 +19,7 @@ import (
 )
 
 const maxWebAPIParams = 32 << 10
-const maxWebAPIReply = 48 << 10
+const maxWebAPIReply = wirelimits.MaxWebAPIReply
 const webAPITimeout = budget.Operation
 
 var webAPIName = regexp.MustCompile(`^SYNO\.[A-Za-z][A-Za-z0-9]*(\.[A-Za-z][A-Za-z0-9]*)*$`)
@@ -280,6 +281,13 @@ func (e *Executor) callWebAPI(ctx context.Context, r Request) Response {
 	if !ok {
 		return deny("WEBAPI_UNCERTAIN")
 	}
+	// Share the two bounded-output slots with raw transfers and root programs.
+	if ctx.Value(webJSONSlotKey{}) == nil {
+		if !e.rootSlot() {
+			return deny("ROOT_BUSY")
+		}
+		defer e.rootSlotDone()
+	}
 	target := d.Scope + ":" + p.API + "/" + p.Method + "/" + strconv.Itoa(p.Version)
 	e.commitMu.Lock()
 	err = e.auditLocked(s, "webapi.call", d.ID, target, "admitting")
@@ -289,7 +297,13 @@ func (e *Executor) callWebAPI(ctx context.Context, r Request) Response {
 	}
 	out, err := caller.WebAPI(ctx, s.Username, p.API, p.Method, p.Version, params)
 	result := "completed"
-	if err != nil || len(out) > maxWebAPIReply || !json.Valid(out) {
+	var tooLarge *webAPIReplyTooLarge
+	if len(out) > maxWebAPIReply && err == nil {
+		err = &webAPIReplyTooLarge{len(out)}
+	}
+	if errors.As(err, &tooLarge) {
+		result = "WEBAPI_REPLY_TOO_LARGE"
+	} else if err != nil || !json.Valid(out) {
 		result = "uncertain"
 	}
 	e.commitMu.Lock()
@@ -298,6 +312,9 @@ func (e *Executor) callWebAPI(ctx context.Context, r Request) Response {
 	// Once dispatched, any missing reply is ambiguous: no automatic retries.
 	if result == "uncertain" || auditErr != nil {
 		return deny("WEBAPI_UNCERTAIN")
+	}
+	if tooLarge != nil {
+		return Response{Code: "WEBAPI_REPLY_TOO_LARGE", Message: tooLarge.Error()}
 	}
 	return success(out)
 }
@@ -316,18 +333,29 @@ func (d *liveDSM) WebAPI(ctx context.Context, runner, api, method string, versio
 	if _, code := webAPIParams(raw); code != "" {
 		return nil, errors.New("WebAPI params")
 	}
-	out, err := d.exec(ctx, api, method, strconv.Itoa(version), runner, params)
+	args, err := webAPIArgs(api, method, strconv.Itoa(version), runner, params)
 	if err != nil {
 		return nil, err
 	}
-	if len(out) > maxWebAPIReply {
-		return nil, errors.New("WebAPI reply size")
+	out := &webJSONOutput{}
+	if stream, ok := d.Command.(interface {
+		Stream(context.Context, string, []string, io.Writer) error
+	}); ok {
+		// Production never uses Exec's generic 1 MiB output buffer.
+		err = stream.Stream(context.WithValue(ctx, webJSONCommandKey{}, true), "/usr/syno/bin/synowebapi", args, out)
+	} else {
+		// Command adapters must bound their own capture. Used by fixtures.
+		var b []byte
+		b, err = d.Command.Exec(ctx, "/usr/syno/bin/synowebapi", args)
+		if err == nil {
+			_, err = out.Write(b)
+		}
 	}
-	var envelope struct {
-		Success *bool `json:"success"`
+	if err != nil {
+		return nil, err
 	}
-	if strictJSON(out, &map[string]json.RawMessage{}) != nil || json.Unmarshal(out, &envelope) != nil || envelope.Success == nil {
-		return nil, errors.New("WebAPI envelope")
+	if err = validateWebJSON(out.buf); err != nil {
+		return nil, err
 	}
-	return json.RawMessage(out), nil
+	return json.RawMessage(out.buf), nil
 }

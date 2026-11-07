@@ -1,6 +1,6 @@
 {
   "version": "0.53.3",
-  "executorVersion": "0.49.5",
+  "executorVersion": "0.53.3",
   "executorRootSDK": "v0.49.4-0.20261103141054-34994683c7b8",
   "packages": {
     "@synopackageland/sdk": "0.53.3",
@@ -9,9 +9,9 @@
     "synopkgland_app": "0.53.3"
   },
   "executorDigests": {
-    "x86_64": "1a2dbb1c93a5d7cf5c4d5cafd2526c152e1cc21611649875db8e1c23837c2874",
-    "aarch64": "faabdeb1db9467d82997d8398e90203799c6ca5dddaaa383ed8bdb75534a6b2d",
-    "armv7": "6a0256fd2e2f093c154421bbc6323b715c324411b25c7794be92c73bbc59271f",
+    "x86_64": "169be9cb1dbf44a5d03b9f92e95b53b238886001448c0b7b0dbbe5a0b1b53499",
+    "aarch64": "347f4132a495e7498cdef377e0b1d08cb0cba62af71e6dfb2552a957b33881de",
+    "armv7": "075f5d78eecbd2e1cb6e16c4c93b9c94fcaac573fc16aba445ee794f66f065ce",
     "lifecycle": {
       "x86_64": "3b2720a4d093aeaa82674a75f16e3adc0bfaa76b8357e58ef591d1f15a73a5c0",
       "aarch64": "f8a9bb0e69dd380d993fcc89cf19e9e3a526a76bdc24c97d53f01001953aad0d",
@@ -20,12 +20,12 @@
     "goToolchain": "go1.26.10"
   },
   "verification": {
-    "executorSourceUnchanged": true,
-    "executorReleaseReused": true,
+    "executorSourceUnchanged": false,
+    "executorReleaseReused": false,
     "canonicalTaskDefinitionsUnchanged": true,
     "nasAcceptance": false,
     "rustCratePublished": false,
-    "validation": "Patch checks: AppShell unit tests (tab page phoneTitle keeps the phone title bar; a fill page ending with an AppActionBar or a data-ui-page-bar element drops the end space; not-last, hidden and scrolling cases keep it), shell test suite, typecheck, documentation and version checks, SDK and App builds, npm pack for both packages, and repository and tarball internal-content scans. No full gate, publication or NAS acceptance."
+    "validation": "Patch checks cover AppShell phoneTitle and docked-bar end-space behavior, the shell suite, bounded WebAPI JSON capture, compaction, 1 MiB and 20 MiB executor/socket/client transfers, typed overflow, memory allocation, language adapters, typecheck, builds, documentation and version checks, package scans, and reproducible executor digests. No full gate, publication or NAS acceptance."
   },
   "ui": {
     "builtAgainst": "0.23.2",
@@ -40,6 +40,11 @@
     "AppShellPage.phoneTitle: true keeps a tab page's title bar on a phone; omitted, a tab page still has no title row.",
     "A fill page whose last element is a docked bar (a UI footer bar such as AppActionBar, or an element marked data-ui-page-bar) has no end space under it; a scrolling page keeps it.",
     "Keep @synopackageland/ui 0.23.2 and its peer range.",
-    "Align SDK and App adapter versions and reuse the immutable executor release and its six digests."
+    "Raise compact JSON WebAPI replies to 20 MiB, with generated shared socket and language-client limits.",
+    "Stream stdout without retaining pretty output or a decoded tree; write the validated socket payload without a full-frame copy or tmpfs staging.",
+    "Return WEBAPI_REPLY_TOO_LARGE with the observed minimum byte size and limit; preserve operation budgets and mutation reconciliation.",
+    "Hold two shared output slots through socket delivery and keep raw/root inline and staging limits separate.",
+    "Record the changed executor digests; the matching immutable executor module release is required.",
+    "Align adapter metadata for the combined patch release."
   ]
 }

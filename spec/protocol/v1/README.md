@@ -464,9 +464,16 @@ switch MUST fence WebAPI admission and drain admitted calls before acknowledging
 API and method names MUST match their protocol formats. Access MUST be limited
 to the approved profile and the consenting user's DSM permissions.
 Routing, runner, authentication and identity arguments MUST be refused. The
-encoded params object MUST be at most 32 KiB, the JSON DSM envelope at most
-48 KiB, and the call deadline at most 10 seconds including account revalidation.
-Duplicate JSON keys MUST be refused. The wire frame remains at most 64 KiB.
+encoded params object MUST be at most 32 KiB. The DSM JSON envelope MUST be at
+most 20 MiB after removing insignificant whitespace. The shared operation
+budget includes account revalidation; it is not shortened for large replies.
+Duplicate JSON keys MUST be refused. JSON WebAPI reply frames MAY use the
+20 MiB payload limit plus 64 KiB envelope allowance in `limits.json`;
+ordinary requests retain their existing limits. Capture MUST be bounded and
+MUST NOT spool JSON replies into tmpfs. Exceeding the compact limit MUST return
+`WEBAPI_REPLY_TOO_LARGE`, with the observed minimum size and limit in its
+message. The size MAY be a lower bound because capture stops on overflow.
+See [JSON reply memory and error semantics](../../../docs/webapi-json.md).
 Every admitted call MUST be audited without recording params/results.
 
 Protocol success returns the full DSM success/error envelope. No automatic

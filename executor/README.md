@@ -618,9 +618,14 @@ API and method names must match their protocol formats. The approved profile
 and the consenting user's DSM permissions govern access. Reserved routing,
 authentication and runner params cannot be supplied. Exact API/method/version
 matches only; no wildcard profiles. Maximum: 32 profiles, 256 version entries,
-1024-byte purpose, 32 KiB encoded params, 48 KiB JSON reply, and the shared operation call
-bound (including revalidation). Invalid/duplicate JSON is refused. The normal
-64 KiB wire limit also applies. Audit contains identity, grant, profile, API,
+1024-byte purpose, 32 KiB encoded params, 20 MiB compact JSON reply, and the shared operation call
+bound (including revalidation). Invalid/duplicate JSON is refused. JSON reply
+frames allow that payload plus 64 KiB for the envelope; requests keep their
+existing limits. JSON stdout is compacted during bounded capture, without
+staging, a decoded tree, or a second socket-frame copy. Oversize returns
+`WEBAPI_REPLY_TOO_LARGE` with the observed minimum size and limit. See
+[JSON reply memory and errors](../docs/webapi-json.md).
+Audit contains identity, grant, profile, API,
 method, version and admission/completion; it never records API params/results.
 Revocation/disable persist their fence and drain previously admitted calls.
 

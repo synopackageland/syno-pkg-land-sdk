@@ -186,6 +186,9 @@ func TestWebAPIApprovedNames(t *testing.T) {
 					params[key] = original
 				}
 				c := &rawStreamCommand{cmdStub: cmdStub{reply: `{"success":true}`}, stdout: []byte("body")}
+				if mode == "json" {
+					c.stdout = []byte(`{"success":true}`)
+				}
 				d := &liveDSM{Command: c}
 				if mode == "raw" {
 					if err := d.WebAPIRaw(context.Background(), "alice", target.api, target.method, 1, map[string]any{}, &strings.Builder{}); err != nil {

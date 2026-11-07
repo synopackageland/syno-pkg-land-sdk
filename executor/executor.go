@@ -385,11 +385,22 @@ func (e *Executor) Connection(parent context.Context, c net.Conn, uid int, peer 
 			out = deny(code)
 		} else {
 			defer release()
-			out = e.handlePeer(admitted, req, got, uid)
+			// Keep the JSON output slot through the socket write, so a slow
+			// reader cannot accumulate large resident replies behind captures.
+			if req.Op == "webapi.call" && !rawWebAPIRequest(req.Params) {
+				if !e.rootSlot() {
+					out = deny("ROOT_BUSY")
+				} else {
+					defer e.rootSlotDone()
+					out = e.handlePeer(context.WithValue(admitted, webJSONSlotKey{}, true), req, got, uid)
+				}
+			} else {
+				out = e.handlePeer(admitted, req, got, uid)
+			}
 		}
 	}
 	c.SetWriteDeadline(time.Now().Add(budget.Operation))
-	json.NewEncoder(c).Encode(out)
+	_ = writeResponse(c, out)
 }
 
 // grantedLocked finds the person's active grant for the same destination key

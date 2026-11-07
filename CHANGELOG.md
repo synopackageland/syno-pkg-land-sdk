@@ -4,7 +4,12 @@
 
 - `AppShellPage.phoneTitle: true` keeps a tab page's title bar on a phone (a recording or live screen shown as a tab). Omitted, a tab page still has no title row
 - A fill page whose last element is a docked bar (a UI footer bar such as `AppActionBar`, or an element marked `data-ui-page-bar`) has no end space under it, as a page with a `SettingsPage` footer; a scrolling page keeps it
-- Keep the UI 0.23.2 dependency and peer range `>=0.23.2 <0.24.0`, and reuse the immutable executor release and its six digests
+- Keep the UI 0.23.2 dependency and peer range `>=0.23.2 <0.24.0`
+- Raise JSON WebAPI replies from 48 KiB to 20 MiB of compact JSON across the executor socket, Go client, App bridge, TypeScript, Node and Python clients, using one generated protocol limit
+- Stream and compact DSM stdout with bounded memory, validate without decoding the data tree, and write the validated reply directly to the socket without staging or a second full-frame buffer
+- Return the nonretryable typed `WEBAPI_REPLY_TOO_LARGE` refusal with the observed minimum size and limit; preserve the existing operation budgets and mutation reconciliation rules
+- Bound simultaneous JSON reply transfers with the two shared output slots, held until socket delivery completes; keep root/raw inline and staging limits separate
+- Record new executor digests and align the SDK and App adapters for the combined patch release
 
 ## 0.53.2
 

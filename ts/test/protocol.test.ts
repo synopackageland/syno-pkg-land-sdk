@@ -4,6 +4,16 @@ import {expect,expectTypeOf,test} from 'vitest'
 import {generate} from '../scripts/gen-protocol.mjs'
 import {protocolCodes,protocolOps,protocolSchemas,decodeResponse,encodeRequest,type ProtocolOp} from '../src/index'
 import type {WebapiCallParams} from '../src/protocol/v1'
+import {MAX_WEBAPI_REPLY, MAX_REPLY_FRAME} from '../src/protocol/limits'
+
+test('WebAPI reply codec accepts 20 MiB and exposes its typed refusal',()=>{
+ const payload='<'.repeat(MAX_WEBAPI_REPLY-50)
+ const reply=decodeResponse(JSON.stringify({ok:true,result:{success:true,data:payload}})+'\n')
+ expect(reply.ok && (reply.result.data as string).length).toBe(payload.length)
+ expect(decodeResponse(JSON.stringify({ok:false,code:'WEBAPI_REPLY_TOO_LARGE',message:'size >= 20971521; limit 20971520'})))
+  .toMatchObject({ok:false,code:'WEBAPI_REPLY_TOO_LARGE'})
+ expect(()=>decodeResponse(' '.repeat(MAX_REPLY_FRAME+1))).toThrow()
+})
 
 const spec=resolve(__dirname,'../../spec/protocol/v1')
 const vectors=readdirSync(resolve(spec,'vectors')).flatMap(file=>readFileSync(resolve(spec,'vectors',file),'utf8').split('\n').filter(Boolean).map(line=>({file,...JSON.parse(line)})))

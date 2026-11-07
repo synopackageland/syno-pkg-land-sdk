@@ -7,6 +7,7 @@ import time
 import unittest
 
 from synopkgland_app import App, Error
+from synopkgland_app._limits import MAX_WEBAPI_REPLY
 
 
 class Runtime:
@@ -43,6 +44,33 @@ class Runtime:
 
 
 class AppTest(unittest.TestCase):
+    def test_webapi_large_reply_and_typed_size_refusal(self):
+        for size in [1 << 20, MAX_WEBAPI_REPLY]:
+            app = App()
+            app.method("a.read")(lambda ctx, p: len(ctx.runtime("webapi.call", {})["data"]))
+            rt = self.runtime(app)
+            rt.call("a.read")
+            svc = rt.recv()
+            rt.send({"t": "svc_result", "id": svc["id"], "ok": True, "result": {"data": "<" * size}})
+            self.assertEqual(rt.recv()["data"], size)
+        caught = []
+        def read(ctx, p):
+            try:
+                return ctx.runtime("webapi.call", {})
+            except Error as e:
+                caught.append(e)
+                raise
+        app = App()
+        app.method("a.read")(read)
+        rt = self.runtime(app)
+        rt.call("a.read")
+        rt.send({"t": "svc_result", "id": rt.recv()["id"], "ok": False, "error": {
+            "code": "WEBAPI_REPLY_TOO_LARGE",
+            "message": "WebAPI compact reply size is at least 20971521 bytes; limit is 20971520 bytes"}})
+        self.assertEqual(rt.recv()["error"]["code"], "WEBAPI_REPLY_TOO_LARGE")
+        self.assertIsInstance(caught[0], Error)
+        self.assertIn("20971520", caught[0].message)
+
     def runtime(self, app):
         rt = Runtime(app)
         self.addCleanup(rt.close)
