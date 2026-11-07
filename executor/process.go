@@ -30,6 +30,7 @@ func (b *cappedBuffer) Write(p []byte) (int, error) {
 }
 
 type processCommand struct{}
+type webJSONCommandKey struct{}
 
 // StreamBody isolates a DSM streaming handler's outfile from synowebapi's JSON
 // control reply. The only output path is the inherited pipe, never an App path.
@@ -53,7 +54,7 @@ func (processCommand) StreamBody(ctx context.Context, path string, args []string
 			_ = cmd.Cancel()
 		}
 	}
-	control := &rootOutput{limit: maxWebAPIReply, spillAt: maxWebAPIReply + 1, failed: make(chan struct{})}
+	control := &rootOutput{limit: maxWebAPIControlReply, spillAt: maxWebAPIControlReply + 1, failed: make(chan struct{})}
 	cmd.Stdout = &cancelWriter{writer: control, cancel: terminate}
 	cmd.Stderr = io.Discard
 	if err = cmd.Start(); err != nil {
@@ -107,9 +108,14 @@ type cancelWriter struct {
 	err    error
 }
 
-// Only raw WebAPI handlers use these streaming commands. Leave the generic
+// JSON and raw WebAPI handlers use these streaming commands. Leave the generic
 // shared operation allowance, while preserving cancellation and byte ceilings.
 func streamCommandTimeout(ctx context.Context) time.Duration {
+	if ctx.Value(webJSONCommandKey{}) != nil {
+		// JSON previously used Exec: retain its full configured operation
+		// budget, even when policy allows more than the raw default.
+		return commandTimeout(ctx)
+	}
 	if until, ok := ctx.Deadline(); ok {
 		return min(webAPIRawTimeout, budget.Inner(time.Until(until)))
 	}

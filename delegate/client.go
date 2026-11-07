@@ -10,6 +10,7 @@ import (
 	"errors"
 	"github.com/synopackageland/syno-pkg-land-sdk/api"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/wirelimits"
 	"io"
 	"net"
 	"os"
@@ -21,6 +22,17 @@ import (
 )
 
 const MaxFrame = 64 * 1024
+
+// MaxWebAPIReply bounds compact JSON; MaxReplyFrame includes envelope overhead.
+const MaxWebAPIReply = wirelimits.MaxWebAPIReply
+const MaxReplyFrame = wirelimits.MaxReplyFrame
+
+func replyLimit(op string) int {
+	if op == "webapi.call" {
+		return MaxReplyFrame
+	}
+	return MaxFrame
+}
 
 // ExecutorTimeout is the default wait, except for root.run and raw WebAPI:
 // the executor answers within 30 seconds, and the client waits 10 longer
@@ -209,8 +221,9 @@ func (c *Client) Call(parent context.Context, op string, auth map[string]string,
 	if _, e = io.Copy(conn, bytes.NewReader(b)); e != nil {
 		return transport(e)
 	}
-	line, e := bufio.NewReader(io.LimitReader(conn, MaxFrame+1)).ReadBytes('\n')
-	if len(line) > MaxFrame {
+	limit := replyLimit(op)
+	line, e := bufio.NewReader(io.LimitReader(conn, int64(limit)+1)).ReadBytes('\n')
+	if len(line) > limit {
 		return fail(CodeExecutorTooLarge)
 	}
 	if e != nil {
@@ -239,10 +252,17 @@ func decodeReply(line []byte, result any) error {
 		if !stableCode.MatchString(reply.Code) {
 			return fail(CodeExecutorProtocol)
 		}
+		if reply.Code == CodeWebapiReplyTooLarge {
+			return &api.Error{Code: reply.Code, Message: reply.Message}
+		}
 		return fail(reply.Code)
 	}
 	if len(reply.Result) == 0 || string(reply.Result) == "null" || reply.Result[0] != '{' {
 		return fail(CodeExecutorProtocol)
+	}
+	if raw, ok := result.(*json.RawMessage); ok {
+		*raw = reply.Result
+		return nil
 	}
 	if result != nil && json.Unmarshal(reply.Result, result) != nil {
 		return fail(CodeExecutorProtocol)

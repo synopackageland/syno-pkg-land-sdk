@@ -38,4 +38,5 @@ export const protocolRefusals: ReadonlySet<string> = new Set([
   'EXECUTOR_TOO_LARGE',
   'EXECUTOR_PROTOCOL',
   'WEBAPI_UNCERTAIN',
+  'WEBAPI_REPLY_TOO_LARGE',
 ])

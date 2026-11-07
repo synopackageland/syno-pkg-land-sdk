@@ -18,7 +18,7 @@ quota. Keep source identifier/version and size from the same metadata snapshot.
 
 Raw success returns `response_type: "raw"`, `content_type`, `size`, `sha256`, and
 exactly one of `body` (base64, including empty string) or `staging` (bare handle).
-At most 32768 body bytes are inline, keeping the existing 48 KiB result / 64 KiB
+At most 32768 body bytes are inline, keeping raw results within the 64 KiB
 frame bounds. Larger bodies use the existing executor-staging transport:
 `/var/packages/<package>/var/executor-staging/root-<32 lowercase hex digits>`.
 The directory is private (0700), the random file is owned by the App (0600).

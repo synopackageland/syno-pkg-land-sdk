@@ -175,8 +175,8 @@
       "kind": "refusal",
       "retryable": true,
       "httpStatus": 429,
-      "en": "The package already runs as many root programs as it may.",
-      "zh-TW": "此套件同時執行的 root 程式已達上限。"
+      "en": "The package already runs as many root programs or WebAPI reply transfers as it may.",
+      "zh-TW": "此套件同時執行的 root 程式或 WebAPI 回覆傳輸已達上限。"
     },
     {
       "code": "ROOT_STAGING_FULL",
@@ -503,8 +503,8 @@
       "kind": "client",
       "retryable": false,
       "httpStatus": 413,
-      "en": "The request or reply is larger than 64 KiB.",
-      "zh-TW": "請求或回應超過 64 KiB。"
+      "en": "The request or reply exceeds its protocol byte limit.",
+      "zh-TW": "請求或回覆超過其協定位元組上限。"
     },
     {
       "code": "EXECUTOR_PROTOCOL",
@@ -521,6 +521,14 @@
       "httpStatus": 502,
       "en": "The WebAPI outcome is unknown: execution, reply validation or audit completion failed. Do not automatically retry a mutation.",
       "zh-TW": "WebAPI 結果不確定：執行、回覆驗證或稽核完成失敗。請勿自動重試寫入操作。"
+    },
+    {
+      "code": "WEBAPI_REPLY_TOO_LARGE",
+      "kind": "refusal",
+      "retryable": false,
+      "httpStatus": 413,
+      "en": "The compact WebAPI JSON reply exceeds the shared reply limit. The message gives the observed minimum size and limit in bytes. Do not automatically retry a mutation.",
+      "zh-TW": "WebAPI JSON 回覆壓縮後超過共用上限。訊息列出已觀察到的最小大小與上限（bytes）；請勿自動重試寫入操作。"
     }
   ]
 }

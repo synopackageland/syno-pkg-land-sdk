@@ -2,6 +2,31 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { App, ServiceError, type Context } from '../src/index.js'
 import { runtime } from './harness.js'
+import { MAX_WEBAPI_REPLY } from '../src/limits.js'
+
+test('WebAPI service carries a 20 MiB reply and a typed size refusal', async () => {
+  for (const size of [1 << 20, MAX_WEBAPI_REPLY]) {
+    const app = new App().method('a.read', async ctx => {
+      const result = await ctx.runtime('webapi.call', {}) as { data: string }
+      return { size: Buffer.byteLength(result.data) }
+    })
+    const rt = runtime(app)
+    await rt.call('a.read')
+    const svc = await rt.recv()
+    rt.send({ t: 'svc_result', id: svc.id, ok: true, result: { data: '<'.repeat(size) } })
+    assert.equal((await rt.recv()).data.size, size)
+  }
+  let caught: unknown
+  const app = new App().method('a.read', ctx => ctx.runtime('webapi.call', {}).catch(e => { caught = e; throw e }))
+  const rt = runtime(app)
+  await rt.call('a.read')
+  rt.send({ t: 'svc_result', id: (await rt.recv()).id, ok: false, error: {
+    code: 'WEBAPI_REPLY_TOO_LARGE', message: 'WebAPI compact reply size is at least 20971521 bytes; limit is 20971520 bytes',
+  } })
+  assert.equal((await rt.recv()).error.code, 'WEBAPI_REPLY_TOO_LARGE')
+  assert.ok(caught instanceof ServiceError)
+  assert.match(caught.message, /20971521.*20971520/)
+})
 
 // A method that hands its Context to the test and waits for it.
 function held() {

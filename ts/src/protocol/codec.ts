@@ -1,4 +1,5 @@
 import {protocolCodes,type ProtocolOp,type ProtocolParams,type RefusalCode} from './v1'
+import {MAX_REPLY_FRAME} from './limits'
 
 /** remote_addr: the browser's address (REMOTE_ADDR); the executor checks App Privileges for it and refuses without it. */
 export interface ProtocolAuth {dsm_cookie:string;dsm_synotoken:string;remote_addr?:string}
@@ -16,6 +17,7 @@ export function encodeRequest<Op extends ProtocolOp>(op:Op,params:ProtocolParams
 
 /** Parse one response line. Match refusals on code, never on message. */
 export function decodeResponse(line:string):ProtocolResponse{
+ if(new TextEncoder().encode(line).length>MAX_REPLY_FRAME)throw {code:'EXECUTOR_TOO_LARGE'}
  let value:unknown
  try{value=JSON.parse(line)}catch{protocol()}
  if(!object(value)||typeof value.ok!=='boolean')protocol()

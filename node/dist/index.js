@@ -6,3 +6,4 @@
 // dependencies; Node 22 or later.
 export { App, SDK, VERSION } from './app.js';
 export { AppError, ServiceError } from './errors.js';
+export { MAX_WEBAPI_REPLY, MAX_REPLY_FRAME } from './limits.js';

@@ -44,7 +44,7 @@ export const protocolCodes = {
  "ROOT_FAILED": {kind: "refusal", retryable: false, httpStatus: 500},
  /** The root program ran past its policy timeout and was killed. */
  "ROOT_TIMEOUT": {kind: "refusal", retryable: true, httpStatus: 504},
- /** The package already runs as many root programs as it may. */
+ /** The package already runs as many root programs or WebAPI reply transfers as it may. */
  "ROOT_BUSY": {kind: "refusal", retryable: true, httpStatus: 429},
  /** Root output waiting in the staging folder already fills its quota. */
  "ROOT_STAGING_FULL": {kind: "refusal", retryable: true, httpStatus: 507},
@@ -126,15 +126,17 @@ export const protocolCodes = {
  "APP_STARTING": {kind: "client", retryable: true, httpStatus: 503},
  /** The executor did not answer in time. */
  "EXECUTOR_TIMEOUT": {kind: "client", retryable: true, httpStatus: 504},
- /** The request or reply is larger than 64 KiB. */
+ /** The request or reply exceeds its protocol byte limit. */
  "EXECUTOR_TOO_LARGE": {kind: "client", retryable: false, httpStatus: 413},
  /** The executor reply is not a valid v1 response. */
  "EXECUTOR_PROTOCOL": {kind: "client", retryable: false, httpStatus: 502},
  /** The WebAPI outcome is unknown: execution, reply validation or audit completion failed. Do not automatically retry a mutation. */
  "WEBAPI_UNCERTAIN": {kind: "refusal", retryable: false, httpStatus: 502},
+ /** The compact WebAPI JSON reply exceeds the shared reply limit. The message gives the observed minimum size and limit in bytes. Do not automatically retry a mutation. */
+ "WEBAPI_REPLY_TOO_LARGE": {kind: "refusal", retryable: false, httpStatus: 413},
 } as const
 export type ProtocolCode = keyof typeof protocolCodes
-export type RefusalCode = "AUTH_DENIED" | "INELIGIBLE" | "APP_DENIED" | "ADMIN_REQUIRED" | "DELEGATION_DENIED" | "SCOPE_DENIED" | "POLICY_DENIED" | "PEER_DENIED" | "PERMISSION_DENIED" | "UNKNOWN_OP" | "INVALID_REQUEST" | "REQUEST_TOO_LARGE" | "EXECUTOR_PAUSED" | "EXECUTOR_STARTING" | "STORAGE_ERROR" | "INTERNAL" | "WRITE_FAILED" | "READ_FAILED" | "DSM_FAILED" | "ROOT_FAILED" | "ROOT_TIMEOUT" | "ROOT_BUSY" | "ROOT_STAGING_FULL" | "ROOT_JOB_NOT_FOUND" | "PORTAL_FAILED" | "NO_SPACE" | "SCOPE_APPROVAL_STALE" | "IDENTITY_CHANGED" | "needs-scope-confirmation" | "disabled" | "invalid-destination" | "invalid-size" | "operation-conflict" | "operation-not-found" | "destination-exists" | "invalid-path" | "path-too-deep" | "destination-not-directory" | "name-too-long" | "not-found" | "not-a-file" | "recursive-required" | "recycle-bin-disabled" | "task-not-found" | "too-many-tasks" | "queue-full" | "limit-exceeded" | "WEBAPI_UNCERTAIN"
+export type RefusalCode = "AUTH_DENIED" | "INELIGIBLE" | "APP_DENIED" | "ADMIN_REQUIRED" | "DELEGATION_DENIED" | "SCOPE_DENIED" | "POLICY_DENIED" | "PEER_DENIED" | "PERMISSION_DENIED" | "UNKNOWN_OP" | "INVALID_REQUEST" | "REQUEST_TOO_LARGE" | "EXECUTOR_PAUSED" | "EXECUTOR_STARTING" | "STORAGE_ERROR" | "INTERNAL" | "WRITE_FAILED" | "READ_FAILED" | "DSM_FAILED" | "ROOT_FAILED" | "ROOT_TIMEOUT" | "ROOT_BUSY" | "ROOT_STAGING_FULL" | "ROOT_JOB_NOT_FOUND" | "PORTAL_FAILED" | "NO_SPACE" | "SCOPE_APPROVAL_STALE" | "IDENTITY_CHANGED" | "needs-scope-confirmation" | "disabled" | "invalid-destination" | "invalid-size" | "operation-conflict" | "operation-not-found" | "destination-exists" | "invalid-path" | "path-too-deep" | "destination-not-directory" | "name-too-long" | "not-found" | "not-a-file" | "recursive-required" | "recycle-bin-disabled" | "task-not-found" | "too-many-tasks" | "queue-full" | "limit-exceeded" | "WEBAPI_UNCERTAIN" | "WEBAPI_REPLY_TOO_LARGE"
 export type OutcomeCode = "OPERATION_CANCELED" | "CANCEL_REQUESTED" | "CLEANUP_PENDING"
 export type ReasonCode = "grant-revoked" | "destination-replaced" | "integration-disabled" | "validation-denied" | "scope-changed" | "storage-error" | "operation-canceled-by-user" | "operation-deadline-exceeded"
 export type ClientCode = "EXECUTOR_UNAVAILABLE" | "APP_STOPPED" | "APP_STARTING" | "EXECUTOR_TIMEOUT" | "EXECUTOR_TOO_LARGE" | "EXECUTOR_PROTOCOL"

@@ -7,10 +7,12 @@ import (
 	"errors"
 	"io"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/synopackageland/syno-pkg-land-sdk/api"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/wirelimits"
 )
 
 // fakeApp is the app side of the channel in Go, so the runtime is testable
@@ -82,6 +84,22 @@ func pipeDialer(app fakeApp) Dialer {
 }
 
 var alice = Context{User: "alice", Locale: "en", RequestID: "r1"}
+
+func TestWebAPIReplyBridgeFrame(t *testing.T) {
+	payload := json.RawMessage(`{"success":true,"data":"` + strings.Repeat("<", wirelimits.MaxWebAPIReply-24) + `"}`)
+	app := fakeApp{methods: []string{"a.read"}, handle: func(c *fakeConn, _ map[string]any) map[string]any {
+		reply := c.svc("webapi.call", map[string]any{})
+		data := reply["result"].(map[string]any)["data"].(string)
+		return map[string]any{"ok": true, "data": map[string]any{"size": len(data)}}
+	}}
+	s := &Session{Dial: pipeDialer(app), Methods: []string{"a.read"}, Services: map[string]Service{
+		"webapi.call": func(context.Context, *Call, json.RawMessage) (any, error) { return payload, nil },
+	}}
+	data, err := s.Call(context.Background(), "a.read", json.RawMessage(`{}`), &Call{Context: alice})
+	if err != nil || string(data) != `{"size":20971496}` {
+		t.Fatalf("large bridge reply: %s %v", data, err)
+	}
+}
 
 func TestCallReturnsTheAppData(t *testing.T) {
 	app := fakeApp{methods: []string{"hello.greet"}, handle: func(_ *fakeConn, call map[string]any) map[string]any {

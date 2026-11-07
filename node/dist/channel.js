@@ -1,4 +1,5 @@
 import { createInterface } from 'node:readline';
+import { MAX_REPLY_FRAME } from './limits.js';
 // One channel to the runtime: a frame is one line of JSON (spec/bridge/v1
 // README, Transport).
 export class Channel {
@@ -15,6 +16,8 @@ export class Channel {
         try {
             const { value, done } = await this.#lines.next();
             if (done)
+                return null;
+            if (Buffer.byteLength(value) > MAX_REPLY_FRAME)
                 return null;
             const frame = JSON.parse(value);
             return isReceived(frame) ? frame : null;

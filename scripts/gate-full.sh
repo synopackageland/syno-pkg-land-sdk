@@ -7,6 +7,7 @@ node --test "$root/scripts/check-internal-content.test.mjs" "$root/scripts/sdk-v
 node --test "$root/scripts/check-timeout-policy.test.mjs"
 node "$root/scripts/check-timeout-policy.mjs"
 node "$root/scripts/sdk-version.mjs" --check
+node "$root/scripts/protocol-limits.mjs" --check
 node "$root/scripts/executor-manifest.mjs" --check
 node "$root/scripts/check-internal-content.mjs" --repo "$root"
 "$root/scripts/scripts.test.sh"

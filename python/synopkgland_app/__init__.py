@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, BinaryIO, Callable, Dict, List, Optional,
 
 from ._refusals import REFUSALS
 from ._version import SDK_VERSION
+from ._limits import MAX_REPLY_FRAME
 
 if TYPE_CHECKING:
     from . import frames
@@ -141,7 +142,9 @@ class _Channel:
 
     def recv(self) -> Optional[Dict[str, Any]]:
         try:
-            line = self._rfile.readline()
+            line = self._rfile.readline(MAX_REPLY_FRAME + 1)
+            if len(line) > MAX_REPLY_FRAME:
+                return None
             frame = json.loads(line) if line else None
         except (OSError, ValueError):
             return None

@@ -165,7 +165,7 @@ B 的安全邊界是行程邊界：App 拿不到 cookie／SynoToken，也碰不�
 
 完整規則在 `spec/bridge/v1/README.md`，frame 的 JSON Schema 在 `spec/bridge/v1/frames.schema.json`。測試 `bridge/schema_test.go` 檢查 runtime 送出的每種 frame 符合 schema，且 runtime 的解碼器剛好認得 App 可送的欄位。
 
-- **框架**：一行一個 UTF-8 JSON，上限 16 MiB + 64 KiB（= `api.MaxRequestBytesCeiling` 加封套）。
+- **Frames**: one UTF-8 JSON line, bounded by the larger of the API request ceiling and the shared 20 MiB WebAPI reply ceiling, plus 64 KiB for the envelope.
 - **握手與版本協商**：runtime 送 `{"t":"hello","versions":[1]}`，App 從中選一個回覆，並附 `sdk` 與 `methods`。未來 v2 時 runtime 送 `[1,2]`，舊 App 回 1 仍可用；App 回不在清單內的版本即協定錯誤。每個通道都握手：exec 本來就是新行程；socket 的握手只多一次本機往返（已含在上表）。
 - **call**：`{"t":"call","id":"1","method":…,"params":…,"ctx":{user, admin, locale, request_id, deadline_ms}}`。
 - **svc／svc_result**：App 在 result 前可發任意多個 svc；runtime 依序處理並以相同 `id` 回覆。
@@ -338,7 +338,7 @@ CLI 的工作：
 - ~~`bridge/cmd/runtime`~~、~~`app_unavailable`~~、~~refusal 代碼白名單~~：P1 已完成（§1.1）。
 - ~~transfer（§6 spool）~~、~~svc 服務表（§7）~~、~~Python 版本檢查~~：已完成。
 - ~~bridge 套件的背景 worker~~：已完成，`api.cgi --worker` 以套件帳號執行 `delegate.Service.Run`（spec §Background worker）；由 CLI 產生的 systemd user unit 啟停。
-- `root.*`：`root.start`、`root.jobs.*` 的名稱與參數以 executor spec 為準；Go 的 `delegate.Client` frame 上限 64 KiB，root.run 允許 1 MiB，要等它更新 client。
+- `root.*`: names and params follow the executor spec; ordinary Go executor reply frames stay within 64 KiB and root requests may use 1 MiB. JSON WebAPI replies use the separate shared 20 MiB payload allowance.
 - 前端：`@synopackageland/sdk` 尚無 `app_unavailable` 的翻譯（npm 套件不帶 bridge spec），P5 時一併處理。
 - （socket 模式出貨時才需要）socket 併發上限、常駐 App 監控。
 - ~~跨語言 runner 的 svc 與 transfer 案例~~：已完成（`bridge/golden_bridge_test.go`）。

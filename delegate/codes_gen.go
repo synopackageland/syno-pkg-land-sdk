@@ -46,7 +46,7 @@ const (
 	CodeRootFailed = "ROOT_FAILED"
 	// CodeRootTimeout (refusal): The root program ran past its policy timeout and was killed.
 	CodeRootTimeout = "ROOT_TIMEOUT"
-	// CodeRootBusy (refusal): The package already runs as many root programs as it may.
+	// CodeRootBusy (refusal): The package already runs as many root programs or WebAPI reply transfers as it may.
 	CodeRootBusy = "ROOT_BUSY"
 	// CodeRootStagingFull (refusal): Root output waiting in the staging folder already fills its quota.
 	CodeRootStagingFull = "ROOT_STAGING_FULL"
@@ -128,10 +128,12 @@ const (
 	CodeAppStarting = "APP_STARTING"
 	// CodeExecutorTimeout (client): The executor did not answer in time.
 	CodeExecutorTimeout = "EXECUTOR_TIMEOUT"
-	// CodeExecutorTooLarge (client): The request or reply is larger than 64 KiB.
+	// CodeExecutorTooLarge (client): The request or reply exceeds its protocol byte limit.
 	CodeExecutorTooLarge = "EXECUTOR_TOO_LARGE"
 	// CodeExecutorProtocol (client): The executor reply is not a valid v1 response.
 	CodeExecutorProtocol = "EXECUTOR_PROTOCOL"
 	// CodeWebapiUncertain (refusal): The WebAPI outcome is unknown: execution, reply validation or audit completion failed. Do not automatically retry a mutation.
 	CodeWebapiUncertain = "WEBAPI_UNCERTAIN"
+	// CodeWebapiReplyTooLarge (refusal): The compact WebAPI JSON reply exceeds the shared reply limit. The message gives the observed minimum size and limit in bytes. Do not automatically retry a mutation.
+	CodeWebapiReplyTooLarge = "WEBAPI_REPLY_TOO_LARGE"
 )

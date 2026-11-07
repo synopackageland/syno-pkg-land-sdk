@@ -37,4 +37,5 @@ export const protocolRefusals = new Set([
     'EXECUTOR_TOO_LARGE',
     'EXECUTOR_PROTOCOL',
     'WEBAPI_UNCERTAIN',
+    'WEBAPI_REPLY_TOO_LARGE',
 ]);
