@@ -249,6 +249,26 @@ and puts the notes and actions on its line instead. `header: false` is for a
 page that draws its own header: the shell adds no title, and its actions still
 go to the bar.
 
+### Bottom accessory
+
+`#accessory="{page, phone}"` forwards a running task bar or mini player to
+`AppLayout`. On a phone it sits above the tab bar, stays while the bars hide
+on scroll and hides with the keyboard. Elsewhere it occupies the layout's
+bottom row. The UI measures its height and keeps the page, FAB and toasts
+clear of it. Use a UI release that supports the accessory slot; older
+supported UI releases ignore it.
+
+```vue
+<AppShell v-model="page" :pages="pages" :locale="ctx.locale" :ctx="ctx">
+  <template #accessory="{page, phone}">
+    <RunningTaskBar v-if="running" :page="page" :compact="phone" />
+  </template>
+</AppShell>
+```
+
+An omitted or empty slot draws no accessory row. Its content stays outside
+the page scroller, so navigating between pages can keep the same task bar.
+
 ### Scrolling
 
 On phones, the bars hide as content scrolls down and return on scroll up.
@@ -284,7 +304,9 @@ settings footer has no space under it, whether or not it sits in tabs.
 scrolls itself (a treemap, a table paged by height, a log viewer). `fill: false`
 keeps a page scrolling as a whole even when it shows a `SettingsPage`. A filling
 shell holds to `100dvh`, so a phone's address bar does not leave a gap. On a
-phone the same rules give one scrolling area, with the footer in view.
+phone, settings pages scroll as one below the native bar, with the footer
+sticking at the bottom; the settings body has no scroller of its own.
+Other pages that scroll themselves keep their fill layout.
 
 ```vue
 <AppShell v-model="page" :ctx="ctx" :locale="ctx.locale" :pages="[

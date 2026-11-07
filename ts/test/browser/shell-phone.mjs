@@ -50,6 +50,28 @@ try{
    await page.waitForFunction(()=>document.querySelector('[data-phone]')?.getAttribute('data-phone')==='false')
    assert.equal(await page.locator('[data-ui-tab-bar]').count(),0)
   }
+  if(!baseline){
+   await page.setViewportSize({width,height:width===390?844:800})
+   await page.goto(`${server.resolvedUrls.local[0]}phone.html?window=${fullPage?'0':'1'}&accessory=1`)
+   await page.locator('[data-ui-bottom-accessory]').waitFor()
+   await page.waitForTimeout(400)
+   assert.equal(await page.locator('[data-running-task]').innerText(),`Running task: home (${width===390?'phone':'desktop'})`)
+   const bounds=await page.evaluate(()=>{
+    const accessory=document.querySelector('[data-ui-bottom-accessory]').getBoundingClientRect()
+    const content=document.querySelector('.app-page').getBoundingClientRect()
+    const tabs=document.querySelector('[data-ui-tab-bar]')?.getBoundingClientRect()
+    return {top:accessory.top,bottom:accessory.bottom,height:accessory.height,pageBottom:content.bottom,tabTop:tabs?.top,viewport:innerHeight}
+   })
+   assert.ok(bounds.height>=48&&bounds.height<=49,'accessory wraps the content and its border')
+   assert.ok(bounds.bottom<=bounds.viewport+1,'accessory remains inside the viewport')
+   assert.ok(Math.abs(bounds.bottom-(bounds.tabTop??bounds.viewport))<=1,'accessory docks above phone tabs or at the desktop bottom')
+   assert.ok(bounds.pageBottom<=bounds.top+1,'page ends above the accessory')
+   assert.equal(await page.locator('.app-page [data-running-task]').count(),0,'accessory stays outside the page scroller')
+   if(shots)await page.screenshot({path:join(shots,`${label}-accessory.png`)})
+   await page.evaluate(()=>{window.shellAccessory.value=false})
+   await page.locator('[data-ui-bottom-accessory]').waitFor({state:'hidden'})
+   console.log(`shell accessory: ${label} ok`)
+  }
   console.log(`shell phone: ${label} ok${baseline?' (baseline)':''}`)
   await context.close()
  }

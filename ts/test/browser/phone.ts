@@ -9,12 +9,14 @@ const page=ref('home')
 const pages=[{id:'home',title:'Overview',icon:Home},{id:'books',title:'Books',icon:BookOpen},{id:'settings',title:'Settings',icon:Settings}]
 const tabs=pages.slice(0,2).map(p=>({key:p.id,label:p.title,icon:p.icon}))
 const params=new URLSearchParams(location.search)
+const accessory=ref(params.has('accessory'))
 createApp({render:()=>h(AppShell,{
  appRoot:true,locale:'en',modelValue:page.value,'onUpdate:modelValue':(value:string)=>{page.value=value},
  pages,brandName:'Library',ctx:{fullPage:params.get('window')!=='1'},
  title:'My library',headerActions:[{key:'refresh',label:'Refresh library',icon:RefreshCw},{key:'settings',label:'Settings'}],
  onHeaderAction:(key:string)=>{document.documentElement.dataset.headerAction=key},
 },{
+ accessory:({page,phone}:{page:string;phone:boolean})=>accessory.value?h('button',{'data-running-task':'',style:'display:block;width:100%;height:48px'},`Running task: ${page} (${phone?'phone':'desktop'})`):null,
  tabbar:({page:current}:{page:string})=>h(AppTabBar,{items:tabs,modelValue:current,'onUpdate:modelValue':(value:string)=>{page.value=value}}),
  actions:()=>h(Button,{variant:'secondary'},()=>'Add book'),
  default:({phone}:{phone:boolean})=>h('div',{'data-phone':String(!!phone)},[
@@ -25,3 +27,4 @@ createApp({render:()=>h(AppShell,{
   ])),
  ]),
 })}).mount('#app')
+;(window as unknown as {shellAccessory:unknown}).shellAccessory=accessory

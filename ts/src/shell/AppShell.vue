@@ -113,6 +113,8 @@ const slots = defineSlots<{
   notices?: (scope: {page: string; phone: boolean}) => unknown
   /** Forwarded only when supplied, so AppLayout retains its menu fallback. */
   tabbar?: (scope: {page: string; phone: boolean}) => unknown
+  /** Bottom bar forwarded to AppLayout; requires a UI that supports the accessory slot. */
+  accessory?: (scope: {page: string; phone: boolean}) => unknown
   'sidebar-footer'?: (scope: {phone: boolean}) => unknown
   denied?: (scope: {phone: boolean}) => unknown
 }>()
@@ -210,6 +212,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
     <template v-if="slots['sidebar-footer'] || user" #sidebar-footer>
       <slot name="sidebar-footer" :phone="phone"><div v-if="user" class="app-shell-account"><AppSidebarUser :name="user.name" :detail="user.isAdmin ? copy.administrator : copy.dsmUser" /><IconButton v-if="canSignOut" class="app-shell-sign-out" variant="ghost" :label="copy.signOut" @click="signOut"><LogOut :size="16" aria-hidden="true" /></IconButton></div></slot>
     </template>
+    <template v-if="slots.accessory" #accessory><slot name="accessory" :page="modelValue" :phone="phone" /></template>
     <template v-if="slots.tabbar" #tabbar><slot name="tabbar" :page="modelValue" :phone="phone" /></template>
     <template v-if="slots.toolbar || headerMode !== 'shown'" #toolbar>
       <slot name="toolbar" :page="modelValue" :phone="phone" />

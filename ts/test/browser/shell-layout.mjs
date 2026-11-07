@@ -29,7 +29,7 @@ const scrollers=page=>page.evaluate(()=>{
   // A closed phone drawer is out of view and out of reach.
   if(e.closest('[aria-hidden="true"],[inert]'))continue
   const s=getComputedStyle(e)
-  if(['auto','scroll'].includes(s.overflowY)&&e.scrollHeight>e.clientHeight+1)out.push(e.className?.toString?.()||e.tagName)
+  if(['auto','scroll'].includes(s.overflowY)&&e.scrollHeight>e.clientHeight+1)out.push(e.matches('[data-ui-layout-main] > main')?'layout-main':e.className?.toString?.()||e.tagName)
   if(['auto','scroll'].includes(s.overflowX)&&e.scrollWidth>e.clientWidth+1)out.push(`x:${e.className?.toString?.()||e.tagName}`)
  }
  const d=document.scrollingElement
@@ -51,26 +51,37 @@ for(const [width,height] of [[1280,800],[390,844]]){
  const title=await page.evaluate(()=>document.querySelector('h1.app-page-title')?.textContent)
  if(title!=='Home')fail(`${width} home: hidden title ${title}`)
  if(await page.$('[data-ui-page-header]'))fail(`${width} home: a visible page header`)
- const bar=await box(page,'[data-app-page-bar]')
+ // On phones the UI moves page actions into its native top bar.
+ const barSelector=width<640?'[data-ui-mobile-navigation]':'[data-app-page-bar]'
+ const actionsSelector=width<640?'[data-ui-mobile-page-actions] button':'[data-app-page-bar] button'
+ const bar=await box(page,barSelector)
  if(!bar)fail(`${width} home: no page bar`)
- const actions=await page.evaluate(()=>[...document.querySelectorAll('[data-app-page-bar] button')].map(b=>b.textContent.trim()))
+ const actions=await page.evaluate(selector=>[...document.querySelectorAll(selector)].map(b=>b.textContent.trim()),actionsSelector)
  if(actions.join()!=='Rescan,Refresh')fail(`${width} home: bar actions ${actions}`)
  const home=await scrollers(page)
  if(home.length!==1||!home[0].includes('app-page'))fail(`${width} home: scrollers ${home}`)
  await shot('home-top')
  await toBottom(page,'.app-page')
  await page.waitForTimeout(150)
- const barAfter=await box(page,'[data-app-page-bar]')
+ const barAfter=await box(page,barSelector)
  if(JSON.stringify(bar)!==JSON.stringify(barAfter))fail(`${width} home: bar moved ${JSON.stringify({bar,barAfter})}`)
  const scroller=await box(page,'.app-page')
- if(scroller.top<bar.bottom)fail(`${width} home: scroller starts under the bar`)
+ if(bar&&scroller.top<bar.bottom)fail(`${width} home: scroller starts under the bar`)
  await shot('home-bottom')
 
- // Settings pages: only the SettingsPage body scrolls; strip and footer stay.
+ // Desktop settings scroll their body; on phones the page scrolls as one
+ // below the native bar. Both keep the footer at the bottom edge.
  for(const id of ['settings','plain']){
   await open(id)
+  // Mobile SectionTabs starts with its section list; opening a section
+  // mounts the settings body and footer in the push panel.
+  if(id==='settings'&&width<640){
+   await page.click('[data-ui-tab-value=general]');await page.waitForTimeout(400)
+  }
   const list=await scrollers(page)
-  if(list.length!==1||!list[0].includes('ui-settings-page-body'))fail(`${width} ${id}: scrollers ${list}`)
+  const pageScroll=width<640
+  if(pageScroll&&!await page.$('[data-ui-layout-scroll="page"]'))fail(`${width} ${id}: missing phone page-scroll contract`)
+  if(list.length!==1||!list[0].includes(pageScroll?'layout-main':'ui-settings-page-body'))fail(`${width} ${id}: scrollers ${list}`)
   const strip=id==='settings'?await box(page,'nav.ui-tab-strip'):null
   const footer=await box(page,'[data-ui-settings-page-footer]')
   const main=await box(page,'[data-ui-layout-main]')
@@ -78,7 +89,7 @@ for(const [width,height] of [[1280,800],[390,844]]){
   else if(Math.abs(footer.bottom-main.bottom)>1)fail(`${width} ${id}: footer bottom ${footer.bottom}, window ${main.bottom}`)
   if(footer&&footer.bottom>height)fail(`${width} ${id}: footer below the viewport`)
   await shot(`${id}-top`)
-  await toBottom(page,'[data-ui-settings-page-body]')
+  await toBottom(page,pageScroll?'[data-ui-layout-main] > main':'[data-ui-settings-page-body]')
   await page.waitForTimeout(150)
   const footerAfter=await box(page,'[data-ui-settings-page-footer]')
   if(JSON.stringify(footer)!==JSON.stringify(footerAfter))fail(`${width} ${id}: footer moved`)
@@ -90,7 +101,7 @@ for(const [width,height] of [[1280,800],[390,844]]){
  await open('settings')
  await page.click('[data-ui-tab-value=about]');await page.waitForTimeout(400)
  const about=await scrollers(page)
- if(about.length!==1||!about[0].includes('ui-tab-panel'))fail(`${width} about tab: scrollers ${about}`)
+ if(about.length!==1||!about[0].includes(width<640?'layout-main':'ui-tab-panel'))fail(`${width} about tab: scrollers ${about}`)
  await shot('about-tab')
 
  // header: true keeps the shell's PageHeader.
