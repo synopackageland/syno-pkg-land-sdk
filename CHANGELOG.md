@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.53.0
+
+- Add `ipc.ListenTCP(ctx, id, port)` for declared raw IPv4 TCP protocols, with package identity and listener policy bound at build time
+- Enforce declared listener IDs, loopback or all-interface scope, and fixed ports or explicit unprivileged port ranges
+- Reuse loopback port reservations and close listeners when their context is canceled
+- Reuse the immutable executor/v0.49.5 release and its six digests
+
 ## 0.52.4
 
 - On a phone, `AppShell` draws no title row on the tab bar's pages: no repeated App icon or page name under DSM's portal banner or above the page. The one top bar holds only the account and the App's `header-actions`, and is not drawn without them
