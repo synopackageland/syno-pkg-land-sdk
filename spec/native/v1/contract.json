@@ -484,5 +484,6 @@
       ]
     }
   },
-  "$ref": "#/$defs/NativeMessage"
+  "$ref": "#/$defs/NativeMessage",
+  "stability": "stable"
 }

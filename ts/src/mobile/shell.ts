@@ -22,7 +22,7 @@ export function createIntakeStore() {
  const used = new Set<string>()
  return {
   put(id: string, items: readonly NativeIntakeItem[]): void {
-   if(!/^[A-Za-z0-9_-]{1,128}$/.test(id) || used.has(id) || !items.every(isNativeIntakeItem)) throw new TypeError('Invalid or duplicate intake')
+   if(!/^[A-Za-z0-9_-]{1,128}$/.test(id) || used.has(id) || !items.every(item => isNativeIntakeItem(item, {allowUnknownFields: true}))) throw new TypeError('Invalid or duplicate intake')
    used.add(id)
    entries.set(id, items.map(item => ({...item})))
   },

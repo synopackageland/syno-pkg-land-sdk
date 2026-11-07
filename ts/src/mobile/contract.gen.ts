@@ -27,18 +27,22 @@ interface Rule {
  properties?: Record<string, Rule>; required?: string[]; additionalProperties?: boolean
  items?: Rule; minimum?: number; maximum?: number; minLength?: number; maxLength?: number; pattern?: string
 }
-function matches(rule: Rule, value: unknown): boolean {
- if(rule.$ref) return matches(schema[rule.$ref.split('/').pop()!], value)
+export interface NativeValidationOptions {readonly allowUnknownFields?: boolean}
+function dereference(rule: Rule): Rule {return rule.$ref ? dereference(schema[rule.$ref.split('/').pop()!]) : rule}
+function matches(rule: Rule, value: unknown, allowUnknownFields = false): boolean {
+ if(rule.$ref) return matches(dereference(rule), value, allowUnknownFields)
  if('const' in rule) return value === rule.const
  if(rule.enum) return rule.enum.includes(value)
- if(rule.anyOf) return rule.anyOf.some(item => matches(item, value))
+ if(rule.anyOf) return rule.anyOf.some(item => matches(item, value, allowUnknownFields))
  if(rule.type === 'object') {
   if(value === null || typeof value !== 'object' || Array.isArray(value)) return false
   const record = value as Record<string, unknown>, properties = rule.properties!
-  return rule.required!.every(key => Object.hasOwn(record, key)) && Object.keys(record).every(key =>
-   Object.hasOwn(properties, key) ? matches(properties[key], record[key]) : rule.additionalProperties !== false)
+  // Download modes stay exclusive even when a receiver ignores extensions.
+  if(properties.type?.const === 'download' && Object.hasOwn(record, 'base64') && Object.hasOwn(record, 'url')) return false
+  return (rule.required ?? []).every(key => Object.hasOwn(record, key)) && Object.keys(record).every(key =>
+   Object.hasOwn(properties, key) ? matches(properties[key], record[key], allowUnknownFields) : allowUnknownFields || rule.additionalProperties !== false)
  }
- if(rule.type === 'array') return Array.isArray(value) && value.every(item => matches(rule.items!, item))
+ if(rule.type === 'array') return Array.isArray(value) && value.every(item => matches(rule.items!, item, allowUnknownFields))
  if(rule.type === 'string') return typeof value === 'string' &&
   (rule.minLength === undefined || value.length >= rule.minLength) &&
   (rule.maxLength === undefined || value.length <= rule.maxLength) && (!rule.pattern || new RegExp(rule.pattern).test(value))
@@ -46,19 +50,19 @@ function matches(rule: Rule, value: unknown): boolean {
  return typeof value === 'number' && Number.isFinite(value) && (rule.type !== 'integer' || Number.isInteger(value)) &&
   (rule.minimum === undefined || value >= rule.minimum) && (rule.maximum === undefined || value <= rule.maximum)
 }
-export function isNativeShell(value: unknown): value is NativeShell {return matches(schema.NativeShell, value)}
-export function isNativeCapabilities(value: unknown): value is NativeCapabilities {return matches(schema.NativeCapabilities, value)}
-export function isNativeIntakeItem(value: unknown): value is NativeIntakeItem {return matches(schema.NativeIntakeItem, value)}
-export function isNativeDownloadBlob(value: unknown): value is NativeDownloadBlob {return matches(schema.NativeDownloadBlob, value)}
-export function isNativeDownloadURL(value: unknown): value is NativeDownloadURL {return matches(schema.NativeDownloadURL, value)}
-export function isNativeOpenExternal(value: unknown): value is NativeOpenExternal {return matches(schema.NativeOpenExternal, value)}
-export function isNativeIntakeTake(value: unknown): value is NativeIntakeTake {return matches(schema.NativeIntakeTake, value)}
-export function isNativeReady(value: unknown): value is NativeReady {return matches(schema.NativeReady, value)}
-export function isNativeLaunch(value: unknown): value is NativeLaunch {return matches(schema.NativeLaunch, value)}
-export function isNativeTransfer(value: unknown): value is NativeTransfer {return matches(schema.NativeTransfer, value)}
-export function isNativeReply(value: unknown): value is NativeReply {return matches(schema.NativeReply, value)}
-export function isNativeMessage(value: unknown): value is NativeMessage {return matches(schema.NativeMessage, value)}
-export function isNativeEvent(value: unknown): value is NativeEvent {return matches(schema.NativeEvent, value)}
+export function isNativeShell(value: unknown, options: NativeValidationOptions = {}): value is NativeShell {return matches(schema.NativeShell, value, options.allowUnknownFields)}
+export function isNativeCapabilities(value: unknown, options: NativeValidationOptions = {}): value is NativeCapabilities {return matches(schema.NativeCapabilities, value, options.allowUnknownFields)}
+export function isNativeIntakeItem(value: unknown, options: NativeValidationOptions = {}): value is NativeIntakeItem {return matches(schema.NativeIntakeItem, value, options.allowUnknownFields)}
+export function isNativeDownloadBlob(value: unknown, options: NativeValidationOptions = {}): value is NativeDownloadBlob {return matches(schema.NativeDownloadBlob, value, options.allowUnknownFields)}
+export function isNativeDownloadURL(value: unknown, options: NativeValidationOptions = {}): value is NativeDownloadURL {return matches(schema.NativeDownloadURL, value, options.allowUnknownFields)}
+export function isNativeOpenExternal(value: unknown, options: NativeValidationOptions = {}): value is NativeOpenExternal {return matches(schema.NativeOpenExternal, value, options.allowUnknownFields)}
+export function isNativeIntakeTake(value: unknown, options: NativeValidationOptions = {}): value is NativeIntakeTake {return matches(schema.NativeIntakeTake, value, options.allowUnknownFields)}
+export function isNativeReady(value: unknown, options: NativeValidationOptions = {}): value is NativeReady {return matches(schema.NativeReady, value, options.allowUnknownFields)}
+export function isNativeLaunch(value: unknown, options: NativeValidationOptions = {}): value is NativeLaunch {return matches(schema.NativeLaunch, value, options.allowUnknownFields)}
+export function isNativeTransfer(value: unknown, options: NativeValidationOptions = {}): value is NativeTransfer {return matches(schema.NativeTransfer, value, options.allowUnknownFields)}
+export function isNativeReply(value: unknown, options: NativeValidationOptions = {}): value is NativeReply {return matches(schema.NativeReply, value, options.allowUnknownFields)}
+export function isNativeMessage(value: unknown, options: NativeValidationOptions = {}): value is NativeMessage {return matches(schema.NativeMessage, value, options.allowUnknownFields)}
+export function isNativeEvent(value: unknown, options: NativeValidationOptions = {}): value is NativeEvent {return matches(schema.NativeEvent, value, options.allowUnknownFields)}
 /** Typed wire client; the host must first enforce the NAS-origin, main-frame injection policy. */
 export function createNativeClient(bridge: NativeBridge) {
  return {post(message: NativeMessage): void {

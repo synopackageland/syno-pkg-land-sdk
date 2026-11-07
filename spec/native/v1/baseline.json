@@ -1,0 +1,489 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synopackageland.org/spec/native/v1/contract.json",
+  "title": "SynoPkgNative v1",
+  "protocol": 1,
+  "bridgeName": "SynoPkgNative",
+  "eventName": "synopkgnative",
+  "$defs": {
+    "NativeShell": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "platform": {
+          "enum": [
+            "android",
+            "ios"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "platform"
+      ],
+      "additionalProperties": false
+    },
+    "NativeCapabilities": {
+      "type": "object",
+      "properties": {
+        "download": {
+          "anyOf": [
+            {
+              "const": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "base64": {
+                  "type": "boolean"
+                },
+                "url": {
+                  "type": "boolean"
+                },
+                "maxBase64": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 52428800
+                }
+              },
+              "required": [
+                "base64",
+                "url",
+                "maxBase64"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "openExternal": {
+          "type": "boolean"
+        },
+        "intake": {
+          "type": "boolean"
+        },
+        "camera": {
+          "enum": [
+            "live",
+            "capture",
+            false
+          ]
+        }
+      },
+      "required": [
+        "download",
+        "openExternal",
+        "intake",
+        "camera"
+      ],
+      "additionalProperties": false
+    },
+    "NativeIntakeItem": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "url"
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "kind",
+            "url"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "text"
+            },
+            "text": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "text"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "file"
+            },
+            "filename": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "pattern": "^[^/\\\\\\x00-\\x1f\\x7f]+$"
+            },
+            "mime": {
+              "type": "string",
+              "maxLength": 255,
+              "pattern": "^[^\\r\\n]*$"
+            },
+            "base64": {
+              "type": "string",
+              "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
+              "maxLength": 11184812
+            },
+            "size": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 8388608
+            }
+          },
+          "required": [
+            "kind",
+            "filename",
+            "mime",
+            "base64",
+            "size"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "NativeDownloadBlob": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "type": {
+          "const": "download"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "filename": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "pattern": "^[^/\\\\\\x00-\\x1f\\x7f]+$"
+        },
+        "mime": {
+          "type": "string",
+          "maxLength": 255,
+          "pattern": "^[^\\r\\n]*$"
+        },
+        "base64": {
+          "type": "string",
+          "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
+        }
+      },
+      "required": [
+        "v",
+        "type",
+        "id",
+        "filename",
+        "mime",
+        "base64"
+      ],
+      "additionalProperties": false
+    },
+    "NativeDownloadURL": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "type": {
+          "const": "download"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "filename": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "pattern": "^[^/\\\\\\x00-\\x1f\\x7f]+$"
+        },
+        "mime": {
+          "type": "string",
+          "maxLength": 255,
+          "pattern": "^[^\\r\\n]*$"
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "v",
+        "type",
+        "id",
+        "filename",
+        "mime",
+        "url"
+      ],
+      "additionalProperties": false
+    },
+    "NativeOpenExternal": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "type": {
+          "const": "openExternal"
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "v",
+        "type",
+        "url"
+      ],
+      "additionalProperties": false
+    },
+    "NativeIntakeTake": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "type": {
+          "const": "intake.take"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        }
+      },
+      "required": [
+        "v",
+        "type",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "NativeReady": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "type": {
+          "const": "ready"
+        },
+        "fcp": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "v",
+        "type",
+        "fcp"
+      ],
+      "additionalProperties": false
+    },
+    "NativeLaunch": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "type": {
+          "const": "launch"
+        },
+        "link": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "intake": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        }
+      },
+      "required": [
+        "v",
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "NativeTransfer": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "type": {
+          "const": "transfer"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "state": {
+          "enum": [
+            "queued",
+            "downloading",
+            "ready",
+            "shared",
+            "saved",
+            "canceled",
+            "failed"
+          ]
+        },
+        "progress": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "v",
+        "type",
+        "id",
+        "state"
+      ],
+      "additionalProperties": false
+    },
+    "NativeReply": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "v": {
+              "const": 1
+            },
+            "type": {
+              "const": "reply"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_-]+$"
+            },
+            "ok": {
+              "const": true
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/NativeIntakeItem"
+              }
+            }
+          },
+          "required": [
+            "v",
+            "type",
+            "id",
+            "ok",
+            "items"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "v": {
+              "const": 1
+            },
+            "type": {
+              "const": "reply"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_-]+$"
+            },
+            "ok": {
+              "const": false
+            },
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "v",
+            "type",
+            "id",
+            "ok",
+            "error"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "NativeMessage": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NativeDownloadBlob"
+        },
+        {
+          "$ref": "#/$defs/NativeDownloadURL"
+        },
+        {
+          "$ref": "#/$defs/NativeOpenExternal"
+        },
+        {
+          "$ref": "#/$defs/NativeIntakeTake"
+        },
+        {
+          "$ref": "#/$defs/NativeReady"
+        }
+      ]
+    },
+    "NativeEvent": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NativeLaunch"
+        },
+        {
+          "$ref": "#/$defs/NativeTransfer"
+        },
+        {
+          "$ref": "#/$defs/NativeReply"
+        }
+      ]
+    }
+  },
+  "$ref": "#/$defs/NativeMessage",
+  "stability": "stable"
+}
