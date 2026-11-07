@@ -1,5 +1,6 @@
 // Package ipc serves private HTTP IPC for the non-root package account and
-// reserves loopback ports for supervised children. It never returns a listener.
+// reserves loopback ports for supervised children. ListenTCP additionally returns
+// a raw TCP listener constrained by the manifest policy compiled by the CLI.
 package ipc
 
 import (
