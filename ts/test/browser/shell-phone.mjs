@@ -64,6 +64,7 @@ try{
    await page.locator('[data-ui-nav-drawer][data-state="open"]').waitFor()
    // The drawer from a tab page is headed by the App's name, not "Application navigation".
    assert.match(await page.locator('[data-ui-nav-drawer] [data-ui-sidebar-brand]').innerText(),/Library/)
+   assert.equal(await page.locator('[data-ui-nav-drawer] [data-ui-brand-name]').evaluate(name=>name.scrollWidth<=name.clientWidth),true,'the drawer shows the whole App name')
    await page.waitForTimeout(300)
    if(shots)await page.screenshot({path:join(shots,`${label}-drawer.png`)})
    await page.locator('[data-ui-nav-drawer]').getByRole('button',{name:'Settings',exact:true}).tap()

@@ -140,7 +140,8 @@ const currentTab = '[data-ui-tab-bar-item][aria-current="page"]'
 function readPhoneShell(root: HTMLElement): PhoneShell {
   const column = Array.from(root.children).find(child => child.hasAttribute('data-ui-layout-main'))
   const chrome = column ? Array.from(column.children).filter(child => child.tagName !== 'MAIN') : []
-  const bar = chrome.find(child => child.hasAttribute('data-ui-mobile-navigation'))
+  // A bar AppLayout keeps hidden (an empty bar on a tab page) is not drawn.
+  const bar = chrome.find(child => child.hasAttribute('data-ui-mobile-navigation') && !(child as HTMLElement).hidden)
   return {
     phone: root.hasAttribute('data-ui-phone'),
     // Only a tab drawn in the bar counts: More (a page under it) is not a tab item.
@@ -161,15 +162,16 @@ watch(layout, (component, _, onCleanup) => {
   read()
   const observer = new MutationObserver(read)
   // One observe call: observing the same node again replaces its options.
-  observer.observe(root, {attributes: true, attributeFilter: ['data-ui-phone', 'data-ui-bars-hidden', 'aria-current'], childList: true, subtree: true})
+  observer.observe(root, {attributes: true, attributeFilter: ['data-ui-phone', 'data-ui-bars-hidden', 'aria-current', 'hidden'], childList: true, subtree: true})
   onCleanup(() => observer.disconnect())
 }, {flush: 'post', immediate: true})
-// A phone outside a DSM window (a full page or no ctx) draws no title row on
-// one of the tab bar's pages: the tab bar already says where the user is. Its
-// one top bar holds only the account and the App's header actions, and is not
-// drawn without them. A sub-page keeps its Back, title and actions. A tab page
-// is the page whose own tab is current: a page outside the tab bar (a detail
-// or live page) keeps its title bar even while the App marks a tab current.
+// A phone outside a DSM window (a full page or no ctx) draws no title, App
+// icon or brand in the bar on one of the tab bar's pages (phone-bar-title
+// "none"): the tab bar already says where the user is. The drawer keeps the
+// brand and screen readers the title; AppLayout hides the bar while it holds
+// nothing. A sub-page keeps its Back, title and actions. A tab page is the page
+// whose own tab is current: a page outside the tab bar (a detail or live page)
+// keeps its title bar even while the App marks a tab current.
 const phoneTab = computed(() => phoneShell.value.phone && !inWindow.value && phoneShell.value.tab !== undefined && phoneShell.value.tab === props.modelValue)
 const portalChrome = ref<PortalChrome>({brand:false,user:false})
 // Where DSM draws no account (ui.banner: hidden), the shell's account also signs out.
@@ -199,15 +201,8 @@ function onHeaderAction(key: string) {
   else emit('headerAction', key)
 }
 watch(accountInBar, shown => {if(!shown) accountOpen.value = false})
-// A tab page's bar draws no title, App icon or brand (phone-bar-title="none");
-// the drawer keeps the brand and screen readers the title. AppLayout still
-// draws a bar for a title or a brand, so a tab page with nothing for the bar
-// (no actions, no Back) passes neither: then there is no bar at all.
-const emptyTabBar = computed(() => phoneTab.value && !barActions.value.length && !phoneShell.value.back)
-const layoutTitle = computed(() => emptyTabBar.value ? undefined : props.title ?? barTitle.value)
-const layoutBrandName = computed(() => emptyTabBar.value ? '' : props.brandName ?? props.ctx?.displayName)
-const layoutBrandIcon = computed(() => emptyTabBar.value ? '' : props.brandIcon ?? props.ctx?.appIcon)
-watch([fullPage,layout,accountMergeable], (_, __, onCleanup) => {
+// The bar is shown or hidden in place as it gains or loses content.
+watch([fullPage,layout,accountMergeable,() => phoneShell.value.bar], (_, __, onCleanup) => {
   const root=layout.value?.$el
   if(!fullPage.value || !root) {portalChrome.value={brand:false,user:false};return}
   let undoFit=()=>{}, undoCollapse=()=>{}
@@ -286,7 +281,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
     <slot name="denied" :phone="phone"><Callout tone="danger"><span role="alert">{{ denied.message ?? refusal?.message ?? copy.deniedMessage }}</span></Callout></slot>
   </PageContent>
   <AppLayout v-else ref="layout" :class="['app-shell', {'app-shell-fill': fill, 'app-shell-portal-brand': portalChrome.brand}]" min-height="0" :wide-layout="wideLayout ?? (fullPage ? 'web' : 'window')" :sidebar-storage-key="sidebarStorageKey"
-    :navigation="navigation" :hide-on-scroll="hideOnScroll" :title="layoutTitle" :phone-bar-title="phoneTab ? 'none' : 'auto'" :header-actions="barActions" @header-action="onHeaderAction" :brand-name="layoutBrandName" :brand-icon="layoutBrandIcon" @brand="onBrand">
+    :navigation="navigation" :hide-on-scroll="hideOnScroll" :title="props.title ?? barTitle" :phone-bar-title="phoneTab ? 'none' : 'auto'" :header-actions="barActions" @header-action="onHeaderAction" :brand-name="brandName ?? ctx?.displayName" :brand-icon="brandIcon ?? ctx?.appIcon" @brand="onBrand">
     <template #sidebar>
       <AppSidebar :model-value="modelValue" :groups="groups" @update:model-value="emit('update:modelValue', $event)" />
     </template>

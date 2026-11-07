@@ -25,22 +25,22 @@
     "canonicalTaskDefinitionsUnchanged": true,
     "nasAcceptance": false,
     "rustCratePublished": false,
-    "validation": "AppShell unit tests (jsdom: tab page, page outside the tab bar with the parent tab current, header actions in one \"…\", primary header action, portal header), real-browser shell and portal fixtures at 390x844 (tab page, hidden live page with Back, header actions menu, drawer from More headed by the App name) plus the existing shell/portal/picker/entry browser checks, full frontend unit suite, typecheck, build, docs version check and npm pack content scan. No full gate, publication or NAS acceptance. Go ipc tests (scope all refused, absent scope binds 127.0.0.1) and the launch unit test."
+    "validation": "AppShell unit tests (jsdom: tab page, page outside the tab bar with the parent tab current, header actions in one \"…\", primary header action, portal header), real-browser shell and portal fixtures at 390x844 (tab page, hidden live page with Back, header actions menu, drawer from More headed by the whole App name, no empty bar on a tab page without account) plus the existing shell/portal/picker/entry browser checks, full frontend unit suite, typecheck, build, docs version check and npm pack content scan. No full gate, publication or NAS acceptance. Go ipc tests (scope all refused, absent scope binds 127.0.0.1) and the launch unit test."
   },
   "ui": {
-    "builtAgainst": "0.23.1",
-    "peer": ">=0.23.1 <0.24.0",
-    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.1.tgz"
+    "builtAgainst": "0.23.2",
+    "peer": ">=0.23.2 <0.24.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.2.tgz"
   },
   "node": {
     "build": "24.22.1",
     "minimum": "22"
   },
   "changes": [
-    "Require @synopackageland/ui 0.23.1 or a later 0.23 as a peer and build against 0.23.1.",
+    "Require @synopackageland/ui 0.23.2 or a later 0.23 as a peer and build against 0.23.2.",
     "Phone header actions share one \"…\"; only primary: true (or a sole entry with an icon) is a bar button.",
     "Only a page whose own tab is current is a phone tab page; pages outside the tab bar keep their title bar and Back.",
-    "A phone tab page's bar draws no title or brand (UI phone-bar-title=\"none\"); the drawer keeps the App's name and icon.",
+    "A phone tab page's bar draws no title or brand (UI phone-bar-title=\"none\") while the real title and App brand are always passed; the drawer shows the whole App name and an empty bar is hidden.",
     "AppShell's page end padding reads --ui-page-end-space.",
     "Raw TCP listeners are loopback-only; a policy with scope \"all\" is refused (RawTCPPolicyVersion stays 1).",
     "Add packageCenterUrl() and the guide on offering another Package Land package.",

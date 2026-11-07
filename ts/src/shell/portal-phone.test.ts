@@ -84,7 +84,7 @@ function mountShell(target:HTMLElement,{fullPage=true,user='alice',actions=[] as
  app.mount(target)
  return {app,page,detail,signOut,selected,root:target}
 }
-const bar=(root:ParentNode)=>root.querySelector('[data-ui-mobile-navigation]')
+const bar=(root:ParentNode)=>root.querySelector('[data-ui-mobile-navigation]:not([hidden])')
 
 test('a phone tab page in the portal: DSM\'s compact row is the one bar; a sub-page\'s bar replaces it with the account',async()=>{
  viewport(390)
