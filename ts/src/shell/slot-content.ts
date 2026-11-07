@@ -39,12 +39,37 @@ function shown(element: Element, root: Element): boolean {
 }
 
 /**
- * What the page's content shows: a SettingsPage or a SectionTabs fill (the
- * page fills the height) and a settings footer (the page drops the space
- * under it, so the footer is the window's bottom edge). Hidden pages, by
- * v-show or `hidden`, do not count.
+ * A bar docked at the bottom of the page: a UI footer bar (an AppActionBar) or
+ * an App's own bar marked `data-ui-page-bar`.
  */
-export function fillState(root: Element): {fill: boolean; footer: boolean} {
+export const DOCKED_BAR = '[data-ui-footer-bar], [data-ui-page-bar]'
+
+function drawn(element: Element, root: Element): boolean {
+ return shown(element, root) && rendersContent(element)
+}
+
+/**
+ * Whether the content ends with a docked bar: its last element that draws
+ * something is one, or ends with one, however the App wraps it.
+ */
+function endsWithBar(root: Element): boolean {
+ let parent: Element = root
+ for(;;) {
+  const last = Array.from(parent.children).reverse().find(element => drawn(element, root))
+  if(!last) return false
+  if(last.matches(DOCKED_BAR)) return true
+  parent = last
+ }
+}
+
+/**
+ * What the page's content shows: a SettingsPage or a SectionTabs fill (the
+ * page fills the height), a settings footer (the page drops the space under
+ * it, so the footer is the window's bottom edge) and a docked bar as the
+ * content's last element (on a fill page the bar is the bottom edge too).
+ * Hidden pages, by v-show or `hidden`, do not count.
+ */
+export function fillState(root: Element): {fill: boolean; footer: boolean; bar: boolean} {
  const any = (selector: string) => Array.from(root.querySelectorAll(selector)).some(element => shown(element, root))
- return {fill: any(FILLS), footer: any('[data-ui-settings-page-footer]')}
+ return {fill: any(FILLS), footer: any('[data-ui-settings-page-footer]'), bar: endsWithBar(root)}
 }

@@ -78,18 +78,18 @@ const current = computed(() => pages.value.find(page => page.id === props.modelV
 const page = current
 // 'shown': the shell's PageHeader (header: true; hidden on a phone's tab page). 'hidden', the default: a
 // visually hidden title. 'own': the page draws its own header (header: false).
-const headerMode = computed(() => page.value?.header === true ? (phoneTab.value ? 'hidden' : 'shown') : page.value?.header === false ? 'own' : 'hidden')
+const headerMode = computed(() => page.value?.header === true ? (untitledTab.value ? 'hidden' : 'shown') : page.value?.header === false ? 'own' : 'hidden')
 // A page fills the height when it says so, while it loads, or when it shows a
 // SettingsPage or a SectionTabs fill: their tabs and footer stay and only their
 // body scrolls. fill: false keeps the page scrolling as a whole.
 const content = useTemplateRef<HTMLElement>('content')
-const detected = ref({fill: false, footer: false})
+const detected = ref({fill: false, footer: false, bar: false})
 watchEffect(onCleanup => {
   const element = content.value
   if(!element) return
   const read = () => {
     const next = fillState(element)
-    if(next.fill !== detected.value.fill || next.footer !== detected.value.footer) detected.value = next
+    if(next.fill !== detected.value.fill || next.footer !== detected.value.footer || next.bar !== detected.value.bar) detected.value = next
   }
   read()
   const observer = new MutationObserver(read)
@@ -97,6 +97,10 @@ watchEffect(onCleanup => {
   onCleanup(() => observer.disconnect())
 }, {flush: 'post'})
 const fill = computed(() => !!props.loading || page.value?.fill === true || (page.value?.fill !== false && detected.value.fill))
+// No end space under a settings footer, nor under a fill page's own docked bar
+// (its last element is a UI footer bar or marked data-ui-page-bar): the bar is
+// the bottom edge. A page that scrolls as a whole keeps the space.
+const flush = computed(() => detected.value.footer || (fill.value && !props.loading && detected.value.bar))
 const title = computed(() => page.value?.title ?? copy.value[props.modelValue as ShellPage] ?? copy.value.status)
 // The phone bar names the current page. A page that draws its own header names
 // itself: AppLayout reads that PageHeader's title.
@@ -173,6 +177,8 @@ watch(layout, (component, _, onCleanup) => {
 // whose own tab is current: a page outside the tab bar (a detail or live page)
 // keeps its title bar even while the App marks a tab current.
 const phoneTab = computed(() => phoneShell.value.phone && !inWindow.value && phoneShell.value.tab !== undefined && phoneShell.value.tab === props.modelValue)
+// A tab page that opts in (phoneTitle: true, a live screen) keeps its title bar.
+const untitledTab = computed(() => phoneTab.value && page.value?.phoneTitle !== true)
 const portalChrome = ref<PortalChrome>({brand:false,user:false})
 // Where DSM draws no account (ui.banner: hidden), the shell's account also signs out.
 const canSignOut = computed(() => {
@@ -182,7 +188,7 @@ const canSignOut = computed(() => {
 function signOut() {accountOpen.value = false; pageCtx.value?.host?.signOut?.()}
 const appActions = computed(() => props.headerActions ?? [])
 // Whether AppLayout draws its top bar, leaving the account out of it.
-const barWithoutAccount = computed(() => !phoneTab.value || appActions.value.length > 0 || phoneShell.value.back)
+const barWithoutAccount = computed(() => !untitledTab.value || appActions.value.length > 0 || phoneShell.value.back)
 // On a phone the account joins the one top bar: always where DSM shows no
 // account, and in DSM's portal while the App's bar takes the place of DSM's
 // header (which then shows no account). Never a second account control.
@@ -281,7 +287,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
     <slot name="denied" :phone="phone"><Callout tone="danger"><span role="alert">{{ denied.message ?? refusal?.message ?? copy.deniedMessage }}</span></Callout></slot>
   </PageContent>
   <AppLayout v-else ref="layout" :class="['app-shell', {'app-shell-fill': fill, 'app-shell-portal-brand': portalChrome.brand}]" min-height="0" :wide-layout="wideLayout ?? (fullPage ? 'web' : 'window')" :sidebar-storage-key="sidebarStorageKey"
-    :navigation="navigation" :hide-on-scroll="hideOnScroll" :title="props.title ?? barTitle" :phone-bar-title="phoneTab ? 'none' : 'auto'" :header-actions="barActions" @header-action="onHeaderAction" :brand-name="brandName ?? ctx?.displayName" :brand-icon="brandIcon ?? ctx?.appIcon" @brand="onBrand">
+    :navigation="navigation" :hide-on-scroll="hideOnScroll" :title="props.title ?? barTitle" :phone-bar-title="untitledTab ? 'none' : 'auto'" :header-actions="barActions" @header-action="onHeaderAction" :brand-name="brandName ?? ctx?.displayName" :brand-icon="brandIcon ?? ctx?.appIcon" @brand="onBrand">
     <template #sidebar>
       <AppSidebar :model-value="modelValue" :groups="groups" @update:model-value="emit('update:modelValue', $event)" />
     </template>
@@ -299,7 +305,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
         </AppToolbar>
       </div>
     </template>
-    <PageContent ref="scroller" :class="['app-page', {'app-page-fill': fill, 'app-page-untitled': headerMode === 'hidden', 'app-page-flush': detected.footer}]" :width="pageWidth" :surface="pageSurface" :hide-on-scroll="page?.hideOnScroll">
+    <PageContent ref="scroller" :class="['app-page', {'app-page-fill': fill, 'app-page-untitled': headerMode === 'hidden', 'app-page-flush': flush}]" :width="pageWidth" :surface="pageSurface" :hide-on-scroll="page?.hideOnScroll">
       <PageHeader v-if="headerMode === 'shown'" :title="title">
         <template #meta><span ref="page-info" class="app-page-info" /><slot name="meta" :page="modelValue" :phone="phone" /></template>
         <template #actions><div ref="page-actions" class="app-page-actions" /><slot v-if="!loading" name="actions" :page="modelValue" :phone="phone" /></template>
@@ -371,7 +377,8 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
    are hidden on a fill page. */
 .app-page-content { padding-bottom: var(--ui-page-end-space, var(--ui-space-6, 24px)); }
 /* A SettingsPage's footer is the bottom of the window, as in DSM: a page that
-   shows one drops the space under it, however deeply the App wraps it. */
+   shows one drops the space under it, however deeply the App wraps it. So does
+   a fill page whose last element is a docked bar. */
 .app-page-flush .app-page-content { padding-bottom: 0; }
 /* A fill page gives its height to a SettingsPage or a SectionTabs fill through
    the App's own wrappers: each element between the page and that component is

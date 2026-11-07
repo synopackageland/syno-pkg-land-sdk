@@ -196,6 +196,30 @@ test('outside the portal a tab page draws a bar only for the account or actions;
  }
 })
 
+test('a tab page with phoneTitle: true keeps its title bar; other tab pages stay untitled',async()=>{
+ viewport(390)
+ const root=document.createElement('div');document.body.append(root)
+ const titled=[{id:'home',title:'Home'},{id:'live',title:'Recording',phoneTitle:true},{id:'about',title:'About'}]
+ const items=titled.slice(0,2).map(p=>({key:p.id,label:p.title}))
+ const page=ref('home')
+ const app=createApp({render:()=>h(AppShell,{
+  appRoot:true,locale:'en',pages:titled,modelValue:page.value,'onUpdate:modelValue':(v:string)=>{page.value=v},
+  ctx:{fullPage:true,displayName:'Meeting Notes',host:{platform:()=>({host:'dsm',dsmStandalone:true})} as never},
+ },{
+  tabbar:({page:current}:{page:string})=>h(AppTabBar,{items,modelValue:current,'onUpdate:modelValue':(v:string)=>{page.value=v}}),
+  default:({page:current}:{page:string})=>h('p',current),
+ })})
+ try{
+  app.mount(root);await settle()
+  expect(bar(root)).toBeNull()
+  page.value='live';await settle()
+  expect(root.querySelector('[data-ui-tab-bar-item="live"]')?.getAttribute('aria-current')).toBe('page')
+  expect(bar(root)?.querySelector('[data-ui-mobile-title]')?.textContent).toBe('Recording')
+  page.value='home';await settle()
+  expect(bar(root)).toBeNull()
+ }finally{app.unmount();root.remove()}
+})
+
 test('a page outside the tab bar keeps its title bar and Back while the App marks its parent tab current',async()=>{
  viewport(390)
  const root=document.createElement('div');document.body.append(root)
