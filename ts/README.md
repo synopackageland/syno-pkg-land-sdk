@@ -160,10 +160,20 @@ App draws no title row under it (see "Phone top bar"). When the App's own
 bar is shown instead (a page outside the tab bar, a sub-page with Back, an
 App with `header-actions`, or an App without a tab bar, whose bar holds the
 menu button), it takes the
-banner's place: the banner moves up out of the window and the App gets its
-height. The account then moves into the App's bar (below). The banner also
-hides with the App's bars when the page scrolls down and comes back with
-them. Wider layouts, a mouse and a DSM window keep the banner.
+banner's place: the banner is hidden and the App gets its height. The
+account then moves into the App's bar (below). The banner also hides with
+the App's bars when the page scrolls down and comes back with them: it
+follows the UI's own hide-on-scroll decision (the UI's shared gesture
+velocity and thresholds) and moves at the UI's bar speed, at once with
+reduced motion. On a phone the window body is sized once and the banner
+lies over its top, so the banner moves by transform and opacity only: the
+App's page scroller keeps its size, nothing writes `scrollTop`, and a
+momentum fling keeps going while the banner goes. The App keeps the
+banner's height as room above its content (`--synopkgland-portal-room`,
+counted in the UI's `--ui-bars-room`), and its content moves into that room
+by translate, as it moves under the UI's own top bar. A page whose end is a
+docked bar or a settings footer keeps the banner, so the bar stays at the
+bottom of the page. Wider layouts, a mouse and a DSM window keep the banner.
 The rules ship in `@synopackageland/sdk/vue/style.css`.
 
 An App whose own frame already names it and shows the account (a full-page

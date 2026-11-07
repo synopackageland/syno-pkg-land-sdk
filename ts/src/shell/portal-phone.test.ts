@@ -6,7 +6,9 @@ import {afterEach,beforeEach,expect,test,vi} from 'vitest'
 import {createApp,h,nextTick,ref} from 'vue'
 import {AppTabBar,PageHeader} from '@synopackageland/ui'
 import AppShell from './AppShell.vue'
-import {collapsePortalHeader,portalBodyHeight,portalCollapsedAttr,portalHeaderHeight,portalMobileAttr} from './portal-chrome'
+import {readFileSync} from 'node:fs'
+import {join} from 'node:path'
+import {collapsePortalHeader,portalBodyHeight,portalCollapsedAttr,portalHeaderHeight,portalMobileAttr,portalMotion,portalOverlayAttr,portalRoom} from './portal-chrome'
 
 // The menu's floating layer watches its anchor.
 beforeEach(()=>{vi.stubGlobal('IntersectionObserver',class{observe(){} unobserve(){} disconnect(){} takeRecords(){return []}})})
@@ -31,30 +33,57 @@ function viewport(width:number,coarse=true){
  return (matches:boolean)=>{Object.assign(media,{matches});media.dispatchEvent(Object.assign(new Event('change'),{matches}))}
 }
 
-test('collapsePortalHeader moves the header row out and the body reaches the bottom; false and undo restore',()=>{
+test('collapsePortalHeader sizes the body once; the header shows, hides on scroll or gives way by its own marks only',()=>{
  const f=dsmWindow()
  Object.defineProperty(window,'innerHeight',{configurable:true,value:844})
- const undo=collapsePortalHeader(f.app,'bar')
+ const geometry=()=>[portalHeaderHeight,portalBodyHeight,portalRoom].map(name=>f.main.style.getPropertyValue(name))
+ const undo=collapsePortalHeader(f.app,'shown')
+ expect(f.main.hasAttribute(portalOverlayAttr)).toBe(true)
+ expect(f.main.hasAttribute(portalCollapsedAttr)).toBe(false)
+ // The body reaches the bottom from where the header starts; the App keeps the header's room.
+ expect(geometry()).toEqual(['40px','844px','40px'])
+ // Hiding on scroll and showing again change no size: only the header's mark.
+ f.app.style.setProperty('--ui-bars-motion','120ms')
+ collapsePortalHeader(f.app,'scroll')
+ expect(f.main.getAttribute(portalCollapsedAttr)).toBe('scroll')
+ expect(geometry()).toEqual(['40px','844px','40px'])
+ // The header moves at the UI's bar speed (60% after a flick).
+ expect(f.main.style.getPropertyValue(portalMotion)).toBe('120ms')
+ f.app.style.removeProperty('--ui-bars-motion')
+ collapsePortalHeader(f.app,'shown')
+ expect(f.main.hasAttribute(portalCollapsedAttr)).toBe(false)
+ expect(f.main.style.getPropertyValue(portalMotion)).toBe('')
+ expect(geometry()).toEqual(['40px','844px','40px'])
+ // The App's own bar: the header gives way and the App has no room.
+ collapsePortalHeader(f.app,'bar')
  expect(f.main.getAttribute(portalCollapsedAttr)).toBe('bar')
- expect(f.main.style.getPropertyValue(portalHeaderHeight)).toBe('40px')
- expect(f.main.style.getPropertyValue(portalBodyHeight)).toBe('844px')
+ expect(geometry()).toEqual(['40px','844px',''])
  // Rotation: the Portal's window follows the viewport, whatever DSM writes inline meanwhile.
  Object.defineProperty(window,'innerHeight',{configurable:true,value:390});f.body.style.height='380px'
  collapsePortalHeader(f.app,'scroll')
- expect(f.main.getAttribute(portalCollapsedAttr)).toBe('scroll')
  expect(f.main.style.getPropertyValue(portalBodyHeight)).toBe('390px')
  expect(f.body.style.height).toBe('380px')
  collapsePortalHeader(f.app,false)
  expect(f.main.hasAttribute(portalCollapsedAttr)).toBe(false)
+ expect(f.main.hasAttribute(portalOverlayAttr)).toBe(false)
  expect(f.main.getAttribute('style')??'').not.toContain('--synopkgland')
  // DSM sized the body during the rotation with the header moved: restore gives it the viewport less the header.
  expect(f.body.style.height).toBe('350px')
  // A window that is not maximized: DSM's inline height and the header's.
  f.main.classList.remove('x-window-maximized');f.body.style.height='804px'
- collapsePortalHeader(f.app,'bar')
+ collapsePortalHeader(f.app,'shown')
+ expect(f.main.style.getPropertyValue(portalBodyHeight)).toBe('844px')
+ collapsePortalHeader(f.app,'scroll')
  expect(f.main.style.getPropertyValue(portalBodyHeight)).toBe('844px')
  undo()
- expect(f.main.hasAttribute(portalCollapsedAttr)).toBe(false)
+ expect(f.main.hasAttribute(portalOverlayAttr)).toBe(false)
+})
+test('the room counts in the UI\'s own --ui-bars-room sum',()=>{
+ // AppShell restates the UI's sum with the room added; a UI that changes the sum must change it here too.
+ const theme=readFileSync(join(__dirname,'../../node_modules/@synopackageland/ui/dist/theme.css'),'utf8')
+ expect(theme).toContain('--ui-bars-room:calc(var(--ui-bars-top-box,0px) + max(var(--ui-bars-bottom-box,0px), var(--ui-safe-bottom,0px)) + var(--ui-bottom-accessory-height,0px))')
+ const shell=readFileSync(join(__dirname,'AppShell.vue'),'utf8')
+ expect(shell).toContain('--ui-bars-room: calc(var(--ui-bars-top-box, 0px) + max(var(--ui-bars-bottom-box, 0px), var(--ui-safe-bottom, 0px)) + var(--ui-bottom-accessory-height, 0px) + var(--synopkgland-portal-room, 0px));')
 })
 test('no banner, a root outside the window body or a detached root collapse nothing',()=>{
  const f=dsmWindow()

@@ -13,7 +13,10 @@ export function readPortalChrome(root: HTMLElement): PortalChrome {
    if(root.contains(element) || element.closest(mainSelector)!==main || !element.textContent?.trim()) return false
    const view=element.ownerDocument.defaultView
    if(!view) return false
+   // The header row hidden by collapsePortalHeader still holds DSM's chrome.
+   const own=main.hasAttribute(portalCollapsedAttr) ? main.querySelector(':scope > .x-window-tl') : null
    for(let node:HTMLElement|null=element;node;node=node.parentElement){
+    if(node===own) continue
     const style=view.getComputedStyle(node)
     if(node.hidden || style.display==='none' || style.visibility==='hidden' || style.visibility==='collapse' || style.opacity==='0') return false
    }
@@ -147,26 +150,38 @@ export function watchPortalName(root: HTMLElement): () => void {
 }
 
 /** On a phone, DSM's standalone header gives way to the App's one top bar.
- * 'bar': the App draws its own phone bar (a sub-page with Back, a page with
- * actions or the menu), which takes the header's place. 'scroll': the App's
- * bars are hidden on scroll, and the header goes with them. The header row
- * (.x-window-tl) moves up out of the window by its own height and the window
- * body reaches the bottom of the page (the Portal's maximized window) or is
- * that much taller (another window), so the App takes the whole page; DSM's
- * own inline size stays in place underneath; a restore corrects it only when
- * DSM resized the Portal's window while the header was moved.
+ * Every phone mode sizes the window body once, at the page's whole height
+ * from where the header starts (the header lies over the body's top,
+ * portalOverlayAttr), so nothing DSM or the App lays out changes while the
+ * header comes and goes: the header moves by transform and opacity only, and
+ * a momentum scroll is never interrupted.
+ * 'shown': the header is shown over the body; the App keeps its room
+ * (portalRoom, the header's height) above its content. 'scroll': the App's
+ * bars are hidden on scroll (the UI's own decision, data-ui-bars-hidden) and
+ * the header slides out with them, in the same motion (portalMotion, from the
+ * UI's --ui-bars-motion); the App's content moves up into the room by
+ * transform, as the UI moves it under its own top bar. 'bar': the App draws
+ * its own phone bar (a sub-page with Back, a page with actions or the menu),
+ * which takes the header's place: the header is hidden and the App has no
+ * room. DSM's own inline size stays in place underneath; a restore corrects it
+ * only when DSM resized the Portal's window while the header was moved.
  * false, a window without the banner, a missing header or a root outside the
  * window body restore DSM's header. Returns the undo.
  */
 export const portalCollapsedAttr='data-synopkgland-portal-collapsed'
+export const portalOverlayAttr='data-synopkgland-portal-overlay'
 export const portalHeaderHeight='--synopkgland-portal-header'
 export const portalBodyHeight='--synopkgland-portal-body'
-export function collapsePortalHeader(root: HTMLElement, mode: false|'bar'|'scroll'): () => void {
+export const portalRoom='--synopkgland-portal-room'
+export const portalMotion='--synopkgland-portal-motion'
+export type PortalHeaderMode=false|'shown'|'scroll'|'bar'
+const portalProperties=[portalHeaderHeight,portalBodyHeight,portalRoom,portalMotion]
+export function collapsePortalHeader(root: HTMLElement, mode: PortalHeaderMode): () => void {
  const doc=root.ownerDocument
  const clear=()=>{
-  for(const element of Array.from(doc.querySelectorAll<HTMLElement>(`[${portalCollapsedAttr}]`))) {
-   element.removeAttribute(portalCollapsedAttr)
-   element.style.removeProperty(portalHeaderHeight);element.style.removeProperty(portalBodyHeight)
+  for(const element of Array.from(doc.querySelectorAll<HTMLElement>(`[${portalOverlayAttr}], [${portalCollapsedAttr}]`))) {
+   element.removeAttribute(portalCollapsedAttr);element.removeAttribute(portalOverlayAttr)
+   for(const name of portalProperties) element.style.removeProperty(name)
    refitPortalBody(element)
   }
  }
@@ -175,16 +190,16 @@ export function collapsePortalHeader(root: HTMLElement, mode: false|'bar'|'scrol
   const top=main?.querySelector<HTMLElement>(':scope > .x-window-tl')
   const body=main?.querySelector<HTMLElement>(':scope > .x-window-bwrap .x-window-body')
   if(!main || !top || !body || !body.contains(root) || main.classList.contains('sds-standalone-main-window--no-banner')) {clear();return ()=>{}}
-  // The header keeps its height while moved (a margin moves it).
+  // A transform does not change the header's layout height.
   const header=top.offsetHeight
   const view=doc.defaultView
   let height: number
   if(main.classList.contains('x-window-maximized') && view) {
    // The Portal's window fills the viewport: the body reaches its bottom from
-   // where it starts without the header. Measured from the window and the
-   // body's place in its frame, which the header's motion does not change.
-   // DSM's own inline height is not used: DSM resizes it (on rotation) while
-   // the header is moved and then subtracts a different height.
+   // where the header starts. Measured from the window and the body's place
+   // in its frame, which the overlay does not change. DSM's own inline height
+   // is not used: DSM resizes it (on rotation) while the header lies over the
+   // body and then subtracts a different height.
    const wrap=main.querySelector<HTMLElement>(':scope > .x-window-bwrap')!
    const start=main.getBoundingClientRect().top+(body.getBoundingClientRect().top-wrap.getBoundingClientRect().top)
    height=Math.round(view.innerHeight-start)
@@ -192,13 +207,24 @@ export function collapsePortalHeader(root: HTMLElement, mode: false|'bar'|'scrol
    // Another window: DSM's inline height (else the drawn one) and the header's.
    const inline=parseFloat(body.style.height)
    const stored=parseFloat(main.style.getPropertyValue(portalBodyHeight))
-   const base=Number.isFinite(inline) ? inline : main.hasAttribute(portalCollapsedAttr) && Number.isFinite(stored) ? stored-header : body.offsetHeight
+   const base=Number.isFinite(inline) ? inline : main.hasAttribute(portalOverlayAttr) && Number.isFinite(stored) ? stored-header : body.offsetHeight
    height=base+header
   }
   if(!header || !(height>0)) {clear();return ()=>{}}
-  if(main.getAttribute(portalCollapsedAttr)!==mode) main.setAttribute(portalCollapsedAttr,mode as string)
-  if(main.style.getPropertyValue(portalHeaderHeight)!==`${header}px`) main.style.setProperty(portalHeaderHeight,`${header}px`)
-  if(main.style.getPropertyValue(portalBodyHeight)!==`${height}px`) main.style.setProperty(portalBodyHeight,`${height}px`)
+  const set=(name: string, value: string|undefined)=>{
+   if(value===undefined) {if(main.style.getPropertyValue(name)) main.style.removeProperty(name)}
+   else if(main.style.getPropertyValue(name)!==value) main.style.setProperty(name,value)
+  }
+  if(!main.hasAttribute(portalOverlayAttr)) main.setAttribute(portalOverlayAttr,'')
+  if(mode==='shown') {if(main.hasAttribute(portalCollapsedAttr)) main.removeAttribute(portalCollapsedAttr)}
+  else if(main.getAttribute(portalCollapsedAttr)!==mode) main.setAttribute(portalCollapsedAttr,mode as string)
+  set(portalHeaderHeight,`${header}px`)
+  set(portalBodyHeight,`${height}px`)
+  set(portalRoom,mode==='bar' ? undefined : `${header}px`)
+  // The UI's bars move faster after a flick; the header moves with them.
+  const style=view?.getComputedStyle(root)
+  const motion=style?.getPropertyValue('--ui-bars-motion').trim() || style?.getPropertyValue('--ui-motion-bars').trim()
+  set(portalMotion,motion || undefined)
  } catch {clear();return ()=>{}}
  return clear
 }

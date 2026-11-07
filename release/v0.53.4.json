@@ -1,0 +1,46 @@
+{
+  "version": "0.53.4",
+  "executorVersion": "0.53.3",
+  "executorRootSDK": "v0.49.4-0.20261103141054-34994683c7b8",
+  "packages": {
+    "@synopackageland/sdk": "0.53.4",
+    "@synopackageland/app": "0.53.4",
+    "syno-pkg-land-app": "0.53.4",
+    "synopkgland_app": "0.53.4"
+  },
+  "executorDigests": {
+    "x86_64": "169be9cb1dbf44a5d03b9f92e95b53b238886001448c0b7b0dbbe5a0b1b53499",
+    "aarch64": "347f4132a495e7498cdef377e0b1d08cb0cba62af71e6dfb2552a957b33881de",
+    "armv7": "075f5d78eecbd2e1cb6e16c4c93b9c94fcaac573fc16aba445ee794f66f065ce",
+    "lifecycle": {
+      "x86_64": "3b2720a4d093aeaa82674a75f16e3adc0bfaa76b8357e58ef591d1f15a73a5c0",
+      "aarch64": "f8a9bb0e69dd380d993fcc89cf19e9e3a526a76bdc24c97d53f01001953aad0d",
+      "armv7": "118edf2426e8aaeeea66d1b3b114c86d0aa680c02449755fc37b0d5a288dc430"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Patch checks: shell and frontend unit tests, UI peer-range test, typecheck, SDK and App builds, the browser checks in Chromium and WebKit (portal header hides by transform with the page scroller size, body size and header layout unchanged and no scrollTop writes; no horizontal overflow at 390, 402, 825x360 and 1280), documentation and version checks, npm pack for both packages, and repository and tarball internal-content scans. No full gate, publication, real-device fling or NAS acceptance."
+  },
+  "ui": {
+    "builtAgainst": "0.23.5",
+    "peer": ">=0.23.5 <0.24.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.5.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "In DSM's Application Portal on a phone, the window body is sized once and DSM's header hides and shows by transform and opacity only, so a momentum scroll is never interrupted when the header goes.",
+    "The header follows the UI's own hide-on-scroll decision (shared gesture velocity and thresholds) and moves at the UI's bar speed; the App's content moves into the header's room by translate, as under the UI's own top bar.",
+    "A page whose end is a docked bar or a settings footer keeps DSM's header on a phone.",
+    "Require @synopackageland/ui 0.23.5 or a later 0.23 as a peer and build against 0.23.5.",
+    "Reuse the immutable executor/v0.53.3 release and its six digests."
+  ]
+}
