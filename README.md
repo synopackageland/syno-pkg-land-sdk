@@ -228,3 +228,9 @@ Native HTTP Apps declare a `synopkgland.api` v3 registry with
 inventories, shared Go/TypeScript types and JSON schemas, and serves authenticated
 metadata through the existing DSM CGI entry. The CLI handles upstream credentials,
 HTTP execution and bounded file transfers. See the [native HTTP contract](api/nativehttp/README.md).
+
+### Raw TCP protocols
+
+Use manifest-declared `ipc.ListenTCP` for raw TCP services; bind scope and allowed
+ports are compiled by the CLI. See [declared TCP listeners](docs/raw-tcp-listeners.md)
+for policy, lifetime, audit and authentication boundaries.
