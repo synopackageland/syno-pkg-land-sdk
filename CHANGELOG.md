@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.53.4
+
+- In DSM's Application Portal on a phone, the window body is sized once and DSM's banner hides and shows by transform and opacity only: no margin, height or `top` change, no page scroller resize and no `scrollTop` write while scrolling, so a momentum fling (iOS Safari) keeps going when the banner goes
+- The banner follows the UI's own hide-on-scroll decision (UI 0.23.5's shared `VelocityEstimator` and `GESTURE_THRESHOLDS`: distance hysteresis for slow scrolls, flicks at once) and moves at the UI's bar speed; reduced motion moves it at once
+- The App keeps the banner's height as room above its content (`--synopkgland-portal-room`, counted in `--ui-bars-room`) and its content moves into the room by translate, as under the UI's own top bar. A page whose end is a docked bar or a settings footer keeps the banner on a phone
+- The Vue entry needs `@synopackageland/ui` 0.23.5 or a later 0.23 (peer `>=0.23.5 <0.24.0`) and is built and tested against 0.23.5. An App moves its UI to 0.23.5 with the SDK
+- Reuse the immutable executor/v0.53.3 release and its six digests
+
 ## 0.53.3
 
 - `AppShellPage.phoneTitle: true` keeps a tab page's title bar on a phone (a recording or live screen shown as a tab). Omitted, a tab page still has no title row

@@ -85,7 +85,16 @@ try{
     const accessory=document.querySelector('[data-ui-bottom-accessory]').getBoundingClientRect()
     const content=document.querySelector('.app-page').getBoundingClientRect()
     const tabs=document.querySelector('[data-ui-tab-bar]')?.getBoundingClientRect()
-    return {top:accessory.top,bottom:accessory.bottom,height:accessory.height,pageBottom:content.bottom,tabTop:tabs?.top,viewport:innerHeight}
+    // UI 0.23.5 overlay: the page runs under the bars and its scroll ends with
+    // their room, so at the end the last row sits above the accessory.
+    const overlay=!!document.querySelector('[data-ui-bars-overlay]')
+    let pageBottom=content.bottom
+    if(overlay){
+     const scroller=document.querySelector('.app-page');scroller.scrollTop=scroller.scrollHeight
+     const rows=document.querySelector('.app-page-content').lastElementChild
+     pageBottom=rows?rows.getBoundingClientRect().bottom:content.bottom
+    }
+    return {top:accessory.top,bottom:accessory.bottom,height:accessory.height,pageBottom,tabTop:tabs?.top,viewport:innerHeight}
    })
    assert.ok(bounds.height>=48&&bounds.height<=49,'accessory wraps the content and its border')
    assert.ok(bounds.bottom<=bounds.viewport+1,'accessory remains inside the viewport')

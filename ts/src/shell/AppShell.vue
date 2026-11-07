@@ -208,7 +208,7 @@ function onHeaderAction(key: string) {
 }
 watch(accountInBar, shown => {if(!shown) accountOpen.value = false})
 // The bar is shown or hidden in place as it gains or loses content.
-watch([fullPage,layout,accountMergeable,() => phoneShell.value.bar], (_, __, onCleanup) => {
+watch([fullPage,layout,accountMergeable,() => phoneShell.value.bar,flush], (_, __, onCleanup) => {
   const root=layout.value?.$el
   if(!fullPage.value || !root) {portalChrome.value={brand:false,user:false};return}
   let undoFit=()=>{}, undoCollapse=()=>{}
@@ -219,16 +219,22 @@ watch([fullPage,layout,accountMergeable,() => phoneShell.value.bar], (_, __, onC
     undoFit=fitPortalHeader(root, root.getAttribute('data-ui-layout-mode')==='mobile')
     // On a phone the App's own top bar takes the header's place, and the
     // header hides with the App's bars on scroll: one top bar at a time. The
-    // bar takes it only when it can hold the account DSM's header shows.
+    // bar takes it only when it can hold the account DSM's header shows. The
+    // UI decides when the bars hide (its gesture velocity and thresholds);
+    // the header follows that decision only where the App's content moves
+    // with the bars (data-ui-bars-overlay). A page whose bottom edge is a
+    // docked bar or a settings footer (flush) keeps the header, so the bar
+    // stays at the bottom of the page.
     const shell=readPhoneShell(root)
     const bar=shell.bar && (accountMergeable.value || !next.user)
-    undoCollapse=collapsePortalHeader(root, !shell.phone ? false : bar ? 'bar' : shell.barsHidden ? 'scroll' : false)
+    const hides=shell.barsHidden && root.hasAttribute('data-ui-bars-overlay') && !flush.value
+    undoCollapse=collapsePortalHeader(root, !shell.phone ? false : bar ? 'bar' : hides ? 'scroll' : 'shown')
   }
   read()
   // At wider layouts a long App name ends before DSM's account button.
   const stopName=watchPortalName(root)
   const mode=new MutationObserver(read)
-  mode.observe(root,{attributes:true,attributeFilter:['data-ui-layout-mode','data-ui-phone','data-ui-bars-hidden']})
+  mode.observe(root,{attributes:true,attributeFilter:['data-ui-layout-mode','data-ui-phone','data-ui-bars-hidden','data-ui-bars-overlay']})
   // The App's own top bar comes and goes as the page changes.
   const column=Array.from(root.children).find(child=>child.hasAttribute('data-ui-layout-main'))
   if(column) mode.observe(column,{childList:true})
@@ -380,6 +386,21 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
    shows one drops the space under it, however deeply the App wraps it. So does
    a fill page whose last element is a docked bar. */
 .app-page-flush .app-page-content { padding-bottom: 0; }
+/* In DSM's Application Portal on a phone, DSM's header lies over the top of
+   the window body, which is sized once (collapsePortalHeader), and DSM's
+   window passes the header's height down as --synopkgland-portal-room while
+   the header can show. The App keeps that room above its column; its content
+   reaches that much further down, as the UI's content reaches under its own
+   top bar, and the room counts in --ui-bars-room (the UI's own sum plus the
+   room), so the last row and a settings footer clear the bars. A page whose
+   end is a docked bar keeps the bar at the bottom of the page. Outside the
+   portal the room is 0 and the UI's layout is unchanged. */
+.app-shell[data-ui-layout-mode='mobile'][data-ui-phone] {
+  --ui-bars-room: calc(var(--ui-bars-top-box, 0px) + max(var(--ui-bars-bottom-box, 0px), var(--ui-safe-bottom, 0px)) + var(--ui-bottom-accessory-height, 0px) + var(--synopkgland-portal-room, 0px));
+}
+.app-shell[data-ui-layout-mode='mobile'][data-ui-phone] :deep(> [data-ui-layout-main]) { padding-top: var(--synopkgland-portal-room, 0px); }
+.app-shell[data-ui-layout-mode='mobile'][data-ui-phone][data-ui-bars-overlay] :deep(> [data-ui-layout-main] > main) { margin-bottom: calc(-1 * (var(--ui-bars-top-box, 0px) + var(--synopkgland-portal-room, 0px))); }
+.app-shell[data-ui-layout-mode='mobile'][data-ui-phone] .app-page-flush .app-page-content { padding-bottom: var(--synopkgland-portal-room, 0px); }
 /* A fill page gives its height to a SettingsPage or a SectionTabs fill through
    the App's own wrappers: each element between the page and that component is
    a flex column taking the room its siblings leave, so the App needs no CSS to
@@ -416,16 +437,26 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
 .sds-standalone-main-window[data-synopkgland-portal-name="icon"]:not([data-synopkgland-portal-mobile]) .sds-standalone-main-window-header-text > .x-window-header-text {
   box-sizing: content-box; inline-size: 0; max-inline-size: none; text-overflow: clip;
 }
-/* On a phone the App's one top bar takes the place of DSM's header
-   (collapsePortalHeader): the header row moves up out of the window by its
-   own height and the window body, which DSM sizes inline, takes that height,
-   so the App fills the page. With the App's bars it hides on scroll and
-   comes back in the same motion. */
-.sds-standalone-main-window[data-synopkgland-portal-mobile] > .x-window-tl { transition: margin-top 200ms cubic-bezier(0.32, 0.72, 0, 1); }
-.sds-standalone-main-window[data-synopkgland-portal-collapsed] > .x-window-tl { margin-top: calc(-1 * var(--synopkgland-portal-header, 0px)); }
-.sds-standalone-main-window[data-synopkgland-portal-collapsed] > .x-window-bwrap .x-window-body { height: var(--synopkgland-portal-body) !important; }
+/* On a phone (collapsePortalHeader) the window body is sized once, at the
+   page's height from where DSM's header starts, and the header lies over its
+   top: nothing is laid out again while the header comes and goes, so a
+   momentum scroll keeps going. The header moves by transform and opacity
+   only, with the UI's bars and at their speed (--synopkgland-portal-motion,
+   the UI's --ui-bars-motion); the App's column moves up into the header's
+   room by translate, as the UI moves it under its own top bar. Where the
+   App's own top bar takes the header's place ("bar") the header is hidden
+   and the App has no room. */
+.sds-standalone-main-window[data-synopkgland-portal-overlay] > .x-window-tl {
+  position: relative; z-index: 1;
+  transition: transform var(--synopkgland-portal-motion, 200ms) cubic-bezier(0.32, 0.72, 0, 1), opacity var(--synopkgland-portal-motion, 200ms) cubic-bezier(0.32, 0.72, 0, 1);
+}
+.sds-standalone-main-window[data-synopkgland-portal-overlay] > .x-window-bwrap { margin-top: calc(-1 * var(--synopkgland-portal-header, 0px)); }
+.sds-standalone-main-window[data-synopkgland-portal-overlay] > .x-window-bwrap .x-window-body { height: var(--synopkgland-portal-body) !important; }
+.sds-standalone-main-window[data-synopkgland-portal-collapsed] > .x-window-tl { transform: translateY(-100%); opacity: 0; pointer-events: none; }
 .sds-standalone-main-window[data-synopkgland-portal-collapsed="bar"] > .x-window-tl { transition: none; }
-@media (prefers-reduced-motion: reduce) { .sds-standalone-main-window[data-synopkgland-portal-mobile] > .x-window-tl { transition: none; } }
+.sds-standalone-main-window[data-synopkgland-portal-collapsed="scroll"] .app-shell[data-ui-layout-mode='mobile'][data-ui-phone][data-ui-bars-overlay] > [data-ui-layout-main] > [data-ui-mobile-navigation] { translate: 0 calc(-100% - var(--synopkgland-portal-room, 0px)); }
+.sds-standalone-main-window[data-synopkgland-portal-collapsed="scroll"] .app-shell[data-ui-layout-mode='mobile'][data-ui-phone][data-ui-bars-overlay] > [data-ui-layout-main] > :is([data-ui-layout-bar], main) { translate: 0 calc(-1 * (var(--ui-bars-top-box, 0px) + var(--synopkgland-portal-room, 0px))); }
+@media (prefers-reduced-motion: reduce) { .sds-standalone-main-window[data-synopkgland-portal-overlay] > .x-window-tl { transition: none; } }
 /* A non-interactive heading above DSM's items (Help, Sign out). DSM measures
    and places the menu before the SDK names it: the heading takes the menu's
    width (inline-size 0, min 100%) instead of widening it past the button, and
