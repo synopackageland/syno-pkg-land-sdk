@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"strings"
 	"testing"
 	"time"
 )
@@ -156,33 +155,34 @@ func TestListenTCPAdmissionCancellationAndReservationExclusion(t *testing.T) {
 	selected.Close()
 }
 
-func TestTCPPolicyRejectsAllScope(t *testing.T) {
-	bindTCPPolicy(t, `{"schema":1,"listeners":{"mail":{"scope":"all","port":2525}}}`)
-	l, err := ListenTCP(context.Background(), "mail", 0)
-	if err == nil {
-		l.Close()
-		t.Fatal("scope all accepted")
-	}
-	if !strings.Contains(err.Error(), `scope "all" is not supported`) || !strings.Contains(err.Error(), "127.0.0.1") {
-		t.Fatalf("unclear refusal: %v", err)
-	}
-}
-
-func TestListenTCPAbsentScopeIsLoopbackAndCancelledContext(t *testing.T) {
-	port := availableTCPPort(t)
-	bindTCPPolicy(t, fmt.Sprintf(`{"schema":1,"listeners":{"mail":{"port":%d}}}`, port))
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	if l, err := ListenTCP(ctx, "mail", 0); err == nil {
-		l.Close()
-		t.Fatal("cancelled listener accepted")
-	}
-	l, err := ListenTCP(context.Background(), "mail", 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer l.Close()
-	if ip := l.Addr().(*net.TCPAddr).IP; !ip.Equal(net.IPv4(127, 0, 0, 1)) {
-		t.Fatalf("absent scope did not bind loopback: %s", l.Addr())
+func TestListenTCPScopeAndCancelledContext(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		scope string
+		ip    net.IP
+	}{
+		{"default", "", net.IPv4(127, 0, 0, 1)},
+		{"loopback", `"scope":"loopback",`, net.IPv4(127, 0, 0, 1)},
+		{"all", `"scope":"all",`, net.IPv4zero},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			port := availableTCPPort(t)
+			bindTCPPolicy(t, fmt.Sprintf(`{"schema":1,"listeners":{"mail":{%s"port":%d}}}`, test.scope, port))
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			if l, err := ListenTCP(ctx, "mail", 0); err == nil {
+				l.Close()
+				t.Fatal("cancelled listener accepted")
+			}
+			l, err := ListenTCP(context.Background(), "mail", 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer l.Close()
+			addr := l.Addr().(*net.TCPAddr)
+			if addr.Network() != "tcp" || addr.IP.To4() == nil || !addr.IP.Equal(test.ip) || addr.Port != port {
+				t.Fatalf("unexpected binding for %s: %s", test.name, addr)
+			}
+		})
 	}
 }

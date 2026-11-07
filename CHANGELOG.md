@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.53.2
+
+- Raw TCP listeners default to `tcp4` on `127.0.0.1` when `scope` is omitted or `loopback`; explicit `scope: all` binds `tcp4` on `0.0.0.0` on every IPv4 interface. Use the DSM firewall to restrict access
+- Keep `RawTCPPolicyVersion` at 1, the UI 0.23.2 dependency and peer range, and `packageCenterUrl()`
+- Align the SDK and App adapter versions and reuse the immutable executor release and its six digests
+
 ## 0.53.1
 
 - The Vue entry needs `@synopackageland/ui` 0.23.2 or a later 0.23 (peer `>=0.23.2 <0.24.0`) and is built and tested against 0.23.2. An App moves its UI to 0.23.2 with the SDK

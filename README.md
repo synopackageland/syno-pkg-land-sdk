@@ -237,6 +237,9 @@ another package](docs/install-another-package.md).
 
 ### Raw TCP protocols
 
-Use manifest-declared `ipc.ListenTCP` for raw TCP services on loopback
-(127.0.0.1); allowed ports are compiled by the CLI. See [declared TCP listeners](docs/raw-tcp-listeners.md)
+Use manifest-declared `ipc.ListenTCP` for raw TCP services; bind scope and allowed
+ports are compiled by the CLI. Omitted or `loopback` scope binds `127.0.0.1`;
+explicit `scope: all` binds `0.0.0.0` on every IPv4 interface.
+Use the DSM firewall to restrict access to an all-interface port.
+See [declared TCP listeners](docs/raw-tcp-listeners.md)
 for policy, lifetime, audit and authentication boundaries.

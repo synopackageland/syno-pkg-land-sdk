@@ -5,14 +5,14 @@ the native Go package's build-bound manifest declaration. This supports private
 protocols such as a loopback SMTP relay without permitting arbitrary `net.Listen`
 constructors in shipped application binaries. Use a matching CLI with TCP policy
 v1 support; look up matching released SDK and CLI versions before updating pins.
-No release is made by this change.
 
 ```yaml
 # dsm-package.yaml, schema 2
 tcp_listeners:
   mail_relay:
     port: 2525
-    # binds exactly IPv4 127.0.0.1 (scope: loopback, the only scope)
+    # scope defaults to loopback: exactly IPv4 127.0.0.1
+    # scope: all # explicit opt-in to every IPv4 interface (0.0.0.0)
     port_range: [1024, 65535] # optional explicit configurable-port allowance
 ```
 
@@ -27,10 +27,11 @@ defer listener.Close()
 
 A zero requested port selects the manifest default, rather than an ephemeral
 port. Without `port_range`, only that fixed default is allowed. All ports must
-be unprivileged integers, 1024–65535. A listener binds only `tcp4` on
-`127.0.0.1`: `scope` is `loopback` or omitted, and the SDK refuses a policy
-with any other scope, including `all`, with an error naming the listener.
-Non-loopback addresses, IPv6, DNS names, arbitrary host strings and privileged
+be unprivileged integers, 1024–65535. Only the declaration selects the address:
+`scope` omitted or `scope: loopback` (default) means `tcp4` on `127.0.0.1`;
+explicit `scope: all` opts in to `tcp4` on `0.0.0.0`, exposing the port on every IPv4 interface.
+Use the DSM firewall to restrict access to an all-interface port.
+IPv6, DNS names, arbitrary host strings and privileged
 ports are unsupported. Names use lowercase ASCII letters, digits and underscores,
 start with a letter and have at most 64 characters. At most 64 declarations are
 allowed. Duplicate default ports fail CLI validation; overlapping configurable
