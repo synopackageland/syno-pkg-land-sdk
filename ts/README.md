@@ -16,6 +16,15 @@ App's `backend/go.mod`.
 | `@synopackageland/sdk/i18n/<capability>/<locale>.json` | Copy in `en`, `zh-TW`, `zh-CN`, `ja`, `ko`, `de`, `fr`, `es`, `it`. |
 | `@synopackageland/sdk/spec/protocol/v1/` | The executor protocol (`errors.json`, `schema/`, `vectors/`), a file copy of the repository's `spec/protocol/v1`. Read it from `node_modules/@synopackageland/sdk/spec/protocol/v1`. |
 
+## Raw TCP protocols
+
+Native Go backends use manifest-declared `ipc.ListenTCP` for raw IPv4 TCP
+services. Omitted or `loopback` scope binds `tcp4` on `127.0.0.1`; explicit
+`scope: all` opts in to `tcp4` on `0.0.0.0`, exposing the port on every IPv4 interface.
+Use the DSM firewall to restrict access to an all-interface port.
+See [declared TCP listeners](../docs/raw-tcp-listeners.md) for policy, lifetime
+and authentication boundaries.
+
 ## DSM session carriers
 
 `createDsmSession({read, write, fetch})` provides DSM session carriers for a
