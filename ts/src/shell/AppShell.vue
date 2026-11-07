@@ -8,12 +8,12 @@
 // user moves between pages; a page's own component is rendered only while it
 // is the current page.
 import {computed, provide, ref, useTemplateRef, watch, watchEffect, type FunctionalComponent} from 'vue'
-import {LogOut} from '@lucide/vue'
-import {AppLayout, AppRoot, AppSidebar, AppSidebarUser, AppToolbar, Callout, IconButton, ConfigProvider, LoadingArea, PageContent, PageHeader, ensureDeviceViewport, type DropdownMenuEntry, type WideLayout} from '@synopackageland/ui'
+import {CircleUser, LogOut} from '@lucide/vue'
+import {AppLayout, AppRoot, AppSidebar, AppSidebarUser, AppToolbar, Button, Callout, Dialog, IconButton, ConfigProvider, LoadingArea, PageContent, PageHeader, ensureDeviceViewport, type DropdownMenuEntry, type WideLayout} from '@synopackageland/ui'
 import {isFullPage, type ShellContext} from '../context'
 import {appRefusal} from '../authorization/refusal'
 import {shellCopy} from './i18n'
-import {fitPortalHeader, readPortalChrome, watchPortalName, type PortalChrome} from './portal-chrome'
+import {collapsePortalHeader, fitPortalHeader, readPortalChrome, watchPortalName, type PortalChrome} from './portal-chrome'
 import {uiLocale} from '../i18n'
 import {fillState, hasContent, rendersContent, rendersOwnContent} from './slot-content'
 import type {ShellPage} from './pages'
@@ -61,6 +61,8 @@ const props = withDefaults(defineProps<{
   // The App's first reads are still loading: the sidebar and page title stand,
   // the page body shows a loading area and the App's actions wait for them.
   loading?: boolean
+  /** Where #accessory goes off a phone: 'bottom' (default), the layout's bottom row; 'notices', after the page's notices at its top. A phone keeps it above the tab bar. */
+  accessoryDesktop?: 'bottom' | 'notices'
 }>(), {hideOnScroll: undefined})
 const emit = defineEmits<{'update:modelValue': [value: string]; brand: [event: MouseEvent]; headerAction: [key: string]}>()
 // Apps can use @brand.prevent to replace the default home selection.
@@ -74,9 +76,9 @@ const pages = computed(() => resolvePages(props.pages, copy.value))
 const groups = computed(() => sidebarGroups(pages.value))
 const current = computed(() => pages.value.find(page => page.id === props.modelValue))
 const page = current
-// 'shown': the shell's PageHeader (header: true). 'hidden', the default: a
+// 'shown': the shell's PageHeader (header: true; hidden on a phone's tab page). 'hidden', the default: a
 // visually hidden title. 'own': the page draws its own header (header: false).
-const headerMode = computed(() => page.value?.header === true ? 'shown' : page.value?.header === false ? 'own' : 'hidden')
+const headerMode = computed(() => page.value?.header === true ? (phoneTab.value ? 'hidden' : 'shown') : page.value?.header === false ? 'own' : 'hidden')
 // A page fills the height when it says so, while it loads, or when it shows a
 // SettingsPage or a SectionTabs fill: their tabs and footer stay and only their
 // body scrolls. fill: false keeps the page scrolling as a whole.
@@ -128,22 +130,100 @@ const Bare: FunctionalComponent = (_, {slots}) => slots.default?.()
 const inWindow = computed(() => props.ctx !== undefined && !fullPage.value)
 function toFront() {props.ctx?.host?.activateWindow?.()}
 const layout = useTemplateRef<{$el: HTMLElement}>('layout')
+// What AppLayout shows on a phone, read from its markup: the phone signal, a
+// tab bar whose tab is the current page, its own top bar (with Back on a
+// sub-page) and bars hidden on scroll. A UI without the phone shell reads none.
+interface PhoneShell {phone: boolean; tab: boolean; bar: boolean; back: boolean; barsHidden: boolean}
+const phoneShell = ref<PhoneShell>({phone:false,tab:false,bar:false,back:false,barsHidden:false})
+function readPhoneShell(root: HTMLElement): PhoneShell {
+  const column = Array.from(root.children).find(child => child.hasAttribute('data-ui-layout-main'))
+  const chrome = column ? Array.from(column.children).filter(child => child.tagName !== 'MAIN') : []
+  const bar = chrome.find(child => child.hasAttribute('data-ui-mobile-navigation'))
+  return {
+    phone: root.hasAttribute('data-ui-phone'),
+    // A page reached from the tab bar's More is not one of its tabs: it keeps its title.
+    tab: chrome.some(child => !!child.querySelector('[data-ui-tab-bar-item][aria-current="page"]') || child.matches('[data-ui-tab-bar-item][aria-current="page"]')),
+    bar: !!bar,
+    back: !!bar?.querySelector('[data-ui-mobile-back]'),
+    barsHidden: root.hasAttribute('data-ui-bars-hidden'),
+  }
+}
+watch(layout, (component, _, onCleanup) => {
+  const root = component?.$el
+  if(!(root instanceof HTMLElement)) {phoneShell.value = {phone:false,tab:false,bar:false,back:false,barsHidden:false};return}
+  const read = () => {
+    const next = readPhoneShell(root)
+    const now = phoneShell.value
+    if((Object.keys(next) as (keyof PhoneShell)[]).some(key => next[key] !== now[key])) phoneShell.value = next
+  }
+  read()
+  const observer = new MutationObserver(read)
+  // One observe call: observing the same node again replaces its options.
+  observer.observe(root, {attributes: true, attributeFilter: ['data-ui-phone', 'data-ui-bars-hidden', 'aria-current'], childList: true, subtree: true})
+  onCleanup(() => observer.disconnect())
+}, {flush: 'post', immediate: true})
+// A phone outside a DSM window (a full page or no ctx) draws no title row on
+// one of the tab bar's pages: the tab bar already says where the user is. Its
+// one top bar holds only the account and the App's header actions, and is not
+// drawn without them. A sub-page keeps its Back, title and actions.
+const phoneTab = computed(() => phoneShell.value.phone && !inWindow.value && phoneShell.value.tab)
 const portalChrome = ref<PortalChrome>({brand:false,user:false})
-watch([fullPage,layout], (_, __, onCleanup) => {
+// Where DSM draws no account (ui.banner: hidden), the shell's account also signs out.
+const canSignOut = computed(() => {
+  const host = pageCtx.value?.host
+  return typeof host?.signOut === 'function' && host.platform().host === 'dsm'
+})
+function signOut() {accountOpen.value = false; pageCtx.value?.host?.signOut?.()}
+const appActions = computed(() => props.headerActions ?? [])
+// Whether AppLayout draws its top bar, leaving the account out of it.
+const barWithoutAccount = computed(() => !phoneTab.value || appActions.value.length > 0 || phoneShell.value.back)
+// On a phone the account joins the one top bar: always where DSM shows no
+// account, and in DSM's portal while the App's bar takes the place of DSM's
+// header (which then shows no account). Never a second account control.
+const accountMergeable = computed(() => phoneShell.value.phone && !!pageCtx.value?.user?.name && canSignOut.value)
+const accountInBar = computed(() => accountMergeable.value && (!portalChrome.value.user || barWithoutAccount.value))
+const accountKey = 'synopkgland-shell-account'
+const accountOpen = ref(false)
+// With the App's actions the account follows them in "…"; alone, it is the bar's account icon.
+const barActions = computed<DropdownMenuEntry[]>(() => {
+  if(!accountInBar.value) return appActions.value
+  const account: DropdownMenuEntry = {key: accountKey, label: pageCtx.value?.user?.name ?? copy.value.account, icon: CircleUser}
+  return appActions.value.length ? [...appActions.value, {type: 'separator', key: `${accountKey}-separator`}, account] : [account]
+})
+function onHeaderAction(key: string) {
+  if(key === accountKey && accountInBar.value) accountOpen.value = true
+  else emit('headerAction', key)
+}
+watch(accountInBar, shown => {if(!shown) accountOpen.value = false})
+const layoutTitle = computed(() => phoneTab.value ? (barActions.value.length ? '' : undefined) : props.title ?? barTitle.value)
+// With nothing for the bar, no brand either: AppLayout then draws no bar.
+const noBar = computed(() => phoneTab.value && !barActions.value.length && !phoneShell.value.back)
+const layoutBrandName = computed(() => noBar.value ? '' : props.brandName ?? props.ctx?.displayName)
+const layoutBrandIcon = computed(() => noBar.value ? '' : props.brandIcon ?? props.ctx?.appIcon)
+watch([fullPage,layout,accountMergeable], (_, __, onCleanup) => {
   const root=layout.value?.$el
   if(!fullPage.value || !root) {portalChrome.value={brand:false,user:false};return}
-  let undoFit=()=>{}
+  let undoFit=()=>{}, undoCollapse=()=>{}
   const read=()=>{
     const next=readPortalChrome(root)
     if(next.brand!==portalChrome.value.brand || next.user!==portalChrome.value.user) portalChrome.value=next
     // In the UI's mobile layout DSM's header keeps only the App icon and an account icon.
     undoFit=fitPortalHeader(root, root.getAttribute('data-ui-layout-mode')==='mobile')
+    // On a phone the App's own top bar takes the header's place, and the
+    // header hides with the App's bars on scroll: one top bar at a time. The
+    // bar takes it only when it can hold the account DSM's header shows.
+    const shell=readPhoneShell(root)
+    const bar=shell.bar && (accountMergeable.value || !next.user)
+    undoCollapse=collapsePortalHeader(root, !shell.phone ? false : bar ? 'bar' : shell.barsHidden ? 'scroll' : false)
   }
   read()
   // At wider layouts a long App name ends before DSM's account button.
   const stopName=watchPortalName(root)
   const mode=new MutationObserver(read)
-  mode.observe(root,{attributes:true,attributeFilter:['data-ui-layout-mode']})
+  mode.observe(root,{attributes:true,attributeFilter:['data-ui-layout-mode','data-ui-phone','data-ui-bars-hidden']})
+  // The App's own top bar comes and goes as the page changes.
+  const column=Array.from(root.children).find(child=>child.hasAttribute('data-ui-layout-main'))
+  if(column) mode.observe(column,{childList:true})
   // DSM finishes its header after mounting the App. Watch host changes too;
   // ignore mutations inside the App to avoid observing our own rendering.
   const observer=new MutationObserver(records=>{
@@ -152,15 +232,9 @@ watch([fullPage,layout], (_, __, onCleanup) => {
   observer.observe(root.ownerDocument.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style','hidden'],characterData:true})
   const view=root.ownerDocument.defaultView
   view?.addEventListener('resize',read)
-  onCleanup(()=>{observer.disconnect();mode.disconnect();view?.removeEventListener('resize',read);undoFit();stopName()})
+  onCleanup(()=>{observer.disconnect();mode.disconnect();view?.removeEventListener('resize',read);undoFit();undoCollapse();stopName()})
 }, {flush:'post',immediate:true})
-const user = computed(() => !portalChrome.value.user && pageCtx.value?.user?.name ? pageCtx.value.user : undefined)
-// Where DSM draws no account (ui.banner: hidden), the shell's account also signs out.
-const canSignOut = computed(() => {
-  const host = pageCtx.value?.host
-  return typeof host?.signOut === 'function' && host.platform().host === 'dsm'
-})
-function signOut() {pageCtx.value?.host?.signOut?.()}
+const user = computed(() => !portalChrome.value.user && !accountInBar.value && pageCtx.value?.user?.name ? pageCtx.value.user : undefined)
 // A page component's PageActions render into the header (or the page bar), before the App's actions.
 provide(PageActionsTarget, useTemplateRef<HTMLElement>('page-actions'))
 // A page component's PageInfo renders on the title line (or the page bar), before the App's meta.
@@ -205,14 +279,14 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
     <slot name="denied" :phone="phone"><Callout tone="danger"><span role="alert">{{ denied.message ?? refusal?.message ?? copy.deniedMessage }}</span></Callout></slot>
   </PageContent>
   <AppLayout v-else ref="layout" :class="['app-shell', {'app-shell-fill': fill, 'app-shell-portal-brand': portalChrome.brand}]" min-height="0" :wide-layout="wideLayout ?? (fullPage ? 'web' : 'window')" :sidebar-storage-key="sidebarStorageKey"
-    :navigation="navigation" :hide-on-scroll="hideOnScroll" :title="props.title ?? barTitle" :header-actions="headerActions" @header-action="emit('headerAction', $event)" :brand-name="brandName ?? ctx?.displayName" :brand-icon="brandIcon ?? ctx?.appIcon" @brand="onBrand">
+    :navigation="navigation" :hide-on-scroll="hideOnScroll" :title="layoutTitle" :header-actions="barActions" @header-action="onHeaderAction" :brand-name="layoutBrandName" :brand-icon="layoutBrandIcon" @brand="onBrand">
     <template #sidebar>
       <AppSidebar :model-value="modelValue" :groups="groups" @update:model-value="emit('update:modelValue', $event)" />
     </template>
     <template v-if="slots['sidebar-footer'] || user" #sidebar-footer>
       <slot name="sidebar-footer" :phone="phone"><div v-if="user" class="app-shell-account"><AppSidebarUser :name="user.name" :detail="user.isAdmin ? copy.administrator : copy.dsmUser" /><IconButton v-if="canSignOut" class="app-shell-sign-out" variant="ghost" :label="copy.signOut" @click="signOut"><LogOut :size="16" aria-hidden="true" /></IconButton></div></slot>
     </template>
-    <template v-if="slots.accessory" #accessory><slot name="accessory" :page="modelValue" :phone="phone" /></template>
+    <template v-if="slots.accessory && (phone || accessoryDesktop !== 'notices')" #accessory><slot name="accessory" :page="modelValue" :phone="phone" /></template>
     <template v-if="slots.tabbar" #tabbar><slot name="tabbar" :page="modelValue" :phone="phone" /></template>
     <template v-if="slots.toolbar || headerMode !== 'shown'" #toolbar>
       <slot name="toolbar" :page="modelValue" :phone="phone" />
@@ -231,10 +305,14 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
       <h1 v-else-if="headerMode === 'hidden'" class="app-page-title">{{ title }}</h1>
       <UiUpdateNotice v-if="ctx?.uiUpdate" :ctx="ctx" :locale="locale" />
       <ExecutorNotice v-if="ctx?.executor" :ctx="ctx" :locale="locale" />
-      <div v-if="hasContent(slots.notices?.({page: modelValue, phone}))" ref="notices" class="app-notices" :hidden="noticesEmpty"><slot name="notices" :page="modelValue" :phone="phone" /></div>
+      <div v-if="hasContent(slots.notices?.({page: modelValue, phone})) || (!phone && accessoryDesktop === 'notices' && hasContent(slots.accessory?.({page: modelValue, phone})))" ref="notices" class="app-notices" :hidden="noticesEmpty"><slot name="notices" :page="modelValue" :phone="phone" /><slot v-if="!phone && accessoryDesktop === 'notices'" name="accessory" :page="modelValue" :phone="phone" /></div>
       <div ref="content" class="app-page-content"><LoadingArea v-if="loading" :text="copy.loading" /><template v-else><component :is="page.component" v-if="page?.component" :key="page.id" /><slot :page="modelValue" :phone="phone" /></template></div>
     </PageContent>
   </AppLayout>
+  <Dialog v-if="accountInBar && pageCtx?.user" v-model:open="accountOpen" :title="copy.account">
+    <AppSidebarUser :name="pageCtx.user.name" :detail="pageCtx.user.isAdmin ? copy.administrator : copy.dsmUser" />
+    <template #footer><Button class="app-shell-account-sign-out" @click="signOut"><LogOut :size="16" aria-hidden="true" />{{ copy.signOut }}</Button></template>
+  </Dialog>
   </ShellPhone>
   </component>
   </component>
@@ -327,6 +405,16 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
 .sds-standalone-main-window[data-synopkgland-portal-name="icon"]:not([data-synopkgland-portal-mobile]) .sds-standalone-main-window-header-text > .x-window-header-text {
   box-sizing: content-box; inline-size: 0; max-inline-size: none; text-overflow: clip;
 }
+/* On a phone the App's one top bar takes the place of DSM's header
+   (collapsePortalHeader): the header row moves up out of the window by its
+   own height and the window body, which DSM sizes inline, takes that height,
+   so the App fills the page. With the App's bars it hides on scroll and
+   comes back in the same motion. */
+.sds-standalone-main-window[data-synopkgland-portal-mobile] > .x-window-tl { transition: margin-top 200ms cubic-bezier(0.32, 0.72, 0, 1); }
+.sds-standalone-main-window[data-synopkgland-portal-collapsed] > .x-window-tl { margin-top: calc(-1 * var(--synopkgland-portal-header, 0px)); }
+.sds-standalone-main-window[data-synopkgland-portal-collapsed] > .x-window-bwrap .x-window-body { height: var(--synopkgland-portal-body) !important; }
+.sds-standalone-main-window[data-synopkgland-portal-collapsed="bar"] > .x-window-tl { transition: none; }
+@media (prefers-reduced-motion: reduce) { .sds-standalone-main-window[data-synopkgland-portal-mobile] > .x-window-tl { transition: none; } }
 /* A non-interactive heading above DSM's items (Help, Sign out). DSM measures
    and places the menu before the SDK names it: the heading takes the menu's
    width (inline-size 0, min 100%) instead of widening it past the button, and

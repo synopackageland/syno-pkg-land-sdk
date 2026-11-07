@@ -32,7 +32,8 @@ try{
   const label=`${width}-${fullPage?'web':'window'}`
   if(shots)await page.screenshot({path:join(shots,`${baseline?'baseline-':''}${label}.png`)})
   if(width===390){
-   assert.equal(await page.locator('[data-ui-mobile-title]').innerText(),'My library')
+   // A tab page draws no title, the App's title included: the bar holds its actions.
+   assert.equal(await page.locator('[data-ui-mobile-title]').innerText(),'')
    await page.locator('[data-ui-mobile-action]').tap()
    assert.equal(await page.evaluate(()=>document.documentElement.dataset.headerAction),'refresh')
    await page.locator('[data-ui-mobile-more]').tap()

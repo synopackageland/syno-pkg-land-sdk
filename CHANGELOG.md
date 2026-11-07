@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.52.4
+
+- On a phone, `AppShell` draws no title row on the tab bar's pages: no repeated App icon or page name under DSM's portal banner or above the page. The one top bar holds only the account and the App's `header-actions`, and is not drawn without them
+- In DSM's Application Portal on a phone, the App's own top bar (a sub-page with Back, `header-actions`, or an App without a tab bar) takes the place of DSM's banner instead of stacking under it, and the App gets the banner's height. The banner also hides on scroll with the App's bars. Wider layouts, a mouse and DSM windows keep the banner
+- The account joins that single bar on a phone (an account icon, or an entry after the App's actions under "…") with the user and Sign out, instead of a second account control; DSM's Help item is not offered while the banner is hidden
+- Add `accessory-desktop="notices"` to show `#accessory` at the top of the page, after `#notices`, off a phone, so an App declares its task bar once
+
 ## 0.52.3
 
 - Mark SynoPkgNative protocol 1 and the mobile manifest stable with an immutable compatibility baseline checked during generation, build and gate
