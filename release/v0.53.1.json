@@ -1,0 +1,49 @@
+{
+  "version": "0.53.1",
+  "executorVersion": "0.49.5",
+  "executorRootSDK": "v0.49.4-0.20261103141054-34994683c7b8",
+  "packages": {
+    "@synopackageland/sdk": "0.53.1",
+    "@synopackageland/app": "0.53.1",
+    "syno-pkg-land-app": "0.53.1",
+    "synopkgland_app": "0.53.1"
+  },
+  "executorDigests": {
+    "x86_64": "1a2dbb1c93a5d7cf5c4d5cafd2526c152e1cc21611649875db8e1c23837c2874",
+    "aarch64": "faabdeb1db9467d82997d8398e90203799c6ca5dddaaa383ed8bdb75534a6b2d",
+    "armv7": "6a0256fd2e2f093c154421bbc6323b715c324411b25c7794be92c73bbc59271f",
+    "lifecycle": {
+      "x86_64": "3b2720a4d093aeaa82674a75f16e3adc0bfaa76b8357e58ef591d1f15a73a5c0",
+      "aarch64": "f8a9bb0e69dd380d993fcc89cf19e9e3a526a76bdc24c97d53f01001953aad0d",
+      "armv7": "118edf2426e8aaeeea66d1b3b114c86d0aa680c02449755fc37b0d5a288dc430"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "AppShell unit tests (jsdom: tab page, page outside the tab bar with the parent tab current, header actions in one \"…\", primary header action, portal header), real-browser shell and portal fixtures at 390x844 (tab page, hidden live page with Back, header actions menu, drawer from More headed by the whole App name, no empty bar on a tab page without account) plus the existing shell/portal/picker/entry browser checks, full frontend unit suite, typecheck, build, docs version check and npm pack content scan. No full gate, publication or NAS acceptance. Go ipc tests (scope all refused, absent scope binds 127.0.0.1) and the launch unit test."
+  },
+  "ui": {
+    "builtAgainst": "0.23.2",
+    "peer": ">=0.23.2 <0.24.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.2.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Require @synopackageland/ui 0.23.2 or a later 0.23 as a peer and build against 0.23.2.",
+    "Phone header actions share one \"…\"; only primary: true (or a sole entry with an icon) is a bar button.",
+    "Only a page whose own tab is current is a phone tab page; pages outside the tab bar keep their title bar and Back.",
+    "A phone tab page's bar draws no title or brand (UI phone-bar-title=\"none\") while the real title and App brand are always passed; the drawer shows the whole App name and an empty bar is hidden.",
+    "AppShell's page end padding reads --ui-page-end-space.",
+    "Raw TCP listeners are loopback-only; a policy with scope \"all\" is refused (RawTCPPolicyVersion stays 1).",
+    "Add packageCenterUrl() and the guide on offering another Package Land package.",
+    "Reuse the immutable executor release and its six digests."
+  ]
+}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 	"testing"
 	"time"
 )
@@ -155,9 +156,21 @@ func TestListenTCPAdmissionCancellationAndReservationExclusion(t *testing.T) {
 	selected.Close()
 }
 
-func TestListenTCPExplicitAllAndCancelledContext(t *testing.T) {
+func TestTCPPolicyRejectsAllScope(t *testing.T) {
+	bindTCPPolicy(t, `{"schema":1,"listeners":{"mail":{"scope":"all","port":2525}}}`)
+	l, err := ListenTCP(context.Background(), "mail", 0)
+	if err == nil {
+		l.Close()
+		t.Fatal("scope all accepted")
+	}
+	if !strings.Contains(err.Error(), `scope "all" is not supported`) || !strings.Contains(err.Error(), "127.0.0.1") {
+		t.Fatalf("unclear refusal: %v", err)
+	}
+}
+
+func TestListenTCPAbsentScopeIsLoopbackAndCancelledContext(t *testing.T) {
 	port := availableTCPPort(t)
-	bindTCPPolicy(t, fmt.Sprintf(`{"schema":1,"listeners":{"mail":{"scope":"all","port":%d}}}`, port))
+	bindTCPPolicy(t, fmt.Sprintf(`{"schema":1,"listeners":{"mail":{"port":%d}}}`, port))
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if l, err := ListenTCP(ctx, "mail", 0); err == nil {
@@ -169,7 +182,7 @@ func TestListenTCPExplicitAllAndCancelledContext(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer l.Close()
-	if !l.Addr().(*net.TCPAddr).IP.IsUnspecified() {
-		t.Fatalf("explicit all ignored: %s", l.Addr())
+	if ip := l.Addr().(*net.TCPAddr).IP; !ip.Equal(net.IPv4(127, 0, 0, 1)) {
+		t.Fatalf("absent scope did not bind loopback: %s", l.Addr())
 	}
 }

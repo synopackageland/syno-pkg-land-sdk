@@ -130,19 +130,22 @@ const Bare: FunctionalComponent = (_, {slots}) => slots.default?.()
 const inWindow = computed(() => props.ctx !== undefined && !fullPage.value)
 function toFront() {props.ctx?.host?.activateWindow?.()}
 const layout = useTemplateRef<{$el: HTMLElement}>('layout')
-// What AppLayout shows on a phone, read from its markup: the phone signal, a
-// tab bar whose tab is the current page, its own top bar (with Back on a
-// sub-page) and bars hidden on scroll. A UI without the phone shell reads none.
-interface PhoneShell {phone: boolean; tab: boolean; bar: boolean; back: boolean; barsHidden: boolean}
-const phoneShell = ref<PhoneShell>({phone:false,tab:false,bar:false,back:false,barsHidden:false})
+// What AppLayout shows on a phone, read from its markup: the phone signal, the
+// key of the tab bar's current tab, its own top bar (with Back on a sub-page)
+// and bars hidden on scroll. A UI without the phone shell reads none.
+interface PhoneShell {phone: boolean; tab: string | undefined; bar: boolean; back: boolean; barsHidden: boolean}
+const noPhoneShell: PhoneShell = {phone:false,tab:undefined,bar:false,back:false,barsHidden:false}
+const phoneShell = ref<PhoneShell>(noPhoneShell)
+const currentTab = '[data-ui-tab-bar-item][aria-current="page"]'
 function readPhoneShell(root: HTMLElement): PhoneShell {
   const column = Array.from(root.children).find(child => child.hasAttribute('data-ui-layout-main'))
   const chrome = column ? Array.from(column.children).filter(child => child.tagName !== 'MAIN') : []
-  const bar = chrome.find(child => child.hasAttribute('data-ui-mobile-navigation'))
+  // A bar AppLayout keeps hidden (an empty bar on a tab page) is not drawn.
+  const bar = chrome.find(child => child.hasAttribute('data-ui-mobile-navigation') && !(child as HTMLElement).hidden)
   return {
     phone: root.hasAttribute('data-ui-phone'),
-    // A page reached from the tab bar's More is not one of its tabs: it keeps its title.
-    tab: chrome.some(child => !!child.querySelector('[data-ui-tab-bar-item][aria-current="page"]') || child.matches('[data-ui-tab-bar-item][aria-current="page"]')),
+    // Only a tab drawn in the bar counts: More (a page under it) is not a tab item.
+    tab: chrome.map(child => child.matches(currentTab) ? child : child.querySelector(currentTab)).find(item => item)?.getAttribute('data-ui-tab-bar-item') ?? undefined,
     bar: !!bar,
     back: !!bar?.querySelector('[data-ui-mobile-back]'),
     barsHidden: root.hasAttribute('data-ui-bars-hidden'),
@@ -150,7 +153,7 @@ function readPhoneShell(root: HTMLElement): PhoneShell {
 }
 watch(layout, (component, _, onCleanup) => {
   const root = component?.$el
-  if(!(root instanceof HTMLElement)) {phoneShell.value = {phone:false,tab:false,bar:false,back:false,barsHidden:false};return}
+  if(!(root instanceof HTMLElement)) {phoneShell.value = noPhoneShell;return}
   const read = () => {
     const next = readPhoneShell(root)
     const now = phoneShell.value
@@ -159,14 +162,17 @@ watch(layout, (component, _, onCleanup) => {
   read()
   const observer = new MutationObserver(read)
   // One observe call: observing the same node again replaces its options.
-  observer.observe(root, {attributes: true, attributeFilter: ['data-ui-phone', 'data-ui-bars-hidden', 'aria-current'], childList: true, subtree: true})
+  observer.observe(root, {attributes: true, attributeFilter: ['data-ui-phone', 'data-ui-bars-hidden', 'aria-current', 'hidden'], childList: true, subtree: true})
   onCleanup(() => observer.disconnect())
 }, {flush: 'post', immediate: true})
-// A phone outside a DSM window (a full page or no ctx) draws no title row on
-// one of the tab bar's pages: the tab bar already says where the user is. Its
-// one top bar holds only the account and the App's header actions, and is not
-// drawn without them. A sub-page keeps its Back, title and actions.
-const phoneTab = computed(() => phoneShell.value.phone && !inWindow.value && phoneShell.value.tab)
+// A phone outside a DSM window (a full page or no ctx) draws no title, App
+// icon or brand in the bar on one of the tab bar's pages (phone-bar-title
+// "none"): the tab bar already says where the user is. The drawer keeps the
+// brand and screen readers the title; AppLayout hides the bar while it holds
+// nothing. A sub-page keeps its Back, title and actions. A tab page is the page
+// whose own tab is current: a page outside the tab bar (a detail or live page)
+// keeps its title bar even while the App marks a tab current.
+const phoneTab = computed(() => phoneShell.value.phone && !inWindow.value && phoneShell.value.tab !== undefined && phoneShell.value.tab === props.modelValue)
 const portalChrome = ref<PortalChrome>({brand:false,user:false})
 // Where DSM draws no account (ui.banner: hidden), the shell's account also signs out.
 const canSignOut = computed(() => {
@@ -195,12 +201,8 @@ function onHeaderAction(key: string) {
   else emit('headerAction', key)
 }
 watch(accountInBar, shown => {if(!shown) accountOpen.value = false})
-const layoutTitle = computed(() => phoneTab.value ? (barActions.value.length ? '' : undefined) : props.title ?? barTitle.value)
-// With nothing for the bar, no brand either: AppLayout then draws no bar.
-const noBar = computed(() => phoneTab.value && !barActions.value.length && !phoneShell.value.back)
-const layoutBrandName = computed(() => noBar.value ? '' : props.brandName ?? props.ctx?.displayName)
-const layoutBrandIcon = computed(() => noBar.value ? '' : props.brandIcon ?? props.ctx?.appIcon)
-watch([fullPage,layout,accountMergeable], (_, __, onCleanup) => {
+// The bar is shown or hidden in place as it gains or loses content.
+watch([fullPage,layout,accountMergeable,() => phoneShell.value.bar], (_, __, onCleanup) => {
   const root=layout.value?.$el
   if(!fullPage.value || !root) {portalChrome.value={brand:false,user:false};return}
   let undoFit=()=>{}, undoCollapse=()=>{}
@@ -279,7 +281,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
     <slot name="denied" :phone="phone"><Callout tone="danger"><span role="alert">{{ denied.message ?? refusal?.message ?? copy.deniedMessage }}</span></Callout></slot>
   </PageContent>
   <AppLayout v-else ref="layout" :class="['app-shell', {'app-shell-fill': fill, 'app-shell-portal-brand': portalChrome.brand}]" min-height="0" :wide-layout="wideLayout ?? (fullPage ? 'web' : 'window')" :sidebar-storage-key="sidebarStorageKey"
-    :navigation="navigation" :hide-on-scroll="hideOnScroll" :title="layoutTitle" :header-actions="barActions" @header-action="onHeaderAction" :brand-name="layoutBrandName" :brand-icon="layoutBrandIcon" @brand="onBrand">
+    :navigation="navigation" :hide-on-scroll="hideOnScroll" :title="props.title ?? barTitle" :phone-bar-title="phoneTab ? 'none' : 'auto'" :header-actions="barActions" @header-action="onHeaderAction" :brand-name="brandName ?? ctx?.displayName" :brand-icon="brandIcon ?? ctx?.appIcon" @brand="onBrand">
     <template #sidebar>
       <AppSidebar :model-value="modelValue" :groups="groups" @update:model-value="emit('update:modelValue', $event)" />
     </template>
@@ -365,7 +367,9 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
    spaces them from the header and the content. */
 .app-notices { display: flex; flex-direction: column; gap: var(--ui-space-2, 8px); }
 .app-notices[hidden] { display: none; }
-.app-page-content { padding-bottom: var(--ui-space-6, 24px); }
+/* The UI's room after a page's last row: only the safe area while the bars
+   are hidden on a fill page. */
+.app-page-content { padding-bottom: var(--ui-page-end-space, var(--ui-space-6, 24px)); }
 /* A SettingsPage's footer is the bottom of the window, as in DSM: a page that
    shows one drops the space under it, however deeply the App wraps it. */
 .app-page-flush .app-page-content { padding-bottom: 0; }

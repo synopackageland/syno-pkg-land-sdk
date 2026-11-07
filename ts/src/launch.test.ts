@@ -1,5 +1,5 @@
 import {expect,expectTypeOf,test} from 'vitest'
-import {MAX_LAUNCH_ROUTE,dsmLaunchURL,followLaunchRoute,launchRoute,type Context,type LaunchParams} from './index'
+import {MAX_LAUNCH_ROUTE,dsmLaunchURL,followLaunchRoute,packageCenterUrl,launchRoute,type Context,type LaunchParams} from './index'
 
 test('the context carries the launch params and the later launches of the DSM window',()=>{
  expectTypeOf<Context['launchParams']>().toEqualTypeOf<LaunchParams|undefined>()
@@ -50,4 +50,10 @@ test('a desktop link opens the App window with its params encoded the way DSM de
 
 test('a desktop link refuses a package name that is not a DSM package id',()=>{
  expect(()=>dsmLaunchURL('https://nas.example:5001','Bad.Name',{})).toThrow(/package/)
+})
+
+test('packageCenterUrl opens Package Center, relative or on an origin',()=>{
+ expect(packageCenterUrl()).toBe('/?launchApp=SYNO.SDS.PkgManApp.Instance')
+ expect(packageCenterUrl('https://nas.example:5001')).toBe('https://nas.example:5001/?launchApp=SYNO.SDS.PkgManApp.Instance')
+ expect(packageCenterUrl('https://nas.example:5001/webman/index.cgi')).toBe('https://nas.example:5001/?launchApp=SYNO.SDS.PkgManApp.Instance')
 })

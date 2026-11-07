@@ -45,3 +45,16 @@ export function dsmLaunchURL(origin: string, packageId: string, params: LaunchPa
  url.searchParams.set('launchParam', Object.entries(params).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&'))
  return url.href
 }
+
+/** DSM's launch link for Package Center, relative to the DSM origin. */
+const PACKAGE_CENTER = '/?launchApp=SYNO.SDS.PkgManApp.Instance'
+
+/**
+ * The DSM desktop link that opens Package Center, where an administrator
+ * installs a package. Relative (`/?launchApp=SYNO.SDS.PkgManApp.Instance`)
+ * without an origin, else on that origin. It opens Package Center only: DSM
+ * documents no link to a single package's page.
+ */
+export function packageCenterUrl(origin?: string): string {
+ return origin === undefined ? PACKAGE_CENTER : new URL(PACKAGE_CENTER, origin).href
+}

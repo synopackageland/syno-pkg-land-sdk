@@ -19,7 +19,7 @@ await server.listen()
 const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{})})
 const state=page=>page.evaluate(()=>{
  const main=document.querySelector('.sds-standalone-main-window'),tl=main?.querySelector('.x-window-tl')
- const app=document.querySelector('[data-ui-app]').getBoundingClientRect(),bar=document.querySelector('[data-ui-mobile-navigation]')
+ const app=document.querySelector('[data-ui-app]').getBoundingClientRect(),bar=document.querySelector('[data-ui-mobile-navigation]:not([hidden])')
  const tab=document.querySelector('[data-ui-tab-bar]')?.getBoundingClientRect()
  return {collapsed:main?.getAttribute('data-synopkgland-portal-collapsed')??null,dsmBottom:tl?Math.round(tl.getBoundingClientRect().bottom):null,
   appTop:Math.round(app.top),appBottom:Math.round(app.bottom),bar:!!bar,barBottom:bar?Math.round(bar.getBoundingClientRect().bottom):null,

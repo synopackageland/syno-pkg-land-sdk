@@ -12,7 +12,7 @@ No release is made by this change.
 tcp_listeners:
   mail_relay:
     port: 2525
-    # scope defaults to loopback: exactly IPv4 127.0.0.1
+    # binds exactly IPv4 127.0.0.1 (scope: loopback, the only scope)
     port_range: [1024, 65535] # optional explicit configurable-port allowance
 ```
 
@@ -27,9 +27,10 @@ defer listener.Close()
 
 A zero requested port selects the manifest default, rather than an ephemeral
 port. Without `port_range`, only that fixed default is allowed. All ports must
-be unprivileged integers, 1024–65535. Only the declaration selects the address:
-`scope: loopback` (default) means `tcp4` on `127.0.0.1`; explicit `scope: all`
-means `tcp4` on `0.0.0.0`. IPv6, DNS names, arbitrary host strings and privileged
+be unprivileged integers, 1024–65535. A listener binds only `tcp4` on
+`127.0.0.1`: `scope` is `loopback` or omitted, and the SDK refuses a policy
+with any other scope, including `all`, with an error naming the listener.
+Non-loopback addresses, IPv6, DNS names, arbitrary host strings and privileged
 ports are unsupported. Names use lowercase ASCII letters, digits and underscores,
 start with a letter and have at most 64 characters. At most 64 declarations are
 allowed. Duplicate default ports fail CLI validation; overlapping configurable
