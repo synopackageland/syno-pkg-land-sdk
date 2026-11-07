@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Portal phone bar</title>
+<style>
+/* DSM 7.3/7.4's standalone main window as a phone loads it through the
+   Application Portal: ExtJS markup, the header row in .x-window-tl, and the
+   window body sized inline to the viewport less the header (portal-phone.ts). */
+html,body{height:100%;margin:0;overflow:hidden;font-family:Arial,sans-serif}
+.sds-standalone-main-window{position:absolute;left:0;top:0;background:#fff}
+.x-window-tl{border-bottom:1px solid #e3e7eb}
+.sds-standalone-main-window .x-window-header{position:relative;height:39px;box-sizing:border-box;background-repeat:no-repeat;background-position:18px center;background-size:24px 24px}
+.sds-standalone-main-window .x-window-header-text{line-height:20px;font-size:16px;font-weight:700;color:#282828;padding-left:34px;white-space:normal}
+.sds-standalone-main-window-header-text{padding:10px 0 10px 18px;line-height:20px}
+.sds-standalone-main-window-header{position:absolute;top:0;right:0;box-sizing:border-box;padding:10px 18px;height:39px;z-index:2}
+.sds-standalone-main-window-header__toolbar__btn{display:inline-block;height:20px;line-height:20px}
+.sds-standalone-main-window-header__toolbar__btn em{position:relative;display:block;font-style:normal}
+.sds-standalone-main-window-header__toolbar__btn .x-btn-text{height:inherit;line-height:inherit;padding:0;border:0;background:none;font:13px Arial,sans-serif;color:#282828}
+.sds-standalone-main-window-header__toolbar__btn .x-btn-arrow{padding-right:24px}
+.x-window-tc{position:relative}
+.x-window-body{position:relative;overflow:hidden}
+</style></head>
+<body>
+<div class="x-window sds-standalone-main-window sds-window-v5 x-window-maximized active-win" id="main">
+ <div class="x-window-tl" id="tl"><div class="x-window-tr"><div class="x-window-tc">
+  <div class="sds-standalone-main-window-header" id="toolbar"></div>
+  <div class="x-window-header x-panel-icon" id="header"><div class="sds-standalone-main-window-header-text"><span class="x-window-header-text" id="name"></span></div></div>
+ </div></div></div>
+ <div class="x-window-bwrap"><div class="x-window-ml"><div class="x-window-mr"><div class="x-window-mc"><div class="x-window-body" id="body"><div id="app" class="dsmapp-root dsmapp-vue-root" style="height:100%"></div></div></div></div></div>
+  <div class="x-window-bl x-panel-nofooter"><div class="x-window-br"><div class="x-window-bc"></div></div></div></div>
+</div>
+<script type="module" src="./portal-phone.ts"></script>
+</body>
+</html>

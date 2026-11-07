@@ -145,6 +145,15 @@ layouts DSM's banner and menu stay as DSM draws them, except that an App name
 which would run under the account button ends with an ellipsis 12px before
 it; with less than an icon's width free it shows only the App icon. The name
 stays the window's accessible name and, while cut, its tooltip.
+On a phone (that mobile layout with a coarse pointer) the page has one top
+bar. On one of the tab bar's pages DSM's compact banner is that bar; the
+App draws no title row under it (see "Phone top bar"). When the App's own
+bar is shown instead (a sub-page with Back, an App with `header-actions`, or
+an App without a tab bar, whose bar holds the menu button), it takes the
+banner's place: the banner moves up out of the window and the App gets its
+height. The account then moves into the App's bar (below). The banner also
+hides with the App's bars when the page scrolls down and comes back with
+them. Wider layouts, a mouse and a DSM window keep the banner.
 The rules ship in `@synopackageland/sdk/vue/style.css`.
 
 An App whose own frame already names it and shows the account (a full-page
@@ -269,6 +278,19 @@ supported UI releases ignore it.
 An omitted or empty slot draws no accessory row. Its content stays outside
 the page scroller, so navigating between pages can keep the same task bar.
 
+`accessory-desktop="notices"` puts the same slot content at the top of the
+page, after `#notices`, wherever `phone` is false (desktop, a DSM window, a
+narrow window used with a mouse, a tablet). A phone keeps it above the tab
+bar. The App declares the task bar once instead of in both `#notices` and
+`#accessory v-if="phone"`. The default, `bottom`, keeps it in the layout's
+bottom row at every width. Moving between the two places remounts it.
+
+```vue
+<AppShell v-model="page" :pages="pages" :locale="ctx.locale" :ctx="ctx" accessory-desktop="notices">
+  <template #accessory="{phone}"><RecordingBar :compact="phone" /></template>
+</AppShell>
+```
+
 ### Scrolling
 
 On phones, the bars hide as content scrolls down and return on scroll up.
@@ -370,7 +392,30 @@ surface at every width (web, DSM window and mobile):
 
 Other shell spacing, including the body bottom padding, stays unchanged.
 
-On a phone, `AppLayout`'s bar shows the current page entry's `title` (or the
+#### Phone top bar
+
+On a phone outside a DSM window, a page that is one of the `#tabbar`'s tabs
+draws no title row: the tab bar already shows where the user is. No App
+icon or page name is repeated, and the shell's `title` prop and a page's
+`header: true` heading are not shown there (the page keeps a heading for
+screen readers). The one top bar holds only the account and the App's
+`header-actions`; with neither, the shell draws no bar at all. A page reached
+from the tab bar's More, a sub-page (a `PageHeader` with `back`, which shows
+Back, its title and actions), an App without a tab bar and a DSM window keep
+the bar as below. A page with `header: false` names itself through its own
+`PageHeader`, which stays.
+
+The account joins that bar where it would otherwise be a second control: on
+a DSM full page whose host can sign out (`ctx.host.signOut()`), the bar shows
+an account icon, or, with the App's `header-actions`, an account entry after
+them under "…". It opens a sheet with the user, administrator or DSM user,
+and Sign out. The drawer's account footer is then left out. In DSM's portal
+this happens only while the App's bar takes the banner's place; on a tab page
+the banner's own account icon remains. DSM's account menu items other than
+Sign out (Help) are not offered while the banner is hidden. The bar's height
+and icon sizes are the UI's.
+
+Elsewhere, `AppLayout`'s bar shows the current page entry's `title` (or the
 built-in page's name), also for a page whose title is otherwise only in the
 sidebar. A page with `header: false` names itself: the bar takes the title of
 its own `PageHeader`. The shell's `title` prop overrides that phone bar title

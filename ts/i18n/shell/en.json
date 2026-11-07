@@ -4,6 +4,7 @@
   "administrator": "Administrator",
   "dsmUser": "DSM user",
   "signOut": "Sign out",
+  "account": "Account",
   "deniedTitle": "No access",
   "deniedMessage": "Your DSM account is not allowed to use this app. Ask an administrator to allow it in DSM Application Privileges",
   "notes": "Notes",

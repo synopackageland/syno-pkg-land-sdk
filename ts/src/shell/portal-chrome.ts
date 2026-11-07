@@ -145,3 +145,78 @@ export function watchPortalName(root: HTMLElement): () => void {
   clear()
  }
 }
+
+/** On a phone, DSM's standalone header gives way to the App's one top bar.
+ * 'bar': the App draws its own phone bar (a sub-page with Back, a page with
+ * actions or the menu), which takes the header's place. 'scroll': the App's
+ * bars are hidden on scroll, and the header goes with them. The header row
+ * (.x-window-tl) moves up out of the window by its own height and the window
+ * body reaches the bottom of the page (the Portal's maximized window) or is
+ * that much taller (another window), so the App takes the whole page; DSM's
+ * own inline size stays in place underneath; a restore corrects it only when
+ * DSM resized the Portal's window while the header was moved.
+ * false, a window without the banner, a missing header or a root outside the
+ * window body restore DSM's header. Returns the undo.
+ */
+export const portalCollapsedAttr='data-synopkgland-portal-collapsed'
+export const portalHeaderHeight='--synopkgland-portal-header'
+export const portalBodyHeight='--synopkgland-portal-body'
+export function collapsePortalHeader(root: HTMLElement, mode: false|'bar'|'scroll'): () => void {
+ const doc=root.ownerDocument
+ const clear=()=>{
+  for(const element of Array.from(doc.querySelectorAll<HTMLElement>(`[${portalCollapsedAttr}]`))) {
+   element.removeAttribute(portalCollapsedAttr)
+   element.style.removeProperty(portalHeaderHeight);element.style.removeProperty(portalBodyHeight)
+   refitPortalBody(element)
+  }
+ }
+ try {
+  const main=mode && root.isConnected ? root.closest<HTMLElement>(mainSelector) : null
+  const top=main?.querySelector<HTMLElement>(':scope > .x-window-tl')
+  const body=main?.querySelector<HTMLElement>(':scope > .x-window-bwrap .x-window-body')
+  if(!main || !top || !body || !body.contains(root) || main.classList.contains('sds-standalone-main-window--no-banner')) {clear();return ()=>{}}
+  // The header keeps its height while moved (a margin moves it).
+  const header=top.offsetHeight
+  const view=doc.defaultView
+  let height: number
+  if(main.classList.contains('x-window-maximized') && view) {
+   // The Portal's window fills the viewport: the body reaches its bottom from
+   // where it starts without the header. Measured from the window and the
+   // body's place in its frame, which the header's motion does not change.
+   // DSM's own inline height is not used: DSM resizes it (on rotation) while
+   // the header is moved and then subtracts a different height.
+   const wrap=main.querySelector<HTMLElement>(':scope > .x-window-bwrap')!
+   const start=main.getBoundingClientRect().top+(body.getBoundingClientRect().top-wrap.getBoundingClientRect().top)
+   height=Math.round(view.innerHeight-start)
+  } else {
+   // Another window: DSM's inline height (else the drawn one) and the header's.
+   const inline=parseFloat(body.style.height)
+   const stored=parseFloat(main.style.getPropertyValue(portalBodyHeight))
+   const base=Number.isFinite(inline) ? inline : main.hasAttribute(portalCollapsedAttr) && Number.isFinite(stored) ? stored-header : body.offsetHeight
+   height=base+header
+  }
+  if(!header || !(height>0)) {clear();return ()=>{}}
+  if(main.getAttribute(portalCollapsedAttr)!==mode) main.setAttribute(portalCollapsedAttr,mode as string)
+  if(main.style.getPropertyValue(portalHeaderHeight)!==`${header}px`) main.style.setProperty(portalHeaderHeight,`${header}px`)
+  if(main.style.getPropertyValue(portalBodyHeight)!==`${height}px`) main.style.setProperty(portalBodyHeight,`${height}px`)
+ } catch {clear();return ()=>{}}
+ return clear
+}
+
+// A rotation while the header is moved leaves DSM's inline body height short
+// of the header's (DSM 7.3: 380px for 362px in a 402px landscape), and DSM
+// keeps it until the next real resize. On restore, the Portal's maximized
+// window gets the height DSM gives it with the header shown: the viewport
+// less the header and the frame above the body. Other windows are left alone.
+function refitPortalBody(main: HTMLElement) {
+ try {
+  const view=main.ownerDocument.defaultView
+  const top=main.querySelector<HTMLElement>(':scope > .x-window-tl')
+  const wrap=main.querySelector<HTMLElement>(':scope > .x-window-bwrap')
+  const body=wrap?.querySelector<HTMLElement>('.x-window-body')
+  if(!view || !top || !wrap || !body || !main.classList.contains('x-window-maximized')) return
+  const inline=parseFloat(body.style.height)
+  const height=Math.round(view.innerHeight-main.getBoundingClientRect().top-top.offsetHeight-(body.getBoundingClientRect().top-wrap.getBoundingClientRect().top))
+  if(Number.isFinite(inline) && height>0 && Math.abs(inline-height)>1) body.style.height=`${height}px`
+ } catch {}
+}

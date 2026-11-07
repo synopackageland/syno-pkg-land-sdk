@@ -4,6 +4,7 @@
   "administrator": "管理员",
   "dsmUser": "DSM 用户",
   "signOut": "注销",
+  "account": "账户",
   "deniedTitle": "无法访问",
   "deniedMessage": "你的 DSM 账号无权使用此应用程序。请管理员在 DSM 的应用程序权限中开放给你",
   "notes": "附注",
