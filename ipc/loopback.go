@@ -25,7 +25,7 @@ func ReserveLoopback(ctx context.Context, port uint16) (*PortReservation, error)
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	l, err := (&net.ListenConfig{}).Listen(ctx, "tcp4", net.JoinHostPort("127.0.0.1", strconv.Itoa(int(port))))
+	l, err := listenLoopback(ctx, port)
 	if err != nil {
 		return nil, err
 	}
@@ -55,4 +55,9 @@ func ProbeLoopback(ctx context.Context, port uint16) error {
 		return err
 	}
 	return r.Release()
+}
+
+// Shared bind primitive; callers either keep the reservation or own admission.
+func listenLoopback(ctx context.Context, port uint16) (net.Listener, error) {
+	return (&net.ListenConfig{}).Listen(ctx, "tcp4", net.JoinHostPort("127.0.0.1", strconv.Itoa(int(port))))
 }
