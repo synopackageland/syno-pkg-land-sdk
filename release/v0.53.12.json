@@ -25,7 +25,7 @@
     "canonicalTaskDefinitionsUnchanged": true,
     "nasAcceptance": false,
     "rustCratePublished": false,
-    "validation": "Passed the basic release gate (doc checks, SDK version/executor-manifest/protocol-limit/timeout-policy checks, Node typecheck/tests/build, Go vet/build/tests, Python tests, TS typecheck/1237 tests/build/consumer test/pack checks, internal-content scans). Meeting Copilot was type-checked, tested and built with the UI 0.24.0 release candidate under the earlier <0.25.0 peer; it has not yet been re-checked against UI 0.25.0. Go sources are unchanged from 0.53.11. No full gate, QEMU, executor, gateway or Compose-helper rebuild, NAS acceptance or publication."
+    "validation": "Passed the basic release gate (doc checks, SDK version/executor-manifest/protocol-limit/timeout-policy checks, Node typecheck/tests/build, Go vet/build/tests, Python tests, TS typecheck/1237 tests/build/consumer test/pack checks, internal-content scans). Meeting Copilot verified with the published UI 0.25.0 and this SDK: plain npm install without legacy peer deps, vue-tsc, 380 vitest tests and vite build passed; fixture-preview screenshots compared before and after on desktop and phone. Go sources are unchanged from 0.53.11. No full gate, QEMU, executor, gateway or Compose-helper rebuild, NAS acceptance or publication."
   },
   "ui": {
     "builtAgainst": "0.23.5",
