@@ -17,6 +17,10 @@ html,body{height:100%;margin:0;overflow:hidden;font-family:Arial,sans-serif}
 .sds-standalone-main-window-header__toolbar__btn .x-btn-text{height:inherit;line-height:inherit;padding:0;border:0;background:none;font:13px Arial,sans-serif;color:#282828}
 .sds-standalone-main-window-header__toolbar__btn .x-btn-arrow{padding-right:24px}
 .x-window-tc{position:relative}
+/* DSM's window frame stacks both rows: .x-window-tl and .x-window-bwrap are
+   each position:relative with z-index:1, and the body row comes later in the
+   document, so with equal z-index it paints over the header row. */
+.x-window-tl,.x-window-bwrap{position:relative;z-index:1}
 .x-window-body{position:relative;overflow:hidden}
 </style></head>
 <body>

@@ -445,9 +445,12 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
    the UI's --ui-bars-motion); the App's column moves up into the header's
    room by translate, as the UI moves it under its own top bar. Where the
    App's own top bar takes the header's place ("bar") the header is hidden
-   and the App has no room. */
+   and the App has no room. DSM stacks its window rows (.x-window-tl and
+   .x-window-bwrap, both position: relative and z-index: 1) and the body row
+   comes later, so the header is raised one above it: at rest it is drawn
+   over the App's room, and it slides out over the App's content. */
 .sds-standalone-main-window[data-synopkgland-portal-overlay] > .x-window-tl {
-  position: relative; z-index: 1;
+  position: relative; z-index: 2;
   transition: transform var(--synopkgland-portal-motion, 200ms) cubic-bezier(0.32, 0.72, 0, 1), opacity var(--synopkgland-portal-motion, 200ms) cubic-bezier(0.32, 0.72, 0, 1);
 }
 .sds-standalone-main-window[data-synopkgland-portal-overlay] > .x-window-bwrap { margin-top: calc(-1 * var(--synopkgland-portal-header, 0px)); }

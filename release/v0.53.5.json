@@ -1,0 +1,44 @@
+{
+  "version": "0.53.5",
+  "executorVersion": "0.53.3",
+  "executorRootSDK": "v0.49.4-0.20261103141054-34994683c7b8",
+  "packages": {
+    "@synopackageland/sdk": "0.53.5",
+    "@synopackageland/app": "0.53.5",
+    "syno-pkg-land-app": "0.53.5",
+    "synopkgland_app": "0.53.5"
+  },
+  "executorDigests": {
+    "x86_64": "169be9cb1dbf44a5d03b9f92e95b53b238886001448c0b7b0dbbe5a0b1b53499",
+    "aarch64": "347f4132a495e7498cdef377e0b1d08cb0cba62af71e6dfb2552a957b33881de",
+    "armv7": "075f5d78eecbd2e1cb6e16c4c93b9c94fcaac573fc16aba445ee794f66f065ce",
+    "lifecycle": {
+      "x86_64": "3b2720a4d093aeaa82674a75f16e3adc0bfaa76b8357e58ef591d1f15a73a5c0",
+      "aarch64": "f8a9bb0e69dd380d993fcc89cf19e9e3a526a76bdc24c97d53f01001953aad0d",
+      "armv7": "118edf2426e8aaeeea66d1b3b114c86d0aa680c02449755fc37b0d5a288dc430"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Patch checks: basic gate (scripts/gate.sh: docs/version/manifest/timeout/internal-content checks, Go vet/build and core Go units, Python units, Node typecheck/units/build, frontend typecheck, 94 test files / 1219 unit tests, build, packed consumer import and pack inventory), the browser checks in Chromium and WebKit with the portal phone fixture stacking DSM's header and body rows at z-index 1 (header hit-tested on top at rest, and per frame of the hide and show the header is on top and the App's content starts at its bottom), npm pack for both packages. Real DSM 7.3.2 (SA3200D) through the launchApp portal at 390x844 touch emulation with the built rule injected: Home, Meetings, Settings, a record page and Live at rest, hidden and shown again. No full gate, publication or real-device check."
+  },
+  "ui": {
+    "builtAgainst": "0.23.5",
+    "peer": ">=0.23.5 <0.24.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.5.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "In DSM's Application Portal on a phone, DSM's header is stacked above the window body (z-index 2 over DSM's z-index 1 body row), so it is drawn over the App's room instead of under it: no empty band at the top of a phone page at rest, while hiding or while showing.",
+    "The portal phone browser check reproduces DSM's row stacking and checks, at rest and per frame of the hide and show, that the header is on top and the App's content starts at its bottom.",
+    "Reuse the immutable executor/v0.53.3 release and its six digests."
+  ]
+}

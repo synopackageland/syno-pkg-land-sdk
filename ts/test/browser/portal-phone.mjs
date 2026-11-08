@@ -39,7 +39,12 @@ const state=page=>page.evaluate(()=>{
  const content=document.querySelector('[data-ui-layout-main] > main').getBoundingClientRect()
  const tab=document.querySelector('[data-ui-tab-bar]')?.getBoundingClientRect(),scroller=document.querySelector('.app-page')
  const overflow=[document.scrollingElement,...document.querySelectorAll('[data-ui-layout-main] > main, .app-page')].some(element=>element.scrollWidth>element.clientWidth)
- return {collapsed:main?.getAttribute('data-synopkgland-portal-collapsed')??null,dsmBottom:tl?Math.round(tl.getBoundingClientRect().bottom):null,
+ // What a tap on DSM's row reaches at its middle and at the account button:
+ // DSM's row, not the App painted over it (DSM stacks both rows at z-index 1).
+ const row=tl?.getBoundingClientRect(),button=main?.querySelector('.sds-standalone-main-window-header__toolbar__btn')?.getBoundingClientRect()
+ const hits=(x,y)=>{const hit=document.elementFromPoint(x,y);return !!hit&&tl.contains(hit)}
+ const header=row&&row.bottom>1?{middle:hits(innerWidth/2,(Math.max(row.top,0)+row.bottom)/2),account:button&&button.width?hits(button.left+button.width/2,button.top+button.height/2):null}:null
+ return {collapsed:main?.getAttribute('data-synopkgland-portal-collapsed')??null,header,dsmBottom:tl?Math.round(tl.getBoundingClientRect().bottom):null,
   dsmOpacity:tl?Number(getComputedStyle(tl).opacity):null,
   // What layout gives: the header's place, the body's size and the scroller's size.
   layout:{dsm:tl?.offsetTop??null,body:body?[body.offsetTop,body.offsetHeight]:null,scroller:[scroller.offsetHeight,scroller.clientHeight,scroller.clientWidth]},
@@ -77,6 +82,8 @@ try{
    if(portal&&!actions){
     assert.equal(s.bar,false,`${label}: DSM's row is the one bar`)
     assert.equal(s.collapsed,null);assert.equal(s.contentTop,s.dsmBottom,`${label}: the App's content starts under DSM's row`)
+    assert.equal(s.header?.middle,true,`${label}: DSM's row is drawn over the App's room, not under it`)
+    if(user)assert.equal(s.header.account,true,`${label}: the account button is on top`)
    }else if(actions||user){
     assert.equal(s.bar,true,`${label}: one bar for the account or actions`)
     assert.equal(s.appTop,0,`${label}: the App's bar is at the top`)
@@ -108,7 +115,7 @@ try{
    for(let i=0;i<4;i++){await wheel(page,-100);await page.waitForTimeout(60)}
    await page.waitForTimeout(400)
    s=await state(page)
-   if(portal&&!actions){assert.equal(s.collapsed,null,`${label}: DSM's row back`);assert.equal(s.contentTop,s.dsmBottom);assert.equal(s.dsmOpacity,1)}
+   if(portal&&!actions){assert.equal(s.collapsed,null,`${label}: DSM's row back`);assert.equal(s.contentTop,s.dsmBottom);assert.equal(s.dsmOpacity,1);assert.equal(s.header?.middle,true,`${label}: DSM's row on top again`)}
    assert.deepEqual(s.layout,shown,`${label}: showing lays nothing out again`)
    assert.equal(s.resizes,0,`${label}: the page scroller keeps its size on the way back`)
    assert.equal(s.scrollWrites,0)
@@ -131,11 +138,53 @@ try{
    }
    await page.locator('[data-ui-mobile-back]').tap();await page.waitForTimeout(400)
    s=await state(page)
-   if(portal&&!actions)assert.equal(s.collapsed,null,`${label}: DSM's row back after Back`)
+   if(portal&&!actions){assert.equal(s.collapsed,null,`${label}: DSM's row back after Back`);assert.equal(s.header?.middle,true,`${label}: DSM's row on top after Back`)}
    assert.deepEqual(errors,[])
    console.log(`portal phone: ${label} ok`)
    await context.close()
   }
+ }
+ // With motion: every frame of the hide and of the show draws DSM's row over
+ // the App, and the App's content follows the row's bottom (no band between
+ // them). The row ignores taps while it hides; the check lets elementFromPoint
+ // see it, which does not change how it is drawn.
+ for(const [width,height] of [[390,844],[402,874]]){
+  const context=await browser.newContext({viewport:{width,height},isMobile:true,hasTouch:true,deviceScaleFactor:2})
+  const page=await context.newPage(),label=`${width}-portal-motion`
+  await page.goto(`${server.resolvedUrls.local[0]}portal-phone.html?portal=1`)
+  await page.waitForSelector('[data-ready]');await page.waitForTimeout(400)
+  await page.evaluate(()=>{
+   const style=document.createElement('style');style.textContent='.x-window-tl{pointer-events:auto!important}';document.head.append(style)
+   const tl=document.querySelector('.x-window-tl'),main=document.querySelector('[data-ui-layout-main] > main')
+   const on=(x,y)=>{const hit=document.elementFromPoint(x,y);return !!hit&&tl.contains(hit)}
+   window.__frames=[]
+   const sample=()=>{
+    const row=tl.getBoundingClientRect(),content=main.getBoundingClientRect()
+    window.__frames.push({top:row.top,bottom:row.bottom,content:content.top,
+     middle:row.bottom>2?on(innerWidth/2,(Math.max(row.top,0)+row.bottom)/2):null,above:content.top>2?on(innerWidth/2,content.top-1):null})
+    window.__frame=requestAnimationFrame(sample)
+   }
+   sample()
+  })
+  await page.mouse.move(200,450)
+  for(let i=0;i<5;i++){await wheel(page,120);await page.waitForTimeout(60)}
+  await page.waitForTimeout(600)
+  const hidden=await page.evaluate(()=>window.__frames.length)
+  for(let i=0;i<6;i++){await wheel(page,-100);await page.waitForTimeout(60)}
+  await page.waitForTimeout(600)
+  const frames=await page.evaluate(()=>{cancelAnimationFrame(window.__frame);return window.__frames})
+  const moving=frames.filter(frame=>frame.top<-0.5&&frame.bottom>0.5)
+  assert.ok(frames.slice(0,hidden).some(frame=>frame.bottom<=0),`${label}: DSM's row hides`)
+  assert.ok(moving.length>=4,`${label}: frames caught DSM's row moving (${moving.length})`)
+  frames.forEach((frame,i)=>{
+   assert.ok(Math.abs(frame.content-Math.max(frame.bottom,0))<=1,`${label} frame ${i}: the App's content at DSM's row bottom (${frame.content} vs ${frame.bottom})`)
+   assert.notEqual(frame.middle,false,`${label} frame ${i}: DSM's row drawn over the App (row ${frame.top}..${frame.bottom})`)
+   assert.notEqual(frame.above,false,`${label} frame ${i}: DSM's row right above the App's content, no band`)
+  })
+  const last=frames.at(-1)
+  assert.equal(last.top,0,`${label}: DSM's row back at the top`);assert.equal(last.middle,true)
+  console.log(`portal phone: ${label} ok (${frames.length} frames, ${moving.length} moving)`)
+  await context.close()
  }
  // Desktop and a phone in landscape (825x360: wider than the phone layout):
  // DSM's header and the App's own layout as before, no sideways pan.

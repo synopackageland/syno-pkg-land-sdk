@@ -166,7 +166,8 @@ the App's bars when the page scrolls down and comes back with them: it
 follows the UI's own hide-on-scroll decision (the UI's shared gesture
 velocity and thresholds) and moves at the UI's bar speed, at once with
 reduced motion. On a phone the window body is sized once and the banner
-lies over its top, so the banner moves by transform and opacity only: the
+lies over its top (stacked above the body, which DSM puts at the same
+level), so the banner moves by transform and opacity only: the
 App's page scroller keeps its size, nothing writes `scrollTop`, and a
 momentum fling keeps going while the banner goes. The App keeps the
 banner's height as room above its content (`--synopkgland-portal-room`,

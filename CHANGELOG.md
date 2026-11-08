@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.53.5
+
+- In DSM's Application Portal on a phone, DSM's banner is drawn over the App again. DSM stacks the window's header row and body row at the same `z-index: 1` with the body row later, so since 0.53.4 the banner lay under the App's room: an empty band at the top of every tab page at rest. The banner row is now raised above the body row (`z-index: 2`) while it lies over it, shown, while it slides out and back, and hidden. Nothing else changes: the body is still sized once, the banner still moves by transform and opacity only, and nothing writes `scrollTop`
+- The browser check's DSM window stacks the rows as DSM does and checks, at rest and on every frame of the hide and show, that the banner is on top and the App's content starts at its bottom
+- Reuse the immutable executor/v0.53.3 release and its six digests
+
 ## 0.53.4
 
 - In DSM's Application Portal on a phone, the window body is sized once and DSM's banner hides and shows by transform and opacity only: no margin, height or `top` change, no page scroller resize and no `scrollTop` write while scrolling, so a momentum fling (iOS Safari) keeps going when the banner goes

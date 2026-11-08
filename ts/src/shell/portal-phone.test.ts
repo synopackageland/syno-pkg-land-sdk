@@ -85,6 +85,14 @@ test('the room counts in the UI\'s own --ui-bars-room sum',()=>{
  const shell=readFileSync(join(__dirname,'AppShell.vue'),'utf8')
  expect(shell).toContain('--ui-bars-room: calc(var(--ui-bars-top-box, 0px) + max(var(--ui-bars-bottom-box, 0px), var(--ui-safe-bottom, 0px)) + var(--ui-bottom-accessory-height, 0px) + var(--synopkgland-portal-room, 0px));')
 })
+test('DSM\'s header row is stacked above its body row',()=>{
+ // DSM gives .x-window-tl and .x-window-bwrap position: relative and z-index: 1, and the body row comes later:
+ // a header at z-index 1 is drawn under the App's room (an empty band at the top of a phone page).
+ const shell=readFileSync(join(__dirname,'AppShell.vue'),'utf8')
+ const rule=shell.match(/\.sds-standalone-main-window\[data-synopkgland-portal-overlay\] > \.x-window-tl \{([^}]*)\}/)
+ expect(rule?.[1]).toContain('position: relative')
+ expect(Number(rule?.[1].match(/z-index: (\d+)/)?.[1])).toBeGreaterThan(1)
+})
 test('no banner, a root outside the window body or a detached root collapse nothing',()=>{
  const f=dsmWindow()
  f.main.classList.add('sds-standalone-main-window--no-banner')
