@@ -20,10 +20,11 @@ Raw success returns `response_type: "raw"`, `content_type`, `size`, `sha256`, an
 exactly one of `body` (base64, including empty string) or `staging` (bare handle).
 At most 32768 body bytes are inline, keeping raw results within the 64 KiB
 frame bounds. Larger bodies use a private staging transport. Classified
-read-only calls return `memory_staging: true` and use verified tmpfs next to the
-executor socket:
+read-only bodies above 32 KiB and at most 1 MiB may return
+`memory_staging: true` and use verified tmpfs next to the executor socket:
 `/run/synopkgland/<package>/read-staging/root-<32 lowercase hex digits>`.
-Mutating/unclassified calls retain the existing persistent transport:
+Larger read-only bodies, small bodies whose tmpfs handoff fails, and
+mutating/unclassified calls use the existing persistent transport:
 `/var/packages/<package>/var/executor-staging/root-<32 lowercase hex digits>`.
 The directory is private (0700), the random file is owned by the App (0600).
 Read, verify size and SHA-256, and immediately unlink it. Never send the path,
@@ -33,19 +34,28 @@ Apps use their existing `webapi.call` service and consume the same wire result
 locally. They must not inline a large body into a bridge/RPC reply.
 
 This reuses the output-spool protocol rather than adding a download endpoint,
-token store or new privileged operation. Raw transfers reserve their actual size
-against a 10 GiB + 256 MiB staging budget, including already staged output and
-active raw reservations. Metadata `expected_size` is checked before dispatch;
-otherwise admission waits for validated CGI headers, before any body write.
-Content-Length supplies the reservation when present; only a response with
-neither size source reserves the approved profile ceiling. Space available to
-the package account is checked on the staging filesystem, accounting for other
-active reservations. Disk-query failures refuse the transfer. Admission is
-conservative if the scan already counts another active file. Read-only staging
-also has a hard 256-file cap and requires enough available tmpfs capacity; it
-never falls back to persistent storage. Rebuild the App runtime and executor
-together so both support `memory_staging`. See [runtime storage](idle-storage.md)
-for audit buffering and crash-loss semantics.
+token store or new privileged operation. A classified read-only call with the
+optional tmpfs spool buffers up to 1 MiB before spilling to persistent staging;
+an unknown Content-Length never restricts the transfer to tmpfs capacity.
+Small tmpfs handoffs share a 1 MiB aggregate cap and a 256-file cap. Missing,
+full or failed tmpfs falls back to persistent staging using the same bytes,
+without repeating the DSM call. `files.read` uses its original persistent path.
+
+Persistent raw transfers reserve their actual size against a 10 GiB + 256 MiB
+staging budget, including already staged output and active raw reservations.
+Metadata `expected_size` is validated before dispatch; otherwise validated CGI
+Content-Length supplies the reservation. With neither size source, a transfer
+that needs persistent staging reserves the approved profile ceiling. Large
+known-size bodies reserve before dispatch or at header admission; unknown-size
+bodies reserve before crossing the memory cap. A failed small tmpfs handoff
+reserves its buffered size before creating the persistent copy. Space available
+to the package account is checked on the persistent staging filesystem,
+accounting for other active reservations. Disk-query failures refuse persistent
+transfers. Admission is conservative if the scan already counts another active
+file. Small successful memory handoffs never probe or create the persistent
+spool. Rebuild the App runtime and executor together so both support
+`memory_staging`. See [runtime storage](idle-storage.md) for audit buffering and
+crash-loss semantics.
 The root.run quota stays 256 MiB. The two shared
 output slots and one-hour orphan reclamation still bound abandoned output.
 Open output files remain locked so cleanup cannot delete an active long transfer;

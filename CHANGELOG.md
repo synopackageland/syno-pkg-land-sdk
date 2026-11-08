@@ -4,7 +4,7 @@
 
 - Buffer classified read-only delegated WebAPI audit in a bounded memory ring; overflow drops the oldest events without touching disk and emits one `dropped:N` marker on the next real flush
 - Flush reads only when every system-array disk is known awake, before durable audit, or on graceful stop; keep mutations synchronous and synchronize the audit directory only on creation or rotation
-- Put read/download intermediate output in bounded private tmpfs and consume it without creating persistent staging; preserve existing transfer ceilings, capacity checks, ownership and consent
+- Keep file reads on their original persistent staging path; bound read-only raw output in memory/tmpfs to 1 MiB and use persistent staging above that cap or when tmpfs is unavailable, full or fails
 - Prepare native identity bridge descriptors once at startup; legacy kernels require executable tmpfs and never stage these checks to persistent storage
 - Document crash loss of unflushed read audit and the need to rebuild both the executor and App runtime
 

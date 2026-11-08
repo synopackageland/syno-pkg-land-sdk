@@ -12,7 +12,8 @@ responsible for their own disk activity.
 | Approved executor tasks | Root-protected `runtime/tasks.json`. Each check still reads both exact scheduler definitions. Only a changed or missing verified inventory is durably replaced. Failed verification retains the previous cleanup inventory and fails readiness. |
 | Read-only delegated WebAPI audit | An in-memory ring of at most 256 events and 64 KiB of serialized JSONL. Overflow drops the oldest events without opening, appending or rotating the audit file. |
 | Mutating and unclassified WebAPI audit | Synchronous durable JSONL, with one file synchronization per append batch. The directory is synchronized only on creation or rotation. Buffered reads precede the mutation in the same batch. |
-| Read/download intermediate output | Package-private, verified tmpfs next to the executor socket. At most 256 files and the existing 10 GiB + 256 MiB staging budget, further limited by available tmpfs space and active reservations. No persistent fallback; insufficient capacity refuses the transfer. |
+| File read intermediate output | `files.read` retains the package-private persistent staging path and its existing transfer limit. Reading the source data volume already requires its disks. |
+| Raw WebAPI intermediate output | Classified reads retain at most 1 MiB per active output in memory. Bodies above 32 KiB and at most 1 MiB may use verified private tmpfs next to the executor socket, bounded to 1 MiB and 256 unconsumed files per executor. Larger output and unavailable/full/failed tmpfs use the original persistent spool and its capacity checks. |
 | Native identity bridges | Sealed memory descriptors, or a fixed set of unlinked read-only executable tmpfs descriptors prepared once at startup on older kernels. Account and privilege checks execute the bridge anew without restaging it to disk per request. |
 | Policies, grants, revocations, root-job records and settings | Existing persistent protected/package state; synchronization and authorization rules remain in force. Real changes and active work may write. |
 | Identity gateway and account bridge | Sessions, WebSocket revalidation and idle supervision stay in memory. Durable account/deletion records change on sign-in/account changes or pending deletion attempts. No pending deletion means no retry writes. |
@@ -55,14 +56,18 @@ existing owner filtering and format. Readers see events after flush in
 loss can lose the last unflushed read events and their drop count. Mutating
 audit, grants, revocations and operation records keep their durability rules.
 
-Staged read and raw responses identify transient output with `memory_staging`.
+Small staged raw responses identify transient output with `memory_staging`.
 The Go client resolves it next to its trusted executor socket, checks the
 private directory, consumes the file and removes it. Rebuild both the executor
 and the App runtime together; a direct protocol consumer must support this
-field. The protocol's maximum transfer size is unchanged, but a transfer must
-fit available tmpfs capacity. A requested download or application-owned output
-can still read/write user data; buffering audit cannot suppress disk activity
-inside DSM APIs or App code.
+field. The protocol's maximum transfer size is unchanged. A body crossing the
+1 MiB memory cap continues in persistent staging without repeating the DSM call.
+If a small tmpfs handoff fails, the same buffered bytes use persistent staging.
+The two shared output slots bound active body buffers; unconsumed tmpfs output
+has a separate 1 MiB aggregate cap. Persistent staging or destination capacity
+can still limit a transfer. A requested download or application-owned output
+can read/write user data; buffering audit cannot suppress disk activity inside
+DSM APIs or App code.
 
 Scheduler readback still uses DSM's native API and checks both exact task
 definitions on every check. DSM's EventScheduler initializer writes its SQLite

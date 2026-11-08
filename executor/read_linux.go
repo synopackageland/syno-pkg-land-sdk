@@ -30,37 +30,18 @@ var errTooLarge = errors.New("file exceeds the limit")
 // to the subject and copies the source into it, and names the staged file.
 // The kernel checks the subject's own permission to open the source.
 func (w subprocessWriter) Read(ctx context.Context, s Subject, root, relative string, limit int64) (string, int64, error) {
-	if w.Memory {
-		memoryReadFilesMu.Lock()
-		defer memoryReadFilesMu.Unlock()
-	}
 	if !cleanPath(root) || !validRelative(relative) || limit <= 0 || limit > maxReadBytes {
 		return "", 0, errors.New("request")
 	}
-	var dir *os.File
-	var err error
-	if w.Memory {
-		dir, err = w.rootStagingDir()
-	} else {
-		var parent string
-		parent, err = filepath.EvalSymlinks(filepath.Dir(w.Staging))
-		if err == nil {
-			dir, err = openBeneath(parent, filepath.Base(w.Staging), syscall.O_RDONLY|syscall.O_DIRECTORY, 0)
-		}
+	parent, err := filepath.EvalSymlinks(filepath.Dir(w.Staging))
+	if err != nil {
+		return "", 0, err
 	}
+	dir, err := openBeneath(parent, filepath.Base(w.Staging), syscall.O_RDONLY|syscall.O_DIRECTORY, 0)
 	if err != nil {
 		return "", 0, err
 	}
 	defer dir.Close()
-	if w.Memory {
-		names, err := dir.Readdirnames(maxMemoryReadFiles + 1)
-		if err != nil && err != io.EOF {
-			return "", 0, err
-		}
-		if len(names) >= maxMemoryReadFiles {
-			return "", 0, errRawSpace
-		}
-	}
 	random := make([]byte, 16)
 	if _, err = rand.Read(random); err != nil {
 		return "", 0, err
@@ -72,12 +53,6 @@ func (w subprocessWriter) Read(ctx context.Context, s Subject, root, relative st
 	}
 	out := os.NewFile(uintptr(fd), name)
 	defer out.Close()
-	if w.Memory {
-		if err := syscall.Flock(fd, syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-			syscall.Unlinkat(int(dir.Fd()), name)
-			return "", 0, err
-		}
-	}
 	kept := false
 	defer func() {
 		if !kept {

@@ -44,6 +44,7 @@ type rawWebOutput struct {
 	body        *rootOutput
 	hash        hash.Hash
 	admit       func(int64) error
+	beforeBody  func(int64) error
 }
 
 func (w *rawWebOutput) Write(p []byte) (int, error) {
@@ -68,6 +69,11 @@ func (w *rawWebOutput) Write(p []byte) (int, error) {
 	if len(p) > 0 {
 		if w.length >= 0 && int64(len(p)) > w.length-w.body.n {
 			return 0, errOutputLimit
+		}
+		if w.beforeBody != nil {
+			if err := w.beforeBody(w.body.n + int64(len(p))); err != nil {
+				return 0, err
+			}
 		}
 		if _, err := w.body.Write(p); err != nil {
 			return 0, err
@@ -160,9 +166,6 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 	defer e.rootSlotDone()
 	staging := e.RootStaging
 	memory := e.ReadStaging != nil && e.Policy.WebAPI[d.Scope].readOnly(p.API, p.Method, p.Version)
-	if memory {
-		staging = e.ReadStaging
-	}
 	limit := e.Policy.WebAPI[d.Scope].RawMaxBytes
 	var reserved int64
 	defer func() {
@@ -171,6 +174,11 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 		e.rootMu.Unlock()
 	}()
 	out := &rootOutput{limit: limit, spillAt: inlineWebAPIRaw + 1, staging: staging, stagingLimit: maxWebAPIStaging, failed: make(chan struct{})}
+	if memory {
+		// Unknown-length bodies stay bounded in memory and spill directly to
+		// the persistent spool when they cross the small-body cap.
+		out.spillAt = maxMemoryReadStaging + 1
+	}
 	defer out.discard()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -184,9 +192,6 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 	reserve := func(size int64) error {
 		if size < 0 {
 			size = limit
-			if memory {
-				size = min(size, maxMemoryReadStaging)
-			}
 		}
 		if size > limit {
 			return errOutputLimit
@@ -218,8 +223,17 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 		out.limit = size
 		return nil
 	}
+	admit := func(size int64) error {
+		if memory && (size < 0 || size <= maxMemoryReadStaging) {
+			if size >= 0 {
+				out.limit = size
+			}
+			return nil
+		}
+		return reserve(size)
+	}
 	if p.ExpectedSize != nil {
-		if err := reserve(*p.ExpectedSize); err != nil {
+		if err := admit(*p.ExpectedSize); err != nil {
 			if errors.Is(err, errRawSpace) {
 				return deny("NO_SPACE")
 			}
@@ -227,6 +241,17 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 		}
 	}
 	w := &rawWebOutput{ctx: ctx, body: out, hash: sha256.New()}
+	if memory {
+		w.beforeBody = func(total int64) error {
+			if total > out.limit {
+				return errOutputLimit
+			}
+			if total > maxMemoryReadStaging && reserved == 0 {
+				return reserve(out.limit)
+			}
+			return nil
+		}
+	}
 	w.admit = func(length int64) error {
 		size := length
 		if p.ExpectedSize != nil {
@@ -239,7 +264,7 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 		if budgetSize < 0 {
 			budgetSize = limit
 		}
-		if err := reserve(size); err != nil {
+		if err := admit(size); err != nil {
 			return err
 		}
 		timer = time.AfterFunc(time.Until(started.Add(budget.WebAPIRawForSize(budgetSize))), cancel)
@@ -302,10 +327,24 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 		return deny(code)
 	}
 	reply := map[string]any{"response_type": "raw", "content_type": w.contentType, "size": out.n, "sha256": hex.EncodeToString(w.hash.Sum(nil))}
-	if out.file == nil {
+	if out.file == nil && out.n <= inlineWebAPIRaw {
 		// []byte encodes as base64; empty bodies must encode as "", never null.
 		reply["body"] = append([]byte{}, out.mem.Bytes()...)
 	} else {
+		if out.file == nil && memory {
+			if name, ok := e.keepMemoryRaw(out.mem.Bytes()); ok {
+				reply["staging"], reply["memory_staging"] = name, true
+				return success(reply)
+			}
+			// Keep the original bytes until tmpfs handoff succeeds. Capacity,
+			// mount and write failures all fall back to the persistent spool.
+			if err := reserve(out.n); err != nil {
+				if errors.Is(err, errRawSpace) {
+					return deny("NO_SPACE")
+				}
+				return deny("STORAGE_ERROR")
+			}
+		}
 		name, _, err := out.keep()
 		if err != nil {
 			if errors.Is(err, syscall.ENOSPC) || errors.Is(err, syscall.EDQUOT) {
@@ -314,9 +353,6 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 			return deny("STORAGE_ERROR")
 		}
 		reply["staging"] = name
-		if memory {
-			reply["memory_staging"] = true
-		}
 	}
 	return success(reply)
 }

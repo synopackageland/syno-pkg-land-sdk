@@ -191,7 +191,7 @@ func (w subprocessWriter) Used() (int64, error) {
 	}
 	var used int64
 	for _, name := range names {
-		if !strings.HasPrefix(name, "root-") && !(w.Memory && strings.HasPrefix(name, "read-")) {
+		if !strings.HasPrefix(name, "root-") {
 			continue
 		}
 		// Opened without following: a symlink is no output.

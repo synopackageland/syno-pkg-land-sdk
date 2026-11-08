@@ -252,7 +252,7 @@ func load(pkg, exe string) (*Executor, int, int, error) {
 	dsm := newDSM(filepath.Join(stateBase, pkg))
 	staging := subprocessWriter{Staging: filepath.Join("/var/packages", pkg, "var/executor-staging"), Executable: exe, PackageUID: uid, PackageGID: gid}
 	reads := subprocessWriter{Staging: filepath.Join(socketBase, pkg, "read-staging"), Executable: exe, PackageUID: uid, PackageGID: gid, Memory: true}
-	e := &Executor{Policy: p, DSM: dsm, Tasks: dsm, Writer: staging, Reader: reads, Runner: rootPrograms{Dir: dir, Executable: exe}, RootStaging: staging, ReadStaging: reads, Store: &Store{Dir: state}, Now: time.Now, ExecutorDigest: ed, PolicyDigest: pd}
+	e := &Executor{Policy: p, DSM: dsm, Tasks: dsm, Writer: staging, Reader: staging, Runner: rootPrograms{Dir: dir, Executable: exe}, RootStaging: staging, ReadStaging: reads, Store: &Store{Dir: state}, Now: time.Now, ExecutorDigest: ed, PolicyDigest: pd}
 	if p.Portal != nil {
 		e.Portal = portalEntry{Package: pkg, Policy: *p.Portal, Paths: dsmPortal, DSM: dsm, StateDir: state, OperationBudget: p.budgets().Duration("operation")}
 	}

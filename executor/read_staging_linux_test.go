@@ -4,7 +4,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,23 +11,6 @@ import (
 
 	"golang.org/x/sys/unix"
 )
-
-func TestReadStagingReservationsStayBounded(t *testing.T) {
-	e := &Executor{ReadStaging: dirStaging{t.TempDir()}}
-	release, err := e.reserveReadStaging(maxMemoryReadStaging)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := e.reserveReadStaging(1); !errors.Is(err, errRawSpace) {
-		t.Fatal("parallel reads exceeded memory capacity", err)
-	}
-	release()
-	release, err = e.reserveReadStaging(maxMemoryReadStaging)
-	if err != nil {
-		t.Fatal("reservation leaked", err)
-	}
-	release()
-}
 
 func TestServiceStopFlushesBufferedAudit(t *testing.T) {
 	if os.Geteuid() != 0 {

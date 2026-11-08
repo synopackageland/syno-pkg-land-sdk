@@ -188,8 +188,8 @@ type Executor struct {
 	Reader      FileReader
 	Runner      RootRunner
 	RootStaging RootStaging
-	// ReadStaging is bounded tmpfs shared with the package account. It carries
-	// read/download outputs; mutating root programs retain their durable spool.
+	// ReadStaging is optional bounded tmpfs for small read-only raw outputs.
+	// Larger outputs and files.read use the persistent package spool.
 	ReadStaging RootStaging
 	// StopStep runs the policy's stop step for a package stop or upgrade.
 	StopStep func(reason string)
