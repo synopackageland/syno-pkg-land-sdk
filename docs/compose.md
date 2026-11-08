@@ -830,3 +830,11 @@ chown and App root preparation remain unsupported by the SDK initializer.
 Existing package-UID initialization keeps its private-directory and ownership
 checks. These additions require rebuilding with the new SDK; existing installed
 Apps and images receive no automatic identity or capability change.
+
+`run_as` changes the identity assigned by Container Manager inside this service.
+The SPK lifecycle, Compose control tool and identity gateway remain package-user
+processes. Declaring container-root does not enable `rootOps`, install an SDK
+executor, create a privileged host task or request SDK administrator authorization.
+The manifest/plan records `host_elevation: false` for this control path; this does
+not mean that container UID 0 is remapped to an unprivileged host UID. Normal DSM
+administrator sign-in remains the entry gate for administrator-only Apps.

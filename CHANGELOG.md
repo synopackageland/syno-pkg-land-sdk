@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.53.7
+
+- Let explicitly opted-in container-root services load declared runtime environment values through the SDK initializer; retain package-UID defaults, source ownership validation and read-only SDK mounts
+- Permit explicit DAC_OVERRIDE for access to retained private package-UID data without recursive ownership changes; root filesystem, bridge networking and host-mount restrictions remain in force
+- Keep root storage initialization, runtime file generation, preparation and periodic commands refused
+- Record reproducible Compose planner and storage-init helper digests for both supported container architectures
+- Reuse the immutable executor/v0.53.5 release and its six digests
+
 ## 0.53.6
 
 - In DSM's Application Portal on a phone, DSM's banner is drawn over the App again. DSM stacks the window's header row and body row at the same `z-index: 1` with the body row later, so since 0.53.4 the banner lay under the App's room: an empty band at the top of every tab page at rest. The banner row is now raised above the body row (`z-index: 2`) while it lies over it, shown, while it slides out and back, and hidden. Nothing else changes: the body is still sized once, the banner still moves by transform and opacity only, and nothing writes `scrollTop`

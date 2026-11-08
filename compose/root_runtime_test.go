@@ -21,7 +21,7 @@ func TestExplicitRootRuntimeEnvironmentRetainsIsolation(t *testing.T) {
 	if s.User != "0:0" || !s.ReadOnly || len(s.CapAdd) != 1 || s.CapAdd[0] != "DAC_OVERRIDE" || len(s.CapDrop) != 1 || s.CapDrop[0] != "ALL" {
 		t.Fatalf("isolation changed: %+v", s)
 	}
-	if !p.Services[0].ContainerRoot || p.Services[0].RootReason == "" {
+	if !p.Services[0].ContainerRoot || p.Services[0].RootReason == "" || p.Services[0].HostElevation {
 		t.Fatal("missing explicit root inventory")
 	}
 	for _, m := range s.Volumes {

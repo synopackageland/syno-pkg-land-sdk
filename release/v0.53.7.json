@@ -1,0 +1,68 @@
+{
+  "version": "0.53.7",
+  "executorVersion": "0.53.5",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.7",
+    "@synopackageland/app": "0.53.7",
+    "syno-pkg-land-app": "0.53.7",
+    "synopkgland_app": "0.53.7"
+  },
+  "executorDigests": {
+    "x86_64": "78125a96c428dd3322056669d27d7269dfcac78057a34f22d1bac9741393a957",
+    "aarch64": "ed9e21ffd6f6f46927eddd6a11a68ccd201f4ebd680846b81d266845edc180da",
+    "armv7": "21787da130a653f66fb6a71c859868c1c144cd184d896c0df44f87eb44f7c0ca",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Passed targeted Compose planner/runtime/storage-init tests, SDK version and executor-manifest tests/checks, canonical Compose helper builds for x86_64 and aarch64 without target execution, Node and frontend npm builds/packs, package version/inventory and tarball content scans. Passed UID-0 read-only container smoke loading a synthetic UID-1000 private seed with only DAC_OVERRIDE. No full gate, QEMU, executor rebuild, NAS acceptance or publication."
+  },
+  "ui": {
+    "builtAgainst": "0.23.5",
+    "peer": ">=0.23.5 <0.24.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.5.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Support runtime-environment-only initialization for explicitly opted-in container-root services",
+    "Allow explicit DAC_OVERRIDE for retained package-UID private data without recursive chown",
+    "Retain package identity defaults and root storage/host-mount restrictions",
+    "Rebuild both Compose helpers for x86_64 and aarch64 with canonical CLI build inputs",
+    "Reuse the immutable executor/v0.53.5 release and its six digests"
+  ],
+  "composeHelpers": {
+    "sdkVersion": "0.53.7",
+    "goToolchain": "go1.26.10",
+    "helpers": {
+      "x86_64": {
+        "plan": "18e731de71e12daa8f31b8b151e92ac071e7b24f234ad152c9bc0d1cc700b02e",
+        "storage-init": "e6b355154993ee2f3448c513bcdc01d1034cf27209de67aad0bd33b1c6d99e21"
+      },
+      "aarch64": {
+        "plan": "3cf26ab6a25a103f5ea0252e439a025dc175bb7b9a0243497a1118d07165597b",
+        "storage-init": "7c9e0ec63fb20569c7e9833a50d7073c68168b923f8baafd9fe826df44bb8f9e"
+      }
+    }
+  },
+  "npmArtifacts": {
+    "synopackageland-app-0.53.7.tgz": {
+      "sha256": "f14f3ef1e903c892b4b04148cc73961e0d004ce500a59de630bde9f49e4cf7ca"
+    },
+    "synopackageland-sdk-0.53.7.tgz": {
+      "sha256": "b4a62c4e64c0b6b364bf8bef6cf443ff736e3fa98f30348933528e335ed8cdbb"
+    }
+  }
+}

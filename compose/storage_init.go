@@ -54,7 +54,7 @@ func applyStorageInit(pkg string, s *types.ServiceConfig, init *StorageInitializ
 		return nil
 	}
 	invalid := func() error {
-		return problem("COMPOSE_STORAGE_INIT_INVALID", "%s storage_init needs a nonroot service, 1-32 private directories on writable mounts and explicit entrypoint/command argv; /synopkgland/storage-init is reserved for the SPK initializer", s.Name)
+		return problem("COMPOSE_STORAGE_INIT_INVALID", "%s storage_init needs explicit entrypoint/command argv and package-owned private directories, or an explicit root service with runtime environment only; /synopkgland/storage-init is reserved for the SPK initializer", s.Name)
 	}
 	if (rootContainer && !rootEnvironmentOnly(*init)) || (!rootContainer && len(init.Directories) == 0) || len(init.Directories) > 32 || s.Entrypoint == nil || len(s.Entrypoint)+len(s.Command) == 0 {
 		return invalid()

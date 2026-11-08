@@ -14,6 +14,7 @@ remain in `node/` and `ts/` and expose the same gate commands.
 | `scripts/ts-gate.sh` | Frontend typecheck/units/build, local packed consumer import, package inventory and content scan | Same checks |
 | Node/frontend `prepack` | Build and static manifest/version check | No integration checks |
 | `scripts/executor-manifest.mjs --check` | Validate committed inventory and generated copies | `--verify-build` compares explicitly supplied build evidence |
+| `scripts/compose-helper-digests.sh <output-directory>` | Manual reproducible Compose planner/storage-init build for x86_64/aarch64 with canonical CLI toolchain/flags; record its manifest in the release record | No target execution or QEMU |
 | `scripts/executor-digests.sh`, `scripts/gate-full.sh` | Manual integration commands | Retain target digests and cold comparison |
 | `scripts/prepare-npm-publish.py` | Safe archive extraction and byte-preserving repack | No integration checks |
 | `scripts/publish-npm.py` | Metadata validation, directory publication with scripts disabled | No integration checks |
