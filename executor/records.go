@@ -219,44 +219,61 @@ func (s *Store) Audit(event AuditEvent) error {
 	return s.flushAuditLocked(append(b, '\n'))
 }
 
-func (s *Store) appendAudit(b []byte) error {
+// The bool acknowledges a complete, file-synchronized batch even if closing
+// the file or synchronizing its new directory entry subsequently fails.
+func (s *Store) appendAudit(b []byte) (bool, error) {
 	path := filepath.Join(s.Dir, "audit.jsonl")
 	info, err := os.Lstat(path)
 	if err != nil && !os.IsNotExist(err) {
-		return err
+		return false, err
 	}
 	if os.IsNotExist(err) {
 		s.audit.directoryDirty = true
 	}
 	if err == nil {
 		if !info.Mode().IsRegular() || info.Mode().Perm() != 0600 {
-			return errors.New("audit mode")
+			return false, errors.New("audit mode")
 		}
 		if info.Size()+int64(len(b)) > maxAuditBytes/2 {
 			if err = os.Rename(path, filepath.Join(s.Dir, "audit.previous")); err != nil {
-				return err
+				return false, err
 			}
 			s.audit.directoryDirty = true
 		}
 	}
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer f.Close()
+	before, err := f.Stat()
+	if err != nil {
+		return false, err
+	}
+	rollback := func(cause error) (bool, error) {
+		// ENOSPC/RLIMIT_FSIZE can write a prefix. Never leave half a JSONL
+		// event behind for the next retry or the existing audit readers.
+		truncateErr := f.Truncate(before.Size())
+		syncErr := f.Sync()
+		return false, errors.Join(cause, truncateErr, syncErr)
+	}
 	n, err := f.Write(b)
 	if err != nil {
-		return err
+		return rollback(err)
 	}
 	if n != len(b) {
-		return io.ErrShortWrite
+		return rollback(io.ErrShortWrite)
 	}
 	if err = f.Sync(); err != nil {
-		return err
+		return rollback(err)
 	}
 	if err = f.Close(); err != nil {
-		return err
+		return true, err
 	}
+	return true, s.syncAuditDirectory()
+}
+
+func (s *Store) syncAuditDirectory() error {
 	if s.audit.directoryDirty {
 		dir, err := os.Open(s.Dir)
 		if err != nil {

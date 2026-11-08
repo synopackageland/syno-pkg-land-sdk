@@ -69,7 +69,7 @@ func (s *Store) FlushAudit() error {
 func (s *Store) flushAuditLocked(tail []byte) error {
 	q := &s.audit
 	if len(q.events) == 0 && q.dropped == 0 && len(tail) == 0 {
-		return nil
+		return s.syncAuditDirectory()
 	}
 	b := make([]byte, 0, q.bytes+len(tail)+256)
 	if q.dropped > 0 {
@@ -85,21 +85,22 @@ func (s *Store) flushAuditLocked(tail []byte) error {
 		b = append(b, event...)
 	}
 	b = append(b, tail...)
-	if err := s.appendAudit(b); err != nil {
+	written, err := s.appendAudit(b)
+	if !written {
 		return err
 	}
 	clear(q.events)
 	q.events = q.events[:0]
 	q.bytes, q.dropped = 0, 0
 	q.marker = AuditEvent{}
-	return nil
+	return err
 }
 
 func (s *Store) FlushAuditIfAwake(awake func() bool) error {
 	// Do not even probe sysfs when there is nothing to flush.
 	s.audit.mu.Lock()
 	defer s.audit.mu.Unlock()
-	if len(s.audit.events) == 0 && s.audit.dropped == 0 {
+	if len(s.audit.events) == 0 && s.audit.dropped == 0 && !s.audit.directoryDirty {
 		return nil
 	}
 	if !awake() {
