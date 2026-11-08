@@ -1,0 +1,68 @@
+{
+  "version": "0.53.8",
+  "executorVersion": "0.53.5",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.8",
+    "@synopackageland/app": "0.53.8",
+    "syno-pkg-land-app": "0.53.8",
+    "synopkgland_app": "0.53.8"
+  },
+  "executorDigests": {
+    "x86_64": "78125a96c428dd3322056669d27d7269dfcac78057a34f22d1bac9741393a957",
+    "aarch64": "ed9e21ffd6f6f46927eddd6a11a68ccd201f4ebd680846b81d266845edc180da",
+    "armv7": "21787da130a653f66fb6a71c859868c1c144cd184d896c0df44f87eb44f7c0ca",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Passed targeted Compose planner/runtime/storage-init tests including a generated-worker second-interpolation regression, SDK version/executor manifest tests/checks, canonical x86_64/aarch64 Compose helper builds without target execution, both npm builds/packs and content scans. A real Docker Compose run consumed generated worker YAML, loaded a UID-12345 synthetic 0600 seed as container root, and preserved a literal App environment placeholder. No aggregate gate, QEMU, executor rebuild, NAS success claim or publication."
+  },
+  "ui": {
+    "builtAgainst": "0.23.5",
+    "peer": ">=0.23.5 <0.24.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.5.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Fix Compose worker interpolation of the SDK-owned root runtime owner UID",
+    "Keep literal application environment values escaped against host interpolation",
+    "Add a generated-worker reload regression with a concrete package UID",
+    "Rebuild Compose helper inventory for x86_64/aarch64 without target execution",
+    "Reuse executor/v0.53.5 and its six immutable digests"
+  ],
+  "composeHelpers": {
+    "sdkVersion": "0.53.8",
+    "goToolchain": "go1.26.10",
+    "helpers": {
+      "x86_64": {
+        "plan": "f44cd70b4bb4ad664ba1b6de728315d79d691c3939143c591aed4b5a47b8250f",
+        "storage-init": "e6b355154993ee2f3448c513bcdc01d1034cf27209de67aad0bd33b1c6d99e21"
+      },
+      "aarch64": {
+        "plan": "88bcc73d3204646c2e51a904a8056b364025fc9d15fa69fceedac1bd27c75e1f",
+        "storage-init": "7c9e0ec63fb20569c7e9833a50d7073c68168b923f8baafd9fe826df44bb8f9e"
+      }
+    }
+  },
+  "npmArtifacts": {
+    "synopackageland-app-0.53.8.tgz": {
+      "sha256": "7e7dc0d417ade4a6e5be1a9a8af1dbb01075bf5afe884a06edb7e42563b4a3c6"
+    },
+    "synopackageland-sdk-0.53.8.tgz": {
+      "sha256": "f60ba4fe8b1f9f4b5f0d977438145d3e5a604b5e0bc9950a924ea468005cd60a"
+    }
+  }
+}

@@ -36,7 +36,8 @@ func workerYAML(raw []byte) ([]byte, error) {
 			}
 			ownedUser := len(path) == 3 && path[0] == "services" && path[2] == "user" && n.Value == PackageUser
 			ownedMount := len(path) == 5 && path[0] == "services" && path[2] == "volumes" && path[4] == "source" && (strings.HasPrefix(n.Value, "${SYNOPKG_PKGVAR}/") || strings.HasPrefix(n.Value, "${SYNOPKGLAND_MOUNT_"))
-			if !ownedUser && !ownedMount {
+			ownedRuntimeOwner := len(path) == 4 && path[0] == "services" && path[2] == "environment" && path[3] == runtimeOwnerEnv && n.Value == "${SYNOPKGLAND_UID}"
+			if !ownedUser && !ownedMount && !ownedRuntimeOwner {
 				n.Value = strings.ReplaceAll(n.Value, "$", "$$")
 			}
 		}

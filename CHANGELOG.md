@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.53.8
+
+- Preserve the SDK-owned runtime owner UID placeholder through Compose worker YAML serialization so Container Manager resolves it to the host package UID rather than a literal string
+- Keep application environment values escaped against host-side reinterpolation
+- Add a regression that loads generated worker YAML with a concrete host package environment, and rebuild the Compose helper inventory
+- Reuse the immutable executor/v0.53.5 release and its six digests
+
 ## 0.53.7
 
 - Let explicitly opted-in container-root services load declared runtime environment values through the SDK initializer; retain package-UID defaults, source ownership validation and read-only SDK mounts
