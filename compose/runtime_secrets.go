@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -141,6 +142,10 @@ func prepareRuntimeSecrets(project, pkg, pkgvar string, services []Inventory) er
 }
 
 func readRuntimeSecret(file string) ([]byte, error) {
+	return readRuntimeSecretAs(file, uint32(os.Geteuid()))
+}
+
+func readRuntimeSecretAs(file string, uid uint32) ([]byte, error) {
 	st, err := os.Lstat(file)
 	if err != nil {
 		return nil, err
@@ -148,7 +153,7 @@ func readRuntimeSecret(file string) ([]byte, error) {
 	if !st.Mode().IsRegular() || st.Mode().Perm()&0077 != 0 || st.Size() != 64 {
 		return nil, fmt.Errorf("runtime secret must be a private 64-byte regular file")
 	}
-	if owner, ok := st.Sys().(*syscall.Stat_t); !ok || owner.Uid != uint32(os.Geteuid()) || owner.Nlink != 1 {
+	if owner, ok := st.Sys().(*syscall.Stat_t); !ok || owner.Uid != uid || owner.Nlink != 1 {
 		return nil, fmt.Errorf("runtime secret must be package-owned with one link")
 	}
 	f, err := os.OpenFile(file, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
@@ -175,12 +180,24 @@ func loadRuntimeEnvironment(values map[string]RuntimeEnvironment) error {
 	return loadRuntimeEnvironmentAt(values, "/synopkgland")
 }
 
+const runtimeOwnerEnv = "SYNOPKGLAND_RUNTIME_OWNER_UID"
+
 func loadRuntimeEnvironmentAt(values map[string]RuntimeEnvironment, root string) error {
+	uid := uint32(os.Geteuid())
+	if os.Geteuid() == 0 {
+		// Set by the planner from the host package account, never from App input.
+		value, err := strconv.ParseUint(os.Getenv(runtimeOwnerEnv), 10, 32)
+		if err != nil || value == 0 {
+			return problem("COMPOSE_RUNTIME_CONFIG_FAILED", "container root requires the package runtime owner UID")
+		}
+		uid = uint32(value)
+	}
+
 	for key, e := range values {
 		var b []byte
 		var err error
 		if e.ExternalOrigin {
-			b, err = readExternalOriginSnapshot(filepath.Join(root, "settings", e.filename()))
+			b, err = readRuntimeValueAs(filepath.Join(root, "settings", e.filename()), 0, uid)
 			if err == nil && len(b) == 0 {
 				if err := os.Unsetenv(key); err != nil {
 					return err
@@ -188,9 +205,9 @@ func loadRuntimeEnvironmentAt(values map[string]RuntimeEnvironment, root string)
 				continue
 			}
 		} else if e.Setting != "" || e.Port != "" {
-			b, err = readRuntimeSetting(filepath.Join(root, "settings", e.filename()))
+			b, err = readRuntimeValueAs(filepath.Join(root, "settings", e.filename()), 1, uid)
 		} else {
-			b, err = readRuntimeSecret(filepath.Join(root, "secrets", e.filename()))
+			b, err = readRuntimeSecretAs(filepath.Join(root, "secrets", e.filename()), uid)
 		}
 		if err != nil {
 			return problem("COMPOSE_RUNTIME_CONFIG_FAILED", "runtime secret unavailable")

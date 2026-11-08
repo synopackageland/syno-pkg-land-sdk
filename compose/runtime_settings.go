@@ -20,13 +20,17 @@ func readRuntimeSetting(file string) ([]byte, error) {
 }
 
 func readRuntimeValue(file string, minimum int64) ([]byte, error) {
+	return readRuntimeValueAs(file, minimum, uint32(os.Geteuid()))
+}
+
+func readRuntimeValueAs(file string, minimum int64, uid uint32) ([]byte, error) {
 	bad := errors.New("runtime setting must be a private bounded package-owned regular file")
 	st, err := os.Lstat(file)
 	if err != nil {
 		return nil, err
 	}
 	owner, ok := st.Sys().(*syscall.Stat_t)
-	if !st.Mode().IsRegular() || st.Mode().Perm()&0077 != 0 || st.Size() < minimum || st.Size() > 2048 || !ok || owner.Uid != uint32(os.Geteuid()) || owner.Nlink != 1 {
+	if !st.Mode().IsRegular() || st.Mode().Perm()&0077 != 0 || st.Size() < minimum || st.Size() > 2048 || !ok || owner.Uid != uid || owner.Nlink != 1 {
 		return nil, bad
 	}
 	f, err := os.OpenFile(file, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)

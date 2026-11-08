@@ -82,7 +82,7 @@ the App retains PID, signals and exit status. It sets umask 077. The declaration
 and SDK-owned read-only mount are inventoried in the lock and effective-plan
 digest. Check/build reject malformed declarations, read-only/unmounted bases,
 missing explicit argv, collisions with the SDK executable mount and
-container-root services with `COMPOSE_STORAGE_INIT_INVALID`. Inspect verifies
+container-root storage initialization with `COMPOSE_STORAGE_INIT_INVALID` (root runtime-environment-only initialization is supported; see `compose.md`). Inspect verifies
 that the SPK carries an executable binary for the requested architecture and
 rejects a removed initializer or modified worker that bypasses preflight.
 

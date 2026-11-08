@@ -163,7 +163,7 @@ a build operator trust decision. `check`/`inspect` remain offline.
 | Host | Explicit verified OIDC web consumer with address_env forced to 127.0.0.1; no container-root; internet access is visible |
 | Egress | isolated internal networks, or explicit internet outbound bridge; fine allowlist declarations fail |
 | Public ports | All upstream publishes removed; the host gateway dials the declared web service on its fixed bridge IP; auxiliary ingress is unsupported |
-| Root | Fixed package UID/GID by default; per-service container-root requires reason, bridge and no host binds; only CHOWN/FOWNER/SETUID/SETGID opt-ins |
+| Root | Fixed package UID/GID by default; per-service container-root requires reason, bridge and no host binds; only CHOWN/FOWNER/SETUID/SETGID/DAC_OVERRIDE opt-ins |
 | Build, hooks, privileged, host PID/IPC, arbitrary devices, sockets | Rejected; Intel render devices require the explicit GPU capability below |
 | Secret/config file resources, plugins, replicas/deploy | Rejected until their bounded delivery/runtime contract exists |
 | Subpath hosting | Unsupported; use the app's dedicated origin at / |
@@ -802,3 +802,31 @@ upstream encoder and select software if initialization fails. Reinstallation or
 upgrade recomputes mappings; hotplug or changing hardware without rematerializing
 the package is unsupported. GPU access authorizes shared render-engine ioctls; it
 does not isolate GPU workloads or imply per-DSM-user file authority.
+
+### Explicit root services and retained private data
+
+`services.<name>.run_as` remains opt-in and requires `mode: container-root`,
+a nonempty `reason`, bridge networking and no App-declared host binds or Shares.
+Unchanged services continue to run as the DSM package UID/GID. The plan/CLI check
+inventory explicitly records `user: "0:0"`, `container_root`, `root_reason` and
+`cap_add`. Container root is host UID 0 on DSM without user namespace remapping;
+this option is not a claim of host identity isolation.
+
+An App that must read retained package-UID private files can explicitly add
+`capabilities: [DAC_OVERRIDE]` while retaining `cap_drop: [ALL]`. This avoids
+recursive ownership changes and preserves retained data for rollback. It grants
+read/write permission bypass inside the container, so use App-owned named volumes
+and keep the root filesystem read-only. It does not grant Docker socket, host
+network, arbitrary host binds or Share access.
+
+A root service may use `storage_init` **only** for `runtime.environment`, with no
+`directories`, `files`, `prepare` or `periodic` commands. The SDK mounts its own
+initializer and declared value files read-only. It checks private file ownership
+against the host package UID, carried by the planner in the reserved
+`SYNOPKGLAND_RUNTIME_OWNER_UID` variable. Reading mode-0600 package-owned seeds
+requires `DAC_OVERRIDE` on a host without UID remapping. Root storage creation,
+chown and App root preparation remain unsupported by the SDK initializer.
+
+Existing package-UID initialization keeps its private-directory and ownership
+checks. These additions require rebuilding with the new SDK; existing installed
+Apps and images receive no automatic identity or capability change.
