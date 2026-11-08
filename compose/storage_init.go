@@ -54,9 +54,9 @@ func applyStorageInit(pkg string, s *types.ServiceConfig, init *StorageInitializ
 		return nil
 	}
 	invalid := func() error {
-		return problem("COMPOSE_STORAGE_INIT_INVALID", "%s storage_init needs a nonroot service, 1-32 private directories on writable mounts and explicit entrypoint/command argv; /synopkgland/storage-init is reserved for the SPK initializer", s.Name)
+		return problem("COMPOSE_STORAGE_INIT_INVALID", "%s storage_init needs explicit entrypoint/command argv and package-owned private directories, or an explicit root service with runtime environment only; /synopkgland/storage-init is reserved for the SPK initializer", s.Name)
 	}
-	if rootContainer || len(init.Directories) == 0 || len(init.Directories) > 32 || s.Entrypoint == nil || len(s.Entrypoint)+len(s.Command) == 0 {
+	if (rootContainer && !rootEnvironmentOnly(*init)) || (!rootContainer && len(init.Directories) == 0) || len(init.Directories) > 32 || s.Entrypoint == nil || len(s.Entrypoint)+len(s.Command) == 0 {
 		return invalid()
 	}
 	if err := validateRuntime(*init); err != nil {
@@ -100,6 +100,11 @@ func applyStorageInit(pkg string, s *types.ServiceConfig, init *StorageInitializ
 			}
 		}
 	}
+	for _, m := range s.Volumes {
+		if StorageInitExecutable == m.Target || strings.HasPrefix(StorageInitExecutable, strings.TrimSuffix(m.Target, "/")+"/") || strings.HasPrefix(m.Target, StorageInitExecutable+"/") {
+			return invalid()
+		}
+	}
 	seen := map[string]bool{}
 	for _, d := range init.Directories {
 		if !validWritableDirectory(d) || seen[path.Join(d.Base, d.Path)] {
@@ -110,9 +115,6 @@ func applyStorageInit(pkg string, s *types.ServiceConfig, init *StorageInitializ
 		for _, m := range s.Volumes {
 			if m.Target == d.Base && !m.ReadOnly {
 				mounted = true
-			}
-			if StorageInitExecutable == m.Target || strings.HasPrefix(StorageInitExecutable, strings.TrimSuffix(m.Target, "/")+"/") || strings.HasPrefix(m.Target, StorageInitExecutable+"/") {
-				return invalid()
 			}
 		}
 		if !mounted {

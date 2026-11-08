@@ -3,6 +3,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"path"
 	"strings"
 )
@@ -191,11 +192,24 @@ func validateRuntime(i StorageInitialization) error {
 	return nil
 }
 
-// InitializeRuntime runs in the container as the package UID. Its caller owns
+// rootEnvironmentOnly permits an explicitly opted-in root service to load its
+// SDK-generated environment. It never initializes storage, writes files or runs
+// preparation/periodic commands as root.
+func rootEnvironmentOnly(i StorageInitialization) bool {
+	return len(i.Directories) == 0 && i.Runtime != nil && len(i.Runtime.Environment) > 0 && len(i.Runtime.Files) == 0 && len(i.Runtime.Prepare) == 0 && len(i.Runtime.Periodic) == 0
+}
+
+// InitializeRuntime runs in the container as the declared service identity. Its caller owns
 // the single startup deadline. A failed prepare never starts the application.
 func InitializeRuntime(ctx context.Context, i StorageInitialization) error {
 	if err := validateRuntime(i); err != nil {
 		return err
+	}
+	if os.Getuid() == 0 || os.Geteuid() == 0 {
+		if os.Getuid() != os.Geteuid() || !rootEnvironmentOnly(i) {
+			return problem("COMPOSE_STORAGE_INIT_INVALID", "container root initialization only supports declared runtime environment values")
+		}
+		return loadRuntimeEnvironment(i.Runtime.Environment)
 	}
 	if err := InitializeStorage(i.Directories); err != nil {
 		return err

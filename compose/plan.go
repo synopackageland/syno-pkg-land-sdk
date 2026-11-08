@@ -465,11 +465,12 @@ func Build(ctx context.Context, r Request) (*Plan, error) {
 			}
 			s.User = "0:0"
 			for _, c := range policy.RunAs.Capabilities {
-				if !slices.Contains([]string{"CHOWN", "FOWNER", "SETUID", "SETGID"}, c) {
+				if !slices.Contains([]string{"CHOWN", "FOWNER", "SETUID", "SETGID", "DAC_OVERRIDE"}, c) {
 					return nil, problem("COMPOSE_PRIVILEGE_UNSUPPORTED", "container root capability %s is not supported", c)
 				}
 			}
 			s.CapAdd = policy.RunAs.Capabilities
+			setEnv(&s, runtimeOwnerEnv, "${SYNOPKGLAND_UID}")
 		}
 		for i, v := range s.Volumes {
 			id := name + ":" + v.Target
