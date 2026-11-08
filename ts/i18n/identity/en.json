@@ -25,5 +25,8 @@
     "expired": "Your session expired. Sign in again",
     "revalidate": "Sign in to DSM in this browser, then choose Continue with DSM",
     "unavailable": "Sign-in is unavailable. Refresh to try again"
-  }
+  },
+  "httpsReason": "Sign-in requires HTTPS to protect your password and Secure session cookie, including Continue with DSM",
+  "httpsInstructions": "Open DSM using HTTPS, then reopen this app. Ask an administrator for the HTTPS address if needed",
+  "openHTTPS": "Open HTTPS"
 }

@@ -33,3 +33,14 @@ test('the background button row keeps a UI space from the text and cards around 
  expect(css.match(/(?:^|\})\s*\.integration-actions\s*\{([^}]*)\}/)?.[1]).toMatch(/margin-block\s*:\s*var\(--ui-space-\d/)
  expect(css.match(/\.bg-card-body\s*>\s*\.integration-actions\s*\{([^}]*)\}/)?.[1]).toMatch(/margin-block\s*:\s*0/)
 })
+
+
+test.each([
+ ['shell/AppShell.vue','.app-denied'],
+ ['identity/LoginPage.vue','.identity-login'],
+])('the denied/login surface uses the theme background and text: %s', (file,selector)=>{
+ const css=styles.find(style=>style.file===file)!.css
+ const body=css.slice(css.indexOf(selector)).split('{')[1].split('}')[0]
+ expect(body).toMatch(/background:\s*var\(--ui-bg\)/)
+ expect(body).toMatch(/color:\s*var\(--ui-text\)/)
+})

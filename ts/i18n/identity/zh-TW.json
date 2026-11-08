@@ -25,5 +25,8 @@
     "expired": "登入已逾時，請重新登入",
     "revalidate": "請先在此瀏覽器登入 DSM，然後選擇「以 DSM 繼續」",
     "unavailable": "登入目前無法使用，請重新整理後再試"
-  }
+  },
+  "httpsReason": "登入需要 HTTPS 以保護密碼及 Secure 工作階段 Cookie，「以 DSM 繼續」也需要 HTTPS",
+  "httpsInstructions": "請使用 HTTPS 開啟 DSM，再重新開啟此 App。如需 HTTPS 位址，請詢問管理員",
+  "openHTTPS": "開啟 HTTPS"
 }

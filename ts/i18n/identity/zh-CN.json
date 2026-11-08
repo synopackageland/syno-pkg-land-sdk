@@ -25,5 +25,8 @@
     "expired": "登录已过期，请重新登录",
     "revalidate": "请先在此浏览器中登录 DSM，然后选择“通过 DSM 继续”",
     "unavailable": "登录暂时不可用，请刷新后重试"
-  }
+  },
+  "httpsReason": "登录需要 HTTPS 以保护密码及 Secure 会话 Cookie，“以 DSM 继续”也需要 HTTPS",
+  "httpsInstructions": "请使用 HTTPS 打开 DSM，再重新打开此 App。如需 HTTPS 地址，请询问管理员",
+  "openHTTPS": "打开 HTTPS"
 }

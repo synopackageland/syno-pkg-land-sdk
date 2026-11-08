@@ -25,5 +25,8 @@
     "expired": "Su sesión ha caducado. Vuelva a iniciar sesión",
     "revalidate": "Inicie sesión en DSM en este navegador y luego elija «Continuar con DSM»",
     "unavailable": "El inicio de sesión no está disponible. Actualice e inténtelo de nuevo"
-  }
+  },
+  "httpsReason": "El inicio de sesión requiere HTTPS para proteger la contraseña y la cookie de sesión Secure, también al continuar con DSM",
+  "httpsInstructions": "Abra DSM con HTTPS y vuelva a abrir esta app. Si necesita la dirección HTTPS, consulte a un administrador",
+  "openHTTPS": "Abrir HTTPS"
 }

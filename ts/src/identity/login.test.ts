@@ -47,3 +47,21 @@ test('a sign-in the origin guard refuses explains that the page must be opened a
   }finally{app.unmount();session.dispose();root.remove()}
  }
 })
+
+
+test('HTTPS keeps Continue with DSM enabled without port discovery or an HTTP warning',async()=>{
+ const call=vi.fn(async()=>({user:'alice',uid:'1205',expiresAt:new Date(Date.now()+900000).toISOString()}))
+ const webApi=vi.fn()
+ const session=createSession({locale:'en',call,webApi,user:{name:'alice',isAdmin:true}} as unknown as Context)
+ const root=document.createElement('div');document.body.append(root)
+ const app=createApp({render:()=>h(AppRoot,{},()=>h(LoginPage,{session,locale:'en'}))});app.mount(root)
+ try {
+  await settle()
+  expect(root.textContent).not.toContain('HTTPS required')
+  expect(button(root,'Continue with DSM').disabled).toBe(false)
+  button(root,'Continue with DSM').click();await settle()
+  expect(call).toHaveBeenCalledExactlyOnceWith('identity.session',{bootstrap:true})
+  expect(session.subject.value?.user).toBe('alice')
+  expect(webApi).not.toHaveBeenCalled()
+ } finally {app.unmount();session.dispose();root.remove()}
+})

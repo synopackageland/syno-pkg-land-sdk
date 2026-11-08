@@ -51,7 +51,10 @@ For bounded public HTTP(S) subprocess probes, see [Outbound probe proxy](docs/ou
 For optional HTTPS requirements, administrator-only HTTPS links and opt-in
 read RPC recovery after a stale DSM token, see
 [HTTPS and session recovery](docs/https-and-session-recovery.md).
-Ordinary HTTP Apps remain supported; writes, AI and streams never auto-replay.
+Ordinary HTTP Apps remain supported. Standalone identity (`identity: standalone`
+or `init --with login`) requires HTTPS, including DSM-cookie reuse, and is for
+Apps opened outside a DSM window (Portal or their own tab). DSM-window Apps
+should not add it. Writes, AI and streams never auto-replay.
 
 For owner-bound asynchronous Go work, structured results and ctl integration, see
 [Structured background jobs](docs/background-results.md).

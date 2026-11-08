@@ -1,5 +1,11 @@
 # Standalone identity
 
+Use standalone identity only for Apps opened outside a DSM window, such as a
+Portal or their own tab. DSM-window Apps use the existing DSM session and
+should not add `identity: standalone` or `init --with login`. Standalone
+identity requires HTTPS for password sign-in and DSM-cookie bootstrap alike;
+its session cookie is always Secure and no credentials are sent on HTTP.
+
 Enable only with `-X main.identity=standalone`. The CGI creates this service from
 its package var directory and trusted `SCRIPT_NAME`; `internal/app/identity.go`
 registers the transport. The Vue shell discovers `identity.status` at runtime.
@@ -11,8 +17,8 @@ or business step, transfers included:
 
 - `identity.status {}` reports whether this transport is enabled.
 - `identity.session {bootstrap: true}` exchanges the incoming DSM `id` cookie
-  for an app session when no app cookie is present. Without bootstrap it reads
-  the app session. Expired app cookies are cleared before another bootstrap.
+  for an app session over HTTPS when no app cookie is present. Without bootstrap
+  it reads the app session. Expired app cookies are cleared before another bootstrap.
 - `identity.login {account, password, otp}` verifies credentials with DSM Auth
   v7, without a `session=DSM` argument. `otp_required` requests the second step.
 - `identity.logout {}` removes the app session and clears the cookie.
@@ -43,6 +49,14 @@ that another site or port sent answers `cross_origin`, one that proves no origin
 `origin_required`.
 Password login and cookie bootstrap require HTTPS, determined by Go's TLS state
 (the CGI library maps the trusted `HTTPS` environment variable to that state).
+
+On HTTP, the SDK LoginPage shows a dismissible Callout explaining the HTTPS
+requirement. It offers an explicit HTTPS button when `readDsmHttpsURL` can
+discover the DSM HTTPS address from the session context; unknown/ordinary
+users never invoke administrator-only PortInfo. Without a verified address,
+it asks the user to reopen DSM over HTTPS or ask an administrator for the
+address. Discovery preserves only App launch parameters and never guesses a
+port. Dismissing the warning keeps password and Continue with DSM disabled.
 
 The package account has no verified disabled-account reader. Every operation
 except the explicit read-only `app.status` and `greeting.get` therefore requires

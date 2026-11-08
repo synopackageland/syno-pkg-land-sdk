@@ -25,5 +25,8 @@
     "expired": "La sessione è scaduta. Accedere di nuovo",
     "revalidate": "Accedere a DSM in questo browser, quindi scegliere «Continua con DSM»",
     "unavailable": "L’accesso non è disponibile. Aggiornare e riprovare"
-  }
+  },
+  "httpsReason": "L’accesso richiede HTTPS per proteggere la password e il cookie di sessione Secure, anche continuando con DSM",
+  "httpsInstructions": "Apri DSM tramite HTTPS, quindi riapri questa app. Se necessario, chiedi l’indirizzo HTTPS a un amministratore",
+  "openHTTPS": "Apri HTTPS"
 }

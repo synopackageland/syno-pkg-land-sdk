@@ -19,7 +19,7 @@ vi.mock('@synopackageland/ui',async importOriginal=>{
     return h('section',[h('button',{'data-test-brand':'',onClick:(event:MouseEvent)=>emit('brand',event)},'App'),slots.sidebar?.(),slots['sidebar-footer']&&h('footer',slots['sidebar-footer']()),slots.toolbar&&h('header',slots.toolbar()),slots.default?.()])
    }
   }}),
-  AppRoot:defineComponent({props:['modalScope','dialogBounds'],emits:['activate'],setup(props,{slots,emit,attrs}){
+  AppRoot:defineComponent({props:['modalScope','dialogBounds','colorScheme'],emits:['activate'],setup(props,{slots,emit,attrs}){
    return ()=>{seen.root={...props,style:attrs.style};seen.activate=()=>emit('activate');return h('div',{'data-app-root':''},slots.default?.())}
   }}),
   ConfigProvider:defineComponent({props:['locale'],setup(props,{slots}){return ()=>{seen.config=props.locale;return h('div',{'data-config':''},slots.default?.())}}}),
@@ -596,4 +596,15 @@ test('the App-wide hide-on-scroll prop is reactive and preserves the UI default 
 test('the public shell and page hide-on-scroll options accept booleans',()=>{
  expectTypeOf<InstanceType<typeof AppShell>['$props']['hideOnScroll']>().toEqualTypeOf<boolean|undefined>()
  expectTypeOf<import('../vue').AppShellPage['hideOnScroll']>().toEqualTypeOf<boolean|undefined>()
+})
+
+
+test.each([undefined,'light','dark'] as const)('app-root explicitly forwards colorScheme=%s without leaking an attribute',async colorScheme=>{
+ const root=document.createElement('div');document.body.append(root)
+ const app=createApp({render:()=>h(AppShell,{appRoot:true,colorScheme,locale:'en',modelValue:'home',pages:[{id:'home',title:'Home'}]})})
+ try {
+  app.mount(root);await nextTick()
+  expect(seen.root?.colorScheme).toBe(colorScheme)
+  expect(root.querySelector('[color-scheme], [colorscheme]')).toBeNull()
+ } finally {app.unmount();root.remove()}
 })

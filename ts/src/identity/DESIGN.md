@@ -23,7 +23,11 @@ layout and keyboard focus treatment.
 
 Account stays visible with `autocomplete="username"`; password is masked with
 `autocomplete="current-password"`. HTTPS is required and insecure-page sign-in
-controls are disabled.
+controls are disabled, including Continue with DSM. A dismissible warning
+explains the password and Secure-cookie requirement. A verified
+`readDsmHttpsURL` result offers an explicit HTTPS button; without one,
+instructions explain reopening DSM over HTTPS and asking an administrator for
+the address. Closing the warning never enables insecure sign-in.
 
 When DSM requests OTP, the verification field visually replaces the password
 field. The password remains only in component memory for verification; success,
