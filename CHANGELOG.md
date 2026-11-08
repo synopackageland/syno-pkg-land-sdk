@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.53.14
+
+- Add typed DSM application targets, `openApp`, an injectable `DsmAppLauncher` and `dsmAppLaunchURL` for verified application IDs, alongside the existing package-based `dsmLaunchURL` and CLI host methods
+- Share current-page desktop dispatch with File Station, preserve its existing path bounds, and report `requested` only as dispatch acknowledgment; missing capability, explicit unavailability, validation failures and host exceptions remain distinct
+- Validate bounded launch parameters and explicit DSM origins, refuse desktop override and common credential keys, and avoid parent globals or implicit Portal-origin navigation
+- Document MailPlus Server metadata provenance, manual fallback and a WizardStep handoff that rechecks actual state instead of inferring completion from focus or dispatch
+- Reuse the immutable executor/v0.53.5 release and its six digests; Go sources, canonical tasks and permission policy bytes are unchanged
+
 ## 0.53.13
 
 - Use the manifest file-delegate declaration in executor approval, skip file scope reads for WebAPI-only Apps and treat unknown_method as absent file scope in initial and approval readback paths
