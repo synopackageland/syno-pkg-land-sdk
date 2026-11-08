@@ -43,5 +43,5 @@ func parseNativeAccount(out []byte, name string, err error) (Subject, error) {
 // NativeAccount is injected by tests; production always reads through the
 // pinned NSS/expiry bridge and never falls back to Core.User's missing field.
 func nativeAccountReader(dir string) func(context.Context, string) (Subject, error) {
-	return nativeAccountBridge{Dir: dir}.Lookup
+	return preparedNativeAccountBridge(dir).Lookup
 }

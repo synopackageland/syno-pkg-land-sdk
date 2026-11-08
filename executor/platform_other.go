@@ -41,6 +41,7 @@ func openRegular(path string) (*os.File, error) {
 type subprocessWriter struct {
 	Staging, Executable    string
 	PackageUID, PackageGID int
+	Memory                 bool
 }
 
 func (subprocessWriter) Write(context.Context, Subject, string, string, string, string) (MoveReceipt, error) {

@@ -264,14 +264,10 @@ func (f JobFiles) Read(ctx context.Context, p string, max int64) ([]byte, error)
 	if !validPath(p) || max <= 0 || max > MaxDownloadBytes {
 		return nil, fail(CodeInvalidRequest)
 	}
-	root, e := f.stagingRoot()
-	if e != nil {
-		return nil, e
-	}
-	defer root.Close()
 	var out struct {
-		Staging string `json:"staging"`
-		Size    int64  `json:"size"`
+		Staging       string `json:"staging"`
+		Size          int64  `json:"size"`
+		MemoryStaging bool   `json:"memory_staging,omitempty"`
 	}
 	if e := f.call(ctx, "files.read", map[string]any{"path": p, "max_bytes": max}, &out); e != nil {
 		return nil, e
@@ -279,6 +275,17 @@ func (f JobFiles) Read(ctx context.Context, p string, max int64) ([]byte, error)
 	if !validName(out.Staging) || !strings.HasPrefix(out.Staging, "read-") || out.Size < 0 || out.Size > max {
 		return nil, fail(CodeExecutorProtocol)
 	}
+	var root *os.Root
+	var e error
+	if out.MemoryStaging {
+		root, e = openMemoryReadStaging(f.Client)
+	} else {
+		root, e = openPrivateReadStaging(f.StagingDir)
+	}
+	if e != nil {
+		return nil, e
+	}
+	defer root.Close()
 	defer root.Remove(out.Staging)
 	staged, e := root.Open(out.Staging)
 	if e != nil {

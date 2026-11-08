@@ -94,7 +94,7 @@ var memfdCreate = unix.MemfdCreate
 func sealedBridge(payload []byte) (*os.File, error) {
 	fd, err := memfdCreate("synopkgland-admin", unix.MFD_CLOEXEC|unix.MFD_ALLOW_SEALING)
 	if errors.Is(err, unix.ENOSYS) {
-		return unlinkedBridge(bridgeFallbackDir, payload)
+		return cachedBridgeFallback(payload)
 	}
 	if err != nil {
 		return nil, err

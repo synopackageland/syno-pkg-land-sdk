@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -207,15 +208,25 @@ func (s *Store) Operations() ([]Operation, error) {
 	return out, nil
 }
 func (s *Store) Audit(event AuditEvent) error {
-	path := filepath.Join(s.Dir, "audit.jsonl")
 	b, err := json.Marshal(event)
 	if err != nil {
 		return err
 	}
-	b = append(b, '\n')
+	s.audit.mu.Lock()
+	defer s.audit.mu.Unlock()
+	// Flush pending reads and this mutation together, in admission order, with
+	// one append and one file sync. A failed durable audit still fails closed.
+	return s.flushAuditLocked(append(b, '\n'))
+}
+
+func (s *Store) appendAudit(b []byte) error {
+	path := filepath.Join(s.Dir, "audit.jsonl")
 	info, err := os.Lstat(path)
 	if err != nil && !os.IsNotExist(err) {
 		return err
+	}
+	if os.IsNotExist(err) {
+		s.audit.directoryDirty = true
 	}
 	if err == nil {
 		if !info.Mode().IsRegular() || info.Mode().Perm() != 0600 {
@@ -225,6 +236,7 @@ func (s *Store) Audit(event AuditEvent) error {
 			if err = os.Rename(path, filepath.Join(s.Dir, "audit.previous")); err != nil {
 				return err
 			}
+			s.audit.directoryDirty = true
 		}
 	}
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
@@ -232,18 +244,35 @@ func (s *Store) Audit(event AuditEvent) error {
 		return err
 	}
 	defer f.Close()
-	if _, err = f.Write(b); err != nil {
+	n, err := f.Write(b)
+	if err != nil {
 		return err
+	}
+	if n != len(b) {
+		return io.ErrShortWrite
 	}
 	if err = f.Sync(); err != nil {
 		return err
 	}
-	dir, err := os.Open(s.Dir)
-	if err != nil {
+	if err = f.Close(); err != nil {
 		return err
 	}
-	defer dir.Close()
-	return dir.Sync()
+	if s.audit.directoryDirty {
+		dir, err := os.Open(s.Dir)
+		if err != nil {
+			return err
+		}
+		err = dir.Sync()
+		closeErr := dir.Close()
+		if err != nil {
+			return err
+		}
+		if closeErr != nil {
+			return closeErr
+		}
+		s.audit.directoryDirty = false
+	}
+	return nil
 }
 func (e *Executor) auditLocked(s Subject, operation, job, path, result string) error {
 	return e.Store.Audit(AuditEvent{At: e.Now().UTC(), Package: e.Policy.Package, Username: s.Username, UID: s.UID, Operation: operation, Job: job, Path: path, Result: result})

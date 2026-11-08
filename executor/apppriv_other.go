@@ -7,6 +7,8 @@ import "context"
 // DSM's native SDK requires Linux; host tests inject a decision.
 type appPrivBridge struct{ Dir string }
 
+func preparedAppPrivBridge(dir string) appPrivBridge { return appPrivBridge{Dir: dir} }
+
 func (appPrivBridge) Check(context.Context, string, string, string) (bool, error) {
 	return false, errAppPriv
 }

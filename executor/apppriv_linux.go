@@ -6,19 +6,37 @@ import (
 	"context"
 	"errors"
 	"github.com/synopackageland/syno-pkg-land-sdk/executor/internal/budget"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/memoryexec"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"syscall"
 	"unsafe"
 )
 
 // appPrivBridge runs the embedded SLIBAppPrivUserHas bridge. Dir is the
-// executor's root-only directory, used only on a kernel without memfd_create
-// (DSM 7 on Linux 3.10); empty refuses there.
+// executor's validated root-only directory. Kernels without memfd_create also
+// require executable tmpfs; an empty Dir refuses that fallback.
 type appPrivBridge struct {
-	Dir     string
-	payload []byte // tests only; nil is this architecture's bridge
+	Dir      string
+	payload  []byte // tests only; nil is this architecture's bridge
+	prepared bool
+	file     *os.File
+	err      error
+}
+
+// Prepare once while starting the service. On old kernels the sole disk-backed
+// memory staging happens here; every subsequent check reopens the unlinked,
+// read-only descriptor through procfs. There is no per-request staging retry.
+func (b appPrivBridge) prepare(payload []byte) appPrivBridge {
+	b.file, b.err = b.stage(payload)
+	b.prepared = true
+	return b
+}
+
+func preparedAppPrivBridge(dir string) appPrivBridge {
+	return (appPrivBridge{Dir: dir}).prepare(appPrivBridges[runtime.GOARCH])
 }
 
 // Check asks DSM whether principal may use app from addr. The arguments were
@@ -79,6 +97,12 @@ var memfdCreate = func() (int, error) {
 // stage returns a read-only executable descriptor holding payload: a sealed
 // memfd, or without one a file in Dir whose name is already gone.
 func (b appPrivBridge) stage(payload []byte) (*os.File, error) {
+	if b.prepared {
+		if b.err != nil {
+			return nil, b.err
+		}
+		return os.Open("/proc/self/fd/" + strconv.FormatUint(uint64(b.file.Fd()), 10))
+	}
 	fd, err := memfdCreate()
 	if errors.Is(err, syscall.ENOSYS) {
 		return unlinkedBridge(b.Dir, payload)
@@ -104,8 +128,8 @@ func (b appPrivBridge) stage(payload []byte) (*os.File, error) {
 	return file, nil
 }
 
-// unlinkedBridge stages payload in a fresh 0700 directory under dir, which
-// must be an absolute directory of this (root) account writable by no one else.
+// unlinkedBridge validates dir as a private absolute directory of this account,
+// then stages only on executable tmpfs. It never falls back to disk.
 func unlinkedBridge(dir string, payload []byte) (*os.File, error) {
 	info, err := os.Stat(dir)
 	if err != nil || !filepath.IsAbs(dir) {
@@ -115,22 +139,5 @@ func unlinkedBridge(dir string, payload []byte) (*os.File, error) {
 	if !info.IsDir() || info.Mode().Perm()&0o022 != 0 || !ok || int(st.Uid) != os.Geteuid() {
 		return nil, errAppPriv
 	}
-	stage, err := os.MkdirTemp(dir, "bridge-")
-	if err != nil {
-		return nil, err
-	}
-	defer os.RemoveAll(stage)
-	path := filepath.Join(stage, "bridge")
-	if err = os.WriteFile(path, payload, 0o500); err != nil {
-		return nil, err
-	}
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	if err = os.Remove(path); err != nil {
-		file.Close()
-		return nil, err
-	}
-	return file, nil
+	return memoryexec.Open(dir, payload)
 }

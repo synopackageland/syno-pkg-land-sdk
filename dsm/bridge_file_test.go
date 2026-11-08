@@ -1,14 +1,29 @@
 package dsm
 
 import (
+	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/memoryexec"
 	"io"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
+func requireMemoryBridge(t *testing.T, dir string) {
+	t.Helper()
+	f, err := memoryexec.Open(dir, []byte("probe"))
+	if errors.Is(err, memoryexec.ErrUnavailable) {
+		t.Skip("executable tmpfs unavailable; legacy bridge must refuse")
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.Close()
+}
+
 func TestUnlinkedBridgeLeavesOnlyAReadOnlyDescriptor(t *testing.T) {
 	dir := t.TempDir()
+	requireMemoryBridge(t, dir)
 	file, err := unlinkedBridge(dir, []byte("bridge"))
 	if err != nil {
 		t.Fatal(err)
@@ -49,6 +64,7 @@ func TestUnlinkedBridgeRefusesWithoutAPrivateDirectory(t *testing.T) {
 		}
 	}
 	// DSM's /var/packages/<pkg>/tmp is a root-owned link to @apptemp/<pkg>.
+	requireMemoryBridge(t, link)
 	file, err := unlinkedBridge(link, []byte("bridge"))
 	if err != nil {
 		t.Fatalf("linked private directory refused: %v", err)

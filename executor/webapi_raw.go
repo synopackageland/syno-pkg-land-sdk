@@ -158,6 +158,11 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 		return deny("ROOT_BUSY")
 	}
 	defer e.rootSlotDone()
+	staging := e.RootStaging
+	memory := e.ReadStaging != nil && e.Policy.WebAPI[d.Scope].readOnly(p.API, p.Method, p.Version)
+	if memory {
+		staging = e.ReadStaging
+	}
 	limit := e.Policy.WebAPI[d.Scope].RawMaxBytes
 	var reserved int64
 	defer func() {
@@ -165,7 +170,7 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 		e.rawReserved -= reserved
 		e.rootMu.Unlock()
 	}()
-	out := &rootOutput{limit: limit, spillAt: inlineWebAPIRaw + 1, staging: e.RootStaging, stagingLimit: maxWebAPIStaging, failed: make(chan struct{})}
+	out := &rootOutput{limit: limit, spillAt: inlineWebAPIRaw + 1, staging: staging, stagingLimit: maxWebAPIStaging, failed: make(chan struct{})}
 	defer out.discard()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -179,17 +184,20 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 	reserve := func(size int64) error {
 		if size < 0 {
 			size = limit
+			if memory {
+				size = min(size, maxMemoryReadStaging)
+			}
 		}
 		if size > limit {
 			return errOutputLimit
 		}
 		e.rootMu.Lock()
 		defer e.rootMu.Unlock()
-		staging, ok := e.RootStaging.(interface{ Available() (int64, error) })
+		space, ok := staging.(interface{ Available() (int64, error) })
 		if !ok {
 			return errRootStaging
 		}
-		used, err := e.RootStaging.Used()
+		used, err := staging.Used()
 		if err != nil {
 			return errRootStaging
 		}
@@ -197,7 +205,7 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 		if used+others+size > maxWebAPIStaging {
 			return errRootStagingFull
 		}
-		free, err := staging.Available()
+		free, err := space.Available()
 		if err != nil {
 			return errRootStaging
 		}
@@ -251,7 +259,7 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 		e.rawCalls[d.ID] = map[*rawWebOutput]context.CancelFunc{}
 	}
 	e.rawCalls[d.ID][w] = cancel
-	err := e.auditLocked(s, "webapi.call", d.ID, target, "admitting")
+	err := e.auditWebAPILocked(s, d, p, target, "admitting")
 	e.commitMu.Unlock()
 	defer func() {
 		e.commitMu.Lock()
@@ -285,7 +293,7 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 	if fence := e.rawGrantCodeLocked(d); fence != "" {
 		code, result = fence, fence
 	}
-	auditErr := e.auditLocked(s, "webapi.call", d.ID, target, result+":"+strconv.FormatInt(out.n, 10))
+	auditErr := e.auditWebAPILocked(s, d, p, target, result+":"+strconv.FormatInt(out.n, 10))
 	e.commitMu.Unlock()
 	if auditErr != nil {
 		return deny("WEBAPI_UNCERTAIN")
@@ -306,6 +314,9 @@ func (e *Executor) callWebAPIRaw(ctx context.Context, s Subject, d Delegation, p
 			return deny("STORAGE_ERROR")
 		}
 		reply["staging"] = name
+		if memory {
+			reply["memory_staging"] = true
+		}
 	}
 	return success(reply)
 }

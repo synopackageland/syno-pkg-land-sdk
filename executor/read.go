@@ -35,6 +35,16 @@ func (e *Executor) readFile(ctx context.Context, d Delegation, s Subject, real s
 	if e.Reader == nil {
 		return deny("READ_FAILED")
 	}
+	if e.ReadStaging != nil {
+		release, err := e.reserveReadStaging(limit)
+		if err != nil {
+			if errors.Is(err, errRawSpace) {
+				return deny("NO_SPACE")
+			}
+			return deny("STORAGE_ERROR")
+		}
+		defer release()
+	}
 	done, code := e.beginLegacy(d)
 	if code != "" {
 		return deny(code)
@@ -45,8 +55,15 @@ func (e *Executor) readFile(ctx context.Context, d Delegation, s Subject, real s
 	if errors.As(err, &refused) {
 		return deny(refused.Code)
 	}
+	if errors.Is(err, errRawSpace) {
+		return deny("NO_SPACE")
+	}
 	if err != nil {
 		return deny("READ_FAILED")
 	}
-	return success(map[string]any{"staging": name, "size": size})
+	reply := map[string]any{"staging": name, "size": size}
+	if e.ReadStaging != nil {
+		reply["memory_staging"] = true
+	}
+	return success(reply)
 }

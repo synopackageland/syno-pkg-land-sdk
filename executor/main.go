@@ -251,7 +251,8 @@ func load(pkg, exe string) (*Executor, int, int, error) {
 	}
 	dsm := newDSM(filepath.Join(stateBase, pkg))
 	staging := subprocessWriter{Staging: filepath.Join("/var/packages", pkg, "var/executor-staging"), Executable: exe, PackageUID: uid, PackageGID: gid}
-	e := &Executor{Policy: p, DSM: dsm, Tasks: dsm, Writer: staging, Reader: staging, Runner: rootPrograms{Dir: dir, Executable: exe}, RootStaging: staging, Store: &Store{Dir: state}, Now: time.Now, ExecutorDigest: ed, PolicyDigest: pd}
+	reads := subprocessWriter{Staging: filepath.Join(socketBase, pkg, "read-staging"), Executable: exe, PackageUID: uid, PackageGID: gid, Memory: true}
+	e := &Executor{Policy: p, DSM: dsm, Tasks: dsm, Writer: staging, Reader: reads, Runner: rootPrograms{Dir: dir, Executable: exe}, RootStaging: staging, ReadStaging: reads, Store: &Store{Dir: state}, Now: time.Now, ExecutorDigest: ed, PolicyDigest: pd}
 	if p.Portal != nil {
 		e.Portal = portalEntry{Package: pkg, Policy: *p.Portal, Paths: dsmPortal, DSM: dsm, StateDir: state, OperationBudget: p.budgets().Duration("operation")}
 	}
@@ -573,6 +574,13 @@ func openService(parent context.Context, e *Executor, uid, gid int, sock string)
 	connections := map[*net.UnixConn]bool{}
 	done := make(chan struct{})
 	slots := make(chan struct{}, maxPendingConnections)
+	auditDone := make(chan struct{})
+	go func() {
+		defer close(auditDone)
+		ticker := time.NewTicker(auditCheckInterval)
+		defer ticker.Stop()
+		e.Store.auditLoop(ctx, ticker.C, func() bool { return auditDisksAwake("/sys") })
+	}()
 	go func() {
 		defer close(done)
 		for {
@@ -615,8 +623,12 @@ func openService(parent context.Context, e *Executor, uid, gid int, sock string)
 		}
 		mu.Unlock()
 		active.Wait()
+		<-auditDone
 		e.endRoot(e.jobEnd())
 		e.stopOperations()
+		if err := e.Store.FlushAudit(); err != nil {
+			log.Print("audit flush failed during stop; buffered read events may be lost")
+		}
 		os.Remove(sock)
 	}, nil
 }

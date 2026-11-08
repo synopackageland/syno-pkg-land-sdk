@@ -19,7 +19,11 @@ quota. Keep source identifier/version and size from the same metadata snapshot.
 Raw success returns `response_type: "raw"`, `content_type`, `size`, `sha256`, and
 exactly one of `body` (base64, including empty string) or `staging` (bare handle).
 At most 32768 body bytes are inline, keeping raw results within the 64 KiB
-frame bounds. Larger bodies use the existing executor-staging transport:
+frame bounds. Larger bodies use a private staging transport. Classified
+read-only calls return `memory_staging: true` and use verified tmpfs next to the
+executor socket:
+`/run/synopkgland/<package>/read-staging/root-<32 lowercase hex digits>`.
+Mutating/unclassified calls retain the existing persistent transport:
 `/var/packages/<package>/var/executor-staging/root-<32 lowercase hex digits>`.
 The directory is private (0700), the random file is owned by the App (0600).
 Read, verify size and SHA-256, and immediately unlink it. Never send the path,
@@ -28,8 +32,8 @@ both forms and removes staged output, including on verification failure. Bridge
 Apps use their existing `webapi.call` service and consume the same wire result
 locally. They must not inline a large body into a bridge/RPC reply.
 
-This reuses the root output spool rather than adding a download endpoint, token
-store or new privileged operation. Raw transfers reserve their actual size
+This reuses the output-spool protocol rather than adding a download endpoint,
+token store or new privileged operation. Raw transfers reserve their actual size
 against a 10 GiB + 256 MiB staging budget, including already staged output and
 active raw reservations. Metadata `expected_size` is checked before dispatch;
 otherwise admission waits for validated CGI headers, before any body write.
@@ -37,7 +41,11 @@ Content-Length supplies the reservation when present; only a response with
 neither size source reserves the approved profile ceiling. Space available to
 the package account is checked on the staging filesystem, accounting for other
 active reservations. Disk-query failures refuse the transfer. Admission is
-conservative if the disk scan already counts another active file.
+conservative if the scan already counts another active file. Read-only staging
+also has a hard 256-file cap and requires enough available tmpfs capacity; it
+never falls back to persistent storage. Rebuild the App runtime and executor
+together so both support `memory_staging`. See [runtime storage](idle-storage.md)
+for audit buffering and crash-loss semantics.
 The root.run quota stays 256 MiB. The two shared
 output slots and one-hour orphan reclamation still bound abandoned output.
 Open output files remain locked so cleanup cannot delete an active long transfer;

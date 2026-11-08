@@ -143,13 +143,13 @@ func TestServiceGrantsTheNewFileOperations(t *testing.T) {
 	}
 }
 
-func TestJobFilesReadCreatesTheStagingFolderFirst(t *testing.T) {
+func TestJobFilesReadDoesNotCreatePersistentStaging(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "executor-staging")
 	c, sent := recordingExecutor(t, map[string]string{"files.read": `{"ok":true,"result":{"staging":"read-1","size":0}}`})
 	f := JobContext{Client: c, JobID: "j", DelegationID: "d", StagingDir: dir}.Files()
 	f.Read(context.Background(), "/home/a.txt", 10)
 	info, e := os.Stat(dir)
-	if e != nil || !info.IsDir() || info.Mode().Perm() != 0700 || len(sent()) != 1 {
+	if !os.IsNotExist(e) || len(sent()) != 1 {
 		t.Fatal(info, e, sent())
 	}
 }
