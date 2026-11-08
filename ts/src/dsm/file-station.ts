@@ -10,13 +10,10 @@
 // that is not one canonical shared-folder path (relative, a volume root, ., ..,
 // an empty segment, a backslash or a control character) never launches.
 
-export const FILE_STATION_APP='SYNO.SDS.App.FileStation3.Instance'
+import {dispatchDsmApp,type DsmDesktop} from './app-launch'
+export type {DsmDesktop} from './app-launch'
 
-/** The DSM desktop global (SYNO.SDS) the App window runs in; absent outside DSM. */
-export interface DsmDesktop{
- AppLaunch?:(id:string,params?:{opendir:string}|{openfile:string})=>void
- StatusNotifier?:{isAppEnabled?:(id:string)=>boolean;isAppLaunchable?:(id:string)=>boolean}
-}
+export const FILE_STATION_APP='SYNO.SDS.App.FileStation3.Instance'
 
 export interface FileStationOptions{
  /** The volume mount the path is under, when known; otherwise /volumeN is stripped. */
@@ -54,11 +51,7 @@ function sharedFolderPath(path:string):boolean{
 }
 
 function launch(params:{opendir:string}|{openfile:string},options:FileStationOptions):boolean{
- const desktop='desktop' in options?options.desktop:(globalThis as {SYNO?:{SDS?:DsmDesktop}}).SYNO?.SDS
- const status=desktop?.StatusNotifier
  const target='opendir' in params?params.opendir:params.openfile
- if(!sharedFolderPath(target)||typeof desktop?.AppLaunch!=='function')return false
- if(status?.isAppEnabled?.(FILE_STATION_APP)===false||status?.isAppLaunchable?.(FILE_STATION_APP)===false)return false
- desktop.AppLaunch(FILE_STATION_APP,params)
- return true
+ if(!sharedFolderPath(target))return false
+ return dispatchDsmApp({appId:FILE_STATION_APP,params},options).status==='requested'
 }

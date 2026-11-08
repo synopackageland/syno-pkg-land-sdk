@@ -232,6 +232,15 @@ dsmLaunchURL('https://nas.example:5001', 'HelloGo', {route: '/a/notes/42'})
 DSM replays the opening launch's values when it restores the desktop's windows
 at sign-in, so a restored window opens on the same page.
 
+For a verified application ID that differs from the package ID, use
+`await openApp({appId, params})` in the DSM page or
+`dsmAppLaunchURL(dsmOrigin, {appId, params})` with a known DSM origin.
+`createDsmAppLauncher({desktop})` provides an injectable platform adapter.
+`requested` acknowledges dispatch only; outside the desktop the launcher returns
+`unsupported`. See [DSM App launcher](../docs/dsm-app-launcher.md) for parameter
+bounds, the MailPlus Server metadata example, manual fallback and WizardStep
+handoff/recheck. Keep credentials out of launch parameters.
+
 `packageCenterUrl(origin?)` is the link that opens DSM's Package Center
 (`/?launchApp=SYNO.SDS.PkgManApp.Instance`, or on `origin`), for an
 administrator who should install another package. DSM has no link to a single

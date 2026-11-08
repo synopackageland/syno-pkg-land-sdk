@@ -31,6 +31,16 @@ test('the packed SDK loads as an App test imports it', async () => {
 	expect(new Function(native.ROOT_RUNTIME + ';return createRootAccess;')()).toBeTypeOf('function')
 	expect(new Function(native.AUTHORIZATION_RUNTIME + ';return createAuthorizationAccess;')()).toBeTypeOf('function')
 })
+test('the packed application launcher exposes typed targets and dispatches through its desktop capability', async () => {
+ const {openApp, createDsmAppLauncher, dsmAppLaunchURL} = await import('@synopackageland/sdk')
+ const target = {appId: 'SYNO.SDS.MailPlusServer.Instance', params: {route: '/a/b?x=1&y=2'}}
+ expect(await openApp(target, {desktop: undefined})).toEqual({status: 'unsupported'})
+ const calls = []
+ const launcher = createDsmAppLauncher({desktop: {AppLaunch: (...args) => calls.push(args)}})
+ expect(await launcher.openApp(target)).toEqual({status: 'requested'})
+ expect(calls).toEqual([[target.appId, target.params]])
+ expect(new URL(dsmAppLaunchURL('https://dsm.example:5001', target)).searchParams.get('launchApp')).toBe(target.appId)
+})
 TEST
 (cd "$work" && "$ts/node_modules/.bin/vitest" run --root "$work")
 
@@ -38,6 +48,13 @@ cat >"$work/consumer.ts" <<'TYPES'
 import {bootEntryPage, createAppContext, createSignInCache} from '@synopackageland/sdk/entry'
 import {saveBlob, createNativeHost} from '@synopackageland/sdk/mobile'
 import {NATIVE_PROTOCOL, type NativeBridge, type NativeMessage, type NativeEvent} from '@synopackageland/sdk/mobile/shell'
+import {openApp, createDsmAppLauncher, dsmAppLaunchURL, type DsmAppTarget, type DsmAppLaunchResult, type DsmAppLauncher} from '@synopackageland/sdk'
+const target: DsmAppTarget = {appId: 'SYNO.SDS.MailPlusServer.Instance'}
+const launcher: DsmAppLauncher = createDsmAppLauncher({desktop: undefined})
+const result: Promise<DsmAppLaunchResult> = launcher.openApp(target)
+void result
+void openApp(target, {desktop: undefined})
+void dsmAppLaunchURL('https://dsm.example:5001', target)
 const message: NativeMessage = {v: NATIVE_PROTOCOL, type: 'intake.take', id: 'handle'}
 const launch: NativeEvent = {v: NATIVE_PROTOCOL, type: 'launch', link: '/add', intake: 'handle'}
 declare const bridge: NativeBridge

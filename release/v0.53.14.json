@@ -1,0 +1,53 @@
+{
+  "version": "0.53.14",
+  "executorVersion": "0.53.5",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.14",
+    "@synopackageland/app": "0.53.14",
+    "syno-pkg-land-app": "0.53.14",
+    "synopkgland_app": "0.53.14"
+  },
+  "executorDigests": {
+    "x86_64": "78125a96c428dd3322056669d27d7269dfcac78057a34f22d1bac9741393a957",
+    "aarch64": "ed9e21ffd6f6f46927eddd6a11a68ccd201f4ebd680846b81d266845edc180da",
+    "armv7": "21787da130a653f66fb6a71c859868c1c144cd184d896c0df44f87eb44f7c0ca",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Passed 456 related frontend launcher/host/entry/approval regression tests, 33 Node tests in a nonroot container, seven version/manifest/docs unit tests, frontend and Node typechecks/builds, generated Node dist comparison, two packed consumer tests and NodeNext typecheck, package inventories, metadata consistency, documentation version check, generic source and exact npm tarball scans plus private identifier checks for changed sources and archives. Rebased onto the preceding release. No full gate, QEMU, Rust build, Go integration, executor/helper rebuild, NAS acceptance, publication, tag or merge; immutable executor inventory and Go sources are unchanged."
+  },
+  "ui": {
+    "builtAgainst": "0.23.5",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.5.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Add typed DSM application targets, an injectable platform launcher and an explicit application-ID URL builder alongside the existing package-ID API",
+    "Share desktop dispatch with File Station, detect only the current page capability, validate bounded parameters and preserve existing File Station path bounds",
+    "Document verified MailPlus Server metadata, manual fallback and WizardStep handoff with authenticated state rechecks",
+    "Reuse the immutable executor/v0.53.5 release and its six digests; Go sources, canonical tasks and permission policy bytes are unchanged"
+  ],
+  "npmArtifacts": {
+    "synopackageland-app-0.53.14.tgz": {
+      "sha256": "9a0d8e20c6fe0d6a90890f44c665de5ad0f3e93804d20f411fd29135afdf5d2d"
+    },
+    "synopackageland-sdk-0.53.14.tgz": {
+      "sha256": "1661c17e4041b8763e2328ab38d2a27952e72b0cad082c1ffc7c5f37895f4c79"
+    }
+  }
+}

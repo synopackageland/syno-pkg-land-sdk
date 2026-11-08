@@ -1,4 +1,5 @@
 import type {Context, LaunchParams} from './context'
+import {dsmAppTarget,type DsmAppTarget} from './dsm/app-launch'
 
 /** The longest route launchRoute returns. */
 export const MAX_LAUNCH_ROUTE = 2048
@@ -43,6 +44,22 @@ export function dsmLaunchURL(origin: string, packageId: string, params: LaunchPa
  const url = new URL('/', origin)
  url.searchParams.set('launchApp', `SYNO.SDS.${packageId}.Instance`)
  url.searchParams.set('launchParam', Object.entries(params).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&'))
+ return url.href
+}
+
+/** A link to a verified application ID on an explicitly known DSM origin.
+ * Never infer this origin from an Application Portal or an iframe's parent. */
+export function dsmAppLaunchURL(dsmOrigin:string,target:DsmAppTarget):string {
+ if(typeof dsmOrigin !== 'string' || !/^https?:\/\/[^/?#]+\/?$/i.test(dsmOrigin) ||
+  /[\\\s\u0000-\u001f\u007f-\u009f]/.test(dsmOrigin)) throw new Error('Invalid DSM origin')
+ let origin:URL
+ try {origin=new URL(dsmOrigin)} catch {throw new Error('Invalid DSM origin')}
+ if(!['https:','http:'].includes(origin.protocol) || origin.username || origin.password ||
+  origin.pathname !== '/' || origin.search || origin.hash) throw new Error('Invalid DSM origin')
+ const checked=dsmAppTarget(target)
+ const url=new URL('/',origin)
+ url.searchParams.set('launchApp',checked.appId)
+ url.searchParams.set('launchParam',checked.encoded)
  return url.href
 }
 

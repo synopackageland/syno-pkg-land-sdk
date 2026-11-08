@@ -23,6 +23,13 @@ test('folders open with opendir and files are selected with openfile',()=>{
  expect(calls).toEqual([[FILE_STATION_APP,{opendir:'/photo/2026'}],[FILE_STATION_APP,{openfile:'/photo/a.jpg'}]])
 })
 
+test('shared App dispatch retains File Station path bounds above general launcher parameter limits',()=>{
+ const {sds,calls}=desktop()
+ const path='/photo/'+ 'x'.repeat(3000)
+ expect(openFolderInFileStation(path,{desktop:sds})).toBe(true)
+ expect(calls).toEqual([[FILE_STATION_APP,{opendir:path}]])
+})
+
 test('nothing launches outside DSM, for an empty path or when File Station is not available',()=>{
  expect(openFolderInFileStation('/photo',{desktop:undefined})).toBe(false)
  for(const status of [{enabled:false,launchable:true},{enabled:true,launchable:false}]){
