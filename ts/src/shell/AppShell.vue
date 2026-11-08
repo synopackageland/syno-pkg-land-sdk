@@ -137,21 +137,25 @@ const layout = useTemplateRef<{$el: HTMLElement}>('layout')
 // What AppLayout shows on a phone, read from its markup: the phone signal, the
 // key of the tab bar's current tab, its own top bar (with Back on a sub-page)
 // and bars hidden on scroll. A UI without the phone shell reads none.
-interface PhoneShell {phone: boolean; tab: string | undefined; bar: boolean; back: boolean; barsHidden: boolean}
-const noPhoneShell: PhoneShell = {phone:false,tab:undefined,bar:false,back:false,barsHidden:false}
+interface PhoneShell {phone: boolean; tab: string | undefined; bar: boolean; back: boolean; pageActions: boolean; barsHidden: boolean}
+const noPhoneShell: PhoneShell = {phone:false,tab:undefined,bar:false,back:false,pageActions:false,barsHidden:false}
 const phoneShell = ref<PhoneShell>(noPhoneShell)
 const currentTab = '[data-ui-tab-bar-item][aria-current="page"]'
 function readPhoneShell(root: HTMLElement): PhoneShell {
   const column = Array.from(root.children).find(child => child.hasAttribute('data-ui-layout-main'))
   const chrome = column ? Array.from(column.children).filter(child => child.tagName !== 'MAIN') : []
   // A bar AppLayout keeps hidden (an empty bar on a tab page) is not drawn.
-  const bar = chrome.find(child => child.hasAttribute('data-ui-mobile-navigation') && !(child as HTMLElement).hidden)
+  const navigation = chrome.find(child => child.hasAttribute('data-ui-mobile-navigation'))
+  const bar = navigation && !(navigation as HTMLElement).hidden ? navigation : undefined
   return {
     phone: root.hasAttribute('data-ui-phone'),
     // Only a tab drawn in the bar counts: More (a page under it) is not a tab item.
     tab: chrome.map(child => child.matches(currentTab) ? child : child.querySelector(currentTab)).find(item => item)?.getAttribute('data-ui-tab-bar-item') ?? undefined,
     bar: !!bar,
     back: !!bar?.querySelector('[data-ui-mobile-back]'),
+    // A page's actions (the App's actions slot, PageActions) claim the bar,
+    // shown or not: AppLayout then draws it.
+    pageActions: !!navigation?.querySelector('[data-ui-mobile-page-actions]')?.childElementCount,
     barsHidden: root.hasAttribute('data-ui-bars-hidden'),
   }
 }
@@ -188,7 +192,7 @@ const canSignOut = computed(() => {
 function signOut() {accountOpen.value = false; pageCtx.value?.host?.signOut?.()}
 const appActions = computed(() => props.headerActions ?? [])
 // Whether AppLayout draws its top bar, leaving the account out of it.
-const barWithoutAccount = computed(() => !untitledTab.value || appActions.value.length > 0 || phoneShell.value.back)
+const barWithoutAccount = computed(() => !untitledTab.value || appActions.value.length > 0 || phoneShell.value.back || phoneShell.value.pageActions)
 // On a phone the account joins the one top bar: always where DSM shows no
 // account, and in DSM's portal while the App's bar takes the place of DSM's
 // header (which then shows no account). Never a second account control.
@@ -207,12 +211,28 @@ function onHeaderAction(key: string) {
   else emit('headerAction', key)
 }
 watch(accountInBar, shown => {if(!shown) accountOpen.value = false})
-// The bar is shown or hidden in place as it gains or loses content.
-watch([fullPage,layout,accountMergeable,() => phoneShell.value.bar,flush], (_, __, onCleanup) => {
+// Whether the page has a phone bar: what the App gives AppLayout to draw (a
+// title, actions, Back or the account), not whether the bar is drawn now. The
+// header gives way to that bar; the bar's content never depends on the header
+// being hidden (readPortalChrome reads DSM's header as DSM shows it), so the
+// decision cannot undo itself.
+const phoneBar = computed(() => barWithoutAccount.value || accountInBar.value)
+// Set while the header was placed in the current frame: a run that follows in
+// the same frame (this watcher again, through a ref the last run changed)
+// waits for the next one.
+let placed = false
+// The next frame (a timer where the window draws none, as in jsdom).
+function onFrame(view: Window, run: () => void): () => void {
+  if(typeof view.requestAnimationFrame === 'function') {const id = view.requestAnimationFrame(run);return () => view.cancelAnimationFrame(id)}
+  const id = view.setTimeout(run, 0);return () => view.clearTimeout(id)
+}
+watch([fullPage,layout,accountMergeable,phoneBar,flush], (_, __, onCleanup) => {
   const root=layout.value?.$el
   if(!fullPage.value || !root) {portalChrome.value={brand:false,user:false};return}
-  let undoFit=()=>{}, undoCollapse=()=>{}
-  const read=()=>{
+  let undoFit=()=>{}, undoCollapse=()=>{}, frame: (() => void) | undefined
+  const view=root.ownerDocument.defaultView
+  const apply=()=>{
+    if(view && !placed) {placed=true;onFrame(view,()=>{placed=false})}
     const next=readPortalChrome(root)
     if(next.brand!==portalChrome.value.brand || next.user!==portalChrome.value.user) portalChrome.value=next
     // In the UI's mobile layout DSM's header keeps only the App icon and an account icon.
@@ -226,13 +246,22 @@ watch([fullPage,layout,accountMergeable,() => phoneShell.value.bar,flush], (_, _
     // docked bar or a settings footer (flush) keeps the header, so the bar
     // stays at the bottom of the page.
     const shell=readPhoneShell(root)
-    const bar=shell.bar && (accountMergeable.value || !next.user)
+    const bar=phoneBar.value && (accountMergeable.value || !next.user)
     const hides=shell.barsHidden && root.hasAttribute('data-ui-bars-overlay') && !flush.value
     undoCollapse=collapsePortalHeader(root, !shell.phone ? false : bar ? 'bar' : hides ? 'scroll' : 'shown')
+    // What the lines above changed in the page is not news to read again.
+    mode.takeRecords();observer.takeRecords()
   }
-  read()
-  // At wider layouts a long App name ends before DSM's account button.
-  const stopName=watchPortalName(root)
+  // The first change in a frame is answered at once, so the header moves in
+  // the same frame as the App's bars. Later changes in that frame (one that
+  // answers the SDK's own, from DSM or the App) are read once, in the next
+  // frame: the header is placed at most once a frame and never holds the
+  // main thread.
+  const read=()=>{
+    if(frame) return
+    if(!view || !placed) {apply();return}
+    frame=onFrame(view,()=>{frame=undefined;apply()})
+  }
   const mode=new MutationObserver(read)
   mode.observe(root,{attributes:true,attributeFilter:['data-ui-layout-mode','data-ui-phone','data-ui-bars-hidden','data-ui-bars-overlay']})
   // The App's own top bar comes and goes as the page changes.
@@ -244,9 +273,11 @@ watch([fullPage,layout,accountMergeable,() => phoneShell.value.bar,flush], (_, _
     if(records.some(record=>!root.contains(record.target))) read()
   })
   observer.observe(root.ownerDocument.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style','hidden'],characterData:true})
-  const view=root.ownerDocument.defaultView
+  read()
+  // At wider layouts a long App name ends before DSM's account button.
+  const stopName=watchPortalName(root)
   view?.addEventListener('resize',read)
-  onCleanup(()=>{observer.disconnect();mode.disconnect();view?.removeEventListener('resize',read);undoFit();undoCollapse();stopName()})
+  onCleanup(()=>{frame?.();observer.disconnect();mode.disconnect();view?.removeEventListener('resize',read);undoFit();undoCollapse();stopName()})
 }, {flush:'post',immediate:true})
 const user = computed(() => !portalChrome.value.user && !accountInBar.value && pageCtx.value?.user?.name ? pageCtx.value.user : undefined)
 // A page component's PageActions render into the header (or the page bar), before the App's actions.
@@ -445,9 +476,12 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
    the UI's --ui-bars-motion); the App's column moves up into the header's
    room by translate, as the UI moves it under its own top bar. Where the
    App's own top bar takes the header's place ("bar") the header is hidden
-   and the App has no room. */
+   and the App has no room. DSM stacks its window rows (.x-window-tl and
+   .x-window-bwrap, both position: relative and z-index: 1) and the body row
+   comes later, so the header is raised one above it: at rest it is drawn
+   over the App's room, and it slides out over the App's content. */
 .sds-standalone-main-window[data-synopkgland-portal-overlay] > .x-window-tl {
-  position: relative; z-index: 1;
+  position: relative; z-index: 2;
   transition: transform var(--synopkgland-portal-motion, 200ms) cubic-bezier(0.32, 0.72, 0, 1), opacity var(--synopkgland-portal-motion, 200ms) cubic-bezier(0.32, 0.72, 0, 1);
 }
 .sds-standalone-main-window[data-synopkgland-portal-overlay] > .x-window-bwrap { margin-top: calc(-1 * var(--synopkgland-portal-header, 0px)); }

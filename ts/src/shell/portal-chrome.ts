@@ -13,8 +13,10 @@ export function readPortalChrome(root: HTMLElement): PortalChrome {
    if(root.contains(element) || element.closest(mainSelector)!==main || !element.textContent?.trim()) return false
    const view=element.ownerDocument.defaultView
    if(!view) return false
-   // The header row hidden by collapsePortalHeader still holds DSM's chrome.
-   const own=main.hasAttribute(portalCollapsedAttr) ? main.querySelector(':scope > .x-window-tl') : null
+   // The header row collapsePortalHeader moves (hidden, or fading back in)
+   // still holds DSM's chrome: what DSM shows does not follow the SDK's own
+   // hiding, so a decision taken from it cannot undo the hiding.
+   const own=main.hasAttribute(portalCollapsedAttr) || main.hasAttribute(portalOverlayAttr) ? main.querySelector(':scope > .x-window-tl') : null
    for(let node:HTMLElement|null=element;node;node=node.parentElement){
     if(node===own) continue
     const style=view.getComputedStyle(node)
@@ -211,6 +213,11 @@ export function collapsePortalHeader(root: HTMLElement, mode: PortalHeaderMode):
    height=base+header
   }
   if(!header || !(height>0)) {clear();return ()=>{}}
+  // The UI's bars move faster after a flick; the header moves with them. Read
+  // before anything is written: reading a computed style after the marks
+  // change would start the header's transition at the old speed.
+  const style=view?.getComputedStyle(root)
+  const motion=style?.getPropertyValue('--ui-bars-motion').trim() || style?.getPropertyValue('--ui-motion-bars').trim()
   const set=(name: string, value: string|undefined)=>{
    if(value===undefined) {if(main.style.getPropertyValue(name)) main.style.removeProperty(name)}
    else if(main.style.getPropertyValue(name)!==value) main.style.setProperty(name,value)
@@ -221,9 +228,6 @@ export function collapsePortalHeader(root: HTMLElement, mode: PortalHeaderMode):
   set(portalHeaderHeight,`${header}px`)
   set(portalBodyHeight,`${height}px`)
   set(portalRoom,mode==='bar' ? undefined : `${header}px`)
-  // The UI's bars move faster after a flick; the header moves with them.
-  const style=view?.getComputedStyle(root)
-  const motion=style?.getPropertyValue('--ui-bars-motion').trim() || style?.getPropertyValue('--ui-motion-bars').trim()
   set(portalMotion,motion || undefined)
  } catch {clear();return ()=>{}}
  return clear

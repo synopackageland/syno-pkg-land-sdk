@@ -8,12 +8,13 @@ import {AppTabBar,PageHeader} from '@synopackageland/ui'
 import AppShell from './AppShell.vue'
 import {readFileSync} from 'node:fs'
 import {join} from 'node:path'
-import {collapsePortalHeader,portalBodyHeight,portalCollapsedAttr,portalHeaderHeight,portalMobileAttr,portalMotion,portalOverlayAttr,portalRoom} from './portal-chrome'
+import {collapsePortalHeader,readPortalChrome,portalBodyHeight,portalCollapsedAttr,portalHeaderHeight,portalMobileAttr,portalMotion,portalOverlayAttr,portalRoom} from './portal-chrome'
 
 // The menu's floating layer watches its anchor.
 beforeEach(()=>{vi.stubGlobal('IntersectionObserver',class{observe(){} unobserve(){} disconnect(){} takeRecords(){return []}})})
 afterEach(()=>{document.body.replaceChildren();vi.restoreAllMocks();vi.unstubAllGlobals()})
-async function settle(){for(let i=0;i<6;i++)await nextTick()}
+// The shell reads DSM's window again once per frame after it changes.
+async function settle(){for(let i=0;i<3;i++){for(let j=0;j<6;j++)await nextTick();await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)))}}
 function dsmWindow({account=true}={}){
  const main=document.createElement('div')
  main.className='x-window sds-standalone-main-window sds-window-v5 x-window-maximized'
@@ -32,6 +33,26 @@ function viewport(width:number,coarse=true){
  vi.stubGlobal('matchMedia',vi.fn(()=>media))
  return (matches:boolean)=>{Object.assign(media,{matches});media.dispatchEvent(Object.assign(new Event('change'),{matches}))}
 }
+
+// The header fades back in from opacity 0 after a scroll. DSM's account is
+// shown all along: read as hidden, the account would move into the App's bar,
+// the bar would take the header's place, the header would read as shown again
+// and the bar would empty: a loop that held the main thread (SDK 0.53.4).
+test('DSM\'s chrome reads as DSM shows it, whatever the SDK does to the header row',()=>{
+ viewport(390)
+ const f=dsmWindow()
+ const undo=collapsePortalHeader(f.app,'scroll')
+ f.tl.style.opacity='0'
+ expect(readPortalChrome(f.app).user).toBe(true)
+ collapsePortalHeader(f.app,'shown')
+ expect(f.main.hasAttribute(portalCollapsedAttr)).toBe(false)
+ expect(readPortalChrome(f.app).user).toBe(true)
+ // DSM's own hiding still counts.
+ undo()
+ expect(readPortalChrome(f.app).user).toBe(false)
+ f.tl.style.opacity=''
+ expect(readPortalChrome(f.app).user).toBe(true)
+})
 
 test('collapsePortalHeader sizes the body once; the header shows, hides on scroll or gives way by its own marks only',()=>{
  const f=dsmWindow()
@@ -84,6 +105,14 @@ test('the room counts in the UI\'s own --ui-bars-room sum',()=>{
  expect(theme).toContain('--ui-bars-room:calc(var(--ui-bars-top-box,0px) + max(var(--ui-bars-bottom-box,0px), var(--ui-safe-bottom,0px)) + var(--ui-bottom-accessory-height,0px))')
  const shell=readFileSync(join(__dirname,'AppShell.vue'),'utf8')
  expect(shell).toContain('--ui-bars-room: calc(var(--ui-bars-top-box, 0px) + max(var(--ui-bars-bottom-box, 0px), var(--ui-safe-bottom, 0px)) + var(--ui-bottom-accessory-height, 0px) + var(--synopkgland-portal-room, 0px));')
+})
+test('DSM\'s header row is stacked above its body row',()=>{
+ // DSM gives .x-window-tl and .x-window-bwrap position: relative and z-index: 1, and the body row comes later:
+ // a header at z-index 1 is drawn under the App's room (an empty band at the top of a phone page).
+ const shell=readFileSync(join(__dirname,'AppShell.vue'),'utf8')
+ const rule=shell.match(/\.sds-standalone-main-window\[data-synopkgland-portal-overlay\] > \.x-window-tl \{([^}]*)\}/)
+ expect(rule?.[1]).toContain('position: relative')
+ expect(Number(rule?.[1].match(/z-index: (\d+)/)?.[1])).toBeGreaterThan(1)
 })
 test('no banner, a root outside the window body or a detached root collapse nothing',()=>{
  const f=dsmWindow()
@@ -150,6 +179,27 @@ test('a phone tab page in the portal: DSM\'s compact row is the one bar; a sub-p
  // Unmounting restores DSM's header.
  expect(f.main.hasAttribute(portalCollapsedAttr)).toBe(false)
  expect(f.main.hasAttribute(portalMobileAttr)).toBe(false)
+})
+
+// A page whose actions go to the phone bar (Meeting Copilot's Settings: its
+// actions slot draws nothing on a phone, but the UI gives it the bar on a
+// section-list page) has a bar: AppLayout draws it. It takes DSM's row and
+// holds the account, never an empty bar under DSM's row or in its place.
+test('a tab page whose actions claim the phone bar: the bar takes DSM\'s row and holds the account',async()=>{
+ viewport(390)
+ const f=dsmWindow(),s=mountShell(f.app)
+ try{
+  await settle()
+  expect(f.main.hasAttribute(portalCollapsedAttr)).toBe(false)
+  const slot=f.app.querySelector('[data-ui-mobile-page-actions]')!
+  const claim=document.createElement('div');claim.className='app-page-slot app-page-bar-actions'
+  slot.append(claim);await settle()
+  expect(f.main.getAttribute(portalCollapsedAttr)).toBe('bar')
+  expect(bar(f.app)?.querySelector('[data-ui-mobile-action]')?.getAttribute('aria-label')).toBe('alice')
+  claim.remove();await settle()
+  expect(f.main.hasAttribute(portalCollapsedAttr)).toBe(false)
+  expect(bar(f.app)).toBeNull()
+ }finally{s.app.unmount()}
 })
 
 test('App header actions in the portal: one bar, the actions and the account after them in its one "…"',async()=>{

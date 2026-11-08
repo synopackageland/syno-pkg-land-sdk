@@ -1,6 +1,6 @@
 {
   "name": "@synopackageland/sdk",
-  "version": "0.53.5",
+  "version": "0.53.6",
   "description": "Frontend SDK for DSM packages built with synopkgland: headless client and Vue components",
   "license": "MIT",
   "homepage": "https://github.com/synopackageland/syno-pkg-land-sdk/tree/main/ts#readme",
@@ -58,7 +58,7 @@
     "build": "node ../scripts/protocol-limits.mjs --check && node ../scripts/native-contract.mjs --check && node ../scripts/executor-manifest.mjs --check && vite build && vue-tsc -p tsconfig.build.json && cp -R i18n dist/ && rm -rf spec && cp -R ../spec spec && cp -R ../api/nativehttp/schema spec/api/v3/schema",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",
-    "test:browser": "node test/browser/picker-layout.mjs && node test/browser/shell-layout.mjs && node test/browser/shell-phone.mjs && node test/browser/portal-header.mjs && node test/browser/portal-phone.mjs && node test/browser/portal-name.mjs && node test/browser/entry-preload.mjs",
+    "test:browser": "node test/browser/picker-layout.mjs && node test/browser/shell-layout.mjs && node test/browser/shell-phone.mjs && node test/browser/portal-header.mjs && node test/browser/portal-phone.mjs && node test/browser/portal-phone-cycles.mjs && node test/browser/portal-name.mjs && node test/browser/entry-preload.mjs",
     "gates": "bash ../scripts/gate.sh",
     "gates:full": "bash ../scripts/gate.sh --full"
   },
