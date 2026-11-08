@@ -588,6 +588,12 @@
     "reason": "Session revalidation spacing; lookup work uses the shared budget"
   },
   {
+    "file": "idgateway/resource_wait.go",
+    "statement": "timer := time.NewTimer(time.Second)",
+    "class": "B",
+    "reason": "Retry spacing while a static resource waits for App readiness; the browser request's context alone cancels the wait, and the clock never fails or aborts work"
+  },
+  {
     "file": "internal/startupbudget/budget.go",
     "statement": "ProbeSeconds = runtimebudget.Operation / time.Second",
     "class": "B",
