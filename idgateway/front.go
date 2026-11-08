@@ -166,13 +166,14 @@ type session struct {
 
 // Front is the gateway handler on the app's ports.
 type Front struct {
-	httpWarning sync.Once
-	optional    *optionalPassthrough
-	cfg         FrontConfig
-	brand       appBrand
-	upstream    *url.URL
-	proxy       *httputil.ReverseProxy
-	cookie      string
+	resourceWaiters chan struct{}
+	httpWarning     sync.Once
+	optional        *optionalPassthrough
+	cfg             FrontConfig
+	brand           appBrand
+	upstream        *url.URL
+	proxy           *httputil.ReverseProxy
+	cookie          string
 
 	mu           sync.Mutex // Authenticated sessions only
 	txnMu        sync.Mutex // Unauthenticated transactions never take mu
@@ -287,7 +288,7 @@ func NewFront(cfg FrontConfig) (*Front, error) {
 		return nil, err
 	}
 	cfg = scopeFront(cfg)
-	f := &Front{brand: readAppBrand("/var/packages", cfg.Package), cfg: cfg, upstream: up, cookie: "synopkgland_sso_" + cfg.Package, txns: map[string]txn{}, sessions: map[string]session{}}
+	f := &Front{resourceWaiters: make(chan struct{}, resourceWaitLimit), brand: readAppBrand("/var/packages", cfg.Package), cfg: cfg, upstream: up, cookie: "synopkgland_sso_" + cfg.Package, txns: map[string]txn{}, sessions: map[string]session{}}
 	if cfg.Provider != nil && cfg.Entry != "" {
 		cfg.Provider.admit = f.admitClient
 	}
@@ -307,11 +308,17 @@ func NewFront(cfg FrontConfig) (*Front, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.DialContext = (&net.Dialer{Timeout: runtimebudget.Operation, KeepAlive: 30 * time.Second}).DialContext
 	transport.ResponseHeaderTimeout = cfg.ResponseHeaderTimeout
-	if transport.ResponseHeaderTimeout <= 0 {
-		transport.ResponseHeaderTimeout = runtimebudget.Operation + 10*time.Second
-	}
 	transport.TLSHandshakeTimeout = runtimebudget.Operation
-	f.proxy = &httputil.ReverseProxy{Rewrite: f.rewrite, ModifyResponse: f.modifyProxyResponse, Transport: transport, ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+	f.proxy = &httputil.ReverseProxy{Rewrite: f.rewrite, ModifyResponse: f.modifyProxyResponse, Transport: &boundedProxyTransport{base: transport, headers: make(chan struct{}, resourceWaitLimit)}, ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+		if errors.Is(err, errUpstreamBusy) {
+			writeStarting(w, r)
+			return
+		}
+		var admission *resourceAccessError
+		if errors.As(err, &admission) {
+			f.writeFailure(w, r, admission.code, "", false)
+			return
+		}
 		var limit *http.MaxBytesError
 		if errors.As(err, &limit) {
 			http.Error(w, "upload exceeds max_upload_bytes", http.StatusRequestEntityTooLarge)

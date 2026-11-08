@@ -13,8 +13,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/synopackageland/syno-pkg-land-sdk/api"
 )
 
 type upstream struct {
@@ -24,16 +22,13 @@ type upstream struct {
 	hits int
 }
 
-func TestProxyWaitsPastDefaultRequestAndKeepsExplicitBudget(t *testing.T) {
+func TestProxyHeadersHaveNoDefaultDeadlineAndKeepExplicitBudget(t *testing.T) {
 	for _, explicit := range []time.Duration{0, 20 * time.Millisecond, 10 * time.Minute} {
 		f, _ := newFront(t, ModeNone, newUpstream(t, nil), func(c *FrontConfig) {
 			c.ResponseHeaderTimeout = explicit
 		})
-		transport := f.proxy.Transport.(*http.Transport)
+		transport := f.proxy.Transport.(*boundedProxyTransport).base
 		want := explicit
-		if want == 0 {
-			want = api.DefaultRequestTimeout + 10*time.Second
-		}
 		if transport.ResponseHeaderTimeout != want {
 			t.Fatalf("header timeout %v, want %v", transport.ResponseHeaderTimeout, want)
 		}
