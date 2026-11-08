@@ -244,3 +244,19 @@ test('the sidebar account keeps the user and sign out on one row',async()=>{
   expect(account.querySelector('button')?.textContent?.trim()).toBe('')
  }finally{app.unmount();root.remove();vi.restoreAllMocks()}
 })
+
+
+test.each([false,true])('the real AppRoot applies an explicit scheme to the normal and denied branches (denied=%s)',async denied=>{
+ const root=document.createElement('div');document.body.append(root)
+ const colorScheme=ref<'light'|'dark'|undefined>()
+ const app=createApp({render:()=>h(AppShell,{appRoot:true,colorScheme:colorScheme.value,denied,locale:'en',modelValue:'home',pages:[{id:'home',title:'Home'}]})})
+ try {
+  app.mount(root);await nextTick()
+  expect(root.querySelector('[data-ui-app]')?.getAttribute('data-ui-color-scheme')).toBeNull()
+  colorScheme.value='dark';await nextTick()
+  expect(root.querySelector('[data-ui-app]')?.getAttribute('data-ui-color-scheme')).toBe('dark')
+  colorScheme.value='light';await nextTick()
+  expect(root.querySelector('[data-ui-app]')?.getAttribute('data-ui-color-scheme')).toBeNull()
+  expect(root.querySelector('[color-scheme], [colorscheme]')).toBeNull()
+ } finally {app.unmount();root.remove()}
+})

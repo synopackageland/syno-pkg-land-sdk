@@ -51,8 +51,12 @@ is not automatically wrapped.
 See [HTTPS and session recovery](../docs/https-and-session-recovery.md) for the
 API, cancellation/deadline behavior and the CLI skill link.
 
-Many Apps can use HTTP. Only Apps needing secure context, pairing or a strict
-HTTPS Origin policy should require it. Opt-in Go `api.RequireSecureOrigin`
+Many Apps can use HTTP. Standalone identity (`identity: standalone`, including
+`init --with login`) requires HTTPS for password sign-in and DSM-cookie reuse:
+its session cookie is Secure. Use it only for Apps opened outside a DSM window
+(Portal or their own tab); do not add it to a DSM-window App. Other Apps should
+require HTTPS only for secure context, pairing or a strict HTTPS Origin policy.
+Opt-in Go `api.RequireSecureOrigin`
 returns `https_required`; render `identityCopy(locale).httpsTitle` and
 `errors.https_required` with instructions to reopen through HTTPS.
 `readDsmHttpsURL(ctx, location.href)` discovers `dms_https` through
@@ -665,6 +669,13 @@ is not a full page) its dialogs may leave the window (`dialog-bounds=
 page and a shell without `ctx` keep dialogs in the App. Use it in place of
 the App's own `AppRoot`: app-local roots do not nest.
 
+With `app-root`, the declared `color-scheme` prop (`'light' | 'dark'`) goes
+directly to `AppRoot`. Leave it unset in a DSM window: DSM draws the window
+light. Only the App's own full page (Portal or its own tab) may follow
+`prefers-color-scheme`. Without `app-root`, set the scheme on the App's own
+`AppRoot` instead. The denied page and LoginPage draw the `--ui-bg` surface
+so their background and text use the same theme.
+
 ```vue
 <AppShell app-root v-model="page" :ctx="ctx" :locale="ctx.locale" :pages="pages" />
 ```
@@ -690,7 +701,12 @@ Explicit `title`, `message` and `header: false` still take precedence; the
 `denied` slot replaces the message. The sidebar, notices and default slot are
 not rendered while denied. `createSession(ctx).denied` exposes the entry refusal
 with this copy, including refusals during session discovery or later calls.
-LoginPage shows it without offering a login form.
+LoginPage shows it without offering a login form. On HTTP, LoginPage shows a
+dismissible warning explaining why HTTPS is required, with a button when
+`readDsmHttpsURL` can discover a trusted DSM HTTPS address through the session
+context. Otherwise it gives instructions to reopen DSM over HTTPS and ask an
+administrator for the address. Both password sign-in and Continue with DSM
+remain disabled on HTTP, including after dismissing the warning.
 
 ```vue
 <AppShell v-model="page" :ctx="ctx" :locale="ctx.locale" :pages="pages" :denied="accessError && {code: accessError.code}" />

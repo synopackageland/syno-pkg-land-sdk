@@ -25,5 +25,8 @@
     "expired": "Votre session a expiré. Reconnectez-vous",
     "revalidate": "Connectez-vous à DSM dans ce navigateur, puis choisissez « Continuer avec DSM »",
     "unavailable": "La connexion n’est pas disponible. Actualisez et réessayez"
-  }
+  },
+  "httpsReason": "La connexion exige HTTPS pour protéger le mot de passe et le cookie de session Secure, même en continuant avec DSM",
+  "httpsInstructions": "Ouvrez DSM en HTTPS, puis rouvrez cette app. Demandez si besoin l’adresse HTTPS à un administrateur",
+  "openHTTPS": "Ouvrir en HTTPS"
 }

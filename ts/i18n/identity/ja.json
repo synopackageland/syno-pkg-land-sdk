@@ -25,5 +25,8 @@
     "expired": "セッションの有効期限が切れました。もう一度サインインしてください",
     "revalidate": "このブラウザーで DSM にサインインしてから、「DSM で続行」を選択してください",
     "unavailable": "サインインを利用できません。最新の情報に更新してから、もう一度お試しください"
-  }
+  },
+  "httpsReason": "パスワードと Secure セッション Cookie を保護するため、DSM で続行する場合もログインには HTTPS が必要です",
+  "httpsInstructions": "HTTPS で DSM を開き、このアプリを開き直してください。HTTPS のアドレスは管理者にお問い合わせください",
+  "openHTTPS": "HTTPS を開く"
 }

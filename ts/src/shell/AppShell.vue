@@ -58,6 +58,9 @@ const props = withDefaults(defineProps<{
   // Wraps the shell in an app-local AppRoot, with the UI's locale. In a DSM window its dialogs may
   // leave the window, and a press on one brings the window to the front.
   appRoot?: boolean
+  /** Forwarded to AppRoot with app-root. Leave unset in a DSM window: DSM draws it light.
+   * Only the App's own full page (Portal or own tab) may follow prefers-color-scheme. */
+  colorScheme?: 'light' | 'dark'
   // The App's first reads are still loading: the sidebar and page title stand,
   // the page body shows a loading area and the App's actions wait for them.
   loading?: boolean
@@ -316,7 +319,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
 </script>
 
 <template>
-  <component :is="appRoot ? AppRoot : Bare" v-bind="appRoot ? {modalScope: 'app', dialogBounds: inWindow ? 'viewport' : 'app', style: 'height: 100%;', onActivate: toFront} : {}">
+  <component :is="appRoot ? AppRoot : Bare" v-bind="appRoot ? {modalScope: 'app', dialogBounds: inWindow ? 'viewport' : 'app', colorScheme, style: 'height: 100%;', onActivate: toFront} : {}">
   <component :is="appRoot ? ConfigProvider : Bare" v-bind="appRoot ? {locale: uiLocale(locale)} : {}">
   <ShellPhone v-slot="{phone}">
   <PageContent v-if="denied" class="app-denied" :width="pageWidth" :surface="pageSurface">
@@ -375,7 +378,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
 /* Only the layout's own main: a <main> inside an App's page keeps its scroll. */
 .app-shell :deep(> div > main) { display: flex; flex-direction: column; overflow: hidden; }
 .app-page { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-.app-denied { height: 100%; overflow-y: auto; }
+.app-denied { height: 100%; overflow-y: auto; background: var(--ui-bg); color: var(--ui-text); }
 /* The account is one row beside the collapse button, as wide as the footer
    leaves: the user (its name truncates), then sign out. A collapsed sidebar
    stacks them, as the footer stacks the collapse button. */

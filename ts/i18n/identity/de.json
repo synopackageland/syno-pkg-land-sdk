@@ -25,5 +25,8 @@
     "expired": "Ihre Sitzung ist abgelaufen. Melden Sie sich erneut an",
     "revalidate": "Melden Sie sich in diesem Browser bei DSM an und wählen Sie dann „Mit DSM fortfahren“",
     "unavailable": "Die Anmeldung ist nicht verfügbar. Aktualisieren Sie die Ansicht und versuchen Sie es erneut"
-  }
+  },
+  "httpsReason": "Die Anmeldung erfordert HTTPS zum Schutz von Passwort und Secure-Sitzungscookie, auch beim Fortfahren mit DSM",
+  "httpsInstructions": "Öffnen Sie DSM über HTTPS und dann diese App erneut. Fragen Sie bei Bedarf einen Administrator nach der HTTPS-Adresse",
+  "openHTTPS": "HTTPS öffnen"
 }

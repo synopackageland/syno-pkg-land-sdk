@@ -3,6 +3,7 @@ import type {Context, CallOptions} from '../context'
 import type {BatchCall, BatchResult} from '../client'
 import type {IdentityNotice} from './i18n'
 import {appDenial,appRefusal,type AppDenial} from '../authorization/refusal'
+import {readDsmHttpsURL} from '../dsm/https'
 
 export interface SessionSubject {user: string; uid: string; expiresAt: string}
 export function createSession(ctx: Context) {
@@ -98,6 +99,10 @@ export function createSession(ctx: Context) {
   await identityCall('identity.logout'); if (!disposed) clear()
  }
  function dispose() {disposed = true; clear()}
- return {enabled, ready, subject, notice, denied, start, call, batch, login, bootstrap, logout, dispose}
+ /** Best-effort HTTPS DSM link for LoginPage; unknown/ordinary users never query PortInfo. */
+ function readHttpsURL(pageURL: string, signal?: AbortSignal) {
+  return readDsmHttpsURL(ctx, pageURL, {signal, keepLaunchApp: true})
+ }
+ return {enabled, ready, subject, notice, denied, start, call, batch, login, bootstrap, logout, dispose, readHttpsURL}
 }
 export type IdentitySession = ReturnType<typeof createSession>

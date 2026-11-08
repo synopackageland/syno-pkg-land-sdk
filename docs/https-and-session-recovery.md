@@ -1,7 +1,16 @@
 # HTTPS requirements and stale DSM sessions
 
-Many Apps work over HTTP. Do not force HTTPS for ordinary CRUD, settings or
-file interfaces. Require it only when the App needs secure context features
+Many Apps work over HTTP. Standalone identity (`identity: standalone` or
+`init --with login`) requires HTTPS for both password sign-in and DSM-cookie
+bootstrap because its session cookie is Secure. It is for Apps opened outside
+a DSM window (Portal or their own tab); DSM-window Apps should not add it.
+LoginPage displays a dismissible explanation on HTTP and an explicit HTTPS
+button when `readDsmHttpsURL` can discover a verified address. Otherwise it
+shows instructions to reopen DSM over HTTPS and ask an administrator for the
+address. Dismissing the warning leaves sign-in and Continue with DSM disabled.
+
+For Apps without standalone identity, do not force HTTPS for ordinary CRUD,
+settings or file interfaces. Require it only when the App needs secure context features
 such as `getUserMedia`, clipboard access, Service Worker or WebCrypto `subtle`,
 browser Extension or external device pairing, or an explicit secure Origin
 policy. Browser feature availability still depends on its own permissions.

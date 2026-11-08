@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.53.9
+
+- Declare AppShell `colorScheme` and forward it to AppRoot with `app-root`; leave it unset in DSM windows, and follow system colour preferences only on the App's own full page
+- Draw the denied page and LoginPage with the theme background and text
+- Explain HTTPS-only standalone sign-in in a dismissible warning in every SDK locale, with an explicit HTTPS action when the administrator's DSM context supplies a verified port
+- Keep password sign-in and Continue with DSM disabled on HTTP, and document HTTPS-only DSM-cookie reuse and standalone identity's full-page scope
+- Align SDK and App adapter metadata and reuse the immutable executor release and its six digests
+
 ## 0.53.8
 
 - Preserve the SDK-owned runtime owner UID placeholder through Compose worker YAML serialization so Container Manager resolves it to the host package UID rather than a literal string
