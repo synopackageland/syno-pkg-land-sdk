@@ -85,3 +85,27 @@ in `CapabilityStatus.diagnostic`, without request parameters or credentials.
 The original error remains available if rollback also fails. Rollback success
 requires an exact readback of the restored tasks, and withdrawal success requires
 readback of their absence.
+
+WebAPI-only approval uses the same executor setup as file-delegate approval.
+The generated desktop and mobile entries expose `ExecutorSetup.fileDelegate`
+from the manifest's `capabilities.delegate` declaration. When it is false, the
+settings, approval page and notice dialog do not call `delegate.status` or wait
+for a file-scope readback. Older hosts without this declaration may probe the
+backend; `unknown_method` means no file scope. Other errors still surface, and
+`EXECUTOR_UNAVAILABLE` remains tolerated only while the executor is not ready.
+File-specific job panels still require a declared file delegate.
+
+Each WebAPI profile keeps its English `purpose`. Add `purpose_i18n` display
+metadata keyed by `en`, `zh-TW`, `zh-CN`, `de`, `fr`, `ja`, `ko`, `es` and `it`.
+The consent list follows the current UI language (including DSM language
+aliases), then falls back to `purpose_i18n.en`, then the original purpose.
+Descriptions have no trailing period. The SDK supplies nine-language catalogs
+for standard update, mail, connection precheck, sign-in, clock repair, account
+access, photo and storage purposes. A catalog matches the exact English text;
+a custom profile name never selects an unrelated purpose. An App's explicit
+translations take precedence over the catalog.
+
+The CLI validates display metadata and warns about missing translations.
+Translations travel to the consent UI, while the executor policy retains only
+the original English purpose and exact API/method/version allowlist. Editing a
+translation alone therefore does not change the executor policy digest.

@@ -1,0 +1,11 @@
+{
+  "update-read": "DSM-Aktualisierungsfortschritt und Serverprüfungsergebnis lesen",
+  "mail-read": "MailPlus-Konfiguration und Diagnosedaten lesen",
+  "mail-write": "In der Vorschau geprüfte Änderungen an MailPlus SMTP, DKIM und Standard-Relay anwenden und wiederherstellen",
+  "precheck-read": "DNS-, Zeit- und Proxy-Einstellungen lesen, um fehlgeschlagene Verbindungen zu erklären",
+  "signin-read": "Einstellungen für Anmeldung, Kontoschutz, Firewall, Portweiterleitung, Snapshots und Verschlüsselungsschlüssel lesen",
+  "time-repair": "Eine eindeutig falsche NAS-Uhr korrigieren, damit Anmeldecodes weiterhin funktionieren",
+  "access-read": "Konten, Gruppen, Freigabeberechtigungen, Ordner-ACLs, Anwendungsberechtigungen und Dateidiensteinstellungen lesen, um den Ordnerzugriff eines Benutzers zu erklären",
+  "photos-read": "Einstellungen für Synology Photos, Benutzer-Home und Codecs lesen, um fehlende Fotos zu erklären",
+  "storage-read": "Speicherzustand, SMART-Zeitpläne und Benachrichtigungsaktivierung lesen"
+}

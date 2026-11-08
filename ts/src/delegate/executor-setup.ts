@@ -18,8 +18,10 @@ export interface CapabilityStatus {state:CapabilityState;approval?:ApprovalDiffe
 // The App supplies the implementation through app.provide(ExecutorSetupKey, setup).
 // Passwords belong only to this call and must never be persisted or logged.
 export interface ExecutorSetup {
+ // Manifest declaration; undefined keeps compatibility with older entry hosts.
+ fileDelegate?:boolean
  // Approved policy profiles provided by the package window for consent details.
- webapiProfiles?:Record<string,{purpose:string;apis:Record<string,Record<string,number[]>>;raw_max_bytes?:number}>
+ webapiProfiles?:Record<string,{purpose:string;purpose_i18n?:Partial<Record<import('../i18n').UiLocale,string>>;apis:Record<string,Record<string,number[]>>;raw_max_bytes?:number}>
  status():Promise<CapabilityStatus>
  authorize(password:string,selectedScope?:string):Promise<CapabilityStatus>
  control(action:'start'|'stop'|'purge'):Promise<CapabilityStatus>

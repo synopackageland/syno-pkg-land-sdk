@@ -100,7 +100,7 @@ test('the dialog reads the scope through the call of the setup the App provides'
   throw {code:'unknown_method'}
  }
  scopeShares([{name:'media',path:'/media',isdir:true}])
- const provided:ExecutorSetup={...setup,call:async<T,>(method:string)=>{adapted.push(method);return (method==='bg.browse'?{shares:[{name:'media',path:'/media',isdir:true}],total:1,offset:0}:await call<T>(method)) as T}}
+ const provided:ExecutorSetup={...setup,fileDelegate:true,call:async<T,>(method:string)=>{adapted.push(method);return (method==='bg.browse'?{shares:[{name:'media',path:'/media',isdir:true}],total:1,offset:0}:await call<T>(method)) as T}}
  const ctx={fullPage:false,locale:'en',executor:setup,user:{name:'someone',isAdmin:true},reopen:()=>()=>{},call}
  const root=document.createElement('div');document.body.append(root)
  const app=createApp({render:()=>h(AppShell,{appRoot:true,ctx,locale:'en',modelValue:'home',pages:[{id:'home',title:'Home'}]},()=>h('p','App content'))})

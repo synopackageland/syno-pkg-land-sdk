@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.53.13
+
+- Use the manifest file-delegate declaration in executor approval, skip file scope reads for WebAPI-only Apps and treat unknown_method as absent file scope in initial and approval readback paths
+- Translate standard WebAPI purpose descriptions in all nine UI languages, accept App purpose_i18n metadata with English fallback and keep custom purposes tied to their own text
+- Reuse the immutable executor release and its six digests; Go sources, canonical tasks and permission policy bytes are unchanged
+
 ## 0.53.12
 
 - The Vue entry accepts `@synopackageland/ui` 0.23.5 or a later 0.23, 0.24 or 0.25 (peer `>=0.23.5 <0.26.0`) so an App can adopt the UI phone refresh; the SDK is still built and tested against 0.23.5, and the refresh changes no component API the SDK uses

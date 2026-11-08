@@ -1,0 +1,11 @@
+{
+  "update-read": "读取 DSM 更新进度与服务器检查结果",
+  "mail-read": "读取 MailPlus 设置与诊断数据",
+  "mail-write": "应用及还原已预览的 MailPlus SMTP、DKIM 与默认中继设置更改",
+  "precheck-read": "读取 DNS、时间与代理服务器设置，以说明连接失败原因",
+  "signin-read": "读取登录、账户保护、防火墙、端口转发、快照与加密密钥设置",
+  "time-repair": "在 NAS 时钟明显错误时校正时间，让登录验证码持续有效",
+  "access-read": "读取账户、群组、共享文件夹权限、文件夹 ACL、应用程序权限与文件服务设置，以说明用户能否打开文件夹的原因",
+  "photos-read": "读取 Synology Photos、用户主目录与编解码器设置，以说明照片未显示的原因",
+  "storage-read": "读取存储空间健康状态、SMART 计划与通知启用状态"
+}
