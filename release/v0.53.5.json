@@ -38,7 +38,10 @@
   },
   "changes": [
     "In DSM's Application Portal on a phone, DSM's header is stacked above the window body (z-index 2 over DSM's z-index 1 body row), so it is drawn over the App's room instead of under it: no empty band at the top of a phone page at rest, while hiding or while showing.",
+    "A phone page in DSM's Application Portal no longer freezes when the header comes back after a scroll (a 0.53.4 regression): DSM's account is read as DSM shows it while the SDK moves the header, the header gives way from the bar the page declares (title, actions, Back, page actions claiming the phone bar, or the account) rather than from the bar drawn at that moment, and the shell places the header at most once per frame and ignores its own writes.",
+    "After a flick the header returns at the UI's bar speed together with the App's content: the speed is read before the header's marks change.",
     "The portal phone browser check reproduces DSM's row stacking and checks, at rest and per frame of the hide and show, that the header is on top and the App's content starts at its bottom.",
+    "A motion-on browser check drags tab pages (Home, Meetings), a page with actions and a sub-page down and up five times plus flings, and asserts no frame gap over 200ms, the App's content at the header's bottom on every frame, and the end states.",
     "Reuse the immutable executor/v0.53.3 release and its six digests."
   ]
 }

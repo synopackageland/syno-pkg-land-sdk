@@ -109,6 +109,8 @@ test('a visible DSM portal header removes duplicate branding and the default acc
  app.unmount();fixture.remove();vi.restoreAllMocks()
 })
 
+// The shell reads DSM's window again once per frame after it changes.
+const frame=()=>new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)))
 // The UI's mobile layout (AppLayout data-ui-layout-mode="mobile") marks DSM's
 // header for the icon-only stylesheet rules; unmounting clears the marks.
 test('the shell marks the portal header only while its layout is mobile',async()=>{
@@ -121,18 +123,18 @@ test('the shell marks the portal header only while its layout is mobile',async()
  const layout=root.querySelector<HTMLElement>('[data-ui-layout-mode]')!
  const marked=()=>fixture.main.hasAttribute('data-synopkgland-portal-mobile')
  expect(marked()).toBe(layout.getAttribute('data-ui-layout-mode')==='mobile')
- layout.setAttribute('data-ui-layout-mode','mobile');await new Promise(resolve=>setTimeout(resolve,0))
+ layout.setAttribute('data-ui-layout-mode','mobile');await frame()
  expect(marked()).toBe(true)
  // DSM renders the account menu into the body on the first tap: it is named then.
  const menu=document.createElement('div');menu.className='x-menu sds-standalone-main-window-header__toolbar__menu'
  menu.innerHTML='<ul class="x-menu-list"><a class="x-menu-list-item sds-standalone-help">Help</a></ul>'
- document.body.append(menu);await new Promise(resolve=>setTimeout(resolve,0))
+ document.body.append(menu);await frame()
  expect(menu.getAttribute('data-synopkgland-portal-account')).toBe('alice')
  expect(fixture.account.querySelector('button')?.textContent).toBe('alice')
- layout.setAttribute('data-ui-layout-mode','web');await new Promise(resolve=>setTimeout(resolve,0))
+ layout.setAttribute('data-ui-layout-mode','web');await frame()
  expect(marked()).toBe(false)
  expect(menu.hasAttribute('data-synopkgland-portal-account')).toBe(false)
- layout.setAttribute('data-ui-layout-mode','mobile');await new Promise(resolve=>setTimeout(resolve,0))
+ layout.setAttribute('data-ui-layout-mode','mobile');await frame()
  app.unmount()
  expect(marked()).toBe(false)
  expect(menu.hasAttribute('data-synopkgland-portal-account')).toBe(false)

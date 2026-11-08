@@ -730,5 +730,11 @@
     "statement": "timer := time.NewTimer(time.Second)",
     "class": "B",
     "reason": "Poll spacing for read-only Container Manager profile metadata; missing registration has no total elapsed failure timer"
+  },
+  {
+    "file": "ts/src/shell/AppShell.vue",
+    "statement": "setTimeout(run, 0)",
+    "class": "B",
+    "reason": "Next-frame stand-in where the window draws no frames (no requestAnimationFrame, as jsdom): defers the shell's portal header placement; nothing is aborted or failed by the clock"
   }
 ]

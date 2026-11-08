@@ -161,7 +161,10 @@ bar is shown instead (a page outside the tab bar, a sub-page with Back, an
 App with `header-actions`, or an App without a tab bar, whose bar holds the
 menu button), it takes the
 banner's place: the banner is hidden and the App gets its height. The
-account then moves into the App's bar (below). The banner also hides with
+account then moves into the App's bar (below). That follows what the page
+declares, never whether a bar is drawn at that moment, and DSM's account
+counts as shown while the shell moves the banner, so hiding the banner never
+changes which bar the page has. The banner also hides with
 the App's bars when the page scrolls down and comes back with them: it
 follows the UI's own hide-on-scroll decision (the UI's shared gesture
 velocity and thresholds) and moves at the UI's bar speed, at once with
