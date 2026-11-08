@@ -10,6 +10,7 @@ import {computed} from 'vue'
 import {ChevronRight,ShieldCheck} from '@lucide/vue'
 import {delegateCopy} from './copy'
 import {joinSentences} from '../i18n'
+import {profilePurpose} from './profile-purpose'
 import ExecutorUpgrade from './ExecutorUpgrade.vue'
 import type {CapabilityStatus} from './executor-setup'
 import type {ExecutorSetup} from './executor-setup'
@@ -30,7 +31,7 @@ const points=computed(()=>[copy.value.pointPassword,copy.value.pointLimited,copy
     <p v-if="!admin" class="executor-consent-lead executor-consent-ask" data-consent-ask>{{ copy.consentAsk }}</p>
    </div>
    <ul v-if="webapiProfiles&&Object.keys(webapiProfiles).length" data-webapi-profiles>
-    <li v-for="(profile,name) in webapiProfiles" :key="name"><strong>{{ name }}</strong>: {{ profile.purpose }}
+    <li v-for="(profile,name) in webapiProfiles" :key="name"><strong>{{ name }}</strong>: {{ profilePurpose(profile,locale) }}
      <details><summary>{{ copy.details }}</summary><div v-for="(methods,api) in profile.apis" :key="api"><code>{{ api }}</code><div v-for="(versions,method) in methods" :key="method">{{ method }} ({{ versions.join(', ') }})</div></div><code v-if="profile.raw_max_bytes" data-webapi-raw>{{ copy.rawLimit }}: {{ profile.raw_max_bytes }}</code></details>
     </li>
    </ul>

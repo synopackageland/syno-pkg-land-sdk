@@ -1,0 +1,52 @@
+{
+  "version": "0.53.13",
+  "executorVersion": "0.53.5",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.13",
+    "@synopackageland/app": "0.53.13",
+    "syno-pkg-land-app": "0.53.13",
+    "synopkgland_app": "0.53.13"
+  },
+  "executorDigests": {
+    "x86_64": "78125a96c428dd3322056669d27d7269dfcac78057a34f22d1bac9741393a957",
+    "aarch64": "ed9e21ffd6f6f46927eddd6a11a68ccd201f4ebd680846b81d266845edc180da",
+    "armv7": "21787da130a653f66fb6a71c859868c1c144cd184d896c0df44f87eb44f7c0ca",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Passed 121 focused Vue approval/settings/consent tests, 10 locale/glossary tests, frontend and Node typechecks/builds, packed consumer import, 3 SDK version/manifest unit tests and focused Go delegate status tests in a nonroot container. Companion CLI validation passed focused profile, entry, mobile, manifest and guidance tests. A synthetic Chromium WebAPI-only mobile smoke passed first approval (including password retry), upgrade, non-admin and anonymous scenarios with zero delegate.status calls. npm package inventories and generic internal-content scans passed. No full gate, QEMU, NAS acceptance, publication or tag; Go source and released executor inventory are unchanged."
+  },
+  "ui": {
+    "builtAgainst": "0.23.5",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.5.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Approve WebAPI-only Apps without querying an undeclared file delegate; tolerate unknown_method from legacy backends",
+    "Localize standard WebAPI purpose descriptions in nine languages and support App purpose_i18n display metadata",
+    "Reuse the immutable executor release and its six digests; policy bytes and task definitions are unchanged"
+  ],
+  "npmArtifacts": {
+    "synopackageland-app-0.53.13.tgz": {
+      "sha256": "1aa6333e633012ff22df9c3394f950a03626e2a759d6b52ed99b5ea8d7500d5c"
+    },
+    "synopackageland-sdk-0.53.13.tgz": {
+      "sha256": "96d944e1101037b8e5d9b137480f4f937c40013ac152ef3790fb46b877024758"
+    }
+  }
+}

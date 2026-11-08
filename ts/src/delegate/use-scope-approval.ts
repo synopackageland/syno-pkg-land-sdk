@@ -35,15 +35,24 @@ export function useScopeApproval(props:{readonly admin:boolean;readonly locale?:
  const options=computed(()=>[{label:copy.value.homeScope,value:'home'},...shares.value])
  const canConfirm=computed(()=>!dynamic.value||!!chosen.value&&options.value.some(o=>o.value===chosen.value))
  const needsScope=computed(()=>dynamic.value&&!scope.value?.selection)
- let disposed=false
+ let disposed=false,noFileScope=false
+ const hasFileScope=()=>setup.fileDelegate!==false&&!noFileScope
+ // Older backends may omit the delegate service entirely. Other failures
+ // still propagate, including unavailable executors that should be ready.
+ async function readScope(){
+  if(!hasFileScope()||!props.ctx)return undefined
+  try{return await props.ctx.call<ScopeDetail>('delegate.status')}
+  catch(e){if((e as {code?:string})?.code==='unknown_method'){noFileScope=true;if(!disposed)scope.value=undefined;return undefined}throw e}
+ }
  async function load(approved?:CapabilityStatus){
   const next=approved??await setup.status()
   if(disposed)return
   status.value=next
   // A stopped or starting package has no file scope to read.
+  if(!hasFileScope()){scope.value=undefined;return}
   if(!props.ctx||appLifecycle(next))return
-  let detail:ScopeDetail
-  try{detail=await props.ctx.call<ScopeDetail>('delegate.status')}
+  let detail:ScopeDetail|undefined
+  try{detail=await readScope()}
   catch(e){
    // Failed approval can leave no executor to read. Its scheduler refusal is
    // still the useful result; absence of a file scope must not hide it.
@@ -52,7 +61,7 @@ export function useScopeApproval(props:{readonly admin:boolean;readonly locale?:
   }
   if(disposed)return
   scope.value=detail
-  if(detail.scope_mode!=='install-selected')return
+  if(detail?.scope_mode!=='install-selected')return
   const all:Array<{label:string;value:string}>=[]
   let offset=0
   for(let count=0;count<128;count++){
@@ -98,8 +107,10 @@ export function useScopeApproval(props:{readonly admin:boolean;readonly locale?:
  function submit(){if(!password.value&&!busy.value){missing.value=true;return Promise.resolve()}return authorize()}
  // Applied once delegate.status shows the requested scope above the generation it replaced.
  async function landed(requested:{scope:string;generation:number}){
+  if(!props.ctx||!hasFileScope())return false
   for(const deadline=Date.now()+SCOPE_READBACK_MS;!disposed;await new Promise(r=>setTimeout(r,SCOPE_READBACK_POLL_MS))){
-   const selection=(await props.ctx?.call<ScopeDetail>('delegate.status').catch(()=>undefined))?.selection
+   const selection=(await readScope().catch(()=>undefined))?.selection
+   if(!hasFileScope())return false
    if(selection?.scope===requested.scope&&selection.generation>requested.generation)return true
    if(Date.now()>=deadline)return false
   }
