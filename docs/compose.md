@@ -291,6 +291,22 @@ whole-response streaming timeout. Exact upstream absolute redirects change
 origin while retaining encoded path, query and fragment; unrelated IdP URLs and
 relative redirects keep their semantics. No HTML/JS body regex rewriting.
 
+The default upstream response-header deadline is disabled; an explicit
+`response_header_timeout_seconds` is still honored. At most 64 upstream requests
+may wait for response headers at once; those slots are released before response
+bodies stream. Overload retains the retryable starting response. Browser
+cancellation closes pending work, including a supervisor status socket read.
+
+GET/HEAD browser resources (script, stylesheet, font, image, manifest and worker
+destinations, or the App's `/assets/` path) wait for transient readiness rather
+than receiving a starting JSON response that breaks module loading. There are
+64 resource slots, held through the response; the lifecycle supervisor owns
+startup failure decisions. Navigation and ordinary API calls retain their
+starting responses. Resource retries apply only to transient failed dials,
+before a connection exists. HTTP errors, response timeouts, EOFs and partially
+delivered replies are never replayed. Protected resources recheck the session
+and admission after waiting and before each dial retry.
+
 Protected WebSocket upgrades retain their gateway-session identity. While open,
 they revalidate the gateway session, UID-to-name mapping and current admission
 groups every five seconds; lookups have a two-second deadline and fail closed.
@@ -612,6 +628,58 @@ deprecated for lifecycle use. Existing provider/share checks and post-worker
 readiness remain active; a genuine worker acquisition failure still comes from
 DSM with its own result. No SDK preflight can repair or guarantee DSM's private
 registration state.
+
+### Administrator reconciliation before replacement
+
+[Compose recreates an existing service](https://github.com/docker/compose/blob/v2.20.3/pkg/compose/convergence.go#L429-L472) by creating a temporary container,
+removing the old container and renaming the replacement. CM's profile keys use
+names, and its event watcher can race with replacement-profile registration.
+A surviving profile can also retain the old Docker ID: presence alone does not
+establish readiness. The failure can include `profile should exist`/1202 or a
+stale ID/1301; Package Center's 272 wrapper alone is not sufficient evidence.
+
+The SDK exports `ReconcileWorkerContainers` for an **administrator's CLI
+adapter**, under its package lifecycle lock. It is not invoked by an App hook.
+The adapter obtains installed-package evidence from DSM, resolves trusted
+target aliases, reads the exact CM project by ID and inspects full container
+IDs. The SDK requires matching `is_package`, package name, project name and
+directory, plus container name, service, working directory and fixed Compose
+config-file labels. CM's generated `docker-compose.admin.yaml` and the SDK's
+`docker-compose.yml` must both be in that exact owned directory. Unknown states,
+foreign containers, ambiguous paths or unavailable reads refuse further work.
+The adapter returns only a stored profile's container ID, never its other
+potentially secret settings, and rejects untrusted file metadata.
+
+For prevention, stop the package first, then use
+`RemoveStoppedWorkerContainers` before upgrade or uninstall. It refuses running
+or unknown-state containers and calls only `SYNO.Docker.Container delete` with
+`force=false`, `preserve_profile=false`. Readback confirms removal of the
+container membership and its profile. The subsequent official worker creates
+fresh containers without the temporary-name replacement path. Volumes, bind
+data, images and the project registration are preserved; writable container
+layers are discarded as during a normal replacement.
+
+For a missing profile, `RefreshWorkerProfiles` uses the official Container
+`stop` lookup/regeneration path and verifies the same Docker ID is stopped and
+registered afterward. A matching healthy profile is untouched. A stale profile
+can make that API return 1301; an uncertain write or failed readback stops
+recovery without retrying. Inspect that App before proceeding with a single
+same-version repair/restart. Never infer permission to delete another project,
+force a running container, remove images or volumes, or edit CM's private files.
+
+CM clean performs Down before removing profiles from the remaining container
+inventory. Deleting verified stopped containers through Container delete before
+Down also avoids that orphan-profile path. The documented Profile API has no
+metadata-only delete operation, but on the tested CM version Container delete
+also removed an owned orphan profile after its container was gone. Such cleanup
+needs retained, verified ownership inventory; a name or prefix alone is not
+authority. The SDK refuses to guess ownership of historical orphan profiles.
+
+**CLI integration remains required:** wire the administrator adapter before
+upgrade/uninstall and into evidence-based worker-error repair. Keep package
+scripts nonroot and preflight free of profile waits; a generated root hook
+would not be a safe substitute. Already-built SPKs and Package Center-only
+upgrades do not gain prevention from an SDK library update alone.
 
 Gateway release stops and fences the gateway before writing an inactive acquire
 generation. Previously a concurrent readiness probe could observe the inactive

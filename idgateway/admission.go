@@ -391,6 +391,37 @@ func (f *Front) boundedBody(w http.ResponseWriter, r *http.Request) *http.Reques
 }
 
 func (f *Front) serveProxy(w http.ResponseWriter, r *http.Request) {
+	if isResourceRead(r, f.cfg.IngressPath) {
+		select {
+		case f.resourceWaiters <- struct{}{}:
+			defer func() { <-f.resourceWaiters }()
+		default:
+			writeStarting(w, r)
+			return
+		}
+		for f.cfg.Ready != nil && !f.cfg.Ready(r.Context()) {
+			if waitResource(r.Context()) != nil {
+				return
+			}
+		}
+		if r.Context().Err() != nil {
+			return
+		}
+		proxy := *f.proxy
+		proxy.Transport = resourceTransport{RoundTripper: f.proxy.Transport, check: func() error {
+			if _, protected := r.Context().Value(subjectKey).(Subject); protected {
+				cookie, err := r.Cookie(f.sessionCookie(r))
+				// Reuse long-lived connection admission: it also rechecks role
+				// injection, expiry and revocation after potentially slow lookups.
+				if err != nil || !f.upgradeAllowed(r.Context(), cookie.Value, remoteIP(r)) {
+					return &resourceAccessError{"login_required"}
+				}
+			}
+			return nil
+		}}
+		proxy.ServeHTTP(w, f.boundedBody(w, r))
+		return
+	}
 	if f.cfg.Ready != nil && !f.cfg.Ready(r.Context()) {
 		writeStarting(w, r)
 		return

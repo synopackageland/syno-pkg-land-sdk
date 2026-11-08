@@ -1,0 +1,82 @@
+{
+  "version": "0.53.11",
+  "executorVersion": "0.53.5",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.11",
+    "@synopackageland/app": "0.53.11",
+    "syno-pkg-land-app": "0.53.11",
+    "synopkgland_app": "0.53.11"
+  },
+  "executorDigests": {
+    "x86_64": "78125a96c428dd3322056669d27d7269dfcac78057a34f22d1bac9741393a957",
+    "aarch64": "ed9e21ffd6f6f46927eddd6a11a68ccd201f4ebd680846b81d266845edc180da",
+    "armv7": "21787da130a653f66fb6a71c859868c1c144cd184d896c0df44f87eb44f7c0ca",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Passed the four affected Go packages in a nonroot Linux container, focused gateway race checks, seven metadata/documentation tests and generated metadata checks, x86_64/aarch64 Compose helper and gateway builds, both npm builds/packs and generic repository/tarball content scans. Administrator SDK reconciliation passed three owned CM fixture replacement cycles with matching profiles and retained volume data. No full gate, QEMU, actual SPK upgrade, Package Center acceptance, publication or CLI integration.",
+    "nasFixtureValidation": {
+      "dsm": "7.4.1",
+      "containerManager": "24.0.2-1706",
+      "sdkReplacementCycles": 3,
+      "profileIDsVerified": true,
+      "volumeDataPreserved": true,
+      "orphanProfileCleanupVerified": true,
+      "fixtureCleanupVerified": true,
+      "spkUpgradeTested": false,
+      "gatewayResourceTestedOnNAS": false
+    }
+  },
+  "ui": {
+    "builtAgainst": "0.23.5",
+    "peer": ">=0.23.5 <0.24.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.5.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Provide administrator-only owned-container reconciliation for profile repair and pre-replacement cleanup; CLI integration remains required",
+    "Wait for static resources during transient readiness and connection failures with bounded concurrency and cancellation",
+    "Remove the default upstream response-header deadline while preserving explicit configuration",
+    "Reuse the immutable executor/v0.53.5 release and its six digests"
+  ],
+  "composeHelpers": {
+    "sdkVersion": "0.53.11",
+    "goToolchain": "go1.26.10",
+    "helpers": {
+      "x86_64": {
+        "plan": "74bac50f3cd2ba4ae0a93171ff41260bf2c9b9bf3a175291a287c34ab029a270",
+        "storage-init": "593fa76be7452dd12599782d8cd7f62ca894b975ab91a145a62b4a4d9787f7cb"
+      },
+      "aarch64": {
+        "plan": "9e4737edad108f1c782d3ecd9e9eb1d32e909feec7c3c44eb374c71e5e8f62b4",
+        "storage-init": "9be7fa8be1d3586b07ee1683545107010d809164a187f4aa2110ddbb6d9520b6"
+      }
+    }
+  },
+  "gatewayDigests": {
+    "x86_64": "6ef5a6bf0f4bf8681d645ca322add1eba99d1cd10cb0096d39e51db65c4156b3",
+    "aarch64": "543f164beaecc21af9e443c44e53e6c33e2e1976e512d1e8c96376ca1b07fbff"
+  },
+  "npmArtifacts": {
+    "synopackageland-app-0.53.11.tgz": {
+      "sha256": "b95d0428c4c9e73ab24aa03f582539714a54e30bc010072618d757397aafef88"
+    },
+    "synopackageland-sdk-0.53.11.tgz": {
+      "sha256": "1580262bf41da49eedd7284931b0777af855bc9d542b2b1c37a1fd907b91a2d0"
+    }
+  }
+}

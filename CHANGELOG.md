@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.53.11
+
+- Add administrator-side owned-container reconciliation for missing or stale Container Manager profiles and pre-upgrade/uninstall cleanup; validate package ownership, project path, full container IDs and Compose labels before each action, and preserve volumes and images. CLI lifecycle integration is still required; package-account hooks cannot repair DSM worker state
+- Wait for static assets through transient App readiness and connection failures with 64 resource slots and browser cancellation; revalidate protected sessions before forwarding and never replay a delivered request
+- Remove the default upstream response-header deadline, retain explicit configuration, and bound pending header work to 64 requests without holding streaming bodies in those slots
+- Cancel pending supervisor status reads when their browser request ends
+- Reuse the immutable executor/v0.53.5 release and its six digests
+
 ## 0.53.9
 
 - Declare AppShell `colorScheme` and forward it to AppRoot with `app-root`; leave it unset in DSM windows, and follow system colour preferences only on the App's own full page

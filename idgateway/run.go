@@ -258,6 +258,8 @@ func daemonReadiness(socket, digest string, budget time.Duration) func(context.C
 			return false
 		}
 		defer conn.Close()
+		stopCancel := context.AfterFunc(ctx, func() { conn.Close() })
+		defer stopCancel()
 		if until, ok := ctx.Deadline(); ok {
 			conn.SetDeadline(until)
 		}
