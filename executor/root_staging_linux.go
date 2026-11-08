@@ -4,16 +4,22 @@ package main
 
 import (
 	"errors"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 const selfFD = "/proc/self/fd/"
+
+var memoryReadFilesMu sync.Mutex
 
 func killGroup(pid int) { syscall.Kill(-pid, syscall.SIGKILL) }
 
@@ -39,6 +45,17 @@ func (w subprocessWriter) stagingDir() (*os.File, error) {
 // not: root output may come before any App code made it. A folder the
 // executor creates is the package account's, mode 0700, so the App reads it.
 func (w subprocessWriter) rootStagingDir() (*os.File, error) {
+	if w.Memory {
+		// Check before mkdir: an unavailable memory filesystem must not even
+		// create an empty directory on persistent storage.
+		var fs unix.Statfs_t
+		if err := unix.Statfs(filepath.Dir(w.Staging), &fs); err != nil {
+			return nil, err
+		}
+		if fs.Type != unix.TMPFS_MAGIC {
+			return nil, errors.New("read staging requires tmpfs")
+		}
+	}
 	dir, err := w.stagingDir()
 	if !errors.Is(err, syscall.ENOENT) {
 		if err == nil {
@@ -84,11 +101,24 @@ func (w subprocessWriter) rootStagingDir() (*os.File, error) {
 // Create makes root-<random> as root, exclusively and without following a
 // symlink, and gives it to the package account with mode 0600.
 func (w subprocessWriter) Create() (*os.File, string, error) {
+	if w.Memory {
+		memoryReadFilesMu.Lock()
+		defer memoryReadFilesMu.Unlock()
+	}
 	dir, err := w.rootStagingDir()
 	if err != nil {
 		return nil, "", err
 	}
 	defer dir.Close()
+	if w.Memory {
+		names, err := dir.Readdirnames(maxMemoryReadFiles + 1)
+		if err != nil && err != io.EOF {
+			return nil, "", err
+		}
+		if len(names) >= maxMemoryReadFiles {
+			return nil, "", errRawSpace
+		}
+	}
 	id, err := randomID()
 	if err != nil {
 		return nil, "", err
@@ -126,10 +156,18 @@ func (w subprocessWriter) Available() (int64, error) {
 	if block == 0 {
 		return 0, os.ErrInvalid
 	}
-	if st.Bavail > math.MaxInt64/block {
-		return math.MaxInt64, nil
+	free := int64(math.MaxInt64)
+	if st.Bavail <= math.MaxInt64/block {
+		free = int64(st.Bavail * block)
 	}
-	return int64(st.Bavail * block), nil
+	if w.Memory {
+		used, err := w.Used()
+		if err != nil {
+			return 0, err
+		}
+		free = min(free, max(0, maxMemoryReadStaging-used))
+	}
+	return free, nil
 }
 
 func (w subprocessWriter) Remove(name string) {

@@ -10,7 +10,10 @@ import (
 
 // Dir and its ancestors are validated root-owned at service startup. No client
 // supplies a store path. Atomic replacement + fsync persists revocations.
-type Store struct{ Dir string }
+type Store struct {
+	Dir   string
+	audit auditBuffer
+}
 
 func (s *Store) Put(d Delegation) error {
 	if !idRE.MatchString(d.ID) {

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.53.5
+## 0.53.6
 
 - In DSM's Application Portal on a phone, DSM's banner is drawn over the App again. DSM stacks the window's header row and body row at the same `z-index: 1` with the body row later, so since 0.53.4 the banner lay under the App's room: an empty band at the top of every tab page at rest. The banner row is now raised above the body row (`z-index: 2`) while it lies over it, shown, while it slides out and back, and hidden. Nothing else changes: the body is still sized once, the banner still moves by transform and opacity only, and nothing writes `scrollTop`
 - A phone page in DSM's Application Portal no longer freezes when the banner comes back after a scroll (since 0.53.4). While the banner faded back in, the shell read DSM's account as hidden, moved it into the App's bar, let that bar take the banner's place, then read the account as shown and emptied the bar again, without ever yielding the main thread. The shell now reads DSM's banner as DSM shows it, whatever the SDK does to the row, and decides whether the banner gives way from the bar the page declares (a title, actions, Back, page actions that claim the phone bar, or the account), not from whether the App's bar is drawn at that moment. The first change in a frame is answered at once and later ones in that frame once, in the next frame; the shell's own writes to the page are not read back as news
@@ -8,7 +8,15 @@
 - After a flick DSM's banner comes back at the UI's bar speed with the App's content: the speed is read before the banner's marks change, which had started the banner's transition at the default 200ms while the content took 120ms (a band of up to 13px for about 150ms)
 - A new browser check (`portal-phone-cycles.mjs`, motion on) drags Home, Meetings, a page with actions and a sub-page down until the banner hides and back up five times, then flings both ways, and checks that every frame keeps coming (no gap over 200ms, the page answers), that on every frame the App's content starts at the banner's bottom, and the end state at the top
 - The browser check's DSM window stacks the rows as DSM does and checks, at rest and on every frame of the hide and show, that the banner is on top and the App's content starts at its bottom
-- Reuse the immutable executor/v0.53.3 release and its six digests
+- Reuse the immutable executor/v0.53.5 release and its six digests
+
+## 0.53.5
+
+- Buffer classified read-only delegated WebAPI audit in a bounded memory ring; overflow drops the oldest events without touching disk and emits one `dropped:N` marker on the next real flush
+- Flush reads only when every system-array disk is known awake, before durable audit, or on graceful stop; keep mutations synchronous and synchronize the audit directory only on creation or rotation
+- Keep file reads on their original persistent staging path; bound read-only raw output in memory/tmpfs to 1 MiB and use persistent staging above that cap or when tmpfs is unavailable, full or fails
+- Prepare native identity bridge descriptors once at startup; legacy kernels require executable tmpfs and never stage these checks to persistent storage
+- Document crash loss of unflushed read audit and the need to rebuild both the executor and App runtime
 
 ## 0.53.4
 

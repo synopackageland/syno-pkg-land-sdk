@@ -1,5 +1,11 @@
 [
   {
+    "file": "executor/audit_buffer.go",
+    "statement": "auditCheckInterval = time.Minute",
+    "class": "B",
+    "reason": "Observe already-awake disks once per minute; this timer never expires calls or forces an audit flush"
+  },
+  {
     "file": "ts/src/entry/token.ts",
     "statement": "export const TOKEN_HEDGE_DELAY_MS = 4000",
     "class": "B",

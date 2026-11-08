@@ -14,3 +14,4 @@ func nativeAppPrivilege(context.Context, string, string, string) (bool, error) {
 }
 func nativeAccountLookup(context.Context, string) ([]byte, error) { return nil, errNativeAccount }
 func configureCommand(*exec.Cmd)                                  {}
+func prepareBridgeFallback(string)                                {}

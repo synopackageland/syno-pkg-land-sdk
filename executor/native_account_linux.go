@@ -13,6 +13,12 @@ import (
 type nativeAccountBridge struct {
 	Dir     string
 	payload []byte
+	bridge  *appPrivBridge
+}
+
+func preparedNativeAccountBridge(dir string) nativeAccountBridge {
+	bridge := (appPrivBridge{Dir: dir}).prepare(accountBridges[runtime.GOARCH])
+	return nativeAccountBridge{Dir: dir, bridge: &bridge}
 }
 
 func (b nativeAccountBridge) Lookup(ctx context.Context, name string) (Subject, error) {
@@ -23,7 +29,11 @@ func (b nativeAccountBridge) Lookup(ctx context.Context, name string) (Subject, 
 	if len(payload) == 0 {
 		return Subject{}, errNativeAccount
 	}
-	f, err := (appPrivBridge{Dir: b.Dir}).stage(payload)
+	bridge := appPrivBridge{Dir: b.Dir}
+	if b.bridge != nil {
+		bridge = *b.bridge
+	}
+	f, err := bridge.stage(payload)
 	if err != nil {
 		return Subject{}, errNativeAccount
 	}

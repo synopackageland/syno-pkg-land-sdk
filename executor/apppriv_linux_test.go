@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/memoryexec"
 	"io"
 	"os"
 	"syscall"
@@ -59,6 +60,7 @@ func TestAppPrivBridgeIsSealedBeforeExecution(t *testing.T) {
 
 func TestAppPrivBridgeFallsBackToTheProtectedDirectoryOnlyWithoutMemfd(t *testing.T) {
 	dir := t.TempDir()
+	requireMemoryBridge(t, dir)
 	withMemfd(t, func() (int, error) { return -1, syscall.ENOSYS })
 	file, err := appPrivBridge{Dir: dir}.stage([]byte("bridge"))
 	if err != nil {
@@ -79,4 +81,43 @@ func TestAppPrivBridgeFallsBackToTheProtectedDirectoryOnlyWithoutMemfd(t *testin
 	if _, err := (appPrivBridge{}).stage([]byte("bridge")); err == nil {
 		t.Fatal("ENOSYS without a protected directory must refuse")
 	}
+}
+
+func TestPreparedLegacyBridgeDoesNotRestagePerRead(t *testing.T) {
+	dir := t.TempDir()
+	requireMemoryBridge(t, dir)
+	withMemfd(t, func() (int, error) { return -1, syscall.ENOSYS })
+	payload := []byte("bridge")
+	b := (appPrivBridge{Dir: dir, payload: payload}).prepare(payload)
+	if err := os.Remove(dir); err != nil {
+		t.Fatal(err)
+	}
+	// Once prepared at startup, calls work from the unlinked descriptor even
+	// without the fallback directory. A second call must not share a seek.
+	for i := 0; i < 2; i++ {
+		f, err := b.stage(payload)
+		if err != nil {
+			t.Fatal("per-call staging attempted", err)
+		}
+		data, err := io.ReadAll(f)
+		f.Close()
+		if err != nil || string(data) != "bridge" {
+			t.Fatal("prepared descriptor", string(data), err)
+		}
+	}
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Fatal("per-call check recreated persistent directory")
+	}
+}
+
+func requireMemoryBridge(t *testing.T, dir string) {
+	t.Helper()
+	f, err := memoryexec.Open(dir, []byte("probe"))
+	if errors.Is(err, memoryexec.ErrUnavailable) {
+		t.Skip("executable tmpfs unavailable; legacy bridge must refuse")
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.Close()
 }

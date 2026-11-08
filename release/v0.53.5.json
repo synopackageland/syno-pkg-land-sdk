@@ -1,7 +1,7 @@
 {
   "version": "0.53.5",
-  "executorVersion": "0.53.3",
-  "executorRootSDK": "v0.49.4-0.20261103141054-34994683c7b8",
+  "executorVersion": "0.53.5",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
   "packages": {
     "@synopackageland/sdk": "0.53.5",
     "@synopackageland/app": "0.53.5",
@@ -9,23 +9,23 @@
     "synopkgland_app": "0.53.5"
   },
   "executorDigests": {
-    "x86_64": "169be9cb1dbf44a5d03b9f92e95b53b238886001448c0b7b0dbbe5a0b1b53499",
-    "aarch64": "347f4132a495e7498cdef377e0b1d08cb0cba62af71e6dfb2552a957b33881de",
-    "armv7": "075f5d78eecbd2e1cb6e16c4c93b9c94fcaac573fc16aba445ee794f66f065ce",
+    "x86_64": "78125a96c428dd3322056669d27d7269dfcac78057a34f22d1bac9741393a957",
+    "aarch64": "ed9e21ffd6f6f46927eddd6a11a68ccd201f4ebd680846b81d266845edc180da",
+    "armv7": "21787da130a653f66fb6a71c859868c1c144cd184d896c0df44f87eb44f7c0ca",
     "lifecycle": {
-      "x86_64": "3b2720a4d093aeaa82674a75f16e3adc0bfaa76b8357e58ef591d1f15a73a5c0",
-      "aarch64": "f8a9bb0e69dd380d993fcc89cf19e9e3a526a76bdc24c97d53f01001953aad0d",
-      "armv7": "118edf2426e8aaeeea66d1b3b114c86d0aa680c02449755fc37b0d5a288dc430"
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
     },
     "goToolchain": "go1.26.10"
   },
   "verification": {
-    "executorSourceUnchanged": true,
-    "executorReleaseReused": true,
+    "executorSourceUnchanged": false,
+    "executorReleaseReused": false,
     "canonicalTaskDefinitionsUnchanged": true,
     "nasAcceptance": false,
     "rustCratePublished": false,
-    "validation": "Patch checks: basic gate (scripts/gate.sh: docs/version/manifest/timeout/internal-content checks, Go vet/build and core Go units, Python units, Node typecheck/units/build, frontend typecheck, 94 test files / 1221 unit tests, build, packed consumer import and pack inventory), the browser checks in Chromium and WebKit with the portal phone fixture stacking DSM's header and body rows at z-index 1 (header hit-tested on top at rest, and per frame of the hide and show the header is on top and the App's content starts at its bottom), and the new portal cycles check (motion on, tab pages without a phone bar, a tab page with header actions and a sub-page: five touch drags down and up plus flings; no frame held over 200ms, the page answers, the content at the row's bottom on every frame, correct end states; it fails on 0.53.4 and on the first 0.53.5 commit), npm pack for both packages. Meeting Copilot (master a25d6cf) built with UI 0.23.7 RC and this SDK in a portal simulation: no freeze on Meetings scroll-up (the 0.53.4 reproduction passes), header on top with no band on Home, Meetings, Settings and a record page. Real DSM 7.3.2 (SA3200D) through the launchApp portal at 390x844 touch emulation: the z-index rule at rest, hidden and shown on Home, Meetings, Settings, a record page and Live; the freeze fix before its last two refinements (page actions, motion read order) served in place of the installed bundle, five down/up cycles plus flings on Home, Meetings, Settings and a record page with every step answering. The final build was not run on real DSM (browser certificate prompt). No full gate, publication or real-device check."
+    "validation": "Patch checks cover bounded audit overflow without file writes, exact approved read classification, ordering and rotation, failed/partial append recovery, concurrent flush, sysfs wake detection, persistent file reads, 1 MiB raw memory boundaries, concurrent tmpfs quotas and persistent fallback after tmpfs admission/write/sync failures, native bridge staging and readback ownership. Relevant Go packages run with the race detector, vet and builds; canonical payload builds generate the six executor/lifecycle digests with the pinned Go toolchain. Both npm packages are built and packed for content scans. Documentation, version, timeout and manifest checks are included. No full gate matrix, qemu, publication or NAS hibernation acceptance is implied."
   },
   "ui": {
     "builtAgainst": "0.23.5",
@@ -37,11 +37,9 @@
     "minimum": "22"
   },
   "changes": [
-    "In DSM's Application Portal on a phone, DSM's header is stacked above the window body (z-index 2 over DSM's z-index 1 body row), so it is drawn over the App's room instead of under it: no empty band at the top of a phone page at rest, while hiding or while showing.",
-    "A phone page in DSM's Application Portal no longer freezes when the header comes back after a scroll (a 0.53.4 regression): DSM's account is read as DSM shows it while the SDK moves the header, the header gives way from the bar the page declares (title, actions, Back, page actions claiming the phone bar, or the account) rather than from the bar drawn at that moment, and the shell places the header at most once per frame and ignores its own writes.",
-    "After a flick the header returns at the UI's bar speed together with the App's content: the speed is read before the header's marks change.",
-    "The portal phone browser check reproduces DSM's row stacking and checks, at rest and per frame of the hide and show, that the header is on top and the App's content starts at its bottom.",
-    "A motion-on browser check drags tab pages (Home, Meetings), a page with actions and a sub-page down and up five times plus flings, and asserts no frame gap over 200ms, the App's content at the header's bottom on every frame, and the end states.",
-    "Reuse the immutable executor/v0.53.3 release and its six digests."
+    "Buffer classified read-only delegated WebAPI audit in a bounded memory ring; overflow drops oldest events and emits a single dropped:N marker at the next real flush.",
+    "Flush only when all system-array members are known awake, before durable audit or on graceful stop. Keep mutations synchronous and directory synchronization limited to creation or rotation.",
+    "Keep files.read on its original persistent staging path. Bound optional read-only raw memory/tmpfs output to 1 MiB, falling back to persistent staging for larger output or unavailable/full/failed tmpfs without repeating DSM calls. Legacy native bridges require executable memory and are prepared once at startup.",
+    "Document crash loss of unflushed read audit, conservative unknown-method classification, bounded optional tmpfs with persistent fallback, and the coordinated App runtime/executor rebuild."
   ]
 }

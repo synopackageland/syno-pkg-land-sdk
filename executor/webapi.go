@@ -290,7 +290,7 @@ func (e *Executor) callWebAPI(ctx context.Context, r Request) Response {
 	}
 	target := d.Scope + ":" + p.API + "/" + p.Method + "/" + strconv.Itoa(p.Version)
 	e.commitMu.Lock()
-	err = e.auditLocked(s, "webapi.call", d.ID, target, "admitting")
+	err = e.auditWebAPILocked(s, d, p, target, "admitting")
 	e.commitMu.Unlock()
 	if err != nil {
 		return deny("STORAGE_ERROR")
@@ -307,7 +307,7 @@ func (e *Executor) callWebAPI(ctx context.Context, r Request) Response {
 		result = "uncertain"
 	}
 	e.commitMu.Lock()
-	auditErr := e.auditLocked(s, "webapi.call", d.ID, target, result)
+	auditErr := e.auditWebAPILocked(s, d, p, target, result)
 	e.commitMu.Unlock()
 	// Once dispatched, any missing reply is ambiguous: no automatic retries.
 	if result == "uncertain" || auditErr != nil {
