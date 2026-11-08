@@ -2,7 +2,7 @@
 
 ## 0.53.12
 
-- The Vue entry accepts `@synopackageland/ui` 0.23.5 or a later 0.23 or 0.24 (peer `>=0.23.5 <0.25.0`) so an App can adopt UI 0.24.0's phone styles; the SDK is still built and tested against 0.23.5, and UI 0.24.0 changes no component API the SDK uses
+- The Vue entry accepts `@synopackageland/ui` 0.23.5 or a later 0.23, 0.24 or 0.25 (peer `>=0.23.5 <0.26.0`) so an App can adopt the UI phone refresh; the SDK is still built and tested against 0.23.5, and the refresh changes no component API the SDK uses
 - Write the Korean HTTPS sign-in instructions in DSM's formal register (`-십시오`), which 0.53.9 missed
 - No SDK code, protocol or behaviour change; align SDK and App adapter metadata
 - Reuse the immutable executor/v0.53.5 release and its six digests

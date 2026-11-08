@@ -25,11 +25,11 @@
     "canonicalTaskDefinitionsUnchanged": true,
     "nasAcceptance": false,
     "rustCratePublished": false,
-    "validation": "Passed the basic release gate (doc checks, SDK version/executor-manifest/protocol-limit/timeout-policy checks, Node typecheck/tests/build, Go vet/build/tests, Python tests, TS typecheck/1237 tests/build/consumer test/pack checks, internal-content scans); Meeting Copilot type-checked, tested and built with the UI 0.24.0 release candidate and this SDK after a plain npm install. Go sources are unchanged from 0.53.11. No full gate, QEMU, executor, gateway or Compose-helper rebuild, NAS acceptance or publication."
+    "validation": "Passed the basic release gate (doc checks, SDK version/executor-manifest/protocol-limit/timeout-policy checks, Node typecheck/tests/build, Go vet/build/tests, Python tests, TS typecheck/1237 tests/build/consumer test/pack checks, internal-content scans). Meeting Copilot was type-checked, tested and built with the UI 0.24.0 release candidate under the earlier <0.25.0 peer; it has not yet been re-checked against UI 0.25.0. Go sources are unchanged from 0.53.11. No full gate, QEMU, executor, gateway or Compose-helper rebuild, NAS acceptance or publication."
   },
   "ui": {
     "builtAgainst": "0.23.5",
-    "peer": ">=0.23.5 <0.25.0",
+    "peer": ">=0.23.5 <0.26.0",
     "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.5.tgz"
   },
   "node": {
@@ -37,7 +37,7 @@
     "minimum": "22"
   },
   "changes": [
-    "Widen the @synopackageland/ui peer to >=0.23.5 <0.25.0 so Apps can adopt UI 0.24.0; still built and tested against 0.23.5",
+    "Widen the @synopackageland/ui peer to >=0.23.5 <0.26.0 so Apps can adopt the UI phone refresh (0.24/0.25); still built and tested against 0.23.5",
     "Write the Korean HTTPS sign-in instructions in DSM's formal register",
     "Leave Go sources unchanged from 0.53.11; its Compose helper and gateway digests (release/v0.53.11.json) still apply",
     "Reuse the immutable executor/v0.53.5 release and its six digests"
@@ -47,7 +47,7 @@
       "sha256": "d54a8637eb7ee939d457e7019ec82e8ec325b845da7faef7625885ac02fc5685"
     },
     "synopackageland-sdk-0.53.12.tgz": {
-      "sha256": "647a3a3b91fdb284d4397cd4e9a8cd3a959ac0e548c3385cacc17e24887e1cb7"
+      "sha256": "6c4bc0b9dd7570ae5340fc18bce1bb54ff3a1499d8d3b36267aacf97ddd10ed3"
     }
   }
 }
