@@ -1,0 +1,45 @@
+{
+  "version": "0.53.5",
+  "executorVersion": "0.53.5",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.5",
+    "@synopackageland/app": "0.53.5",
+    "syno-pkg-land-app": "0.53.5",
+    "synopkgland_app": "0.53.5"
+  },
+  "executorDigests": {
+    "x86_64": "78125a96c428dd3322056669d27d7269dfcac78057a34f22d1bac9741393a957",
+    "aarch64": "ed9e21ffd6f6f46927eddd6a11a68ccd201f4ebd680846b81d266845edc180da",
+    "armv7": "21787da130a653f66fb6a71c859868c1c144cd184d896c0df44f87eb44f7c0ca",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": false,
+    "executorReleaseReused": false,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Patch checks cover bounded audit overflow without file writes, exact approved read classification, ordering and rotation, failed/partial append recovery, concurrent flush, sysfs wake detection, persistent file reads, 1 MiB raw memory boundaries, concurrent tmpfs quotas and persistent fallback after tmpfs admission/write/sync failures, native bridge staging and readback ownership. Relevant Go packages run with the race detector, vet and builds; canonical payload builds generate the six executor/lifecycle digests with the pinned Go toolchain. Both npm packages are built and packed for content scans. Documentation, version, timeout and manifest checks are included. No full gate matrix, qemu, publication or NAS hibernation acceptance is implied."
+  },
+  "ui": {
+    "builtAgainst": "0.23.5",
+    "peer": ">=0.23.5 <0.24.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.5.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Buffer classified read-only delegated WebAPI audit in a bounded memory ring; overflow drops oldest events and emits a single dropped:N marker at the next real flush.",
+    "Flush only when all system-array members are known awake, before durable audit or on graceful stop. Keep mutations synchronous and directory synchronization limited to creation or rotation.",
+    "Keep files.read on its original persistent staging path. Bound optional read-only raw memory/tmpfs output to 1 MiB, falling back to persistent staging for larger output or unavailable/full/failed tmpfs without repeating DSM calls. Legacy native bridges require executable memory and are prepared once at startup.",
+    "Document crash loss of unflushed read audit, conservative unknown-method classification, bounded optional tmpfs with persistent fallback, and the coordinated App runtime/executor rebuild."
+  ]
+}

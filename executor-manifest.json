@@ -1,15 +1,15 @@
 {
   "formatVersion": 1,
-  "sdkVersion": "0.53.4",
-  "executorVersion": "0.53.3",
+  "sdkVersion": "0.53.5",
+  "executorVersion": "0.53.5",
   "executorDigests": {
-    "x86_64": "169be9cb1dbf44a5d03b9f92e95b53b238886001448c0b7b0dbbe5a0b1b53499",
-    "aarch64": "347f4132a495e7498cdef377e0b1d08cb0cba62af71e6dfb2552a957b33881de",
-    "armv7": "075f5d78eecbd2e1cb6e16c4c93b9c94fcaac573fc16aba445ee794f66f065ce",
+    "x86_64": "78125a96c428dd3322056669d27d7269dfcac78057a34f22d1bac9741393a957",
+    "aarch64": "ed9e21ffd6f6f46927eddd6a11a68ccd201f4ebd680846b81d266845edc180da",
+    "armv7": "21787da130a653f66fb6a71c859868c1c144cd184d896c0df44f87eb44f7c0ca",
     "lifecycle": {
-      "x86_64": "3b2720a4d093aeaa82674a75f16e3adc0bfaa76b8357e58ef591d1f15a73a5c0",
-      "aarch64": "f8a9bb0e69dd380d993fcc89cf19e9e3a526a76bdc24c97d53f01001953aad0d",
-      "armv7": "118edf2426e8aaeeea66d1b3b114c86d0aa680c02449755fc37b0d5a288dc430"
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
     },
     "goToolchain": "go1.26.10"
   }

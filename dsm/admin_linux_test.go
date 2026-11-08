@@ -59,6 +59,7 @@ func withMemfd(t *testing.T, create func(string, int) (int, error), fallback str
 
 func TestBridgeFallsBackToPackageTempOnlyWithoutMemfd(t *testing.T) {
 	dir := t.TempDir()
+	requireMemoryBridge(t, dir)
 	withMemfd(t, func(string, int) (int, error) { return -1, unix.ENOSYS }, dir)
 	file, err := sealedBridge([]byte("bridge"))
 	if err != nil {
@@ -101,6 +102,24 @@ func TestNativeAdministratorDeviceFixture(t *testing.T) {
 		got, err := IsAdministrator(context.Background(), fields[1])
 		if err != nil || got != want {
 			t.Fatalf("native role %q: %v %v want=%v", fields[1], got, err, want)
+		}
+	}
+}
+
+func TestPreparedLegacyNativeBridgesDoNotWritePerRead(t *testing.T) {
+	dir := t.TempDir()
+	requireMemoryBridge(t, dir)
+	withMemfd(t, func(string, int) (int, error) { return -1, unix.ENOSYS }, dir)
+	if err := os.Remove(dir); err != nil {
+		t.Fatal(err)
+	}
+	for _, bridges := range []map[string][]byte{adminBridges, appPrivBridges, accountBridges} {
+		for i := 0; i < 2; i++ {
+			f, err := sealedBridge(bridges[runtime.GOARCH])
+			if err != nil {
+				t.Fatal("per-call native staging attempted", err)
+			}
+			f.Close()
 		}
 	}
 }

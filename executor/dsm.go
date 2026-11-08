@@ -72,7 +72,7 @@ type liveDSM struct {
 // directory, when the kernel has no memfd_create.
 func newDSM(bridgeDir string) *liveDSM {
 	dsm.SetBridgeFallbackDir(bridgeDir)
-	return &liveDSM{Administrator: dsm.IsAdministrator, NativeAccount: nativeAccountReader(bridgeDir), Command: processCommand{}, Accounts: localAccounts{}, session: runSessionCGI, AppPriv: appPrivBridge{Dir: bridgeDir}.Check}
+	return &liveDSM{Administrator: dsm.IsAdministrator, NativeAccount: nativeAccountReader(bridgeDir), Command: processCommand{}, Accounts: localAccounts{}, session: runSessionCGI, AppPriv: preparedAppPrivBridge(bridgeDir).Check}
 }
 
 type envelope struct {

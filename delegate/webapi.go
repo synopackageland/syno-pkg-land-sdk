@@ -138,35 +138,33 @@ func (w JobWebAPI) callRawTo(ctx context.Context, api, method string, version in
 		}
 	}
 	var out struct {
-		ResponseType string  `json:"response_type"`
-		ContentType  string  `json:"content_type"`
-		Size         int64   `json:"size"`
-		SHA256       string  `json:"sha256"`
-		Body         *string `json:"body"`
-		Staging      string  `json:"staging"`
+		ResponseType  string  `json:"response_type"`
+		ContentType   string  `json:"content_type"`
+		Size          int64   `json:"size"`
+		SHA256        string  `json:"sha256"`
+		Body          *string `json:"body"`
+		Staging       string  `json:"staging"`
+		MemoryStaging bool    `json:"memory_staging,omitempty"`
 	}
 	if err := w.call(ctx, api, method, version, params, "raw", expected, &out); err != nil {
 		return RawWebAPIResult{}, err
 	}
 	var root *os.Root
 	if out.Staging != "" {
-		if !rootFileRE.MatchString(out.Staging) || w.StagingDir == "" {
+		if !rootFileRE.MatchString(out.Staging) || (!out.MemoryStaging && w.StagingDir == "") {
 			return RawWebAPIResult{}, fail(CodeExecutorProtocol)
 		}
-		info, err := os.Lstat(w.StagingDir)
-		if err != nil || !info.IsDir() || info.Mode().Perm()&0077 != 0 {
-			return RawWebAPIResult{}, fail("STAGING_UNAVAILABLE")
+		var err error
+		if out.MemoryStaging {
+			root, err = openMemoryReadStaging(w.Client)
+		} else {
+			root, err = openPrivateReadStaging(w.StagingDir)
 		}
-		root, err = os.OpenRoot(w.StagingDir)
 		if err != nil {
-			return RawWebAPIResult{}, fail("STAGING_UNAVAILABLE")
+			return RawWebAPIResult{}, err
 		}
 		defer root.Close()
 		defer root.Remove(out.Staging)
-		opened, err := root.Stat(".")
-		if err != nil || !os.SameFile(info, opened) {
-			return RawWebAPIResult{}, fail("STAGING_UNAVAILABLE")
-		}
 	}
 	if out.ResponseType != "raw" || out.ContentType == "" || len(out.ContentType) > 256 || out.Size < 0 || out.Size > MaxWebAPIRawBytes || !rootJobRE.MatchString(out.SHA256) || (out.Body == nil) == (out.Staging == "") {
 		return RawWebAPIResult{}, fail(CodeExecutorProtocol)
