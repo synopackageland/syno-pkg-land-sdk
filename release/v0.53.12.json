@@ -1,0 +1,53 @@
+{
+  "version": "0.53.12",
+  "executorVersion": "0.53.5",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.12",
+    "@synopackageland/app": "0.53.12",
+    "syno-pkg-land-app": "0.53.12",
+    "synopkgland_app": "0.53.12"
+  },
+  "executorDigests": {
+    "x86_64": "78125a96c428dd3322056669d27d7269dfcac78057a34f22d1bac9741393a957",
+    "aarch64": "ed9e21ffd6f6f46927eddd6a11a68ccd201f4ebd680846b81d266845edc180da",
+    "armv7": "21787da130a653f66fb6a71c859868c1c144cd184d896c0df44f87eb44f7c0ca",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Passed the basic release gate (doc checks, SDK version/executor-manifest/protocol-limit/timeout-policy checks, Node typecheck/tests/build, Go vet/build/tests, Python tests, TS typecheck/1237 tests/build/consumer test/pack checks, internal-content scans). Meeting Copilot verified with the published UI 0.25.0 and this SDK: plain npm install without legacy peer deps, vue-tsc, 380 vitest tests and vite build passed; fixture-preview screenshots compared before and after on desktop and phone. Go sources are unchanged from 0.53.11. No full gate, QEMU, executor, gateway or Compose-helper rebuild, NAS acceptance or publication."
+  },
+  "ui": {
+    "builtAgainst": "0.23.5",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.5.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Widen the @synopackageland/ui peer to >=0.23.5 <0.26.0 so Apps can adopt the UI phone refresh (0.24/0.25); still built and tested against 0.23.5",
+    "Write the Korean HTTPS sign-in instructions in DSM's formal register",
+    "Leave Go sources unchanged from 0.53.11; its Compose helper and gateway digests (release/v0.53.11.json) still apply",
+    "Reuse the immutable executor/v0.53.5 release and its six digests"
+  ],
+  "npmArtifacts": {
+    "synopackageland-app-0.53.12.tgz": {
+      "sha256": "d54a8637eb7ee939d457e7019ec82e8ec325b845da7faef7625885ac02fc5685"
+    },
+    "synopackageland-sdk-0.53.12.tgz": {
+      "sha256": "6c4bc0b9dd7570ae5340fc18bce1bb54ff3a1499d8d3b36267aacf97ddd10ed3"
+    }
+  }
+}
