@@ -40,3 +40,17 @@ connection limits and callback responsibilities. For custom build hooks, run
 CLI `audit-entry` for each shipped helper, daemon and CGI entry on every target
 architecture. A clean import-graph audit checks entry construction, not the
 safety of privileged operations, protected installation or device lifecycle.
+
+## Container privileges
+
+These describe the container identity of Compose services. None of them
+changes the host identity of the CGI, worker or SPK scripts.
+
+| Tier | Container process | Root inside the container |
+| --- | --- | --- |
+| Package (default) | package UID/GID, no capabilities, `no-new-privileges` | never |
+| Sudo inside container (`run_as.sudo`) | package UID/GID | per command through `sudo`, with a fixed capability set; mounted folders are writable as root |
+| Container root (`run_as: container-root`) | UID 0 with listed capabilities | always; no host binds or Shares |
+
+Apps without elevation never use root. The sudo tier is for interactive
+console services only; see [Compose](compose.md#interactive-console-services).

@@ -1,0 +1,53 @@
+{
+  "version": "0.53.26",
+  "executorVersion": "0.53.6",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.26",
+    "@synopackageland/app": "0.53.26",
+    "syno-pkg-land-app": "0.53.26",
+    "synopkgland_app": "0.53.26"
+  },
+  "executorDigests": {
+    "x86_64": "e77dbf846ea4555355fa15ee3a6ca3b20e1b1aaa9768321243589d9ec15ffabe",
+    "aarch64": "741a7c37757b56b3acc304cef56de5e59c1ca9278a83be0f1e1ff1ad17b24dd6",
+    "armv7": "f0a3059b982d0210621254adf7d1a3343d2a89d114e053e5b3bd646898293b1a",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Compose planner, console init and storage-init binary tests pass as a non-root user (UID 65534): default services unchanged, the sudo opt-in planned with the fixed capability set and no-new-privileges removed only for the opted-in service, refusals (missing reason, extra capabilities, container-root, host network, GPU, privileged, devices, host PID, Docker socket, scratch at /tmp, missing console), Share binds allowed for sudo and refused for container-root, inventory and lock output, package-UID ownership of HOME and TMPDIR, the credential-path table without creation, symlink following or changes to other owners' files. A local Docker check runs the planned options: sudo apt-get install works, the process stays the package UID until sudo, mknod, mount, date and signalling PID 1 as root are refused, and through storage-init and the console init (both exec) tini becomes PID 1 and reaps an orphaned grandchild. Both npm packages are built and packed for content scans. No full gate matrix, qemu, publication or NAS acceptance is implied."
+  },
+  "ui": {
+    "builtAgainst": "0.23.5",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.5.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Add the container init for interactive console services (compose.services.<service>.console): account entry, HOME, TMPDIR on disk scratch and owner-only modes for existing credential paths, as the package UID.",
+    "Add synopkgland container fix-permissions inside console containers.",
+    "Add the explicit sudo opt-in run_as: {mode: package, sudo: {reason}} with a fixed capability set; the service starts as the package UID and keeps its Shares.",
+    "Reuse executor 0.53.6 unchanged."
+  ],
+  "npmArtifacts": {
+    "synopackageland-sdk-0.53.26.tgz": {
+      "sha256": "2e1cdc8d6410cdbf2be3b4da9f04fd43b5575832982ea44fb62fb92d3b48921d"
+    },
+    "synopackageland-app-0.53.26.tgz": {
+      "sha256": "4dc98947cc54eda16c18e1ba3aa83f0832f4bd4cc4ba29c7fbeae3f04b35b228"
+    }
+  }
+}

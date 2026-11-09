@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.53.26 (2026-11-09)
+
+- Add the container init for interactive console services (`compose.services.<service>.console`): account entry for the package UID (nss_wrapper, or `/etc/passwd` with sudo), HOME, `TMPDIR` on disk scratch, `/synopkgland/bin` on `PATH`, and owner-only modes for existing credential paths owned by the package UID (no creation, no symlinks, one log line for other owners). Ordinary Apps are unchanged.
+- Add `synopkgland container fix-permissions` inside console containers to re-apply those modes without a restart. The SDK links exec into the App argv, so an image `tini` stays PID 1.
+- Add the explicit sudo opt-in `run_as: {mode: package, sudo: {reason}}`: the service starts as the package UID, keeps its Shares, drops `no-new-privileges` only there and adds only AUDIT_WRITE, CHOWN, DAC_OVERRIDE, FOWNER, FSETID, SETGID and SETUID. The inventory shows `sudo` with the reason. Requires `console`; refuses host networking, extra capabilities, GPU and scratch at `/tmp`.
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.25 (2026-11-09)
 
 - Compose temporary files go to disk: `compose.services.<service>.scratch: [/tmp]` binds an SDK-created directory from the installed package files (package UID, mode 0700), emptied on every container start before the App and removed with the package. It works with `read_only: true`, replaces a Compose tmpfs at the same target, and pairs with `TMPDIR`.
