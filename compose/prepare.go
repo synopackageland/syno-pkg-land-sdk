@@ -37,7 +37,7 @@ func Prepare(project, pkg, pkgvar string) error {
 	if !filepath.IsAbs(pkgvar) || strings.ContainsAny(pkgvar, "\r\n\x00") {
 		return problem("COMPOSE_STORAGE_NOT_READY", "invalid package var path")
 	}
-	var directories []string
+	var directories, scratch []string
 	var shareEnvironment string
 	if raw, err := os.ReadFile(filepath.Join(project, "compose.lock.json")); err == nil {
 		var lock struct {
@@ -111,6 +111,17 @@ func Prepare(project, pkg, pkgvar string) error {
 			}
 
 		}
+		scratchPrefix := "/var/packages/" + pkg + "/target/compose/"
+		for _, s := range lock.Services {
+			for _, v := range s.Mounts {
+				if rel, ok := strings.CutPrefix(v.Source, scratchPrefix+ScratchDirectory+"/"); ok {
+					if !safeRelative(rel) || strings.Count(rel, "/") != 1 {
+						return problem("COMPOSE_SCRATCH_NOT_READY", "unsafe scratch directory")
+					}
+					scratch = append(scratch, ScratchDirectory+"/"+rel)
+				}
+			}
+		}
 		if !lock.MountsBlocked {
 			for _, s := range lock.Services {
 				for _, v := range s.Mounts {
@@ -166,6 +177,9 @@ func Prepare(project, pkg, pkgvar string) error {
 			}
 		}
 	}
+	if err := prepareScratch(project, scratch); err != nil {
+		return err
+	}
 	envPath := filepath.Join(project, ".env")
 	if st, err := os.Lstat(envPath); err == nil && (!st.Mode().IsRegular() || st.Mode()&os.ModeSymlink != 0) {
 		return problem("COMPOSE_SOURCE_UNSAFE", "runtime env must not be a symlink or special file")
@@ -205,4 +219,42 @@ func Prepare(project, pkg, pkgvar string) error {
 // environment path remains available even while that convenience symlink is gone.
 func packageStateDirectory(pkg, explicit string) string {
 	return pkgstate.Directory(pkg, explicit)
+}
+
+// prepareScratch creates each disk scratch directory in the incoming payload
+// as the package account. It is created fresh and explicitly set to 0700, so
+// neither umask nor inherited permissions decide the mode the App sees.
+func prepareScratch(project string, scratch []string) error {
+	if len(scratch) == 0 {
+		return nil
+	}
+	root, err := os.OpenRoot(project)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+	if err := root.RemoveAll(ScratchDirectory); err != nil {
+		return problem("COMPOSE_SCRATCH_NOT_READY", "cannot reset scratch: %v", err)
+	}
+	for _, rel := range scratch {
+		parts := strings.Split(rel, "/")
+		for i := range parts {
+			dir := filepath.Join(parts[:i+1]...)
+			if err := root.Mkdir(dir, 0700); err != nil && !os.IsExist(err) {
+				return problem("COMPOSE_SCRATCH_NOT_READY", "cannot create scratch: %v", err)
+			}
+			if err := root.Chmod(dir, 0700); err != nil {
+				return problem("COMPOSE_SCRATCH_NOT_READY", "cannot set scratch mode: %v", err)
+			}
+			st, err := root.Lstat(dir)
+			if err != nil {
+				return err
+			}
+			native, ok := st.Sys().(*syscall.Stat_t)
+			if !st.IsDir() || !ok || native.Uid != uint32(os.Geteuid()) || st.Mode().Perm() != 0700 {
+				return problem("COMPOSE_SCRATCH_NOT_READY", "scratch must be a package-owned 0700 directory")
+			}
+		}
+	}
+	return nil
 }

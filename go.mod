@@ -20,7 +20,7 @@ require (
 	github.com/compose-spec/compose-go/v2 v2.16.1
 	github.com/distribution/reference v0.5.0
 	github.com/docker/go-connections v0.4.0 // indirect
-	github.com/docker/go-units v0.5.0 // indirect
+	github.com/docker/go-units v0.5.0
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/mattn/go-shellwords v1.0.12 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect

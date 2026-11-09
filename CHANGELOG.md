@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.53.25 (2026-11-09)
+
+- Compose temporary files go to disk: `compose.services.<service>.scratch: [/tmp]` binds an SDK-created directory from the installed package files (package UID, mode 0700), emptied on every container start before the App and removed with the package. It works with `read_only: true`, replaces a Compose tmpfs at the same target, and pairs with `TMPDIR`.
+- Refuse Compose tmpfs mounts that the package does not declare in `compose.services.<service>.tmpfs` (`COMPOSE_TMPFS_UNDECLARED`, naming the service, target and the scratch option). Every declared tmpfs reaching Docker has a size: the declared size, else the Compose size, else 64 MiB. Size 0 (unlimited) is refused (`COMPOSE_TMPFS_UNBOUNDED`).
+- `storage_init` works with a selected Shared Folder owned by DSM or an administrator: it creates missing subdirectories as the package UID, never changes the folder root, and requires a real write instead of ownership, private modes or a sticky bit. Runtime files stay on package storage.
+- `storage_init` may declare only `runtime` without `directories`.
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.24 (2026-11-09)
 
 - Pass WebAPI params such as `account`, `user`, `username`, `uid`, `password` and `token` to DSM unchanged (for example `SYNO.SecureSignIn.Method.Admin` `get` with `account`). Authorization remains the approved API/method/version tuple and the grant checks; the call always runs as the grant owner.

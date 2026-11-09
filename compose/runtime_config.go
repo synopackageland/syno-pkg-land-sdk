@@ -81,6 +81,11 @@ func privateTarget(dirs []WritableDirectory, target string) (string, string, boo
 		return "", "", false
 	}
 	for _, d := range dirs {
+		// Runtime files and prepare commands stay in package-private storage;
+		// a Shared Folder subtree is visible to other DSM accounts.
+		if d.Share {
+			continue
+		}
 		dir := path.Join(d.Base, d.Path)
 		if path.Dir(target) == dir {
 			return dir, path.Base(target), true
@@ -196,7 +201,7 @@ func validateRuntime(i StorageInitialization) error {
 // SDK-generated environment. It never initializes storage, writes files or runs
 // preparation/periodic commands as root.
 func rootEnvironmentOnly(i StorageInitialization) bool {
-	return len(i.Directories) == 0 && i.Runtime != nil && len(i.Runtime.Environment) > 0 && len(i.Runtime.Files) == 0 && len(i.Runtime.Prepare) == 0 && len(i.Runtime.Periodic) == 0
+	return len(i.Directories) == 0 && len(i.Scratch) == 0 && i.Runtime != nil && len(i.Runtime.Environment) > 0 && len(i.Runtime.Files) == 0 && len(i.Runtime.Prepare) == 0 && len(i.Runtime.Periodic) == 0
 }
 
 // InitializeRuntime runs in the container as the declared service identity. Its caller owns
@@ -210,6 +215,9 @@ func InitializeRuntime(ctx context.Context, i StorageInitialization) error {
 			return problem("COMPOSE_STORAGE_INIT_INVALID", "container root initialization only supports declared runtime environment values")
 		}
 		return loadRuntimeEnvironment(i.Runtime.Environment)
+	}
+	if err := ResetScratch(i.Scratch); err != nil {
+		return err
 	}
 	if err := InitializeStorage(i.Directories); err != nil {
 		return err

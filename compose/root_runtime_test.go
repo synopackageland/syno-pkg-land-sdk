@@ -61,9 +61,17 @@ func TestExplicitRootRuntimeEnvironmentRetainsIsolation(t *testing.T) {
 	}
 }
 
-func TestPackageRuntimeStillRequiresPrivateDirectories(t *testing.T) {
-	if err := InitializeRuntime(context.Background(), StorageInitialization{Runtime: &RuntimeConfiguration{Environment: map[string]RuntimeEnvironment{}}}); err == nil {
-		t.Fatal("empty package initializer accepted")
+func TestPackageRuntimeFilesStillRequirePrivateDirectories(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("run as the package UID")
+	}
+	// Environment-only runtime needs no directories.
+	if err := InitializeRuntime(context.Background(), StorageInitialization{Runtime: &RuntimeConfiguration{Environment: map[string]RuntimeEnvironment{}}}); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(t.TempDir(), "config")
+	if err := InitializeRuntime(context.Background(), StorageInitialization{Runtime: &RuntimeConfiguration{Files: []RuntimeFile{{Target: file, Content: "x"}}}}); err == nil {
+		t.Fatal("runtime file outside a private directory accepted")
 	}
 }
 

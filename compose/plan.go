@@ -106,6 +106,10 @@ type ServicePolicy struct {
 	Network     string                 `json:"network,omitempty"`
 	AddressEnv  string                 `json:"address_env,omitempty"`
 	RunAs       *RunAs                 `json:"run_as,omitempty"`
+	// Scratch lists container targets that get an emptied disk directory.
+	Scratch []string `json:"scratch,omitempty"`
+	// Tmpfs opts targets into a bounded memory tmpfs; others are refused.
+	Tmpfs []TmpfsMount `json:"tmpfs,omitempty"`
 }
 type Input struct {
 	Path    string `json:"path"`
@@ -120,6 +124,8 @@ type Image struct {
 }
 type Inventory struct {
 	StorageInit    *StorageInitialization      `json:"storage_init,omitempty"`
+	Scratch        []string                    `json:"scratch,omitempty"`
+	Tmpfs          []TmpfsInventory            `json:"tmpfs,omitempty"`
 	Ports          []types.ServicePortConfig   `json:"ports"`
 	CapDrop        []string                    `json:"cap_drop"`
 	CapAdd         []string                    `json:"cap_add"`
@@ -256,15 +262,22 @@ func Build(ctx context.Context, r Request) (*Plan, error) {
 	for _, k := range []string{"SYNOPKG_PKGVAR", "SYNOPKGLAND_UID", "SYNOPKGLAND_GID"} {
 		env[k] = "${" + k + "}"
 	}
-	project, err := loader.LoadWithContext(ctx, types.ConfigDetails{WorkingDir: filepath.Dir(files[0].Filename), ConfigFiles: files, Environment: env}, func(o *loader.Options) {
+	loadOptions := func(o *loader.Options) {
 		o.SetProjectName(r.ResourcePrefix+strings.ToLower(r.Package), true)
 		o.Profiles = r.Profiles
 		o.ResolvePaths = true
 		o.ResourceLoaders = nil
-	})
+	}
+	details := types.ConfigDetails{WorkingDir: filepath.Dir(files[0].Filename), ConfigFiles: files, Environment: env}
+	project, err := loader.LoadWithContext(ctx, details, loadOptions)
 	if err != nil {
 		return nil, problem("COMPOSE_MODEL_INVALID", "%v", err)
 	}
+	model, err := loader.LoadModelWithContext(ctx, details, loadOptions)
+	if err != nil {
+		return nil, problem("COMPOSE_MODEL_INVALID", "%v", err)
+	}
+	zeroTmpfs := explicitZeroTmpfs(model)
 	if len(project.Services) == 0 {
 		return nil, problem("COMPOSE_MODEL_INVALID", "no active services in the selected profiles")
 	}
@@ -488,6 +501,7 @@ func Build(ctx context.Context, r Request) (*Plan, error) {
 						return nil, problem("COMPOSE_ANONYMOUS_VOLUME_UNSUPPORTED", "%s:%s needs a stable declared volume", name, v.Target)
 					}
 				case "tmpfs":
+					// Checked by boundTmpfs after all mappings are applied.
 				case "bind":
 					if !(v.ReadOnly && (v.Source == "/etc/localtime" && v.Target == "/etc/localtime" || v.Source == "/etc/timezone" && v.Target == "/etc/timezone")) {
 						return nil, problem("COMPOSE_STORAGE_UNMAPPED", "%s:%s needs package data or an approved Share mapping", name, v.Target)
@@ -524,6 +538,13 @@ func Build(ctx context.Context, r Request) (*Plan, error) {
 					}
 				}
 			}
+		}
+		tmpfs, err := boundTmpfs(&s, policy, zeroTmpfs[name])
+		if err != nil {
+			return nil, err
+		}
+		if err := addScratch(r.Package, &s, policy, rootContainer); err != nil {
+			return nil, err
 		}
 		original := s.Image
 		proof, hasProof := r.ImageProofs[original]
@@ -603,7 +624,11 @@ func Build(ctx context.Context, r Request) (*Plan, error) {
 				}
 			}
 		}
-		if err := applyStorageInit(r.Package, &s, policy.StorageInit, rootContainer); err != nil {
+		storageInit, err := effectiveStorageInit(s, policy)
+		if err != nil {
+			return nil, err
+		}
+		if err := applyStorageInit(r.Package, &s, storageInit, rootContainer); err != nil {
 			return nil, err
 		}
 		p.Images = append(p.Images, Image{Service: name, Source: original, Reference: s.Image, Pinned: digestImage.MatchString(s.Image)})
@@ -612,7 +637,7 @@ func Build(ctx context.Context, r Request) (*Plan, error) {
 		if rootContainer {
 			reason = policy.RunAs.Reason
 		}
-		p.Services = append(p.Services, Inventory{StorageInit: policy.StorageInit, SDKManaged: managedIngress, Ports: s.Ports, CapDrop: s.CapDrop, CapAdd: s.CapAdd, RootReason: reason, HostElevation: false, Retention: "retain", Service: name, User: s.User, ContainerRoot: rootContainer, HostUIDMapping: "unknown", Egress: egress, Network: func() string {
+		p.Services = append(p.Services, Inventory{StorageInit: storageInit, Scratch: policy.Scratch, Tmpfs: tmpfs, SDKManaged: managedIngress, Ports: s.Ports, CapDrop: s.CapDrop, CapAdd: s.CapAdd, RootReason: reason, HostElevation: false, Retention: "retain", Service: name, User: s.User, ContainerRoot: rootContainer, HostUIDMapping: "unknown", Egress: egress, Network: func() string {
 			if s.NetworkMode == "host" {
 				return "host"
 			}
