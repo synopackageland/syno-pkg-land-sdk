@@ -75,9 +75,10 @@ func generator(file string, source func([]byte) ([]byte, error)) func(spec, out 
 }
 
 type entry struct {
-	Code string `json:"code"`
-	Kind string `json:"kind"`
-	En   string `json:"en"`
+	Code         string `json:"code"`
+	Kind         string `json:"kind"`
+	En           string `json:"en"`
+	PreAdmission *bool  `json:"preAdmission"`
 }
 
 func constants(catalog []byte) ([]byte, error) {
@@ -99,6 +100,19 @@ func constants(catalog []byte) ([]byte, error) {
 		fmt.Fprintf(&b, "\t// %s (%s): %s\n\t%s = %q\n", name, c.Kind, c.En, name, c.Code)
 	}
 	b.WriteString(")\n")
+	b.WriteString("\n// preAdmissionCodes are explicit refusals that prove no requested work ran.\nvar preAdmissionCodes = map[string]bool{\n")
+	for _, c := range doc.Codes {
+		if c.PreAdmission == nil {
+			return nil, fmt.Errorf("%s lacks preAdmission metadata", c.Code)
+		}
+		if *c.PreAdmission {
+			if c.Kind != "refusal" {
+				return nil, fmt.Errorf("%s: only executor refusals can be preAdmission", c.Code)
+			}
+			fmt.Fprintf(&b, "\t%q: true,\n", c.Code)
+		}
+	}
+	b.WriteString("}\n")
 	return format.Source(b.Bytes())
 }
 

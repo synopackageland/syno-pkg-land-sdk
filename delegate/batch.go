@@ -49,9 +49,16 @@ func requestBatchClient(ctx context.Context, c *Client) *batchClient {
 	}
 	return value.(*batchClient)
 }
-func (b *batchClient) call(ctx context.Context, c *Client, op string, auth map[string]string, params, result any) error {
+func (b *batchClient) call(ctx context.Context, c *Client, op string, auth map[string]string, params, result any) (err error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	sent := false
+	defer func() {
+		// A cached failure belongs to a previous step; this step sent nothing.
+		if !sent {
+			err = notSent(err)
+		}
+	}()
 	if b.err != nil {
 		return b.err
 	}
@@ -86,7 +93,10 @@ func (b *batchClient) call(ctx context.Context, c *Client, op string, auth map[s
 		if duration <= 0 {
 			return fail("canceled")
 		}
-		conn.SetDeadline(time.Now().Add(duration))
+		if err := conn.SetDeadline(time.Now().Add(duration)); err != nil {
+			b.err = fail(CodeExecutorUnavailable)
+			return b.err
+		}
 		open := Request{V: 1, Op: "root.batch", Auth: auth, Params: json.RawMessage(`{"v":1,"timeout_ms":` + strconv.FormatInt(max(duration.Milliseconds(), 1), 10) + `}`)}
 		if err := json.NewEncoder(conn).Encode(open); err != nil {
 			b.err = fail(CodeExecutorUnavailable)
@@ -104,7 +114,9 @@ func (b *batchClient) call(ctx context.Context, c *Client, op string, auth map[s
 		return fail(CodeExecutorTooLarge)
 	}
 	b.count++
-	if _, err := b.conn.Write(append(wire, '\n')); err != nil {
+	sent = true
+	wire = append(wire, '\n')
+	if n, err := b.conn.Write(wire); err != nil || n != len(wire) {
 		b.err = fail(CodeExecutorUnavailable)
 		return b.err
 	}

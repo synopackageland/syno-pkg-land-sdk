@@ -59,6 +59,10 @@ should not add it. Writes, AI and streams never auto-replay.
 For owner-bound asynchronous Go work, structured results and ctl integration, see
 [Structured background jobs](docs/background-results.md).
 
+For shared executor admission, per-call `delegate.Client.WorkBudget` after
+queueing, and `delegate.NotSent(err)` with mutation readback after an unknown
+outcome, see [request deadlines](docs/request-deadlines.md).
+
 Native Apps appear in Hyper Backup as applications by default; see
 [Hyper Backup application backup](docs/app-backup.md) for what is archived,
 offline and online modes, the data version check, and the fixed root script

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/synopackageland/syno-pkg-land-sdk/api"
 )
@@ -19,6 +20,38 @@ type batchAuthn struct{}
 
 func (batchAuthn) Authenticate(*http.Request) (api.Identity, error) {
 	return api.Identity{User: "alice", Admin: true}, nil
+}
+
+func TestWorkBudgetBatchCallsUseIndependentAuthenticatedDeadlines(t *testing.T) {
+	seen := make(chan Request, 3)
+	client := executor(t, func(r Request) string {
+		seen <- r
+		return "{\"ok\":true,\"result\":{\"ran\":true}}\n"
+	})
+	client.Timeout, client.WorkBudget = ExecutorTimeout, 125*time.Second
+	handler := api.Handle("demo.read", func(ctx context.Context, _ api.Caller, _ json.RawMessage) (any, error) {
+		var out json.RawMessage
+		err := client.Call(ctx, "root.run", map[string]string{"dsm_cookie": "sid"}, nil, &out)
+		return out, err
+	})
+	server, err := api.NewServerWithPermissions(batchAuthn{}, []byte(`{"schema":1,"default":"administrators","methods":{}}`), handler)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := httptest.NewRequest("POST", "http://nas/api.cgi", strings.NewReader(`{"v":1,"calls":[{"method":"demo.read"},{"method":"demo.read"},{"method":"demo.read"}]}`))
+	r.Header.Set("Content-Type", "application/json")
+	r.Header.Set("Origin", "http://nas")
+	w := httptest.NewRecorder()
+	server.ServeHTTP(w, r)
+	if strings.Count(w.Body.String(), `"ran":true`) != 3 {
+		t.Fatal(w.Body.String())
+	}
+	for range 3 {
+		r := <-seen
+		if r.Op != "root.run" || r.Auth["dsm_cookie"] != "sid" || r.DeadlineMS < 114000 || r.DeadlineMS > 115000 {
+			t.Fatalf("batch call did not get its own authenticated budget: %+v", r)
+		}
+	}
 }
 
 func TestHTTPBatchSharesOneExecutorConnectionAndSingleCallsStayFresh(t *testing.T) {

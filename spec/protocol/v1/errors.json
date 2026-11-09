@@ -8,7 +8,8 @@
       "retryable": false,
       "httpStatus": 401,
       "en": "The DSM session in auth is missing, invalid or expired.",
-      "zh-TW": "auth 中的 DSM 工作階段缺少、無效或已過期。"
+      "zh-TW": "auth 中的 DSM 工作階段缺少、無效或已過期。",
+      "preAdmission": true
     },
     {
       "code": "INELIGIBLE",
@@ -16,7 +17,8 @@
       "retryable": false,
       "httpStatus": 403,
       "en": "The DSM account cannot be delegated: system account, expired, or not the caller.",
-      "zh-TW": "此 DSM 帳號無法委派：系統帳號、已過期，或不是呼叫者本人。"
+      "zh-TW": "此 DSM 帳號無法委派：系統帳號、已過期，或不是呼叫者本人。",
+      "preAdmission": true
     },
     {
       "code": "APP_DENIED",
@@ -24,7 +26,8 @@
       "retryable": false,
       "httpStatus": 403,
       "en": "DSM Application Privileges do not allow the account to use the app or File Station.",
-      "zh-TW": "DSM 應用程式權限不允許此帳號使用 App 或 File Station。"
+      "zh-TW": "DSM 應用程式權限不允許此帳號使用 App 或 File Station。",
+      "preAdmission": true
     },
     {
       "code": "ADMIN_REQUIRED",
@@ -32,7 +35,8 @@
       "retryable": false,
       "httpStatus": 403,
       "en": "The operation needs a DSM administrator.",
-      "zh-TW": "此操作需要 DSM 管理員。"
+      "zh-TW": "此操作需要 DSM 管理員。",
+      "preAdmission": true
     },
     {
       "code": "DELEGATION_DENIED",
@@ -40,7 +44,8 @@
       "retryable": false,
       "httpStatus": 403,
       "en": "The grant does not exist, belongs to another user or package, or was revoked.",
-      "zh-TW": "授權不存在、屬於其他使用者或套件，或已撤銷。"
+      "zh-TW": "授權不存在、屬於其他使用者或套件，或已撤銷。",
+      "preAdmission": true
     },
     {
       "code": "SCOPE_DENIED",
@@ -48,7 +53,8 @@
       "retryable": false,
       "httpStatus": 403,
       "en": "The path is outside the grant or the approved folder scope.",
-      "zh-TW": "路徑超出授權或已核准的資料夾範圍。"
+      "zh-TW": "路徑超出授權或已核准的資料夾範圍。",
+      "preAdmission": true
     },
     {
       "code": "POLICY_DENIED",
@@ -56,7 +62,8 @@
       "retryable": false,
       "httpStatus": 403,
       "en": "The operation is not in the approved policy.",
-      "zh-TW": "此操作不在已核准的政策內。"
+      "zh-TW": "此操作不在已核准的政策內。",
+      "preAdmission": true
     },
     {
       "code": "PEER_DENIED",
@@ -64,7 +71,8 @@
       "retryable": false,
       "httpStatus": 403,
       "en": "The socket peer is not the package user or root.",
-      "zh-TW": "socket 對端不是套件使用者或 root。"
+      "zh-TW": "socket 對端不是套件使用者或 root。",
+      "preAdmission": true
     },
     {
       "code": "PERMISSION_DENIED",
@@ -72,7 +80,8 @@
       "retryable": false,
       "httpStatus": 403,
       "en": "The delegated user cannot access the path in DSM.",
-      "zh-TW": "受委派的使用者在 DSM 中無法存取該路徑。"
+      "zh-TW": "受委派的使用者在 DSM 中無法存取該路徑。",
+      "preAdmission": true
     },
     {
       "code": "UNKNOWN_OP",
@@ -80,7 +89,8 @@
       "retryable": false,
       "httpStatus": 400,
       "en": "The executor does not know the operation.",
-      "zh-TW": "executor 不認得此操作。"
+      "zh-TW": "executor 不認得此操作。",
+      "preAdmission": true
     },
     {
       "code": "INVALID_REQUEST",
@@ -88,7 +98,8 @@
       "retryable": false,
       "httpStatus": 400,
       "en": "The request or its params are not valid.",
-      "zh-TW": "請求或其 params 不合法。"
+      "zh-TW": "請求或其 params 不合法。",
+      "preAdmission": true
     },
     {
       "code": "REQUEST_TOO_LARGE",
@@ -96,7 +107,8 @@
       "retryable": false,
       "httpStatus": 413,
       "en": "The request line is larger than 64 KiB.",
-      "zh-TW": "請求行超過 64 KiB。"
+      "zh-TW": "請求行超過 64 KiB。",
+      "preAdmission": true
     },
     {
       "code": "EXECUTOR_PAUSED",
@@ -104,7 +116,8 @@
       "retryable": true,
       "httpStatus": 503,
       "en": "The executor is paused, for example while the package stops or upgrades.",
-      "zh-TW": "executor 已暫停，例如套件停止或升級期間。"
+      "zh-TW": "executor 已暫停，例如套件停止或升級期間。",
+      "preAdmission": false
     },
     {
       "code": "EXECUTOR_STARTING",
@@ -112,7 +125,8 @@
       "retryable": true,
       "httpStatus": 503,
       "en": "The executor is running the App's start step after an install or upgrade; status answers state starting until it ends.",
-      "zh-TW": "executor 正在執行安裝或升級後的 App start 步驟；結束前 status 回報 state starting。"
+      "zh-TW": "executor 正在執行安裝或升級後的 App start 步驟；結束前 status 回報 state starting。",
+      "preAdmission": true
     },
     {
       "code": "STORAGE_ERROR",
@@ -120,7 +134,8 @@
       "retryable": true,
       "httpStatus": 500,
       "en": "The executor could not read or write its protected state.",
-      "zh-TW": "executor 無法讀寫其受保護的狀態。"
+      "zh-TW": "executor 無法讀寫其受保護的狀態。",
+      "preAdmission": false
     },
     {
       "code": "INTERNAL",
@@ -128,7 +143,8 @@
       "retryable": true,
       "httpStatus": 500,
       "en": "The executor failed unexpectedly.",
-      "zh-TW": "executor 發生非預期的失敗。"
+      "zh-TW": "executor 發生非預期的失敗。",
+      "preAdmission": false
     },
     {
       "code": "WRITE_FAILED",
@@ -136,7 +152,8 @@
       "retryable": true,
       "httpStatus": 500,
       "en": "The executor could not write the file.",
-      "zh-TW": "executor 無法寫入檔案。"
+      "zh-TW": "executor 無法寫入檔案。",
+      "preAdmission": false
     },
     {
       "code": "READ_FAILED",
@@ -144,7 +161,8 @@
       "retryable": true,
       "httpStatus": 500,
       "en": "The executor could not copy the file into staging.",
-      "zh-TW": "executor 無法把檔案複製到 staging。"
+      "zh-TW": "executor 無法把檔案複製到 staging。",
+      "preAdmission": false
     },
     {
       "code": "DSM_FAILED",
@@ -152,7 +170,8 @@
       "retryable": true,
       "httpStatus": 502,
       "en": "A DSM call made by the executor failed.",
-      "zh-TW": "executor 呼叫 DSM 失敗。"
+      "zh-TW": "executor 呼叫 DSM 失敗。",
+      "preAdmission": false
     },
     {
       "code": "ROOT_FAILED",
@@ -160,7 +179,8 @@
       "retryable": false,
       "httpStatus": 500,
       "en": "The root program could not run, ended by a signal, or its output could not be kept.",
-      "zh-TW": "root 程式無法執行、被訊號終止，或其輸出無法保存。"
+      "zh-TW": "root 程式無法執行、被訊號終止，或其輸出無法保存。",
+      "preAdmission": false
     },
     {
       "code": "ROOT_TIMEOUT",
@@ -168,7 +188,8 @@
       "retryable": true,
       "httpStatus": 504,
       "en": "The root program ran past its policy timeout and was killed.",
-      "zh-TW": "root 程式超過 policy 的時限，已被終止。"
+      "zh-TW": "root 程式超過 policy 的時限，已被終止。",
+      "preAdmission": false
     },
     {
       "code": "ROOT_BUSY",
@@ -176,7 +197,8 @@
       "retryable": true,
       "httpStatus": 429,
       "en": "The package already runs as many root programs or WebAPI reply transfers as it may.",
-      "zh-TW": "此套件同時執行的 root 程式或 WebAPI 回覆傳輸已達上限。"
+      "zh-TW": "此套件同時執行的 root 程式或 WebAPI 回覆傳輸已達上限。",
+      "preAdmission": true
     },
     {
       "code": "ROOT_STAGING_FULL",
@@ -184,7 +206,8 @@
       "retryable": true,
       "httpStatus": 507,
       "en": "Root output waiting in the staging folder already fills its quota.",
-      "zh-TW": "staging 資料夾中等待取走的 root 輸出已達配額。"
+      "zh-TW": "staging 資料夾中等待取走的 root 輸出已達配額。",
+      "preAdmission": false
     },
     {
       "code": "ROOT_JOB_NOT_FOUND",
@@ -192,7 +215,8 @@
       "retryable": false,
       "httpStatus": 404,
       "en": "No root job of the package has this job_id.",
-      "zh-TW": "此套件沒有這個 job_id 的 root 工作。"
+      "zh-TW": "此套件沒有這個 job_id 的 root 工作。",
+      "preAdmission": true
     },
     {
       "code": "PORTAL_FAILED",
@@ -200,7 +224,8 @@
       "retryable": true,
       "httpStatus": 502,
       "en": "DSM did not accept the Application Portal change; status portal says whether the entry needs another removal.",
-      "zh-TW": "DSM 未接受應用程式入口的變更；status 的 portal 說明是否需要再移除一次。"
+      "zh-TW": "DSM 未接受應用程式入口的變更；status 的 portal 說明是否需要再移除一次。",
+      "preAdmission": false
     },
     {
       "code": "NO_SPACE",
@@ -208,7 +233,8 @@
       "retryable": false,
       "httpStatus": 507,
       "en": "The destination volume is full.",
-      "zh-TW": "目的地的儲存空間已滿。"
+      "zh-TW": "目的地的儲存空間已滿。",
+      "preAdmission": false
     },
     {
       "code": "SCOPE_APPROVAL_STALE",
@@ -216,7 +242,8 @@
       "retryable": false,
       "httpStatus": 409,
       "en": "The folder scope approval is out of date.",
-      "zh-TW": "資料夾範圍的核准已過期。"
+      "zh-TW": "資料夾範圍的核准已過期。",
+      "preAdmission": true
     },
     {
       "code": "IDENTITY_CHANGED",
@@ -224,7 +251,8 @@
       "retryable": false,
       "httpStatus": 409,
       "en": "The DSM account or folder the grant is bound to changed.",
-      "zh-TW": "授權所綁定的 DSM 帳號或資料夾已變更。"
+      "zh-TW": "授權所綁定的 DSM 帳號或資料夾已變更。",
+      "preAdmission": true
     },
     {
       "code": "needs-scope-confirmation",
@@ -232,7 +260,8 @@
       "retryable": false,
       "httpStatus": 409,
       "en": "An administrator must confirm the folder scope first.",
-      "zh-TW": "管理員必須先確認資料夾範圍。"
+      "zh-TW": "管理員必須先確認資料夾範圍。",
+      "preAdmission": false
     },
     {
       "code": "disabled",
@@ -240,7 +269,8 @@
       "retryable": false,
       "httpStatus": 409,
       "en": "An administrator turned the integration off.",
-      "zh-TW": "管理員已關閉這項整合。"
+      "zh-TW": "管理員已關閉這項整合。",
+      "preAdmission": false
     },
     {
       "code": "invalid-destination",
@@ -248,7 +278,8 @@
       "retryable": false,
       "httpStatus": 400,
       "en": "The destination key is not in the policy.",
-      "zh-TW": "目的地不在政策內。"
+      "zh-TW": "目的地不在政策內。",
+      "preAdmission": false
     },
     {
       "code": "invalid-size",
@@ -256,7 +287,8 @@
       "retryable": false,
       "httpStatus": 400,
       "en": "The size is missing, negative or too large.",
-      "zh-TW": "檔案大小缺少、為負數或過大。"
+      "zh-TW": "檔案大小缺少、為負數或過大。",
+      "preAdmission": false
     },
     {
       "code": "operation-conflict",
@@ -264,7 +296,8 @@
       "retryable": false,
       "httpStatus": 409,
       "en": "The same job id was sent again with different input.",
-      "zh-TW": "相同的 job id 又以不同的輸入送出。"
+      "zh-TW": "相同的 job id 又以不同的輸入送出。",
+      "preAdmission": false
     },
     {
       "code": "operation-not-found",
@@ -272,7 +305,8 @@
       "retryable": false,
       "httpStatus": 404,
       "en": "The operation is not known for this grant and caller.",
-      "zh-TW": "此授權與呼叫者沒有這項操作。"
+      "zh-TW": "此授權與呼叫者沒有這項操作。",
+      "preAdmission": false
     },
     {
       "code": "destination-exists",
@@ -280,7 +314,8 @@
       "retryable": false,
       "httpStatus": 409,
       "en": "A file with that name already exists and conflict does not allow replacing it.",
-      "zh-TW": "目的地已有同名檔案，且 conflict 不允許取代。"
+      "zh-TW": "目的地已有同名檔案，且 conflict 不允許取代。",
+      "preAdmission": false
     },
     {
       "code": "invalid-path",
@@ -288,7 +323,8 @@
       "retryable": false,
       "httpStatus": 400,
       "en": "A name or path is empty, reserved, too long or contains a forbidden character.",
-      "zh-TW": "名稱或路徑為空、保留字、過長或含禁止字元。"
+      "zh-TW": "名稱或路徑為空、保留字、過長或含禁止字元。",
+      "preAdmission": false
     },
     {
       "code": "path-too-deep",
@@ -296,7 +332,8 @@
       "retryable": false,
       "httpStatus": 400,
       "en": "The name has more than 16 folders.",
-      "zh-TW": "名稱超過 16 層資料夾。"
+      "zh-TW": "名稱超過 16 層資料夾。",
+      "preAdmission": false
     },
     {
       "code": "destination-not-directory",
@@ -304,7 +341,8 @@
       "retryable": false,
       "httpStatus": 409,
       "en": "A folder in the name exists as a file or symlink, or is on another volume.",
-      "zh-TW": "名稱中的某個資料夾其實是檔案或符號連結，或位於另一個磁碟區。"
+      "zh-TW": "名稱中的某個資料夾其實是檔案或符號連結，或位於另一個磁碟區。",
+      "preAdmission": false
     },
     {
       "code": "name-too-long",
@@ -312,7 +350,8 @@
       "retryable": false,
       "httpStatus": 400,
       "en": "The volume refused a name as too long.",
-      "zh-TW": "磁碟區認為名稱過長而拒絕。"
+      "zh-TW": "磁碟區認為名稱過長而拒絕。",
+      "preAdmission": false
     },
     {
       "code": "not-found",
@@ -320,7 +359,8 @@
       "retryable": false,
       "httpStatus": 404,
       "en": "The path does not exist.",
-      "zh-TW": "路徑不存在。"
+      "zh-TW": "路徑不存在。",
+      "preAdmission": false
     },
     {
       "code": "not-a-file",
@@ -328,7 +368,8 @@
       "retryable": false,
       "httpStatus": 400,
       "en": "The path is a folder or a special file.",
-      "zh-TW": "路徑是資料夾或特殊檔案。"
+      "zh-TW": "路徑是資料夾或特殊檔案。",
+      "preAdmission": false
     },
     {
       "code": "recursive-required",
@@ -336,7 +377,8 @@
       "retryable": false,
       "httpStatus": 400,
       "en": "The path is a folder and recursive is not set.",
-      "zh-TW": "路徑是資料夾，且未設定 recursive。"
+      "zh-TW": "路徑是資料夾，且未設定 recursive。",
+      "preAdmission": false
     },
     {
       "code": "recycle-bin-disabled",
@@ -344,7 +386,8 @@
       "retryable": false,
       "httpStatus": 409,
       "en": "The Shared Folder has no recycle bin and permanent is not set.",
-      "zh-TW": "共用資料夾沒有資源回收筒，且未設定 permanent。"
+      "zh-TW": "共用資料夾沒有資源回收筒，且未設定 permanent。",
+      "preAdmission": false
     },
     {
       "code": "task-not-found",
@@ -352,7 +395,8 @@
       "retryable": false,
       "httpStatus": 404,
       "en": "The task belongs to another job, or the executor restarted.",
-      "zh-TW": "任務屬於其他工作，或 executor 已重新啟動。"
+      "zh-TW": "任務屬於其他工作，或 executor 已重新啟動。",
+      "preAdmission": false
     },
     {
       "code": "too-many-tasks",
@@ -360,7 +404,8 @@
       "retryable": true,
       "httpStatus": 429,
       "en": "The executor already tracks 64 tasks.",
-      "zh-TW": "executor 已在追蹤 64 個任務。"
+      "zh-TW": "executor 已在追蹤 64 個任務。",
+      "preAdmission": false
     },
     {
       "code": "queue-full",
@@ -368,7 +413,8 @@
       "retryable": true,
       "httpStatus": 429,
       "en": "The executor operation queue is full.",
-      "zh-TW": "executor 的操作佇列已滿。"
+      "zh-TW": "executor 的操作佇列已滿。",
+      "preAdmission": false
     },
     {
       "code": "limit-exceeded",
@@ -376,7 +422,8 @@
       "retryable": false,
       "httpStatus": 413,
       "en": "The file is larger than max_bytes (files.read) or 100 MiB (files.write), or root output is larger than its policy max_output.",
-      "zh-TW": "檔案超過 max_bytes（files.read）或 100 MiB（files.write），或 root 輸出超過 policy 的 max_output。"
+      "zh-TW": "檔案超過 max_bytes（files.read）或 100 MiB（files.write），或 root 輸出超過 policy 的 max_output。",
+      "preAdmission": false
     },
     {
       "code": "OPERATION_CANCELED",
@@ -384,7 +431,8 @@
       "retryable": false,
       "httpStatus": 409,
       "en": "The operation was canceled; reason says why.",
-      "zh-TW": "操作已取消；reason 說明原因。"
+      "zh-TW": "操作已取消；reason 說明原因。",
+      "preAdmission": false
     },
     {
       "code": "CANCEL_REQUESTED",
@@ -392,7 +440,8 @@
       "retryable": false,
       "httpStatus": 202,
       "en": "Cancel was requested and the copy has not stopped yet.",
-      "zh-TW": "已要求取消，複製尚未停止。"
+      "zh-TW": "已要求取消，複製尚未停止。",
+      "preAdmission": false
     },
     {
       "code": "CLEANUP_PENDING",
@@ -400,7 +449,8 @@
       "retryable": true,
       "httpStatus": 500,
       "en": "The operation ended but its partial file is not removed yet.",
-      "zh-TW": "操作已結束，但部分檔案尚未清除。"
+      "zh-TW": "操作已結束，但部分檔案尚未清除。",
+      "preAdmission": false
     },
     {
       "code": "grant-revoked",
@@ -408,7 +458,8 @@
       "retryable": false,
       "httpStatus": 409,
       "en": "The grant was revoked.",
-      "zh-TW": "授權已撤銷。"
+      "zh-TW": "授權已撤銷。",
+      "preAdmission": false
     },
     {
       "code": "destination-replaced",
@@ -416,7 +467,8 @@
       "retryable": false,
       "httpStatus": 409,
       "en": "A newer grant replaced this destination.",
-      "zh-TW": "較新的授權取代了此目的地。"
+      "zh-TW": "較新的授權取代了此目的地。",
+      "preAdmission": false
     },
     {
       "code": "integration-disabled",
@@ -424,7 +476,8 @@
       "retryable": false,
       "httpStatus": 409,
       "en": "An administrator disabled the integration.",
-      "zh-TW": "管理員停用了此整合。"
+      "zh-TW": "管理員停用了此整合。",
+      "preAdmission": false
     },
     {
       "code": "validation-denied",
@@ -432,7 +485,8 @@
       "retryable": false,
       "httpStatus": 403,
       "en": "The grant failed revalidation against DSM.",
-      "zh-TW": "授權未通過 DSM 的重新驗證。"
+      "zh-TW": "授權未通過 DSM 的重新驗證。",
+      "preAdmission": false
     },
     {
       "code": "scope-changed",
@@ -440,7 +494,8 @@
       "retryable": false,
       "httpStatus": 409,
       "en": "The approved folder scope changed.",
-      "zh-TW": "已核准的資料夾範圍已變更。"
+      "zh-TW": "已核准的資料夾範圍已變更。",
+      "preAdmission": false
     },
     {
       "code": "storage-error",
@@ -448,7 +503,8 @@
       "retryable": true,
       "httpStatus": 500,
       "en": "Protected state could not be written.",
-      "zh-TW": "受保護的狀態無法寫入。"
+      "zh-TW": "受保護的狀態無法寫入。",
+      "preAdmission": false
     },
     {
       "code": "operation-canceled-by-user",
@@ -456,7 +512,8 @@
       "retryable": false,
       "httpStatus": 409,
       "en": "The owner canceled the operation.",
-      "zh-TW": "擁有者取消了操作。"
+      "zh-TW": "擁有者取消了操作。",
+      "preAdmission": false
     },
     {
       "code": "operation-deadline-exceeded",
@@ -464,7 +521,8 @@
       "retryable": true,
       "httpStatus": 504,
       "en": "The operation ran past its deadline.",
-      "zh-TW": "操作超過期限。"
+      "zh-TW": "操作超過期限。",
+      "preAdmission": false
     },
     {
       "code": "EXECUTOR_UNAVAILABLE",
@@ -472,7 +530,8 @@
       "retryable": true,
       "httpStatus": 503,
       "en": "The client could not connect to the executor socket.",
-      "zh-TW": "用戶端無法連到 executor socket。"
+      "zh-TW": "用戶端無法連到 executor socket。",
+      "preAdmission": false
     },
     {
       "code": "APP_STOPPED",
@@ -480,7 +539,8 @@
       "retryable": true,
       "httpStatus": 503,
       "en": "The package is stopped: its lifecycle mailbox asks the executor to stop. The client sent nothing.",
-      "zh-TW": "套件已停止：生命週期信箱要求 executor 停止。用戶端沒有送出任何內容。"
+      "zh-TW": "套件已停止：生命週期信箱要求 executor 停止。用戶端沒有送出任何內容。",
+      "preAdmission": false
     },
     {
       "code": "APP_STARTING",
@@ -488,7 +548,8 @@
       "retryable": true,
       "httpStatus": 503,
       "en": "The package was just started and its executor is not listening yet. The client sent nothing.",
-      "zh-TW": "套件剛啟動，executor 尚未開始接聽。用戶端沒有送出任何內容。"
+      "zh-TW": "套件剛啟動，executor 尚未開始接聽。用戶端沒有送出任何內容。",
+      "preAdmission": false
     },
     {
       "code": "EXECUTOR_TIMEOUT",
@@ -496,7 +557,8 @@
       "retryable": true,
       "httpStatus": 504,
       "en": "The executor did not answer in time.",
-      "zh-TW": "executor 未及時回應。"
+      "zh-TW": "executor 未及時回應。",
+      "preAdmission": false
     },
     {
       "code": "EXECUTOR_TOO_LARGE",
@@ -504,7 +566,8 @@
       "retryable": false,
       "httpStatus": 413,
       "en": "The request or reply exceeds its protocol byte limit.",
-      "zh-TW": "請求或回覆超過其協定位元組上限。"
+      "zh-TW": "請求或回覆超過其協定位元組上限。",
+      "preAdmission": false
     },
     {
       "code": "EXECUTOR_PROTOCOL",
@@ -512,7 +575,8 @@
       "retryable": false,
       "httpStatus": 502,
       "en": "The executor reply is not a valid v1 response.",
-      "zh-TW": "executor 的回應不是有效的 v1 回應。"
+      "zh-TW": "executor 的回應不是有效的 v1 回應。",
+      "preAdmission": false
     },
     {
       "code": "WEBAPI_UNCERTAIN",
@@ -520,7 +584,8 @@
       "retryable": false,
       "httpStatus": 502,
       "en": "The WebAPI outcome is unknown: execution, reply validation or audit completion failed. Do not automatically retry a mutation.",
-      "zh-TW": "WebAPI 結果不確定：執行、回覆驗證或稽核完成失敗。請勿自動重試寫入操作。"
+      "zh-TW": "WebAPI 結果不確定：執行、回覆驗證或稽核完成失敗。請勿自動重試寫入操作。",
+      "preAdmission": false
     },
     {
       "code": "WEBAPI_REPLY_TOO_LARGE",
@@ -528,7 +593,8 @@
       "retryable": false,
       "httpStatus": 413,
       "en": "The compact WebAPI JSON reply exceeds the shared reply limit. The message gives the observed minimum size and limit in bytes. Do not automatically retry a mutation.",
-      "zh-TW": "WebAPI JSON 回覆壓縮後超過共用上限。訊息列出已觀察到的最小大小與上限（bytes）；請勿自動重試寫入操作。"
+      "zh-TW": "WebAPI JSON 回覆壓縮後超過共用上限。訊息列出已觀察到的最小大小與上限（bytes）；請勿自動重試寫入操作。",
+      "preAdmission": false
     }
   ]
 }

@@ -118,7 +118,7 @@ admission after its reply; the executor continues to own the running job's slot.
 
 A refused root batch step retries as a fresh authenticated socket request, keeping
 the original batch's step count available for later steps. Every attempt uses the
-same caller deadline, so time spent waiting is never restored. A generic protocol
+same effective deadline, so time spent waiting is never restored. A generic protocol
 `retryable` flag is insufficient proof of safe replay: `ROOT_TIMEOUT`,
 `DSM_FAILED`, storage failures and uncertain results can follow execution.
 Transport failures, lost replies, malformed replies and `WEBAPI_UNCERTAIN` are
@@ -128,6 +128,67 @@ The TS frontend and Node/Python backends use the Go bridge for executor services
 they do not have a direct executor socket client needing a separate queue.
 CLI-generated Apps should use this same request context and minute-scale
 allowance.
+
+### Work allowance after local admission
+
+Set `Client.WorkBudget` to give each `Call` a work allowance starting when its
+shared local admission slot is acquired:
+
+```go
+client := delegate.Local(packageID)
+client.WorkBudget = 5 * time.Minute
+err := client.Call(ctx, "webapi.call", auth, params, &result)
+```
+
+Configure the client before sharing it across goroutines, as with `Timeout`.
+The queue waits only on `ctx`; its wait does not consume `WorkBudget`. After
+admission the effective deadline is the earlier of the caller's deadline and
+admission time plus `WorkBudget`. Operations that bypass the queue start their
+budget immediately. Dial/startup waits, authentication, busy backoff and retries
+consume this one budget; retries never reset it. Cancellation remains effective
+throughout. A caller deadline already spent in the queue is never extended.
+Zero or negative `WorkBudget` retains the existing deadline behavior.
+
+The same per-hop reserves above apply: a 125-second budget sends 115000 ms
+before elapsed work and allows at most 110 seconds for a DSM command. For
+N seconds of command work in the long-budget range, allow at least N + 15 seconds
+plus post-admission overhead. Earlier `ctx` deadlines, explicit socket timeouts
+and approved executor policies still win. Apps can remove their own semaphore
+and use an ordinary cancellable context with a minute-scale `WorkBudget`; an
+outer request/proxy deadline still limits the entire wait and operation.
+
+Budgeted calls inside an API batch use fresh authenticated socket connections
+with individual `deadline_ms`, rather than the executor's shared root batch
+deadline. Earlier batch results are retained and never replayed. Calls without
+`WorkBudget` keep the existing shared connection, batch lifetime and step limit.
+No executor change or new wire field is required.
+
+### Classifying failed mutations
+
+For an error returned by Go `delegate.Client.Call`, `delegate.NotSent(err)` is
+true only when the requested operation definitely did not execute. This includes
+dial failures, local validation/size/deadline failures before send, queue or busy
+backoff cancellation, and valid explicit pre-execution refusals such as
+`ROOT_BUSY`, authentication, scope and policy denials. The refusal evidence is
+generated from `spec/protocol/v1/errors.json` (`preAdmission`), independently of
+the catalog's `retryable` flag. The classifier follows App error wrapping via
+`errors.As`, and existing `*api.Error` codes remain available through that API.
+
+For a non-nil error with `NotSent(err) == false`, the outcome may be unknown.
+This includes partial writes, EOF/lost replies, non-timeout transport failures,
+malformed/oversize replies, timeout or cancellation after send, unknown codes,
+`WEBAPI_UNCERTAIN` and `WEBAPI_REPLY_TOO_LARGE`. The same
+`EXECUTOR_UNAVAILABLE`, `EXECUTOR_TIMEOUT`, `EXECUTOR_PROTOCOL` or `canceled`
+code alone cannot determine whether work ran. Nil and unrelated errors also
+return false; apply the classifier only in the failed-call branch.
+
+For writes, keep the original operation/job identity and read back the affected
+state or receipt before deciding what to do. Do not blindly resend a mutation
+whose outcome is unknown. A true result permits considering a new attempt, but
+authorization/policy denials still require fixing the cause. The client itself
+continues to retry only `ROOT_BUSY`. For a batch, classify each failed step:
+an uncertain prior step does not mean a later unsent step ran, and earlier
+successful steps must never be replayed.
 
 ## Outer DSM and proxy boundaries
 

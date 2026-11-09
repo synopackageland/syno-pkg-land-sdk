@@ -49,12 +49,12 @@ func acquireAdmission(ctx context.Context, socket string) (func(), error) {
 		if ctx.Err() != nil {
 			<-q.slots
 			forget()
-			return nil, fail("canceled")
+			return nil, notSent(fail("canceled"))
 		}
 		return func() { <-q.slots; forget() }, nil
 	case <-ctx.Done():
 		forget()
-		return nil, fail("canceled")
+		return nil, notSent(fail("canceled"))
 	}
 }
 
@@ -71,7 +71,7 @@ func waitRootBusy(ctx context.Context, delay time.Duration) error {
 	defer timer.Stop()
 	select {
 	case <-ctx.Done():
-		return fail("canceled")
+		return notSent(fail("canceled"))
 	case <-timer.C:
 		return nil
 	}

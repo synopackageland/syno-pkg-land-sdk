@@ -137,3 +137,24 @@ const (
 	// CodeWebapiReplyTooLarge (refusal): The compact WebAPI JSON reply exceeds the shared reply limit. The message gives the observed minimum size and limit in bytes. Do not automatically retry a mutation.
 	CodeWebapiReplyTooLarge = "WEBAPI_REPLY_TOO_LARGE"
 )
+
+// preAdmissionCodes are explicit refusals that prove no requested work ran.
+var preAdmissionCodes = map[string]bool{
+	"AUTH_DENIED":          true,
+	"INELIGIBLE":           true,
+	"APP_DENIED":           true,
+	"ADMIN_REQUIRED":       true,
+	"DELEGATION_DENIED":    true,
+	"SCOPE_DENIED":         true,
+	"POLICY_DENIED":        true,
+	"PEER_DENIED":          true,
+	"PERMISSION_DENIED":    true,
+	"UNKNOWN_OP":           true,
+	"INVALID_REQUEST":      true,
+	"REQUEST_TOO_LARGE":    true,
+	"EXECUTOR_STARTING":    true,
+	"ROOT_BUSY":            true,
+	"ROOT_JOB_NOT_FOUND":   true,
+	"SCOPE_APPROVAL_STALE": true,
+	"IDENTITY_CHANGED":     true,
+}

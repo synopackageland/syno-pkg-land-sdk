@@ -13,11 +13,20 @@ the executor against the vectors here.
 | File | Contents |
 |---|---|
 | `schema/<op>.json` | JSON Schema (draft 2020-12) of the `params` of each op, with `since` |
-| `errors.json` | Every code: `code`, `kind`, `retryable`, `httpStatus`, `en`, `zh-TW`. The only source of codes; the Go constants are generated from it |
+| `errors.json` | Every code: `code`, `kind`, `retryable`, `preAdmission`, `httpStatus`, `en`, `zh-TW`. The only source of codes and pre-execution refusal evidence; the Go constants are generated from it |
 | `vectors/*.jsonl` | One request per line: `{name, request, policy, state, expect}` |
 | `timeouts.json` | The timeouts of the section Timeouts, in seconds; the SDK's constants and tests read it |
 
 ## Transport
+
+`preAdmission: true` means a valid executor refusal proves the requested operation
+did not execute. A false value provides no such guarantee; it does not assert
+execution. This is independent of `retryable`, which says only whether another
+attempt might succeed. Client codes such as `EXECUTOR_UNAVAILABLE` can arise
+before or after send, so their catalog value is false: the Go client's local
+transport evidence determines `delegate.NotSent(err)` instead. Unrecognized
+codes provide no proof. `EXECUTOR_PAUSED`, `ROOT_STAGING_FULL`, storage failures
+and uncertain WebAPI replies can follow execution and remain false.
 
 1. The socket is `/run/synopkgland/<package>/executor.sock`. The executor MUST
    accept a connection only from the package user or root (peer credentials).
