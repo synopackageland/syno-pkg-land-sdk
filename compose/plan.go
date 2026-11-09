@@ -88,6 +88,7 @@ type Mount struct {
 	Target  string `json:"target"`
 }
 type Share struct {
+	Picker     string  `json:"picker,omitempty"`
 	Select     string  `json:"select"`
 	Permission string  `json:"permission"`
 	Mounts     []Mount `json:"mounts"`

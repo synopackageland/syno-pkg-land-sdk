@@ -99,6 +99,9 @@ func (s Status) Pending() bool {
 
 // Config says where the installer's state lives and what the App needs.
 type Config struct {
+	// Subpaths optionally narrows each selected share to an existing relative folder.
+	Subpaths map[string]string
+
 	// DataDir is the package's persistent directory (/var/packages/<id>/var).
 	DataDir string
 	// Root is where /volumeN lives; empty means "/". Tests set it.
@@ -328,6 +331,9 @@ func (c Config) RequireAccess(key string, need Access) (string, error) {
 		return "", fmt.Errorf("%w: %q", ErrNotConfigured, key)
 	}
 	path, err := Resolve(c.root(), name)
+	if subpath, ok := c.Subpaths[key]; ok {
+		path, err = ResolveSubpath(c.root(), name, subpath)
+	}
 	if errors.Is(err, fs.ErrPermission) {
 		return "", &PermissionError{Key: key, Name: name, Account: account, Need: need, Have: None, Cause: err}
 	}

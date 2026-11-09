@@ -222,3 +222,34 @@ folder that needs attention. It renders nothing when the App configures no folde
    share. An App that keeps the absolute path in its own storage settings calls
    `Sync` from its daemon loop or status route: it applies the new path once and
    does nothing while the path is unchanged.
+
+## Installer-selected child folders
+
+CLI 0.52.14 can pair `install.sharedFolder.picker: folder` with a matching
+`compose.shares.<key>.picker: folder`, using SDK 0.53.22. The installer submits
+the share name and `<key>_subpath` separately; an explicitly empty subpath
+selects the share root. Both values are persisted in config schema 1 as
+`shared_folders` and `shared_folder_paths`. Missing child-selection state is
+an error, not permission to mount the root.
+
+The Compose preparer resolves the share on its current volume, rejects missing
+folders and symlink components, and checks actual RO/RW access as the package
+UID. This occurs before DSM grants new data-share permissions, so an existing
+folder that is not yet accessible can block a first installation. Administrators
+must prepare access and retry; the SDK never changes ACLs or runs the application
+as root. The installed preflight repeats the check and refuses a stale materialized
+mount after a volume move; repair or upgrade regenerates that source. Rename or
+deletion requires restoring or explicitly reselecting the folder.
+
+`sharedfolder.Subpaths(dataDir)` reads the recorded relative selections.
+Set `Config.Subpaths` to those values when an App needs to resolve/check a
+selected child through `Require`/`RequireAccess`. Existing callers continue to
+check the share root. `ResolveSubpath` is a read-only resolution helper, not an
+access grant. These directory checks do not prove every descendant's ACL and
+cannot freeze concurrent filesystem or permission changes.
+
+DSM data-share still grants the entire share; binding a subtree is not a
+subtree-only ACL grant. Container-root services remain unable to bind shares.
+The CLI chooses a native directory chooser on DSM 7.2.2 and newer, and standard
+share/subpath controls on older DSM versions from the same SPK. Browser visibility
+belongs to the logged-in administrator and does not prove package access.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.53.22 (2026-11-09)
+
+- Add opt-in installer-selected child folders for native Compose share mounts, paired with CLI 0.52.14.
+- Resolve and validate relative paths as the package account without creating folders or changing ACLs; preserve saved selections and report missing access or stale mount locations.
+
 ## 0.53.21 (2026-11-09)
 
 - Share in-progress admission for concurrent requests from the same gateway
