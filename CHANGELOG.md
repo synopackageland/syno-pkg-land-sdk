@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.53.28 (2026-11-10)
+
+- `synopkgland container fix-permissions` and the console start now cap credential files at 0600 (the exec bit and special bits are removed; a narrower mode such as 0400 stays) and credential directories at 0700. Before, only group/other bits were cleared, so a key that a folder ACL created as 0777 ended at 0700. HOME, the mounted folder, `*.pub` and `known_hosts` are not changed; paths are still never created, symlinks never followed and other owners' files left with one log line.
+- Refuse, for a nonroot service, a `storage_init` directory whose base is a memory tmpfs or that lies on a tmpfs below its base, and a `console.home` on a tmpfs (`COMPOSE_STORAGE_ON_TMPFS`, pointing to disk `scratch`). DSM's Docker recreates a tmpfs as root 0755 on restart and ignores its declared mode, so such a service crash-looped after a restart. The behaviour is documented in the container storage guide.
+- Decode the SDK's built-in API policy once per process instead of on every route lookup. Building an App's API server with a few hundred routes drops from about 58 ms and 8 MB allocated to about 1 ms and 0.1 MB in the SDK benchmark, which every CGI start saves. Results and errors are unchanged.
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.27 (2026-11-09)
 
 - Keep quoted numeric-looking strings in Compose as strings after DSM rewrites the worker file without quotes. Values such as `"10"`, `"0755"`, `"true"`, `"yes"`, `"null"`, `"1e3"` or `"0x1F"` in `command`, `entrypoint`, `healthcheck.test`, environment values, labels and other string positions are written as `${SYNOPKGLAND_GID:+<value>}`, which Compose interpolates back to the exact text. Exec-form healthchecks such as `["CMD", "curl", "--max-time", "10", …]` no longer fail with `healthcheck.test.N must be a string`.

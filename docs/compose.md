@@ -967,14 +967,17 @@ UID, without root or chown. On every start it:
   another account (logged once).
 - sets `TMPDIR` to the disk scratch directory (package UID, 0700).
 - adds `/synopkgland/bin` to `PATH`.
-- removes group/other permission bits from the credential paths below that
-  already exist and belong to the package UID. It never creates them, never
-  follows symlinks and logs one line for a path owned by another account.
+- caps the credential paths below that already exist and belong to the
+  package UID: files at 0600 (group/other, exec and special bits removed, a
+  narrower mode such as 0400 kept), directories at 0700 at most. It never creates
+  them, never follows symlinks, never changes HOME or the mounted folder
+  itself and logs one line for a path owned by another account.
 
 | Path below HOME | Kind | Result |
 | --- | --- | --- |
 | `.ssh` | directory | 0700 |
 | `.ssh/id_*` (not `*.pub`), `.ssh/config`, `.ssh/authorized_keys` | file | 0600 at most |
+| `.ssh/*.pub`, `.ssh/known_hosts` | file | not changed |
 | `.gnupg` | directory | 0700 |
 | `.netrc`, `.pgpass`, `.kube/config`, `.docker/config.json`, `.aws/credentials` | file | 0600 at most |
 

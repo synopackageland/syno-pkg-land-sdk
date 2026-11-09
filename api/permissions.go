@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sync/atomic"
 	"unicode/utf8"
 )
 
@@ -21,21 +22,58 @@ const MaxPermissionMethods = 1024
 //go:embed sdk-permissions.json
 var sdkPermissionsJSON []byte
 
-func sdkPolicy(method string) (policy, bool) {
-	var capabilities map[string]map[string]string
-	if err := json.Unmarshal(sdkPermissionsJSON, &capabilities); err != nil {
-		panic(err)
+// sdkPolicyTable is the decoded SDK table, memoised per process for the
+// bytes it came from. A CGI builds every route once per start and looks each
+// method up several times; decoding the JSON for every lookup dominated
+// startup. Values stay raw so an invalid entry still panics only when its own
+// method is looked up, exactly as before.
+type sdkPolicyTable struct {
+	raw     []byte
+	methods map[string]string
+	failure any
+}
+
+var (
+	sdkPolicyMemo    atomic.Pointer[sdkPolicyTable]
+	sdkPolicyDecodes atomic.Int64
+)
+
+func loadSDKPolicy() *sdkPolicyTable {
+	raw := sdkPermissionsJSON
+	if t := sdkPolicyMemo.Load(); t != nil && bytes.Equal(t.raw, raw) {
+		return t
 	}
-	for _, methods := range capabilities {
-		if value, ok := methods[method]; ok {
-			rule, valid := permissionValue(value)
-			if !valid {
-				panic("invalid SDK policy")
+	sdkPolicyDecodes.Add(1)
+	t := &sdkPolicyTable{raw: bytes.Clone(raw)}
+	var capabilities map[string]map[string]string
+	if err := json.Unmarshal(raw, &capabilities); err != nil {
+		t.failure = err
+	} else {
+		t.methods = map[string]string{}
+		for _, methods := range capabilities {
+			for method, value := range methods {
+				t.methods[method] = value
 			}
-			return rule, true
 		}
 	}
-	return policyUnset, false
+	sdkPolicyMemo.Store(t)
+	return t
+}
+
+func sdkPolicy(method string) (policy, bool) {
+	t := loadSDKPolicy()
+	if t.failure != nil {
+		panic(t.failure)
+	}
+	value, ok := t.methods[method]
+	if !ok {
+		return policyUnset, false
+	}
+	rule, valid := permissionValue(value)
+	if !valid {
+		panic("invalid SDK policy")
+	}
+	return rule, true
 }
 
 // Set by the CLI through -ldflags -X to bind the SDK policy it validated to

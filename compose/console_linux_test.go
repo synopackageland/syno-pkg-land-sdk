@@ -206,3 +206,49 @@ func TestConsoleInitWithoutSudoUsesNSSWrapperOrLogsOneLine(t *testing.T) {
 		t.Fatal("without sudo the real passwd must not change")
 	}
 }
+
+func TestFixPermissionsCapsFilesAt0600AndDirectoriesAt0700(t *testing.T) {
+	home := t.TempDir()
+	// What ssh-keygen leaves in a folder whose ACL widens new files.
+	write(t, filepath.Join(home, ".ssh/id_ed25519"), 0777)
+	write(t, filepath.Join(home, ".ssh/id_ed25519.pub"), 0777)
+	write(t, filepath.Join(home, ".ssh/known_hosts"), 0777)
+	write(t, filepath.Join(home, ".ssh/config"), 0700)
+	write(t, filepath.Join(home, ".netrc"), 0500)
+	write(t, filepath.Join(home, ".pgpass"), 0400)
+	write(t, filepath.Join(home, ".docker/config.json"), 0600)
+	os.Chmod(filepath.Join(home, ".ssh"), 0777)
+	os.Mkdir(filepath.Join(home, ".gnupg"), 0700)
+	os.Chmod(filepath.Join(home, ".gnupg"), 0700|os.ModeSetgid)
+	var logs []string
+	changed := FixPermissions(home, func(s string) { logs = append(logs, s) })
+	want := map[string]os.FileMode{".ssh": 0700, ".ssh/id_ed25519": 0600, ".ssh/config": 0600, ".netrc": 0400, ".pgpass": 0400, ".docker/config.json": 0600, ".gnupg": 0700,
+		// Not in the table: never touched.
+		".ssh/id_ed25519.pub": 0777, ".ssh/known_hosts": 0777}
+	for rel, m := range want {
+		if got := mode(t, filepath.Join(home, rel)); got != m {
+			t.Errorf("%s: %o, want %o", rel, got, m)
+		}
+	}
+	if st, _ := os.Lstat(filepath.Join(home, ".gnupg")); st.Mode()&os.ModeSetgid != 0 {
+		t.Error(".gnupg kept setgid")
+	}
+	slices.Sort(changed)
+	wantChanged := []string{filepath.Join(home, ".gnupg"), filepath.Join(home, ".netrc"), filepath.Join(home, ".ssh"), filepath.Join(home, ".ssh/config"), filepath.Join(home, ".ssh/id_ed25519")}
+	if !slices.Equal(changed, wantChanged) || len(logs) != 0 {
+		t.Fatalf("changed %v logs %v", changed, logs)
+	}
+	if again := FixPermissions(home, func(string) {}); len(again) != 0 {
+		t.Fatalf("second run changed %v", again)
+	}
+}
+
+func TestFixPermissionsKeepsTheMountedFolderItself(t *testing.T) {
+	home := t.TempDir()
+	os.Chmod(home, 0777)
+	write(t, filepath.Join(home, ".ssh/id_rsa"), 0777)
+	FixPermissions(home, func(string) {})
+	if mode(t, home) != 0777 || mode(t, filepath.Join(home, ".ssh/id_rsa")) != 0600 {
+		t.Fatalf("home %o key %o", mode(t, home), mode(t, filepath.Join(home, ".ssh/id_rsa")))
+	}
+}

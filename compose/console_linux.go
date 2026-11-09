@@ -234,8 +234,9 @@ func privateDirectory(p string, tighten bool, logf func(string)) error {
 	return nil
 }
 
-// FixPermissions clears group/other mode bits on the credential paths in
-// SensitivePaths that already exist below home and belong to the current UID.
+// FixPermissions caps the credential paths in SensitivePaths that already
+// exist below home and belong to the current UID: files at 0600 (exec and
+// special bits removed), directories at 0700. A narrower mode is kept.
 // It never follows symlinks, never creates paths and never touches another
 // account's files (one log line instead). It returns the paths it changed.
 func FixPermissions(home string, logf func(string)) []string {
@@ -349,15 +350,22 @@ func tightenAt(parent int, name string, dir bool, uid uint32, full string, note 
 		note(full, "left %s unchanged: owned by UID %d, not the package UID %d", st.Uid, uid)
 		return false
 	}
-	if st.Mode&0077 == 0 {
+	// Files keep at most owner read/write: no exec, setuid/setgid or sticky
+	// bit. Directories keep at most owner rwx. A narrower mode stays.
+	limit := uint32(0600)
+	if dir {
+		limit = 0700
+	}
+	current := st.Mode & 07777
+	if current&^limit == 0 {
 		return false
 	}
-	if err := unix.Fchmod(fd, st.Mode&07700); err != nil {
+	if err := unix.Fchmod(fd, current&limit); err != nil {
 		note(full, "could not tighten %s: %v", err)
 		return false
 	}
-	if unix.Fstat(fd, &st) == nil && st.Mode&0077 != 0 {
-		note(full, "%s still allows group/other access after chmod (folder ACL); tools such as ssh may refuse it")
+	if unix.Fstat(fd, &st) == nil && st.Mode&07777&^limit != 0 {
+		note(full, "%s still allows more than owner access after chmod (folder ACL); tools such as ssh may refuse it")
 	}
 	return true
 }
