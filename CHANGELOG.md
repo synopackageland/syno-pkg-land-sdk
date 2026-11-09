@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.53.21 (2026-11-09)
+
+- Share in-progress admission for concurrent requests from the same gateway
+  session, including resource and WebSocket revalidation. Keep completed results
+  uncached, queue without a new wait deadline, and cancel work when no waiter remains.
+- Recheck account identity, session expiry and revocation after admission waits;
+  never forward a request whose session was revoked during native verification.
+- Queue asset reads behind resource and upstream-header capacity instead of
+  returning a busy 503; retain active-work bounds and revalidate queued sessions.
+- Identify admission refusals with `X-Synopkgland-Error-Stage: admission` while
+  retaining stable JSON codes and explicit content types for asset failures.
+- Reuse the immutable executor/v0.53.5 release and its six digests.
+
 ## 0.53.20 (2026-11-09)
 
 - Pass a mutable ordinary launch configuration to DSM AppLaunch, keeping validated

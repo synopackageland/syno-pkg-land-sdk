@@ -3,6 +3,7 @@ package idgateway
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -60,15 +61,111 @@ func TestResourceWaitsForReadinessAndCancels(t *testing.T) {
 	}
 }
 
-func TestResourceWaiterLimit(t *testing.T) {
-	f, _ := newFront(t, ModeNone, newUpstream(t, nil), func(c *FrontConfig) { c.Access = "public" })
-	for range resourceWaitLimit {
-		f.resourceWaiters <- struct{}{}
+func TestBusyResourceSlotsWaitInsteadOfReturning503(t *testing.T) {
+	for _, headers := range []bool{false, true} {
+		t.Run(fmt.Sprint(headers), func(t *testing.T) {
+			up := newUpstream(t, nil)
+			f, _ := newFront(t, ModeNone, up, func(c *FrontConfig) { c.Access = "public" })
+			slots := f.resourceWaiters
+			if headers {
+				slots = f.proxy.Transport.(*boundedProxyTransport).headers
+			}
+			for range cap(slots) {
+				slots <- struct{}{}
+			}
+			done := make(chan *httptest.ResponseRecorder, 1)
+			go func() {
+				w := httptest.NewRecorder()
+				f.ServeHTTP(w, httptest.NewRequest("GET", "https://nas.example/assets/app.js", nil))
+				done <- w
+			}()
+			select {
+			case w := <-done:
+				t.Fatalf("busy asset returned early: %d", w.Code)
+			case <-time.After(30 * time.Millisecond):
+			}
+			<-slots
+			select {
+			case w := <-done:
+				if w.Code != 200 {
+					t.Fatalf("resumed asset: %d %s", w.Code, w.Body)
+				}
+			case <-time.After(3 * time.Second):
+				t.Fatal("asset did not resume")
+			}
+			for len(slots) > 0 {
+				<-slots
+			}
+		})
 	}
-	w := httptest.NewRecorder()
-	f.ServeHTTP(w, httptest.NewRequest("GET", "https://nas.example/assets/app.js", nil))
-	if w.Code != 503 {
-		t.Fatalf("overload: %d", w.Code)
+}
+
+func TestBusyResourceSlotWaitHonorsCancellation(t *testing.T) {
+	for _, headers := range []bool{false, true} {
+		t.Run(fmt.Sprint(headers), func(t *testing.T) {
+			up := newUpstream(t, nil)
+			f, _ := newFront(t, ModeNone, up, func(c *FrontConfig) { c.Access = "public" })
+			slots := f.resourceWaiters
+			if headers {
+				slots = f.proxy.Transport.(*boundedProxyTransport).headers
+			}
+			for range cap(slots) {
+				slots <- struct{}{}
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			done := make(chan struct{})
+			go func() {
+				f.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "https://nas.example/assets/app.js", nil).WithContext(ctx))
+				close(done)
+			}()
+			select {
+			case <-done:
+				t.Fatal("busy asset failed before cancellation")
+			case <-time.After(30 * time.Millisecond):
+			}
+			cancel()
+			select {
+			case <-done:
+			case <-time.After(time.Second):
+				t.Fatal("asset wait ignored cancellation")
+			}
+			if up.hits != 0 || len(slots) != cap(slots) {
+				t.Fatal("canceled waiter consumed work")
+			}
+			for len(slots) > 0 {
+				<-slots
+			}
+			if len(f.resourceWaiters) != 0 {
+				t.Fatal("canceled header wait retained a resource slot")
+			}
+		})
+	}
+}
+
+func TestResourceRevalidatesAfterWaitingForHeaderSlot(t *testing.T) {
+	up := newUpstream(t, nil)
+	f, clock := newFront(t, ModeNone, up, nil)
+	b := signedBrowser(t, f, clock)
+	slots := f.proxy.Transport.(*boundedProxyTransport).headers
+	for range cap(slots) {
+		slots <- struct{}{}
+	}
+	done := make(chan *httptest.ResponseRecorder, 1)
+	go func() { done <- b.do("GET", "https://nas.example:18443/assets/app.js") }()
+	select {
+	case w := <-done:
+		t.Fatalf("busy asset failed before revocation: %d", w.Code)
+	case <-time.After(30 * time.Millisecond):
+	}
+	f.RevokeUID(alice.UID)
+	<-slots
+	w := <-done
+	if w.Code != 401 || up.hits != 0 {
+		t.Fatalf("revoked queued asset: %d upstream=%d", w.Code, up.hits)
+	}
+	for len(slots) > 0 {
+		<-slots
 	}
 }
 

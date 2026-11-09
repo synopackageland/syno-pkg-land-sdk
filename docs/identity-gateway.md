@@ -132,6 +132,23 @@ bounded transaction and declared port or configured-origin revision. A second
 failed sign-in attempt remains a refusal rather than a redirect loop. Public
 upstream paths keep their declared authentication behavior.
 
+Concurrent requests carrying the same gateway session share verification that is
+still in progress. Completed permission results are never cached: the next
+request checks DSM again. Each waiter independently checks the account name,
+session expiry, client address and revocation after waiting. Disconnecting one
+request does not cancel other waiters; disconnecting the last cancels the shared
+work. Waiting adds no wall-clock admission deadline. Resource retries and active
+WebSockets retain their checks of the administrator role injected into the App.
+Asset reads also wait for resource and upstream-header capacity, retaining the
+existing active-work bounds. Admission is checked again after the header wait;
+an expired or revoked session cannot reach the App when a busy slot becomes free.
+
+An admission refusal includes `X-Synopkgland-Error-Stage: admission`. API and asset
+requests receive the existing JSON error codes, including
+`dsm_verification_failed` when DSM cannot establish permission; navigation gets
+the localized error page. An error response never masquerades as JavaScript or
+CSS. `app_starting` identifies readiness or upstream availability separately.
+
 The CGI checks the local gateway listener before presenting sign-in. A stopped
 service returns localized `app_not_running` with Package Center Run or Repair
 instructions. Registry endpoint probes remain advisory and never write Repair

@@ -395,8 +395,7 @@ func (f *Front) serveProxy(w http.ResponseWriter, r *http.Request) {
 		select {
 		case f.resourceWaiters <- struct{}{}:
 			defer func() { <-f.resourceWaiters }()
-		default:
-			writeStarting(w, r)
+		case <-r.Context().Done():
 			return
 		}
 		for f.cfg.Ready != nil && !f.cfg.Ready(r.Context()) {
@@ -413,8 +412,11 @@ func (f *Front) serveProxy(w http.ResponseWriter, r *http.Request) {
 				cookie, err := r.Cookie(f.sessionCookie(r))
 				// Reuse long-lived connection admission: it also rechecks role
 				// injection, expiry and revocation after potentially slow lookups.
-				if err != nil || !f.upgradeAllowed(r.Context(), cookie.Value, remoteIP(r)) {
+				if err != nil {
 					return &resourceAccessError{"login_required"}
+				}
+				if err := f.checkSession(r.Context(), cookie.Value, remoteIP(r), true); err != nil {
+					return &resourceAccessError{admissionCode(err)}
 				}
 			}
 			return nil
