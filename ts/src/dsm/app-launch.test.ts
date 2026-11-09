@@ -58,6 +58,30 @@ test('missing availability checks do not invent a denial; AppLaunch return value
  }
 })
 
+test.each([undefined,{},Object.assign(Object.create(null),{route:'/settings'})])('DSM can inspect and extend launch config after dispatch (%j)',async params=>{
+ const failures:unknown[]=[],windows:unknown[]=[]
+ let completion=Promise.resolve()
+ const AppLaunch=vi.fn((id:string,config?:Readonly<Record<string,string>>)=>{
+  // DSM waits for its scripts/task button, calls config.hasOwnProperty directly,
+  // and swallows a launch exception without creating an App instance.
+  completion=Promise.resolve().then(()=>{
+   expect(config!.hasOwnProperty('autoCenter')).toBe(false)
+   expect(Object.getPrototypeOf(config)).toBe(Object.prototype)
+   Object.assign(config!,{dsm_version:'7.3'})
+   windows.push({id,config})
+  }).catch(error=>{failures.push(error)})
+  return completion
+ })
+ const input=params===undefined?undefined:Object.freeze(params)
+ expect(await openApp({...target,params:input},{desktop:{AppLaunch}})).toEqual({status:'requested'})
+ await completion
+ expect(failures).toEqual([])
+ expect(windows).toHaveLength(1)
+ expect(AppLaunch).toHaveBeenCalledTimes(1)
+ expect(AppLaunch.mock.calls[0]![1]).not.toBe(input)
+ expect(input?.dsm_version).toBeUndefined()
+})
+
 test('launch and status exceptions return failed without retry or leaking error details',async()=>{
  const AppLaunch=vi.fn(()=>{throw new Error('private host details')})
  expect(await openApp(target,{desktop:{AppLaunch}})).toEqual({status:'failed'})
@@ -78,6 +102,7 @@ const invalid:unknown[]=[null,{}, {appId:1}, {appId:''}, {appId:'SYNO.SDS.X\n'},
  {...target,params:Object.fromEntries(Array.from({length:8},(_,i)=>[`k${i}`,'x'.repeat(2048)]))},
  ...['password','passwd','pwd','SynoToken','access_token','Authorization','client-secret','api.key','sid'].map(key=>({...target,params:{[key]:'private'}})),
  ...['className','instanceName','dsm_version','title'].map(key=>({...target,params:{[key]:'override'}})),
+ ...['hasOwnProperty','__proto__'].map(key=>({...target,params:{[key]:'override'}})),
 ]
 test.each(invalid.map((input,i)=>({input,i})))('invalid target $i cannot reach the host or URL',async({input})=>{
  const AppLaunch=vi.fn()

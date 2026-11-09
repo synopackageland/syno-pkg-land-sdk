@@ -28,8 +28,8 @@ export const MAX_DSM_APP_LAUNCH_PARAM = 8192
 const controls = /[\u0000-\u001f\u007f-\u009f]/
 const appId = /^[A-Za-z][A-Za-z0-9_.-]{0,255}$/
 const paramKey = /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/
-// AppLaunch interprets these as desktop configuration, rather than App data.
-const desktopKeys = new Set(['className','instanceName','dsm_version','title'])
+// AppLaunch interprets these as desktop configuration, or calls them itself.
+const desktopKeys = new Set(['className','instanceName','dsm_version','title','hasOwnProperty'])
 const secretKey = /^(?:password|passwd|pwd|token|synotoken|accesstoken|refreshtoken|idtoken|authorization|secret|clientsecret|apikey|credential|credentials|sid|sessionid)$/i
 
 /** Shared validation and DSM's existing double-encoding contract. Throws without echoing input. */
@@ -66,7 +66,9 @@ export function dispatchDsmApp(checked:DsmAppTarget,options:DsmAppLauncherOption
   if(typeof desktop?.AppLaunch !== 'function') return {status:'unsupported'}
   const status=desktop.StatusNotifier
   if(status?.isAppEnabled?.(checked.appId)===false || status?.isAppLaunchable?.(checked.appId)===false) return {status:'unavailable'}
-  desktop.AppLaunch(checked.appId,checked.params)
+  // DSM calls config.hasOwnProperty after its async script/task-button load.
+  // Keep validation's prototype-free record internal; DSM needs a mutable Object.
+  desktop.AppLaunch(checked.appId,{...checked.params})
   return {status:'requested'}
  } catch {return {status:'failed'}}
 }

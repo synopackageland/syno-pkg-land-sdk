@@ -23,6 +23,20 @@ test('folders open with opendir and files are selected with openfile',()=>{
  expect(calls).toEqual([[FILE_STATION_APP,{opendir:'/photo/2026'}],[FILE_STATION_APP,{openfile:'/photo/a.jpg'}]])
 })
 
+test('File Station uses DSM-compatible launch config for both actions',()=>{
+ const calls:unknown[][]=[]
+ const sds:DsmDesktop={AppLaunch(id,params){
+  expect(Object.getPrototypeOf(params)).toBe(Object.prototype)
+  const key=params!.hasOwnProperty('opendir')?'opendir':'openfile'
+  expect(params!.hasOwnProperty(key)).toBe(true)
+  Object.assign(params!,{dsm_version:'7.3'})
+  calls.push([id,key,params![key]])
+ }}
+ expect(openFolderInFileStation('/volume1/photo/資料',{desktop:sds})).toBe(true)
+ expect(openFileInFileStation('/volume1/photo/a b.jpg',{desktop:sds})).toBe(true)
+ expect(calls).toEqual([[FILE_STATION_APP,'opendir','/photo/資料'],[FILE_STATION_APP,'openfile','/photo/a b.jpg']])
+})
+
 test('shared App dispatch retains File Station path bounds above general launcher parameter limits',()=>{
  const {sds,calls}=desktop()
  const path='/photo/'+ 'x'.repeat(3000)

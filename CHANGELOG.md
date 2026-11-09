@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Pass a mutable ordinary launch configuration to DSM AppLaunch, keeping validated
+  prototype-free parameters internal. Fix App launches that returned requested but
+  failed asynchronously when DSM called config.hasOwnProperty.
+- Refuse hasOwnProperty as an App launch parameter so it cannot shadow DSM's method.
+- Preserve shared File Station dispatch, parameter validation and requested-only status.
+
 ## 0.53.19 (2026-11-09)
 
 - Export Go `delegate.NotSent(err)` to distinguish definitely unexecuted calls
