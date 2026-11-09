@@ -57,6 +57,8 @@ direct dispatch and URL generation.
 
 Parameters are App data, not DSM configuration. `className`, `instanceName`,
 `dsm_version` and `title` are refused because DSM interprets them itself.
+`hasOwnProperty` is also refused because DSM calls that method on launch config.
+The SDK passes DSM a mutable ordinary object copied from the validated parameters.
 Common credential keys such as `password`, `SynoToken`, `access_token`,
 `Authorization`, `api_key` and `sid` are also refused. The App must never put
 secrets under other keys or inside routes. Parameters and URLs grant no access.
