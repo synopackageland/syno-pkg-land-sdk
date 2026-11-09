@@ -47,9 +47,13 @@ type JobWebAPI struct{ JobContext }
 
 func (j JobContext) WebAPI() JobWebAPI { return JobWebAPI{j} }
 
-// Call returns the full DSM envelope, including success:false. No mutation is
-// retried. WEBAPI_UNCERTAIN or a transport failure after sending requires the
-// App to reconcile the outcome before it offers a deliberate new operation.
+// Call returns the full DSM envelope, including success:false. Params are
+// ordinary DSM API data: names such as user, account, username, password,
+// token and sid pass through unchanged, and only synowebapi's own keys (api,
+// method, version, runner, outfile, custom_event, compound) and names starting
+// with "_" are refused; see docs/webapi-json.md#request-parameters. No mutation
+// is retried. WEBAPI_UNCERTAIN or a transport failure after sending requires
+// the App to reconcile the outcome before it offers a deliberate new operation.
 func (w JobWebAPI) Call(ctx context.Context, api, method string, version int, params map[string]any) (json.RawMessage, error) {
 	var out json.RawMessage
 	err := w.call(ctx, api, method, version, params, "", nil, &out)

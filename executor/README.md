@@ -615,11 +615,18 @@ same user. It then runs the fixed synowebapi executable with `runner=<owner>`;
 no password or session is stored. File Station privileges are independent.
 
 API and method names must match their protocol formats. The approved profile
-and the consenting user's DSM permissions govern access. Reserved routing,
-authentication and runner params cannot be supplied. Exact API/method/version
-matches only; no wildcard profiles. Maximum: 32 profiles, 256 version entries,
-1024-byte purpose, 32 KiB encoded params, 20 MiB compact JSON reply, and the shared operation call
-bound (including revalidation). Invalid/duplicate JSON is refused. JSON reply
+and the consenting user's DSM permissions govern access. Only synowebapi's own
+argument keys are refused: `api`, `method`, `version`, `runner`, `outfile`,
+`custom_event` and `compound`, in any case, plus names starting with `_`. DSM
+API params such as `user`, `account`, `username`, `password`, `token` or `sid`
+are passed through unchanged, for example `SYNO.Core.Group` `list` with `user`
+to list that person's groups. They never change who the call runs as: the
+executor always sets `runner` to the grant's owner; see
+[request parameters](../docs/webapi-json.md#request-parameters).
+Exact API/method/version matches only; no wildcard profiles. Maximum: 32
+profiles, 256 version entries, 1024-byte purpose, 32 KiB encoded params, 20 MiB
+compact JSON reply, and the shared operation call bound (including
+revalidation). Invalid/duplicate JSON is refused. JSON reply
 frames allow that payload plus 64 KiB for the envelope; requests keep their
 existing limits. JSON stdout is compacted during bounded capture, without
 staging, a decoded tree, or a second socket-frame copy. Oversize returns
