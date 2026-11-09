@@ -1,0 +1,58 @@
+{
+  "version": "0.53.20",
+  "executorVersion": "0.53.5",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.20",
+    "@synopackageland/app": "0.53.20",
+    "syno-pkg-land-app": "0.53.20",
+    "synopkgland_app": "0.53.20"
+  },
+  "executorDigests": {
+    "x86_64": "78125a96c428dd3322056669d27d7269dfcac78057a34f22d1bac9741393a957",
+    "aarch64": "ed9e21ffd6f6f46927eddd6a11a68ccd201f4ebd680846b81d266845edc180da",
+    "armv7": "21787da130a653f66fb6a71c859868c1c144cd184d896c0df44f87eb44f7c0ca",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Passed 72 focused launcher/File Station tests, seven version/manifest/docs tests, generated version and executor-manifest checks, docs version check (81 files), Node dist consistency, SDK/app builds, both npm packs and packed-export/version smoke checks with artifact leak scans. Browser-only diagnosis confirmed null-prototype launch config caused the asynchronous DSM error. No full gate, new NAS package deployment, executor source change or rebuild, Rust build, or publication."
+  },
+  "ui": {
+    "builtAgainst": "0.23.5",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.5.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Copy validated launch parameters into a mutable ordinary object at the shared DSM dispatch boundary so asynchronous config.hasOwnProperty checks can create App instances",
+    "Reject hasOwnProperty launch parameters to prevent shadowing the DSM configuration method",
+    "Preserve File Station navigation, parameter bounds and dispatch-only requested status",
+    "Reuse the immutable executor/v0.53.5 release and its six digests"
+  ],
+  "companionCLI": {
+    "version": "0.52.11",
+    "tarball": "synopackageland-cli-0.52.11.tgz",
+    "sha256": "b9526742f8a14093ff9b5612c6c4a865639be5b51e38fa9de11185f2ebfb39c8"
+  },
+  "npmArtifacts": {
+    "synopackageland-app-0.53.20.tgz": {
+      "sha256": "f1c6b81c552c71de10d3e027c0063f92e1cd3dad2a839f68ca5cd63bfc211ca7"
+    },
+    "synopackageland-sdk-0.53.20.tgz": {
+      "sha256": "549ba621479f1298bcca83afe93cd135ac6adc33f3532cbc32248c5ebc25251e"
+    }
+  }
+}

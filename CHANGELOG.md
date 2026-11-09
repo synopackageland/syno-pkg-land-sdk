@@ -1,12 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.53.20 (2026-11-09)
 
 - Pass a mutable ordinary launch configuration to DSM AppLaunch, keeping validated
   prototype-free parameters internal. Fix App launches that returned requested but
   failed asynchronously when DSM called config.hasOwnProperty.
 - Refuse hasOwnProperty as an App launch parameter so it cannot shadow DSM's method.
 - Preserve shared File Station dispatch, parameter validation and requested-only status.
+- Reuse the immutable executor/v0.53.5 release and its six digests.
 
 ## 0.53.19 (2026-11-09)
 
