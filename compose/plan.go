@@ -97,6 +97,7 @@ type RunAs struct {
 	Mode         string   `json:"mode"`
 	Reason       string   `json:"reason,omitempty"`
 	Capabilities []string `json:"capabilities,omitempty"`
+	Sudo         *Sudo    `json:"sudo,omitempty"`
 }
 type ServicePolicy struct {
 	Listener    *Listener              `json:"listener,omitempty"`
@@ -109,7 +110,8 @@ type ServicePolicy struct {
 	// Scratch lists container targets that get an emptied disk directory.
 	Scratch []string `json:"scratch,omitempty"`
 	// Tmpfs opts targets into a bounded memory tmpfs; others are refused.
-	Tmpfs []TmpfsMount `json:"tmpfs,omitempty"`
+	Tmpfs   []TmpfsMount `json:"tmpfs,omitempty"`
+	Console *Console     `json:"console,omitempty"`
 }
 type Input struct {
 	Path    string `json:"path"`
@@ -140,6 +142,8 @@ type Inventory struct {
 	Egress         string                      `json:"egress"`
 	Network        string                      `json:"network"`
 	Mounts         []types.ServiceVolumeConfig `json:"mounts"`
+	Console        *Console                    `json:"console,omitempty"`
+	Sudo           *Sudo                       `json:"sudo,omitempty"`
 }
 type AppDataVolume struct {
 	Key  string `json:"key"`
@@ -473,6 +477,16 @@ func Build(ctx context.Context, r Request) (*Plan, error) {
 		if policy.RunAs != nil && policy.RunAs.Mode != "package" && !rootContainer {
 			return nil, problem("COMPOSE_RUN_AS_INVALID", "service %s run_as must be package or container-root", name)
 		}
+		sudo, err := planSudo(name, policy, s.NetworkMode == "host")
+		if err != nil {
+			return nil, err
+		}
+		if sudo != nil {
+			// The process still starts as the package UID; only an explicit
+			// per-command sudo inside the container reaches container root.
+			s.CapAdd = slices.Clone(SudoCapabilities)
+			s.SecurityOpt = nil
+		}
 		if rootContainer {
 			if strings.TrimSpace(policy.RunAs.Reason) == "" || s.NetworkMode == "host" {
 				return nil, problem("COMPOSE_ROOT_OPT_IN_INVALID", "container root needs a reason and bridge networking")
@@ -606,6 +620,10 @@ func Build(ctx context.Context, r Request) (*Plan, error) {
 			}
 			s.Image = pinned
 		}
+		console, err := applyConsole(r.Package, &s, policy.Console, policy.Scratch, rootContainer, sudo != nil)
+		if err != nil {
+			return nil, err
+		}
 		if policy.StorageInit != nil && policy.StorageInit.Runtime != nil {
 			for _, e := range policy.StorageInit.Runtime.Environment {
 				if e.Port != "" {
@@ -637,7 +655,7 @@ func Build(ctx context.Context, r Request) (*Plan, error) {
 		if rootContainer {
 			reason = policy.RunAs.Reason
 		}
-		p.Services = append(p.Services, Inventory{StorageInit: storageInit, Scratch: policy.Scratch, Tmpfs: tmpfs, SDKManaged: managedIngress, Ports: s.Ports, CapDrop: s.CapDrop, CapAdd: s.CapAdd, RootReason: reason, HostElevation: false, Retention: "retain", Service: name, User: s.User, ContainerRoot: rootContainer, HostUIDMapping: "unknown", Egress: egress, Network: func() string {
+		p.Services = append(p.Services, Inventory{StorageInit: storageInit, Scratch: policy.Scratch, Tmpfs: tmpfs, SDKManaged: managedIngress, Ports: s.Ports, CapDrop: s.CapDrop, CapAdd: s.CapAdd, RootReason: reason, HostElevation: false, Retention: "retain", Service: name, User: s.User, ContainerRoot: rootContainer, HostUIDMapping: "unknown", Egress: egress, Console: console, Sudo: sudo, Network: func() string {
 			if s.NetworkMode == "host" {
 				return "host"
 			}

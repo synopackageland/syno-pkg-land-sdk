@@ -166,6 +166,7 @@ a build operator trust decision. `check`/`inspect` remain offline.
 | Egress | isolated internal networks, or explicit internet outbound bridge; fine allowlist declarations fail |
 | Public ports | All upstream publishes removed; the host gateway dials the declared web service on its fixed bridge IP; auxiliary ingress is unsupported |
 | Root | Fixed package UID/GID by default; per-service container-root requires reason, bridge and no host binds; only CHOWN/FOWNER/SETUID/SETGID/DAC_OVERRIDE opt-ins |
+| Sudo inside the container | Interactive console services only: starts as the package UID; `run_as.sudo` with a reason, `console` and bridge; fixed capability set; Shares stay bound |
 | Build, hooks, privileged, host PID/IPC, arbitrary devices, sockets | Rejected; Intel render devices require the explicit GPU capability below |
 | Secret/config file resources, plugins, replicas/deploy | Rejected until their bounded delivery/runtime contract exists |
 | Subpath hosting | Unsupported; use the app's dedicated origin at / |
@@ -908,3 +909,118 @@ executor, create a privileged host task or request SDK administrator authorizati
 The manifest/plan records `host_elevation: false` for this control path; this does
 not mean that container UID 0 is remapped to an unprivileged host UID. Normal DSM
 administrator sign-in remains the entry gate for administrator-only Apps.
+
+## Interactive console services
+
+Ordinary upstream Apps (media servers, document apps and similar) declare none
+of this. It is for console Apps that give an administrator a shell, terminal
+or coding agents inside the container.
+
+### Container init (`console`)
+
+```yaml
+compose:
+  services:
+    console:
+      scratch: [/scratch]
+      console:
+        home: /data/home      # at or below a writable mount of the service
+        user: myapp           # optional; default is the lowercase package name
+        # tmp: /scratch/work  # optional; default is the first scratch target
+```
+
+The service needs an explicit `entrypoint`/`command`. The SDK mounts its
+initializer read-only at `/synopkgland/bin/synopkgland` and starts the App as
+`synopkgland container init --config <declaration> -- <argv>`, as the package
+UID, without root or chown. On every start it:
+
+- gives the package UID an account entry (`user`, HOME, `/bin/bash` or
+  `/bin/sh`). With `run_as.sudo` the entry is appended to `/etc/passwd` and
+  `/etc/group`; otherwise the init uses `libnss_wrapper` from the image
+  (`/usr/local/lib`, `/usr/lib/<multiarch>`, `/usr/lib64` or `/usr/lib`). If
+  the image has neither, it logs one line and continues.
+- creates HOME (mode 0700) when missing and sets `HOME`, `USER`, `LOGNAME`.
+  An existing HOME keeps its mode and may be a selected folder owned by
+  another account (logged once).
+- sets `TMPDIR` to the disk scratch directory (package UID, 0700).
+- adds `/synopkgland/bin` to `PATH`.
+- removes group/other permission bits from the credential paths below that
+  already exist and belong to the package UID. It never creates them, never
+  follows symlinks and logs one line for a path owned by another account.
+
+| Path below HOME | Kind | Result |
+| --- | --- | --- |
+| `.ssh` | directory | 0700 |
+| `.ssh/id_*` (not `*.pub`), `.ssh/config`, `.ssh/authorized_keys` | file | 0600 at most |
+| `.gnupg` | directory | 0700 |
+| `.netrc`, `.pgpass`, `.kube/config`, `.docker/config.json`, `.aws/credentials` | file | 0600 at most |
+
+A folder ACL can widen the mode a tool asks for when it creates such a path
+(for example the first `ssh-keygen` in a session). Run
+`synopkgland container fix-permissions` in the container to apply the table
+again without a restart. HOME keeps its mode because it is the user's own
+folder; running `sshd` inside the container is not supported.
+
+The SDK links (`storage-init`, then `synopkgland container init`) replace
+themselves with `execve`, so an image entrypoint such as `tini -- <app>`
+becomes PID 1 and reaps orphaned processes. `storage_init.runtime.periodic`
+keeps `storage-init` as the parent; such a service should start its init with
+`tini -s` (subreaper).
+
+### Sudo inside the container (`run_as.sudo`)
+
+```yaml
+compose:
+  services:
+    console:
+      run_as:
+        mode: package
+        sudo: {reason: "Install build tools with apt in the console"}
+      console: {home: /data/home}
+      scratch: [/scratch]
+```
+
+The service still starts as the package UID; the App, its terminal, agents,
+browsers and package managers run as that UID. Only an explicit `sudo ...`
+runs a command as container root. The SDK keeps `cap_drop: [ALL]`, adds only
+`AUDIT_WRITE`, `CHOWN`, `DAC_OVERRIDE`, `FOWNER`, `FSETID`, `SETGID` and
+`SETUID`, and removes `no-new-privileges` for this service only. `sudo`
+requires `console`, a one-line reason, bridge networking and no other
+`run_as.capabilities`; GPU devices are refused. Privileged mode, devices, host
+namespaces, extra capabilities, other security options and the Docker socket
+stay refused. `/tmp` stays the image's own disk-backed directory (mode 1777,
+container layer), shared with system accounts such as apt's; it needs no
+tmpfs. Put scratch at another path such as `/scratch` (TMPDIR follows it); a
+`scratch` at `/tmp` is refused.
+
+What it allows: DSM's Container Manager has no user namespace, so container
+root is UID 0 on the NAS. Through sudo, anything mounted into the container,
+including the selected Shared Folder, can be read and changed regardless of
+DSM ACL, and files created with sudo are owned by root on the NAS. AI agents
+in the container can use sudo too. Use it only for Apps whose mounted folders
+belong to the person using the console.
+
+The image must contain:
+
+- `sudo` installed setuid root (`/usr/bin/sudo`, `/bin/sudo` or
+  `/usr/local/bin/sudo`);
+- `/etc/sudoers.d/<file>` (mode 0440) with
+  `<user> ALL=(ALL:ALL) NOPASSWD: ALL`, where `<user>` is `console.user`;
+- `/etc/passwd` and `/etc/group` appendable by the package UID (for example
+  `chmod 0666`), because setuid sudo ignores `libnss_wrapper`; the init appends
+  `<user>:*:<uid>:<gid>:...` once;
+- a writable root filesystem (no `read_only: true`) when `apt-get` is used.
+
+The init runs `sudo -n true` at start and stops with
+`COMPOSE_CONSOLE_SUDO_UNAVAILABLE` and the reason when the image does not meet
+this contract.
+
+Packages installed with `apt-get` live in the container layer. They survive a
+container restart but are gone when the container is recreated (upgrade,
+repair or changed settings). To re-apply them, keep a script in HOME and run
+it from the App's start command, for example
+`[ -x "$HOME/.config/console/on-start.sh" ] && "$HOME/.config/console/on-start.sh"`,
+with `sudo` inside the script where needed.
+
+The plan, `check` and `inspect` inventory show `sudo: {reason}` and `cap_add`
+for the service; container-root and host elevation stay false.

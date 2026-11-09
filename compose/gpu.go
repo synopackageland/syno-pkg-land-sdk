@@ -41,8 +41,8 @@ func planDevices(r Request) (*DeviceInventory, error) {
 	seen := map[string]bool{}
 	for _, name := range r.Devices.GPU.Services {
 		policy := r.Services[name]
-		if seen[name] || policy.RunAs != nil && (policy.RunAs.Mode != "package" || len(policy.RunAs.Capabilities) > 0) {
-			return nil, problem("COMPOSE_GPU_INVALID", "GPU services must be distinct and use the package UID without added capabilities")
+		if seen[name] || policy.RunAs != nil && (policy.RunAs.Mode != "package" || len(policy.RunAs.Capabilities) > 0 || policy.RunAs.Sudo != nil) {
+			return nil, problem("COMPOSE_GPU_INVALID", "GPU services must be distinct and use the package UID without added capabilities or sudo")
 		}
 		seen[name] = true
 	}

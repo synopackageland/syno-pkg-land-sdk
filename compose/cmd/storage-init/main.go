@@ -22,6 +22,9 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "container" {
+		os.Exit(containerCommand(os.Args[2:], os.Stdout, os.Stderr))
+	}
 	declaration := flag.String("directories", "", "JSON writable-directory declarations")
 	initialization := flag.String("initialization", "", "JSON storage and runtime initialization")
 	flag.Parse()
