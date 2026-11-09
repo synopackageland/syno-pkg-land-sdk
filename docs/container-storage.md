@@ -68,12 +68,120 @@ UID, capabilities and persistent database state for the locked image.
 
 The initializer creates only the declared private subtree and parents, with
 mode 0700, using file-descriptor traversal without symlinks. Shared writable
-bases require the sticky bit. On every start it verifies package ownership and
-private modes, creates an exclusive probe, writes, syncs and removes it.
-Missing/unwritable bases, foreign ownership, symlinks, broad modes, read-only
-storage, quota and full-disk errors fail with `COMPOSE_STORAGE_NOT_WRITABLE`.
-The App is not executed. Existing data and permissions are preserved across
-restart and upgrade; there is no ownership or permission repair.
+bases on package storage require the sticky bit. On every start it verifies
+package ownership and private modes, creates an exclusive probe, writes, syncs
+and removes it. Missing/unwritable bases, foreign ownership, symlinks, broad
+modes, read-only storage, quota and full-disk errors fail with
+`COMPOSE_STORAGE_NOT_WRITABLE`. The App is not executed. Existing data and
+permissions are preserved across restart and upgrade; there is no ownership or
+permission repair.
+
+### A selected Shared Folder as the base
+
+A base mounted from a Shared Folder (`compose.shares`, including the install
+wizard's folder) usually belongs to DSM or an administrator, and DSM grants the
+package account read/write through its ACL. ACL directories often read as mode
+0777 without the sticky bit. The planner marks such directories `share: true`
+in the lock; authors do not set it. For them the initializer:
+
+- never chowns or chmods the Shared Folder root or an existing subdirectory;
+- creates missing subdirectories as the package UID;
+- does not require the package UID to own the root or the subdirectories, or
+  private modes; DSM's grant decides access;
+- still refuses symlinks and requires a real exclusive write.
+
+```yaml
+compose:
+  shares:
+    workspace:
+      select: install
+      picker: folder
+      permission: rw
+      mounts: [{service: app, target: /data/home}]
+  services:
+    app:
+      storage_init:
+        directories: [{base: /data/home, path: .app}]
+```
+
+Runtime files and `prepare` markers can contain secrets, so they must target a
+directory on package storage, never a Shared Folder subtree.
+
+### Runtime only
+
+`storage_init` may declare only `runtime` (for example generated secrets in
+`runtime.environment`) and no `directories`. Runtime `files` and `prepare`
+markers still need a private directory.
+
+## Temporary files
+
+Containers write temporary files to disk, not memory. Docker's default tmpfs has
+no size limit beyond half of the NAS memory, and agents, package managers and
+headless browsers can fill it. The planner therefore refuses every Compose tmpfs
+(the short `tmpfs:` list and `type: tmpfs` volumes) unless the package declares
+it, and host `/tmp` binds stay refused.
+
+### Disk scratch (recommended)
+
+```yaml
+compose:
+  services:
+    app:
+      scratch: [/tmp]
+      environment: {TMPDIR: /tmp}
+```
+
+Each `scratch` target is bound read/write from
+`/var/packages/<package>/target/compose/scratch/<service>/<id>`, a directory in
+the package's own installed files on the volume:
+
+- The package-account `preinst` creates it explicitly with mode 0700, owned by
+  the package UID. Neither the umask nor inherited ACLs decide the mode.
+- On every container start, the SDK initializer checks that the package UID owns
+  it, sets mode 0700, empties it without following symlinks, and probes a write
+  before it runs the App. The App sees an empty directory, owned by its UID,
+  mode 0700. Tools that check their temp parent (owner and no group/other write)
+  accept it.
+- Upgrade replaces it and uninstall removes it with the package files.
+- It works with `read_only: true`, needs no root, and replaces a Compose tmpfs at
+  the same target, so upstream Compose files can stay unchanged.
+
+Set `TMPDIR` to the scratch target when the App or its tools read it. Scratch
+needs explicit `entrypoint`/`command` argv, like `storage_init`, so the SDK can
+empty it before the App starts. At most 8 targets per service are accepted;
+`/synopkgland` is reserved. Container-root services cannot use scratch. Scratch
+is not persistent: keep databases and state on a named volume or in a Shared
+Folder.
+
+### Memory tmpfs (explicit opt-in)
+
+```yaml
+compose:
+  services:
+    app:
+      tmpfs:
+        - /run                         # SDK default size, 64 MiB
+        - {target: /var/cache/render, size: 16m}
+```
+
+A declared target accepts the matching Compose tmpfs, or the SDK adds one if
+the Compose files have none. Every tmpfs that reaches Docker has a size: the
+declared `size`, otherwise the size in the Compose file, otherwise 64 MiB.
+Sizes take bytes or units (`16m`, `1g`). Other Compose tmpfs options such as
+`mode` or `exec` are kept. A size of 0 (unlimited) is refused wherever it
+appears. Memory tmpfs counts against NAS memory; use it only for sockets, PID
+and lock files or other small, speed-sensitive data.
+
+Errors:
+
+- `COMPOSE_TMPFS_UNDECLARED`: `<service>:<target> is an undeclared memory
+  tmpfs; temporary files go to disk: declare
+  compose.services.<service>.scratch: [<target>] ...`
+- `COMPOSE_TMPFS_UNBOUNDED`: an explicit size 0.
+- `COMPOSE_TMPFS_INVALID`, `COMPOSE_SCRATCH_INVALID`: malformed, duplicate or
+  conflicting targets.
+- `COMPOSE_SCRATCH_NOT_READY`: at start, the scratch directory is missing, not
+  owned by the package UID, or not writable.
 
 Declare the upstream `entrypoint` explicitly (including `entrypoint: []` when
 `command` contains the full executable argv). Inherited image defaults are not

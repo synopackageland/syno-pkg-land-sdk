@@ -48,8 +48,10 @@ the upstream config parser. `after_prepare: true` configures installed data
 after initialization. `if_absent: true` retains an existing private file.
 Files are atomically replaced at mode 0600 through pinned directory descriptors;
 symlinks, public/foreign directories, hardlinked targets and path escapes fail.
-Image assets are never written. Rootfs read-only and writable tmpfs/volume
-declarations remain explicit Compose choices.
+Image assets are never written. Rootfs read-only and writable volumes remain
+explicit Compose choices. Temporary files use disk `scratch`; a memory tmpfs
+needs an explicit, always-bounded `tmpfs` declaration (see
+[container storage](container-storage.md#temporary-files)).
 
 Prepare uses absolute fixed argv with no inferred shell and defaults to exit 0;
 only explicitly declared `success_codes` are accepted. `unless_exists` names a
