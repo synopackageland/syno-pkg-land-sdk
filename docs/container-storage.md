@@ -55,8 +55,9 @@ Choose an existing writable mount base in the **official image**, for example
 its existing sticky temporary directory mounted as a persistent named volume.
 A missing mount target is normally created root-owned; declaring it does not
 make it writable. The SDK does not chown/chmod the mount base. Verify its initial
-copy-up contents and avoid hiding required App files. A tmpfs base is ephemeral
-and is unsuitable for persistent databases. If the official image offers no
+copy-up contents and avoid hiding required App files. A memory tmpfs cannot be
+a base, and no declared directory may sit on one (see
+[A tmpfs loses its mode on restart](#a-tmpfs-loses-its-mode-on-restart)). If the official image offers no
 compatible writable base or configurable data path, keep it unsupported; do not
 add a root initialization container or silently switch to a custom image.
 
@@ -171,6 +172,28 @@ Sizes take bytes or units (`16m`, `1g`). Other Compose tmpfs options such as
 `mode` or `exec` are kept. A size of 0 (unlimited) is refused wherever it
 appears. Memory tmpfs counts against NAS memory; use it only for sockets, PID
 and lock files or other small, speed-sensitive data.
+
+#### A tmpfs loses its mode on restart
+
+DSM's Docker recreates a tmpfs as root-owned mode 0755 when the container is
+restarted (`docker restart`, a restart policy, or DSM restarting the
+container); the `mode` and `uid` given in Compose apply only when the container
+is created. A nonroot service can therefore write the root of its tmpfs on the
+first start but not after a restart. Keep a memory tmpfs for paths the App
+does not create itself, or for container-root services; put directories the
+package UID creates on disk `scratch` or on a named volume.
+
+The planner refuses, for a nonroot service, a `storage_init` directory whose
+base is a tmpfs or that lies on a tmpfs below its base, and a `console.home` on
+a tmpfs:
+
+- `COMPOSE_STORAGE_ON_TMPFS`: `<service> storage_init directory <path> is on
+  the memory tmpfs <target>; DSM's Docker recreates a tmpfs as root 0755 on
+  restart ... Use disk scratch (compose.services.<service>.scratch: [<target>])
+  ...`
+
+A tmpfs inside a declared directory (for example a cache below the data
+directory) is accepted: the directory itself stays on disk.
 
 Errors:
 

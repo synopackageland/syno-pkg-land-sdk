@@ -113,6 +113,10 @@ func applyConsole(pkg string, s *types.ServiceConfig, c *Console, scratch []stri
 	if !containerPath(planned.Home) || strings.ContainsAny(planned.Home, ":\n\r") || !writableMount(s, planned.Home) {
 		return invalid("home must be an absolute path at or below a writable mount of the service")
 	}
+	// HOME is created below its mount when missing, as the package UID.
+	if t, ok := nearestTmpfs(s, path.Clean(planned.Home)); ok {
+		return nil, storageOnTmpfs(s.Name, "console home "+planned.Home, t)
+	}
 	// TMPDIR lives on the service's disk scratch: package-owned, 0700 and
 	// emptied by the SDK, never memory and never the selected NAS folder.
 	if planned.Tmp == "" && len(scratch) > 0 {

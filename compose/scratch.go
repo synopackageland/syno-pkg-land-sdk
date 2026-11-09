@@ -279,3 +279,58 @@ func explicitZeroTmpfs(model map[string]any) map[string]map[string]bool {
 	}
 	return found
 }
+
+// tmpfsTargets lists every memory tmpfs that reaches Docker for s.
+func tmpfsTargets(s *types.ServiceConfig) []string {
+	var targets []string
+	for _, entry := range s.Tmpfs {
+		target, _ := shortTmpfs(entry)
+		targets = append(targets, path.Clean(target))
+	}
+	for _, v := range s.Volumes {
+		if v.Type == types.VolumeTypeTmpfs {
+			targets = append(targets, path.Clean(v.Target))
+		}
+	}
+	return targets
+}
+
+// storageTmpfs returns the tmpfs a nonroot service would create p on: a
+// tmpfs at base, or one between base (exclusive) and p (inclusive). DSM's
+// Docker recreates a tmpfs as root 0755 on `docker restart` and ignores the
+// declared mode (and uid), so the package UID could create p on the first
+// start but not after a restart.
+func storageTmpfs(s *types.ServiceConfig, base, p string) (string, bool) {
+	below := func(child, parent string) bool {
+		return strings.HasPrefix(child, strings.TrimSuffix(parent, "/")+"/")
+	}
+	for _, t := range tmpfsTargets(s) {
+		if t == base || below(t, base) && (p == t || below(p, t)) {
+			return t, true
+		}
+	}
+	return "", false
+}
+
+func storageOnTmpfs(service, what, target string) error {
+	return problem("COMPOSE_STORAGE_ON_TMPFS", "%s %s is on the memory tmpfs %s; DSM's Docker recreates a tmpfs as root 0755 on restart and ignores its mode, so the package UID cannot create it after a restart. Use disk scratch (compose.services.%s.scratch: [%s]) for temporary files, or a named volume or package data for files that must persist", service, what, target, service, target)
+}
+
+// nearestTmpfs reports the tmpfs when the closest mount at or above p is one.
+func nearestTmpfs(s *types.ServiceConfig, p string) (string, bool) {
+	best, tmpfs := "", false
+	consider := func(target string, isTmpfs bool) {
+		target = path.Clean(target)
+		if (p == target || strings.HasPrefix(p, strings.TrimSuffix(target, "/")+"/")) && len(target) > len(best) {
+			best, tmpfs = target, isTmpfs
+		}
+	}
+	for _, v := range s.Volumes {
+		consider(v.Target, v.Type == types.VolumeTypeTmpfs)
+	}
+	for _, entry := range s.Tmpfs {
+		target, _ := shortTmpfs(entry)
+		consider(target, true)
+	}
+	return best, tmpfs
+}

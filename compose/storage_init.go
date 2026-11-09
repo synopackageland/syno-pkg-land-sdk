@@ -158,6 +158,11 @@ func applyStorageInit(pkg string, s *types.ServiceConfig, init *StorageInitializ
 			return invalid()
 		}
 	}
+	for _, d := range init.Directories {
+		if t, ok := storageTmpfs(s, path.Clean(d.Base), path.Join(d.Base, d.Path)); ok && !rootContainer {
+			return storageOnTmpfs(s.Name, "storage_init directory "+path.Join(d.Base, d.Path), t)
+		}
+	}
 	seen := map[string]bool{}
 	for _, d := range init.Directories {
 		if !validWritableDirectory(d) || seen[path.Join(d.Base, d.Path)] {

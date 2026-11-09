@@ -20,8 +20,9 @@ Usage:
   synopkgland container fix-permissions [--home DIR]
       Make existing credential paths in HOME (~/.ssh, keys, ~/.gnupg, ~/.netrc,
       ~/.pgpass, ~/.kube/config, ~/.docker/config.json, ~/.aws/credentials)
-      owner-only again. Only paths owned by you are changed; nothing is created
-      and symlinks are not followed. Run it after a tool created one of them
+      owner-only again: files 0600 at most (no exec bit), directories 0700.
+      Only paths owned by you are changed; nothing is created and symlinks
+      are not followed. Run it after a tool created one of them
       in a folder whose ACL widened the mode.
   synopkgland container init --config JSON -- COMMAND [ARG...]
       Entry mode used by the SDK-generated Compose file; not run by hand.

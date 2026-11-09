@@ -1,0 +1,53 @@
+{
+  "version": "0.53.28",
+  "executorVersion": "0.53.6",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.28",
+    "@synopackageland/app": "0.53.28",
+    "syno-pkg-land-app": "0.53.28",
+    "synopkgland_app": "0.53.28"
+  },
+  "executorDigests": {
+    "x86_64": "e77dbf846ea4555355fa15ee3a6ca3b20e1b1aaa9768321243589d9ec15ffabe",
+    "aarch64": "741a7c37757b56b3acc304cef56de5e59c1ca9278a83be0f1e1ff1ad17b24dd6",
+    "armv7": "f0a3059b982d0210621254adf7d1a3343d2a89d114e053e5b3bd646898293b1a",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Go tests pass as a non-root user (UID 65534): fix-permissions caps an ACL-widened 0777 private key at 0600, removes exec and special bits, keeps narrower modes, leaves *.pub, known_hosts, HOME and the mounted folder unchanged, never follows symlinks and never touches other owners' files; the planner refuses storage_init directories and console home on a memory tmpfs of a nonroot service with COMPOSE_STORAGE_ON_TMPFS and accepts a tmpfs inside a declared directory; the SDK policy is decoded once per process for servers of 203 routes, follows changed content and keeps its panics. Both npm packages are built and packed for content scans. No full gate matrix, qemu, publication or NAS acceptance is implied."
+  },
+  "ui": {
+    "builtAgainst": "0.23.5",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.5.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Cap console credential files at 0600 (no exec or special bits) and credential directories at 0700 in fix-permissions and at console start; narrower modes stay.",
+    "Refuse storage_init directories and console home on a memory tmpfs of a nonroot service (COMPOSE_STORAGE_ON_TMPFS), because DSM's Docker recreates a tmpfs as root 0755 on restart.",
+    "Decode the built-in SDK API policy once per process instead of on every route lookup; results and errors are unchanged.",
+    "Reuse executor 0.53.6 unchanged."
+  ],
+  "npmArtifacts": {
+    "synopackageland-sdk-0.53.28.tgz": {
+      "sha256": "ed447466f2c4e5ab1afa2eaf648b588bd9b449b6d1ae47deac04c47a1a98f42d"
+    },
+    "synopackageland-app-0.53.28.tgz": {
+      "sha256": "4c3bd095099ec8894a19d1df3d379892eb464623a4ef6e74ebf120ac23a3a686"
+    }
+  }
+}
