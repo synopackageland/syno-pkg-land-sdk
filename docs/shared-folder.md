@@ -225,8 +225,9 @@ folder that needs attention. It renders nothing when the App configures no folde
 
 ## Installer-selected child folders
 
-CLI 0.52.14 can pair `install.sharedFolder.picker: folder` with a matching
-`compose.shares.<key>.picker: folder`, using SDK 0.53.22. The installer submits
+A matching CLI and SDK release can pair `install.sharedFolder.picker: folder`
+with `compose.shares.<key>.picker: folder` (see the changelog for the first
+supported releases). The installer submits
 the share name and `<key>_subpath` separately; an explicitly empty subpath
 selects the share root. Both values are persisted in config schema 1 as
 `shared_folders` and `shared_folder_paths`. Missing child-selection state is
