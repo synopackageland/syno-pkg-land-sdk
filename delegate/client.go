@@ -35,7 +35,7 @@ func replyLimit(op string) int {
 }
 
 // ExecutorTimeout is the default wait, except for root.run and raw WebAPI:
-// the executor answers within 30 seconds, and the client waits 10 longer
+// the executor uses the shared operation allowance; the client waits 10 longer
 // (spec/protocol/v1/timeouts.json).
 const ExecutorTimeout = runtimebudget.Operation + 10*time.Second
 
@@ -111,18 +111,54 @@ type dialFailure struct{ error }
 
 func (e *dialFailure) Unwrap() error { return e.error }
 
-// Call uses one connection per request, including its newline in the size
-// budget. Refusal codes survive unchanged; executor messages never expose
-// cookie values or internal paths through the CGI response.
+// Call shares root/WebAPI admission with clients for the same socket in this
+// process. Only an explicit pre-execution ROOT_BUSY is retried; queueing and
+// backoff honor the caller context without adding an elapsed wait limit.
 func (c *Client) Call(parent context.Context, op string, auth map[string]string, params any, result any) error {
 	if parent.Err() != nil {
 		return fail("canceled")
 	}
-	if isBatchRootOp(op) || op == "status" && auth["dsm_cookie"] != "" {
-		if stream := requestBatchClient(parent, c); stream != nil {
-			return stream.call(parent, c, op, auth, params, result)
-		}
+	if c == nil || c.Socket == "" {
+		return fail(CodeExecutorUnavailable)
 	}
+	if needsRootSlot(op) {
+		release, err := acquireAdmission(parent, c.Socket)
+		if err != nil {
+			return err
+		}
+		defer release()
+	}
+	var stream *batchClient
+	if isBatchRootOp(op) || op == "status" && auth["dsm_cookie"] != "" {
+		stream = requestBatchClient(parent, c)
+	}
+	delay := 100 * time.Millisecond
+	for {
+		if parent.Err() != nil {
+			return fail("canceled")
+		}
+		var err error
+		if stream != nil {
+			err = stream.call(parent, c, op, auth, params, result)
+			// A refused batch step may be repeated as a fresh authenticated request.
+			// Do not consume the batch's bounded step count with repeated refusals.
+			stream = nil
+		} else {
+			err = c.callOnce(parent, op, auth, params, result)
+		}
+		if !needsRootSlot(op) || !rootBusy(err) {
+			return err
+		}
+		if err := waitRootBusy(parent, delay); err != nil {
+			return err
+		}
+		delay = min(2*delay, time.Second)
+	}
+}
+
+// callOnce uses one connection per attempt. Refusals survive unchanged; sent
+// requests with lost replies are terminal and are never automatically replayed.
+func (c *Client) callOnce(parent context.Context, op string, auth map[string]string, params any, result any) error {
 	if c == nil || c.Socket == "" {
 		return fail(CodeExecutorUnavailable)
 	}

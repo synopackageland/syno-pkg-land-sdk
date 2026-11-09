@@ -7,6 +7,7 @@ node --test scripts/check-internal-content.test.mjs scripts/sdk-version.test.mjs
 node scripts/check-timeout-policy.mjs
 node scripts/sdk-version.mjs --check
 node scripts/protocol-limits.mjs --check
+node scripts/admission-limits.mjs --check
 node scripts/executor-manifest.mjs --check
 node scripts/check-internal-content.mjs --repo .
 (cd node && npm ci --no-audit --no-fund)

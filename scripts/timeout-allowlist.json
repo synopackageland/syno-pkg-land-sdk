@@ -748,5 +748,23 @@
     "statement": "setTimeout(run, 0)",
     "class": "B",
     "reason": "Next-frame stand-in where the window draws no frames (no requestAnimationFrame, as jsdom): defers the shell's portal header placement; nothing is aborted or failed by the clock"
+  },
+  {
+    "file": "delegate/client.go",
+    "statement": "delay := 100 * time.Millisecond",
+    "class": "B",
+    "reason": "Spacing between explicit pre-execution ROOT_BUSY refusals; never expires queued work"
+  },
+  {
+    "file": "delegate/client.go",
+    "statement": "delay = min(2*delay, time.Second)",
+    "class": "B",
+    "reason": "Bound retry spacing, not total waiting; caller cancellation and deadline remain authoritative"
+  },
+  {
+    "file": "ts/src/standalone.ts",
+    "statement": "setTimeout(() => { timer = undefined if(active && document.visibilityState === 'visible') listener() }, 50)",
+    "class": "B",
+    "reason": "Existing visibility/focus event debounce only; does not expire requests or queued work"
   }
 ]

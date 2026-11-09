@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.53.18 (2026-11-09)
+
+- Share Go delegate root/WebAPI admission across clients for the same executor socket
+  in each process, using capacity generated from the executor slot definition.
+- Retry explicit pre-execution `ROOT_BUSY` refusals with caller cancellation/deadline
+  and backoff; never replay uncertain outcomes, transport failures or lost replies.
+  Status and job inspection/cancellation remain available while work is queued.
+- Retry a refused root batch step through a fresh authenticated socket request,
+  preserving earlier results and the batch step budget.
+- Pin exact per-hop deadline reserves and explain minute-scale App deadlines,
+  busy-NAS overhead and how to budget for DSM command work.
+- Reuse the immutable executor/v0.53.5 release and its six digests.
+
 ## 0.53.17 (2026-11-09)
 
 - Fix: a failed `identity.status` probe (timeout, 5xx, network, `business_unavailable`,
