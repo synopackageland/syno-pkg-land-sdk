@@ -66,9 +66,13 @@ func (b *batchClient) call(ctx context.Context, c *Client, op string, auth map[s
 		raw = []byte("{}")
 	}
 	if b.conn == nil {
-		conn, err := c.dial(ctx)
+		conn, err := c.dial(ctx, op != "status")
 		if err != nil {
-			b.err = err
+			// A status probe sent no bytes. Let a later work request in this
+			// batch wait for startup rather than cache its provisional state.
+			if op != "status" {
+				b.err = err
+			}
 			return err
 		}
 		b.conn = conn

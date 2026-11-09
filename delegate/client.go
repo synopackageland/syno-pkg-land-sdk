@@ -53,7 +53,8 @@ type Client struct {
 	Timeout time.Duration
 	// Mailbox is the package's lifecycle mailbox (<data dir>/executor). With
 	// it, a socket that does not answer is APP_STOPPED when the package is
-	// stopped, and a call right after a start waits for the executor.
+	// stopped. Work right after a start waits for the executor; status probes
+	// report APP_STARTING immediately when it is not listening yet.
 	Mailbox string
 }
 
@@ -184,7 +185,7 @@ func (c *Client) Call(parent context.Context, op string, auth map[string]string,
 		}
 		return fail(CodeExecutorUnavailable)
 	}
-	conn, e := c.dial(ctx)
+	conn, e := c.dial(ctx, op != "status")
 	if e != nil {
 		if parent.Err() != nil {
 			return fail("canceled")
@@ -272,11 +273,13 @@ func decodeReply(line []byte, result any) error {
 
 // dial connects to the executor. A stopped package is APP_STOPPED at once,
 // before a dial: while it stops, its executor can hold the socket without
-// answering. A package start requested less than StartGrace ago waits for the
-// executor to listen, and ends APP_STARTING. A protected policy comparison
+// answering. Work after a recent start waits for the executor to listen, and
+// ends APP_STARTING. Status only probes once, reporting APP_STARTING from the
+// recent mailbox request without waiting or changing the work allowance.
+// A protected policy comparison
 // indicating pending approval returns EXECUTOR_UNAVAILABLE without waiting
 // for a socket that cannot open until approval. Neither sent a byte.
-func (c *Client) dial(ctx context.Context) (net.Conn, error) {
+func (c *Client) dial(ctx context.Context, waitForStart bool) (net.Conn, error) {
 	if action, _ := c.lifecycle(); action == "stop" {
 		return nil, fail(CodeAppStopped)
 	}
@@ -294,6 +297,8 @@ func (c *Client) dial(ctx context.Context) (net.Conn, error) {
 			return nil, fail(CodeExecutorUnavailable)
 		case action != "start":
 			return nil, err
+		case !waitForStart && left > 0:
+			return nil, fail(CodeAppStarting)
 		case left <= 0 && waited:
 			return nil, fail(CodeAppStarting)
 		case left <= 0:

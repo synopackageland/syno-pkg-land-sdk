@@ -14,7 +14,7 @@ import {Button,Callout,Dialog} from '@synopackageland/ui'
 import type {Context} from '../context'
 import ExecutorSettings from './ExecutorSettings.vue'
 import type {CapabilityState,CapabilityStatus} from './executor-setup'
-import {ExecutorSetupKey,confirmFailure} from './use-executor-setup'
+import {ExecutorSetupKey,confirmFailure,lifecycleStatus} from './use-executor-setup'
 import {appLifecycle,lifecycleCopy,lifecycleRetryDelay,type AppLifecycle} from './lifecycle'
 import {delegateCopy} from './copy'
 // purpose is the App's own sentence for what it needs system privileges for.
@@ -42,7 +42,7 @@ function show(next:CapabilityStatus|undefined){
 async function check(){
  if(!setup)return
  let next:CapabilityStatus|undefined
- try{next=await setup.status()}catch{next=undefined}
+ try{next=await setup.status()}catch(e){next=lifecycleStatus(e)}
  if(!disposed)show(next)
 }
 onMounted(()=>{

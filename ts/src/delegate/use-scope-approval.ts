@@ -5,7 +5,7 @@ import {computed,onBeforeUnmount,onMounted,ref,watch} from 'vue'
 import {DEFAULT_REQUEST_TIMEOUT,type Context} from '../context'
 import type {ScopeSelection} from './long-running'
 import type {CapabilityStatus} from './executor-setup'
-import {confirmFailure,statusUnreachable,useExecutorSetup,type ConfirmFailure} from './use-executor-setup'
+import {confirmFailure,lifecycleStatus,statusUnreachable,useExecutorSetup,type ConfirmFailure} from './use-executor-setup'
 import {appLifecycle} from './lifecycle'
 import {delegateCopy} from './copy'
 import {createDsmFileStation} from '../dsm/filestation'
@@ -76,7 +76,13 @@ export function useScopeApproval(props:{readonly admin:boolean;readonly locale?:
   shares.value=all
   chosen.value=detail.selection?.scope??detail.preselection??''
  }
- async function reload(approved?:CapabilityStatus){if(!props.admin||busy.value)return;busy.value=true;error.value=false;failure.value=undefined;try{await load(approved)}catch{if(!disposed)error.value=true}finally{if(!disposed)busy.value=false}}
+ async function reload(approved?:CapabilityStatus){
+  if(!props.admin||busy.value||disposed)return
+  busy.value=true;error.value=false;failure.value=undefined
+  try{await load(approved)}
+  catch(e){if(!disposed){const next=lifecycleStatus(e);if(next){status.value=next;scope.value=undefined}else error.value=true}}
+  finally{if(!disposed)busy.value=false}
+ }
  const refresh=()=>reload()
  async function authorize(){
   if(!props.admin||busy.value||!password.value||!canConfirm.value||error.value)return

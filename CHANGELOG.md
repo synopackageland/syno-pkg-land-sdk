@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.53.15 (2026-11-09)
+
+- Read executor status immediately when the lifecycle mailbox says the app is
+  starting and its socket is not listening. Status probes, including authenticated
+  batches and delegate capability checks, no longer consume the startup work
+  allowance. Actual work retains its existing startup wait and operation budget.
+- Show stopped or starting status when an executor status provider or scope read
+  throws a lifecycle refusal. Settings, approval and notice retry these checks in
+  the background and update automatically once ready, without asking for approval.
+- Show localized loading text in the settings status row while its first answer
+  is unknown. Reuse the existing immutable executor release and approval policy.
+
 ## 0.53.14
 
 - Add typed DSM application targets, `openApp`, an injectable `DsmAppLauncher` and `dsmAppLaunchURL` for verified application IDs, alongside the existing package-based `dsmLaunchURL` and CLI host methods

@@ -100,7 +100,7 @@ func TestApprovalPendingStatusKeepsComparisonWithAFreshStart(t *testing.T) {
 	code(t, c.Call(context.Background(), "status", nil, nil, nil), CodeAppStopped)
 }
 
-func TestUnchangedApprovalReadbackStillWaitsForExecutorStart(t *testing.T) {
+func TestUnchangedApprovalReadbackStillWaitsForWork(t *testing.T) {
 	c := approvalClientFixture(t, false)
 	c.Timeout = time.Second
 	time.AfterFunc(300*time.Millisecond, func() {
@@ -123,7 +123,7 @@ func TestUnchangedApprovalReadbackStillWaitsForExecutorStart(t *testing.T) {
 		}
 		conn.Write([]byte("{\"ok\":true,\"result\":{}}\n"))
 	})
-	if err := c.Call(context.Background(), "status", nil, nil, nil); err != nil {
+	if err := c.Call(context.Background(), "root.run", nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -174,7 +174,7 @@ func TestApprovalReadbackAppearingDuringStartEndsTheWait(t *testing.T) {
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	code(t, c.Call(ctx, "status", nil, nil, nil), CodeExecutorUnavailable)
+	code(t, c.Call(ctx, "root.run", nil, nil, nil), CodeExecutorUnavailable)
 }
 
 func TestProtectedApprovalRejectsWritableSymlinkAndWrongPackage(t *testing.T) {
