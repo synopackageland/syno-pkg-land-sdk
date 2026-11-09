@@ -161,3 +161,25 @@ func TestDedicatedSharePlansWithoutRootAndDefaultsBeforeResourceAcquisition(t *t
 		t.Fatal("missing dedicated share accepted outside installer")
 	}
 }
+
+func TestSilentLegacyUpgradeToFolderPickerKeepsShareRoot(t *testing.T) {
+	data, root := t.TempDir(), t.TempDir()
+	os.MkdirAll(filepath.Join(root, "volume1", "Media"), 0755)
+	os.WriteFile(filepath.Join(data, "config.json"), []byte(`{"schema":1,"shared_folders":{"media":"Media"}}`), 0600)
+	t.Setenv("SYNOPKG_PKG_STATUS", "UPGRADE")
+	os.Unsetenv("media")
+	os.Unsetenv("media_subpath")
+	os.Unsetenv("CHANGE_media")
+	env, err := nativeShareEnvironment(&InstallSharedFolder{Mode: "select", Key: "media", Permission: "rw", Picker: "folder"}, data, root)
+	if err != nil || !strings.Contains(env, filepath.Join(root, "volume1", "Media")) {
+		t.Fatalf("%q %v", env, err)
+	}
+	if _, err = os.Stat(filepath.Join(root, "volume1", "Media")); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("media", "Media")
+	t.Setenv("CHANGE_media", "true")
+	if _, err = nativeShareEnvironment(&InstallSharedFolder{Mode: "select", Key: "media", Permission: "rw", Picker: "folder"}, data, root); err != nil {
+		t.Fatalf("saved installer variable: %v", err)
+	}
+}

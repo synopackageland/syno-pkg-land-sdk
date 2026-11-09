@@ -29,7 +29,7 @@ var systemShareName = regexp.MustCompile(`(?i)^(homes?|users|ftp|root|admin|gues
 var shareKey = regexp.MustCompile(`^[a-z][a-z0-9_]{0,31}$`)
 
 func validNativeShare(f *InstallSharedFolder) bool {
-	return f != nil && (f.Picker == "" || f.Picker == "folder" && f.Mode == "select") && (f.Mode == "select" && f.Name == "" || f.Mode == "dedicated" && dedicatedShareName.MatchString(f.Name) && !systemShareName.MatchString(f.Name)) && shareKey.MatchString(f.Key) && !strings.HasPrefix(f.Key, "pkgwizard_") && !strings.HasPrefix(f.Key, "synopkg") && !strings.HasPrefix(f.Key, "change_") && (f.Permission == "ro" || f.Permission == "rw")
+	return f != nil && (f.Picker == "" || f.Picker == "folder" && (f.Mode == "select" || f.Mode == "dedicated")) && (f.Mode == "select" && f.Name == "" || f.Mode == "dedicated" && dedicatedShareName.MatchString(f.Name) && !systemShareName.MatchString(f.Name)) && shareKey.MatchString(f.Key) && !strings.HasPrefix(f.Key, "pkgwizard_") && !strings.HasPrefix(f.Key, "synopkg") && !strings.HasPrefix(f.Key, "change_") && (f.Permission == "ro" || f.Permission == "rw")
 }
 func problem(code, message string) error { return fmt.Errorf("[%s] %s", code, message) }
 

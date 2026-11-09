@@ -7,3 +7,4 @@
 export { App, SDK, VERSION } from './app.js';
 export { AppError, ServiceError } from './errors.js';
 export { MAX_WEBAPI_REPLY, MAX_REPLY_FRAME } from './limits.js';
+export { SharedFolderConfig } from './shared-folder.js';

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.53.23 (2026-11-09)
+
+- Reuse installer folder selection and permission Dialog/Retry in native packages.
+- Resolve native folders through the existing Go Config API and new Node/Python bindings.
+- Check native selections before daemon startup and recovery; support dedicated folder roots.
+- Preserve share-only legacy records as explicit root selections during native and Compose upgrades, including preinst before DSM recreates package data symlinks.
+
 ## 0.53.22 (2026-11-09)
 
 - Add opt-in installer-selected child folders for native Compose share mounts, paired with CLI 0.52.14.

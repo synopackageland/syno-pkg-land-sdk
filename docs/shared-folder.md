@@ -7,42 +7,46 @@ grants only the declared permission to the package account. Installation needs
 no folder choice. Apps and containers keep running as the package account.
 Shared data survives uninstall.
 
-The wizard prefills the dedicated folder, never an arbitrary existing share.
-An administrator may select an existing folder instead. That field checks DSM
-folder metadata and the package account's existing permission before Next is
-allowed. System, encrypted-unmounted, immutable, unavailable and unsupported
-folders are rejected. Unknown permission results fail closed. A first install
-whose package account does not exist cannot verify access to an existing folder:
-use the dedicated folder. The wizard does not modify permissions on unrelated
-existing folders. Fixed `mode: create` and explicit `mode: select` remain available.
+The wizard defaults to the dedicated share or accepts a supported existing
+local ACL share. DSM data-share grants the declared RO/RW after preinst; no
+pre-existing package account or package permission is needed before Next.
+The wizard validates names, storage metadata and selected directories without
+writing ACLs. Uninstall retains the folder, files and package account ACL.
 
-Dedicated-mode upgrades prefill the recorded folder using the localized dynamic
-wizard. A malformed retained record requires an explicit valid selection; a
-static wizard also requires an explicit selection. Clearing the editable field
-chooses the dedicated folder. The installed data is never moved or deleted by
-changing a selection.
+With matching current CLI/SDK releases (see the changelog), native packages support
+`install.sharedFolder: {mode: select, key: media, permission: rw, picker: folder}`.
+Dedicated mode also accepts `picker: folder` and an App-named `name`; an absent
+dedicated share supports its root only. Selected child directories must exist.
+The same SPK uses a native chooser on DSM 7.2.2+ and a share dropdown plus
+relative subpath on 7.1/7.2.1. Upgrade preserves both values. Older share-only records retain their share and
+select its root automatically, including silent upgrades. Compose uses the
+same declaration plus a matching `compose.shares` mount.
 
-Compose maps `compose.shares.<key>.select: install` to the same declaration and
-permission. Preparation writes the dedicated source on DSM's selected package
-volume before resource acquisition. Every start repeats the kernel permission
-check as the fixed package account. Permission loss stops startup with the folder,
-account, needed RO/RW and grant-or-reinstall recovery in the DSM hook log, localized
-in all supported languages. A stopped gateway answers `app_not_running` and points
-to Package Center Run or Repair, independently of DSM browser sign-in.
+The selection record stores the share and relative folder separately. Go
+`Config.Require` and `Status` automatically honor that subpath and resolve the
+current volume on each call. Root, traversal, symlink, missing and ambiguous
+selections fail closed. Checks never create a selected child or change ACLs.
 
-Wizard permission metadata is a preflight, not a grant or a guarantee about child
-ACLs or future changes. Runtime kernel checks remain authoritative. Revocation
-cannot recall already-open file descriptors. DSM device acceptance of resource
-timing and wizard behavior is separate from generated-artifact and unit tests.
+Native packages reuse `install/control` for preinst structure validation and
+post-grant checks. Before startup and daemon recovery, the SDK checks access as
+the package UID. A native gateway's authenticated DSM entry reuses the startup
+permission Dialog with exact File Station recovery steps and Retry. Retry only
+rechecks current access; once ready, start the App in Package Center. Packages
+without a gateway report errors through the SDK API and package hook log.
+Native paths are re-resolved without materializing a bind source; a native App
+that caches its root must restart after a share move. Compose additionally
+requires repair/upgrade if its materialized bind source changes.
 
-DSM mechanism: [Data Share](https://help.synology.com/developer-guide/resource_acquisition/data_share.html)
-and [resource acquisition](https://help.synology.com/developer-guide/resource_acquisition/resources.html).
+Shared-folder ACLs apply to the whole share. Subfolder selection does not narrow
+DSM's share grant. Runtime checks are advisory: child ACLs and later I/O may
+still fail, and revocation does not recall open file descriptors. No root App,
+automatic ACL writer, or alternate selection record is generated.
 
 ## What the SDK decides and who decides it
 
 | Question | Answer comes from |
 | --- | --- |
-| Where is the folder now? | `config.json` name, resolved to `/volumeN/<name>` on every call |
+| Where is the folder now? | Installer record, resolved to `/volumeN/<name>/<subpath>` on every call |
 | What may the package account do? | The kernel: `access(2)` run by the App's own process (never root) |
 | What does the App need? | `Config.Required` (the `permission` of `install.sharedFolder`: `ro` = read, `rw` = write) |
 | Is it pending? | Required > granted, and the folder exists |
@@ -59,6 +63,7 @@ folder of that name: rename one). Only `pending` is fixed by a permission.
 
 ```go
 shares := sharedfolder.Config{
+	Account:  "ExampleApp",
 	DataDir:  dataDir, // /var/packages/<id>/var
 	Required: map[string]sharedfolder.Access{"media": sharedfolder.Write},
 }
@@ -266,3 +271,25 @@ mounts. WORM/encryption-lock and other DSM-specific types do not have a complete
 package-readable filesystem taxonomy or full device matrix. DSM 7.1 and 7.2.1 use
 standard share dropdown/subpath fields with unit/render coverage, without a new
 old-device acceptance claim.
+
+## Node and Python native backends
+
+The bindings use the package's SDK `install/control` so resolution, identity,
+symlink and kernel permission checks stay in the same implementation as Go.
+Only use paths from trusted App configuration, never request parameters.
+
+```ts
+import { SharedFolderConfig } from '@synopackageland/app'
+const folders = new SharedFolderConfig({packageId: 'ExampleApp'})
+const root = await folders.require('media')
+```
+
+```python
+from synopkgland_app import SharedFolderConfig
+root = SharedFolderConfig('ExampleApp').require('media')
+```
+
+Both default to `/var/packages/<id>/var` and `target`; optional `dataDir` /
+`payloadRoot` (Python: `data_dir` / `payload_root`) support trusted package test
+configuration. They require the generated native folder declaration and matching
+non-root package account. Keep SDK/App and gateway releases aligned.

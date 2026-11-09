@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/synopackageland/syno-pkg-land-sdk/installsettings"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/composeingress"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/pkgstate"
 	"net"
 	"os"
 	"os/user"
@@ -203,15 +204,5 @@ func Prepare(project, pkg, pkgvar string) error {
 // DSM removes /var/packages/<id> before upgrade preinst. Its physical pkgvar
 // environment path remains available even while that convenience symlink is gone.
 func packageStateDirectory(pkg, explicit string) string {
-	if explicit != "" {
-		return explicit
-	}
-	if value := os.Getenv("SYNOPKG_PKGVAR"); value != "" {
-		return value
-	}
-	// DSM7 preinst has only the destination volume, before pkgvar/symlinks exist.
-	if volume := os.Getenv("SYNOPKG_PKGDEST_VOL"); volume != "" {
-		return filepath.Join(volume, "@appdata", pkg)
-	}
-	return filepath.Join("/var/packages", pkg, "var")
+	return pkgstate.Directory(pkg, explicit)
 }

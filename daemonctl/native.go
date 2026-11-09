@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/sharepreflight"
 	"github.com/synopackageland/syno-pkg-land-sdk/supervision"
 )
 
@@ -187,6 +188,9 @@ func (c *controller) superviseNative(ready *os.File, signals <-chan os.Signal) e
 		go func() {
 			_, statErr := os.Stat(c.executable())
 			err := statErr
+			if err == nil {
+				err = sharepreflight.CheckPackage(c.dest, c.data)
+			}
 			if err == nil {
 				var announce func()
 				if c.Dependencies != nil {

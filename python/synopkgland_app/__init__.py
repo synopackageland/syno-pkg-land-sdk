@@ -23,7 +23,7 @@ from ._limits import MAX_REPLY_FRAME
 if TYPE_CHECKING:
     from . import frames
 
-__all__ = ["App", "Context", "Error", "SDK", "VERSION"]
+__all__ = ["App", "Context", "Error", "SDK", "VERSION", "SharedFolderConfig"]
 
 VERSION = 1
 SDK = "python/" + SDK_VERSION
@@ -299,3 +299,5 @@ class App:
         os.close(null)
         os.dup2(2, 1)
         self.serve(rfile, wfile)
+
+from .shared_folder import SharedFolderConfig

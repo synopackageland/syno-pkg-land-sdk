@@ -6,11 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/pkgstate"
 	"io"
 	"net"
 	"net/url"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -123,16 +123,7 @@ func settingValue(value string, setting Setting, port int) (string, error) {
 }
 
 func statePath(pkg, explicit string) string {
-	if explicit != "" {
-		return explicit
-	}
-	if value := os.Getenv("SYNOPKG_PKGVAR"); value != "" {
-		return value
-	}
-	if volume := os.Getenv("SYNOPKG_PKGDEST_VOL"); volume != "" {
-		return filepath.Join(volume, "@appdata", pkg)
-	}
-	return filepath.Join("/var/packages", pkg, "var")
+	return pkgstate.Directory(pkg, explicit)
 }
 func owned(st os.FileInfo) bool {
 	n, ok := st.Sys().(*syscall.Stat_t)
