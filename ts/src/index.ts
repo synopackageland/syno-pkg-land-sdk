@@ -1,7 +1,7 @@
 // Headless entry: types, transport helpers and copy. It never imports vue.
-export type * from './context'
-export {DEFAULT_REQUEST_TIMEOUT, clientTimeout, isFullPage} from './context'
-export {createStandaloneHost, createStandaloneContext} from './standalone'
+export type * from './context.js'
+export {DEFAULT_REQUEST_TIMEOUT, clientTimeout, isFullPage} from './context.js'
+export {createStandaloneHost, createStandaloneContext} from './standalone.js'
 export {launchRoute, followLaunchRoute, dsmLaunchURL, dsmAppLaunchURL, packageCenterUrl, MAX_LAUNCH_ROUTE} from './launch'
 export {openApp,createDsmAppLauncher,MAX_DSM_APP_PARAMS,MAX_DSM_APP_PARAM_LENGTH,MAX_DSM_APP_LAUNCH_PARAM} from './dsm/app-launch'
 export type {DsmAppTarget,DsmAppLaunchResult,DsmAppLauncher,DsmAppLauncherOptions} from './dsm/app-launch'

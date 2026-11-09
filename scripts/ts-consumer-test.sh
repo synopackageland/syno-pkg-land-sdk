@@ -7,7 +7,12 @@ set -euo pipefail
 ts=$(cd "$(dirname "$0")/../ts" && pwd)
 work=$(mktemp -d "${TMPDIR:-/tmp}/sdk-consumer.XXXXXX")
 trap 'rm -rf "$work"' EXIT
-tgz=$(cd "$ts" && npm pack --ignore-scripts --pack-destination "$work" 2>/dev/null | tail -n 1)
+if test -n "${SYNOPKGLAND_SDK_TARBALL:-}"; then
+ cp "$SYNOPKGLAND_SDK_TARBALL" "$work/sdk.tgz"
+ tgz=sdk.tgz
+else
+ tgz=$(cd "$ts" && npm pack --ignore-scripts --pack-destination "$work" 2>/dev/null | tail -n 1)
+fi
 mkdir -p "$work/node_modules/@synopackageland/sdk"
 tar xzf "$work/$tgz" -C "$work/node_modules/@synopackageland/sdk" --strip-components 1
 for dep in vue @vue @synopackageland/ui @lucide reka-ui; do
@@ -15,7 +20,7 @@ for dep in vue @vue @synopackageland/ui @lucide reka-ui; do
 done
 printf '{"type":"module"}\n' >"$work/package.json"
 cat >"$work/import.test.js" <<'TEST'
-import {expect, test} from 'vitest'
+import {expect, test, vi} from 'vitest'
 test('the packed SDK loads as an App test imports it', async () => {
 	expect((await import('@synopackageland/sdk/vue')).AppShell).toBeDefined()
 	expect((await import('@synopackageland/sdk')).isFullPage).toBeDefined()
@@ -41,6 +46,22 @@ test('the packed application launcher exposes typed targets and dispatches throu
  expect(calls).toEqual([[target.appId, target.params]])
  expect(new URL(dsmAppLaunchURL('https://dsm.example:5001', target)).searchParams.get('launchApp')).toBe(target.appId)
 })
+test('the packed host delivers one activation and cancels pending delivery on disposal', async () => {
+ const {createStandaloneHost} = await import('@synopackageland/sdk')
+ const page = Object.assign(new EventTarget(), {visibilityState: 'visible'})
+ const browser = new EventTarget()
+ vi.stubGlobal('document', page); vi.stubGlobal('window', browser); vi.useFakeTimers()
+ const host = createStandaloneHost(), listener = vi.fn()
+ try {
+  const sub = host.subscribe('window-activated', listener)
+  expect(sub.status).toBe('subscribed')
+  page.dispatchEvent(new Event('visibilitychange')); browser.dispatchEvent(new Event('focus'))
+  vi.advanceTimersByTime(50)
+  expect(listener).toHaveBeenCalledExactlyOnceWith()
+  browser.dispatchEvent(new Event('focus')); host.dispose(); vi.advanceTimersByTime(100)
+  expect(listener).toHaveBeenCalledTimes(1)
+ } finally {host.dispose(); vi.useRealTimers(); vi.unstubAllGlobals()}
+})
 TEST
 (cd "$work" && "$ts/node_modules/.bin/vitest" run --root "$work")
 
@@ -49,6 +70,13 @@ import {bootEntryPage, createAppContext, createSignInCache} from '@synopackagela
 import {saveBlob, createNativeHost} from '@synopackageland/sdk/mobile'
 import {NATIVE_PROTOCOL, type NativeBridge, type NativeMessage, type NativeEvent} from '@synopackageland/sdk/mobile/shell'
 import {openApp, createDsmAppLauncher, dsmAppLaunchURL, type DsmAppTarget, type DsmAppLaunchResult, type DsmAppLauncher} from '@synopackageland/sdk'
+import {createStandaloneHost, type HostEvent, type HostSubscriptionResult} from '@synopackageland/sdk'
+const activation: HostEvent = 'window-activated'
+const host = createStandaloneHost()
+const subscription: HostSubscriptionResult = host.subscribe(activation, () => {})
+// @ts-expect-error Native event names are not part of HostEvent.
+host.subscribe('activate', () => {})
+if (subscription.status === 'subscribed') subscription.dispose()
 const target: DsmAppTarget = {appId: 'SYNO.SDS.MailPlusServer.Instance'}
 const launcher: DsmAppLauncher = createDsmAppLauncher({desktop: undefined})
 const result: Promise<DsmAppLaunchResult> = launcher.openApp(target)

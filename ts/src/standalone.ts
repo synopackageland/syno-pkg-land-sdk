@@ -1,7 +1,7 @@
 // A host and a context for a page that owns the browser page outside DSM: a
 // development page, a preview or a test. Only what a browser page can do is
 // supported; the DSM window's desktop actions answer unsupported.
-import type {Context, HostAdapter, HostPlatformSnapshot} from './context'
+import type {Context, HostAdapter, HostPlatformSnapshot} from './context.js'
 
 const unsupported = {status: 'unsupported'} as const
 
@@ -9,6 +9,7 @@ const unsupported = {status: 'unsupported'} as const
 export function createStandaloneHost(platform: Partial<HostPlatformSnapshot> = {}): HostAdapter {
  const snapshot: HostPlatformSnapshot = {web: true, host: 'standalone-web', dsmStandalone: null, dsmLanguage: null, appLocale: null, systemVersion: null, fullVersion: null, theme: null, ...platform}
  const disposers = new Set<() => void>()
+ let disposed = false
  return {
   platform: () => ({...snapshot}),
   setTitle(title) {
@@ -33,14 +34,39 @@ export function createStandaloneHost(platform: Partial<HostPlatformSnapshot> = {
   showFileDetails: () => unsupported,
   openAppSetting: () => unsupported,
   subscribe(event, listener) {
-   if(event !== 'window-resize') return unsupported
-   if(typeof window === 'undefined') return {status: 'unavailable'}
+   if(disposed) return {status: 'unavailable'}
+   if(event !== 'window-resize' && event !== 'window-activated') return unsupported
+   if(typeof window === 'undefined' || typeof document === 'undefined') return {status: 'unavailable'}
+   if(event === 'window-activated') {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let active = true
+    const cancel = () => {if(timer !== undefined) clearTimeout(timer); timer = undefined}
+    const signal = () => {
+     if(!active || document.visibilityState !== 'visible') {cancel(); return}
+     // Visibility and focus often describe one return, a few milliseconds apart.
+     if(timer !== undefined) return
+     timer = setTimeout(() => {
+      timer = undefined
+      if(active && document.visibilityState === 'visible') listener()
+     }, 50)
+    }
+    document.addEventListener('visibilitychange', signal)
+    window.addEventListener('focus', signal)
+    const dispose = () => {
+     active = false; cancel()
+     document.removeEventListener('visibilitychange', signal)
+     window.removeEventListener('focus', signal)
+     disposers.delete(dispose)
+    }
+    disposers.add(dispose)
+    return {status: 'subscribed', dispose}
+   }
    window.addEventListener('resize', listener)
    const dispose = () => {window.removeEventListener('resize', listener); disposers.delete(dispose)}
    disposers.add(dispose)
    return {status: 'subscribed', dispose}
   },
-  dispose() {for(const dispose of [...disposers]) dispose()},
+  dispose() {disposed = true; for(const dispose of [...disposers]) dispose()},
  }
 }
 
