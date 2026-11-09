@@ -13,6 +13,7 @@ afterEach(() => vi.unstubAllGlobals())
 function mount(user?: Context['user'], webApi = vi.fn(async () => ({port_info:[{port_id:'dms_https',protocol:'tcp',dst_port:['7443']}]}))) {
  const call = vi.fn()
  const session = createSession({locale:'en',call,user,webApi} as unknown as Context)
+ session.enabled.value = true // as after identity.status answered {enabled:true}
  const discovery=vi.spyOn(session,'readHttpsURL')
  const root = document.createElement('div'); document.body.append(root)
  const app = createApp({render:() => h(AppRoot, {colorScheme:'dark',locale:'en'}, () => h(LoginPage, {session,locale:'en'}))})

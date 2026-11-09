@@ -53,6 +53,7 @@ test('HTTPS keeps Continue with DSM enabled without port discovery or an HTTP wa
  const call=vi.fn(async()=>({user:'alice',uid:'1205',expiresAt:new Date(Date.now()+900000).toISOString()}))
  const webApi=vi.fn()
  const session=createSession({locale:'en',call,webApi,user:{name:'alice',isAdmin:true}} as unknown as Context)
+ session.enabled.value=true // as after identity.status answered {enabled:true}
  const root=document.createElement('div');document.body.append(root)
  const app=createApp({render:()=>h(AppRoot,{},()=>h(LoginPage,{session,locale:'en'}))});app.mount(root)
  try {
@@ -64,4 +65,34 @@ test('HTTPS keeps Continue with DSM enabled without port discovery or an HTTP wa
   expect(session.subject.value?.user).toBe('alice')
   expect(webApi).not.toHaveBeenCalled()
  } finally {app.unmount();session.dispose();root.remove()}
+})
+
+function mountPage(call: unknown){
+ const session=createSession({locale:'en',call,reopen(){return ()=>{}}} as unknown as Context,{retryDelays:[]})
+ const root=document.createElement('div');document.body.append(root)
+ const app=createApp({render:()=>h(AppRoot,{},()=>h(LoginPage,{session,locale:'en'}))});app.mount(root)
+ return {session,root,close(){app.unmount();session.dispose();root.remove()}}
+}
+test.each([
+ ['timeout',{code:'timeout'}],['5xx',{code:'http_error',status:503}],['network',new TypeError('Failed to fetch')],['business_unavailable',{code:'business_unavailable'}],
+])('a failed identity.status (%s) shows no account form; Retry reads it again',async(_,failure)=>{
+ const call=vi.fn().mockRejectedValueOnce(failure).mockResolvedValueOnce({enabled:false})
+ const {session,root,close}=mountPage(call)
+ try{
+  await session.start();await settle()
+  expect(session.enabled.value).toBe(false);expect(session.unavailable.value).toBe(true)
+  expect(root.querySelector('form')).toBeNull();expect(root.querySelector('input')).toBeNull()
+  button(root,'Retry').click();await settle()
+  expect(call).toHaveBeenCalledTimes(2);expect(session.unavailable.value).toBe(false);expect(session.notice.value).toBe('')
+  expect(root.querySelector('form')).toBeNull();expect(root.querySelector('[data-identity-retry]')).toBeNull()
+ }finally{close()}
+})
+test('{enabled:false} never shows the account form',async()=>{
+ const {session,root,close}=mountPage(vi.fn().mockResolvedValue({enabled:false}))
+ try{await session.start();await settle();expect(root.querySelector('form')).toBeNull();expect(root.querySelector('[data-identity-retry]')).toBeNull()}finally{close()}
+})
+test('{enabled:true} shows the account form as before',async()=>{
+ const call=vi.fn(async(method:string)=>{if(method==='identity.status')return {enabled:true};throw {code:'session_required'}})
+ const {session,root,close}=mountPage(call)
+ try{await session.start();await settle();expect(root.querySelector('input[autocomplete="username"]')).not.toBeNull();expect(button(root,'Continue with DSM')).toBeTruthy()}finally{close()}
 })

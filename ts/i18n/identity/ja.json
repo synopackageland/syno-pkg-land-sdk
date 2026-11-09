@@ -12,6 +12,7 @@
   "signIn": "サインイン",
   "otherAccount": "別のアカウントを使用",
   "continueDSM": "DSM で続行",
+  "retry": "再試行",
   "errors": {
     "rate_limited": "サインインの試行回数が多すぎます。1 分待ってからもう一度お試しください",
     "https_required": "サインインするには HTTPS でこのアプリを開いてください",

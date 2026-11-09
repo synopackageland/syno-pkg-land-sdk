@@ -12,6 +12,7 @@
   "signIn": "登录",
   "otherAccount": "使用其他账户",
   "continueDSM": "通过 DSM 继续",
+  "retry": "重试",
   "errors": {
     "rate_limited": "登录尝试次数过多，请等待一分钟后重试",
     "https_required": "请使用 HTTPS 打开此 App 以登录",

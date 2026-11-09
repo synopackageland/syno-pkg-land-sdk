@@ -12,6 +12,7 @@
   "signIn": "Anmelden",
   "otherAccount": "Anderes Konto verwenden",
   "continueDSM": "Mit DSM fortfahren",
+  "retry": "Neuer Versuch",
   "errors": {
     "rate_limited": "Zu viele Anmeldeversuche. Warten Sie eine Minute und versuchen Sie es erneut",
     "https_required": "Öffnen Sie diese App über HTTPS, um sich anzumelden",

@@ -12,6 +12,7 @@
   "signIn": "Accedi",
   "otherAccount": "Usa un altro account",
   "continueDSM": "Continua con DSM",
+  "retry": "Riprova",
   "errors": {
     "rate_limited": "Troppi tentativi di accesso. Attendere un minuto e riprovare",
     "https_required": "Aprire questa app tramite HTTPS per accedere",

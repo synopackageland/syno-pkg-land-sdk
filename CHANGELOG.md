@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.53.17 (unreleased)
+
+- Fix: a failed `identity.status` probe (timeout, 5xx, network, `business_unavailable`,
+  package restarting) no longer turns on the App's own sign-in. `createSession` keeps
+  `enabled` false, sets the new `unavailable` flag and re-probes with bounded backoff
+  (2/5/15/30 s, `retryDelays` overrides). Only a successful `{enabled: true}` enables
+  the App login; `unknown_method`, `session_required` and entry refusals are unchanged.
+- Add `session.retry()` and `createSession(ctx, {identity: false})` so DSM-session-only
+  Apps skip the probe entirely.
+- LoginPage never renders the account/password form unless identity is enabled, and
+  offers Retry while the probe is unavailable.
+- Reuse the immutable executor/v0.53.5 release and its six digests.
+
 ## 0.53.16 (2026-11-09)
 
 - Add `window-activated` to HostEvent; standalone and native WebView hosts coalesce
