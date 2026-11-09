@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -99,11 +100,16 @@ func TestWebAPIFailsClosed(t *testing.T) {
 		{"undeclared version", "POLICY_DENIED", map[string]any{"version": 5}, nil},
 		{"undeclared API", "POLICY_DENIED", map[string]any{"api": "SYNO.Core.User"}, nil},
 		{"runner injection", "INVALID_REQUEST", map[string]any{"params": map[string]any{"runner": "root"}}, nil},
+		{"mixed case runner injection", "INVALID_REQUEST", map[string]any{"params": map[string]any{"Runner": "root"}}, nil},
 		{"outfile injection", "INVALID_REQUEST", map[string]any{"params": map[string]any{"outfile": "/etc/passwd"}}, nil},
 		{"api injection", "INVALID_REQUEST", map[string]any{"params": map[string]any{"api": "SYNO.Core.User"}}, nil},
-		{"token injection", "INVALID_REQUEST", map[string]any{"params": map[string]any{"token": "secret"}}, nil},
-		{"sid injection", "INVALID_REQUEST", map[string]any{"params": map[string]any{"_sid": "secret"}}, nil},
-		{"mixed case auth injection", "INVALID_REQUEST", map[string]any{"params": map[string]any{"SynoToken": "secret"}}, nil},
+		{"upper case api injection", "INVALID_REQUEST", map[string]any{"params": map[string]any{"API": "SYNO.Core.User"}}, nil},
+		{"method injection", "INVALID_REQUEST", map[string]any{"params": map[string]any{"method": "set"}}, nil},
+		{"version injection", "INVALID_REQUEST", map[string]any{"params": map[string]any{"Version": 5}}, nil},
+		{"custom_event injection", "INVALID_REQUEST", map[string]any{"params": map[string]any{"custom_event": "x"}}, nil},
+		{"compound injection", "INVALID_REQUEST", map[string]any{"params": map[string]any{"compound": []any{map[string]any{"api": "SYNO.Core.User"}}}}, nil},
+		{"leading underscore", "INVALID_REQUEST", map[string]any{"params": map[string]any{"_sid": "secret"}}, nil},
+		{"key syntax", "INVALID_REQUEST", map[string]any{"params": map[string]any{"a=b": "x"}}, nil},
 		{"large params", "REQUEST_TOO_LARGE", map[string]any{"params": map[string]any{"value": strings.Repeat("a", 33<<10)}}, nil},
 		{"wrong job", "DELEGATION_DENIED", map[string]any{"job_id": "other"}, nil},
 		{"account disabled", "INELIGIBLE", nil, func(e *Executor, f *webDSM) { f.user.Expired = "now" }},
@@ -293,5 +299,75 @@ func TestWebAPIWireAndAdapter(t *testing.T) {
 		if _, err := d.WebAPI(context.Background(), "alice", "SYNO.Cal.Event", "list", 6, map[string]any{}); err == nil {
 			t.Fatalf("accepted reply of %d bytes", len(reply))
 		}
+	}
+}
+
+// DSM APIs take account, user, username, password and token as ordinary
+// parameters (SYNO.SecureSignIn.Method.Admin get {account},
+// SYNO.Core.AppPriv.App preview {username}); only synowebapi's own keys and
+// SYNO.Entry.Request's compound list are refused.
+var ordinaryWebAPIParams = map[string]any{
+	"account": "alice", "username": "alice", "user": "alice", "password": "secret", "passwd": "secret",
+	"uid": 1026, "token": "t", "sid": "s", "cookie": "c", "SynoToken": "s", "synoconfirmpwtoken": "p",
+	"session": "s", "auth": "a", "authorization": "a", "access_token": "a", "refresh_token": "r",
+	"auth_token": "a", "remote_addr": "192.0.2.1", "stopwhenerror": true,
+}
+
+func TestWebAPIOrdinaryParamNamesPassThrough(t *testing.T) {
+	e, f := webSetup(t)
+	id := webGrant(t, e, false)
+	if r := webCall(e, id, false, map[string]any{"params": ordinaryWebAPIParams}); !r.OK {
+		t.Fatalf("refused ordinary DSM parameters: %+v", r)
+	}
+	if f.calls != 1 || f.runner != "alice" || len(f.params) != len(ordinaryWebAPIParams) {
+		t.Fatalf("%+v", f)
+	}
+	for _, mode := range []string{"json", "raw"} {
+		c := &rawStreamCommand{cmdStub: cmdStub{reply: `{"success":true}`}, stdout: []byte(`{"success":true}`)}
+		d := &liveDSM{Command: c}
+		var err error
+		if mode == "raw" {
+			c.stdout = []byte("body")
+			err = d.WebAPIRaw(context.Background(), "alice", "SYNO.SecureSignIn.Method.Admin", "get", 1, ordinaryWebAPIParams, &strings.Builder{})
+		} else {
+			_, err = d.WebAPI(context.Background(), "alice", "SYNO.SecureSignIn.Method.Admin", "get", 1, ordinaryWebAPIParams)
+		}
+		if err != nil {
+			t.Fatal(mode, err)
+		}
+		want, err := webAPIArgs("SYNO.SecureSignIn.Method.Admin", "get", "1", "alice", ordinaryWebAPIParams)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(c.args, want) || !reflect.DeepEqual(c.args[:5], []string{"--exec", "api=SYNO.SecureSignIn.Method.Admin", "method=get", "version=1", "runner=alice"}) {
+			t.Fatalf("%s argv %q", mode, c.args)
+		}
+		for _, arg := range []string{`account="alice"`, `username="alice"`, `user="alice"`, `password="secret"`, "uid=1026", `token="t"`} {
+			if !contains(c.args, arg) {
+				t.Fatalf("%s argv lacks %s: %q", mode, arg, c.args)
+			}
+		}
+		if n := len(c.args) - 5; n != len(ordinaryWebAPIParams) {
+			t.Fatalf("%s argv has %d params", mode, n)
+		}
+	}
+}
+
+func TestWebAPIControlParamsNeverReachArgv(t *testing.T) {
+	for _, key := range []string{"api", "API", "method", "Method", "version", "VERSION", "runner", "Runner", "outfile", "OutFile", "custom_event", "compound", "Compound"} {
+		t.Run(key, func(t *testing.T) {
+			params := map[string]any{"account": "alice", key: "x"}
+			c := &rawStreamCommand{cmdStub: cmdStub{reply: `{"success":true}`}, stdout: []byte(`{"success":true}`)}
+			d := &liveDSM{Command: c}
+			if _, err := d.WebAPI(context.Background(), "alice", "SYNO.Core.NormalUser", "get", 1, params); err == nil {
+				t.Fatal("JSON adapter accepted control parameter")
+			}
+			if err := d.WebAPIRaw(context.Background(), "alice", "SYNO.Core.NormalUser", "get", 1, params, &strings.Builder{}); err == nil {
+				t.Fatal("raw adapter accepted control parameter")
+			}
+			if c.path != "" || c.args != nil {
+				t.Fatalf("dispatched %q", c.args)
+			}
+		})
 	}
 }

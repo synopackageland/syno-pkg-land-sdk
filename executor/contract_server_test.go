@@ -54,11 +54,31 @@ func (d contractDSM) WebAPI(ctx context.Context, runner, api, method string, ver
 		live := liveDSM{Command: contractJSONCommand{int(size)}}
 		return live.WebAPI(ctx, runner, api, method, version, params)
 	}
+	if _, ok := params["argv_probe"]; ok {
+		live := liveDSM{Command: contractArgvCommand{}}
+		return live.WebAPI(ctx, runner, api, method, version, params)
+	}
 	deadline, ok := ctx.Deadline()
 	if !ok {
 		return nil, errors.New("unbounded WebAPI call")
 	}
 	return json.RawMessage(`{"success":true,"data":{"remaining_ms":` + strconv.FormatInt(time.Until(deadline).Milliseconds(), 10) + `}}`), nil
+}
+
+// contractArgvCommand answers with the exact synowebapi path and argv the
+// production adapter built, so a client test sees what DSM would receive.
+type contractArgvCommand struct{}
+
+func (contractArgvCommand) Exec(context.Context, string, []string) ([]byte, error) {
+	return nil, errors.New("stream required")
+}
+func (contractArgvCommand) Stream(_ context.Context, path string, args []string, w io.Writer) error {
+	b, err := json.Marshal(map[string]any{"success": true, "data": map[string]any{"path": path, "argv": args}})
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(b)
+	return err
 }
 
 type contractJSONCommand struct{ size int }

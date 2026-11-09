@@ -472,7 +472,11 @@ switch MUST fence WebAPI admission and drain admitted calls before acknowledging
 
 API and method names MUST match their protocol formats. Access MUST be limited
 to the approved profile and the consenting user's DSM permissions.
-Routing, runner, authentication and identity arguments MUST be refused. The
+Params are API data: names such as `account`, `user`, `username`, `password`
+or `token` MUST reach DSM unchanged. Only synowebapi's own keys (`api`,
+`method`, `version`, `runner`, `outfile`, `custom_event`, in any case) and
+`compound` MUST be refused; see
+[Request parameters](../../../docs/webapi-json.md#request-parameters). The
 encoded params object MUST be at most 32 KiB. The DSM JSON envelope MUST be at
 most 20 MiB after removing insignificant whitespace. The shared operation
 budget includes account revalidation; it is not shortened for large replies.
