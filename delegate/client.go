@@ -51,6 +51,12 @@ type Request struct {
 type Client struct {
 	Socket  string
 	Timeout time.Duration
+	// WorkBudget optionally bounds each Call after local admission. Queueing
+	// uses only the caller context; earlier caller deadlines still win. The
+	// budget includes busy backoff and all per-hop reply reserves. Values <= 0
+	// preserve the existing behavior. Budgeted calls use fresh connections,
+	// including within an API batch, to give each call its own wire deadline.
+	WorkBudget time.Duration
 	// Mailbox is the package's lifecycle mailbox (<data dir>/executor). With
 	// it, a socket that does not answer is APP_STOPPED when the package is
 	// stopped. Work right after a start waits for the executor; status probes
@@ -116,10 +122,10 @@ func (e *dialFailure) Unwrap() error { return e.error }
 // backoff honor the caller context without adding an elapsed wait limit.
 func (c *Client) Call(parent context.Context, op string, auth map[string]string, params any, result any) error {
 	if parent.Err() != nil {
-		return fail("canceled")
+		return notSent(fail("canceled"))
 	}
 	if c == nil || c.Socket == "" {
-		return fail(CodeExecutorUnavailable)
+		return notSent(fail(CodeExecutorUnavailable))
 	}
 	if needsRootSlot(op) {
 		release, err := acquireAdmission(parent, c.Socket)
@@ -128,14 +134,19 @@ func (c *Client) Call(parent context.Context, op string, auth map[string]string,
 		}
 		defer release()
 	}
+	if c.WorkBudget > 0 {
+		var cancel context.CancelFunc
+		parent, cancel = context.WithTimeout(parent, c.WorkBudget)
+		defer cancel()
+	}
 	var stream *batchClient
-	if isBatchRootOp(op) || op == "status" && auth["dsm_cookie"] != "" {
+	if c.WorkBudget <= 0 && (isBatchRootOp(op) || op == "status" && auth["dsm_cookie"] != "") {
 		stream = requestBatchClient(parent, c)
 	}
 	delay := 100 * time.Millisecond
 	for {
 		if parent.Err() != nil {
-			return fail("canceled")
+			return notSent(fail("canceled"))
 		}
 		var err error
 		if stream != nil {
@@ -158,7 +169,13 @@ func (c *Client) Call(parent context.Context, op string, auth map[string]string,
 
 // callOnce uses one connection per attempt. Refusals survive unchanged; sent
 // requests with lost replies are terminal and are never automatically replayed.
-func (c *Client) callOnce(parent context.Context, op string, auth map[string]string, params any, result any) error {
+func (c *Client) callOnce(parent context.Context, op string, auth map[string]string, params any, result any) (err error) {
+	exchanging := false
+	defer func() {
+		if !exchanging {
+			err = notSent(err)
+		}
+	}()
 	if c == nil || c.Socket == "" {
 		return fail(CodeExecutorUnavailable)
 	}
@@ -235,8 +252,21 @@ func (c *Client) callOnce(parent context.Context, op string, auth map[string]str
 	defer conn.Close()
 	stop := context.AfterFunc(ctx, func() { conn.Close() })
 	defer stop()
+	exchanging = true
+	return exchange(parent, ctx, conn, op, auth, p, result, transport)
+}
+
+// exchange marks the send boundary conservatively: a failed/partial Write may
+// have delivered a complete request, so only earlier errors prove no execution.
+func exchange(parent, ctx context.Context, conn net.Conn, op string, auth map[string]string, p json.RawMessage, result any, transport func(error) error) (err error) {
+	sent := false
+	defer func() {
+		if !sent {
+			err = notSent(err)
+		}
+	}()
 	deadline, _ := ctx.Deadline()
-	if e = conn.SetDeadline(deadline); e != nil {
+	if e := conn.SetDeadline(deadline); e != nil {
 		return transport(e)
 	}
 	remaining := runtimebudget.Inner(time.Until(deadline))
@@ -255,6 +285,7 @@ func (c *Client) callOnce(parent context.Context, op string, auth map[string]str
 	if len(b) > requestLimit(op) {
 		return fail(CodeExecutorTooLarge)
 	}
+	sent = true
 	if _, e = io.Copy(conn, bytes.NewReader(b)); e != nil {
 		return transport(e)
 	}
@@ -292,7 +323,11 @@ func decodeReply(line []byte, result any) error {
 		if reply.Code == CodeWebapiReplyTooLarge {
 			return &api.Error{Code: reply.Code, Message: reply.Message}
 		}
-		return fail(reply.Code)
+		err := fail(reply.Code)
+		if preAdmissionCodes[reply.Code] {
+			return notSent(err)
+		}
+		return err
 	}
 	if len(reply.Result) == 0 || string(reply.Result) == "null" || reply.Result[0] != '{' {
 		return fail(CodeExecutorProtocol)

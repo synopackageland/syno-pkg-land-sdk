@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.53.19 (2026-11-09)
+
+- Export Go `delegate.NotSent(err)` to distinguish definitely unexecuted calls
+  from uncertain outcomes, preserving existing error codes and wrapped errors.
+  Generate pre-execution refusal evidence from the protocol error catalog.
+- Add opt-in `Client.WorkBudget`: start each call's clock after shared local
+  admission, retain earlier caller deadlines and reply reserves, and share the
+  budget across busy retries. Budgeted API batch steps use fresh connections.
+- Document mutation readback after unknown outcomes and removal of App-owned
+  admission semaphores. Keep existing behavior when no work budget is set.
+- Reuse the immutable executor/v0.53.5 release and its six digests.
+
 ## 0.53.18 (2026-11-09)
 
 - Share Go delegate root/WebAPI admission across clients for the same executor socket
