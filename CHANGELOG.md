@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.53.24 (2026-11-09)
+
+- Pass WebAPI params such as `account`, `user`, `username`, `uid`, `password` and `token` to DSM unchanged (for example `SYNO.SecureSignIn.Method.Admin` `get` with `account`). Authorization remains the approved API/method/version tuple and the grant checks; the call always runs as the grant owner.
+- Refuse only synowebapi's own argument keys (`api`, `method`, `version`, `runner`, `outfile`, `custom_event`, in any case) and `SYNO.Entry.Request`'s `compound`, with `INVALID_REQUEST`.
+- Ship executor 0.53.6. Rebuild Apps that use `webapi.call` for the new executor digest; administrators approve the new digest.
+
 ## 0.53.23 (2026-11-09)
 
 - Reuse installer folder selection and permission Dialog/Retry in native packages.

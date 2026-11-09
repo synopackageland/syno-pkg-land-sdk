@@ -1,0 +1,52 @@
+{
+  "version": "0.53.24",
+  "executorVersion": "0.53.6",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.24",
+    "@synopackageland/app": "0.53.24",
+    "syno-pkg-land-app": "0.53.24",
+    "synopkgland_app": "0.53.24"
+  },
+  "executorDigests": {
+    "x86_64": "e77dbf846ea4555355fa15ee3a6ca3b20e1b1aaa9768321243589d9ec15ffabe",
+    "aarch64": "741a7c37757b56b3acc304cef56de5e59c1ca9278a83be0f1e1ff1ad17b24dd6",
+    "armv7": "f0a3059b982d0210621254adf7d1a3343d2a89d114e053e5b3bd646898293b1a",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": false,
+    "executorReleaseReused": false,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Executor WebAPI unit tests and the production contract-server test (real decoder, grant checks and synowebapi argv builder) pass as a non-root user, including account, user, username, password, uid and token pass-through and refusal of the remaining control keys in any case. synowebapi argument precedence (exact, case-insensitive keys; later duplicate wins) was measured read-only on one DSM 7.4.1 device. Executor and root Go packages run with vet; canonical payload builds generate the six executor/lifecycle digests with the pinned Go toolchain. Both npm packages are built and packed for content scans. No full gate matrix, qemu, publication or NAS WebAPI acceptance is implied."
+  },
+  "ui": {
+    "builtAgainst": "0.23.5",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.5.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Pass WebAPI params such as account, user, username, uid, password and token to DSM unchanged; authorization stays the approved API/method/version tuple and the grant checks.",
+    "Refuse only synowebapi's own argument keys (api, method, version, runner, outfile, custom_event, in any case) and SYNO.Entry.Request's compound list.",
+    "Ship executor 0.53.6; Apps must be rebuilt for the new executor digest and approved again."
+  ],
+  "npmArtifacts": {
+    "synopackageland-sdk-0.53.24.tgz": {
+      "sha256": "004ff5da5d610b26a6e1ba46b9b09c278247ce0ac1c85f6a40b1a761efe458a2"
+    },
+    "synopackageland-app-0.53.24.tgz": {
+      "sha256": "f7064e36cdae19683ca416dc044079f1e8c7163fd31dd96d48cab06d87e47ef9"
+    }
+  }
+}

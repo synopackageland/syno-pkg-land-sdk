@@ -22,6 +22,33 @@ does not consume the reply quota. An unbounded amount of whitespace does not
 increase retained memory; the existing operation deadline and cancellation
 still apply. No new wall-clock deadline is introduced.
 
+## Request parameters
+
+`params` is passed to DSM as ordinary API data. Authorization is the approved
+profile's exact API/method/version plus the grant checks; parameter names are
+not. Names such as `account`, `user`, `username`, `uid`, `password`, `passwd`,
+`token`, `sid`, `SynoToken` or `remote_addr` reach the API unchanged, for
+example `SYNO.SecureSignIn.Method.Admin` `get` with `{"account":"..."}` or
+`SYNO.Core.AppPriv.App` `preview` with `{"username":"..."}`. They do not change
+who the call runs as: the executor always sets `runner` to the grant's owner.
+
+The executor runs `/usr/syno/bin/synowebapi --exec api=... method=...
+version=... runner=<owner>` followed by the params, sorted by name, as
+`name=<JSON value>`. synowebapi matches its own argument keys exactly and
+case-insensitively, and a later duplicate replaces an earlier one. A request
+is therefore refused with `INVALID_REQUEST` when a param name, in any case, is:
+
+| Name | Reason |
+| --- | --- |
+| `api`, `method`, `version` | synowebapi dispatch keys; would call a tuple outside the approved profile |
+| `runner` | synowebapi run-as user; would run the call as another DSM user or as root |
+| `outfile` | synowebapi writes the reply to this path as root |
+| `custom_event` | synowebapi argument key; never set by the executor |
+| `compound` | `SYNO.Entry.Request` runs each entry as its own API, outside the approved tuple |
+
+Names must also match `^[A-Za-z_][A-Za-z0-9_]{0,63}$` and must not start with
+`_` (DSM's `_sid` and `_dc` are browser transport fields, not API data).
+
 ## Oversized replies
 
 When the next compact byte would exceed the limit, the executor stops the

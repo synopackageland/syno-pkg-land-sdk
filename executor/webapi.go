@@ -207,12 +207,38 @@ func webAPIParams(raw json.RawMessage) (map[string]any, string) {
 		return nil, "INVALID_REQUEST"
 	}
 	for k := range params {
-		lower := strings.ToLower(k)
-		if !webAPIParam.MatchString(k) || strings.HasPrefix(k, "_") || contains([]string{"api", "method", "version", "runner", "outfile", "sid", "cookie", "synotoken", "synoconfirmpwtoken", "passwd", "password", "account", "session", "user", "username", "uid", "auth", "authorization", "token", "access_token", "refresh_token", "auth_token", "remote_addr", "compound", "stopwhenerror"}, lower) {
+		if !webAPIParam.MatchString(k) || strings.HasPrefix(k, "_") || webAPIControlParam(k) {
 			return nil, "INVALID_REQUEST"
 		}
 	}
 	return params, ""
+}
+
+// webAPIControlParam reports the only parameter names an App may not send.
+// Every other name, including account, user, username, uid, password and
+// token, is ordinary data for the approved API: the run-as identity is the
+// runner argument, never a parameter. synowebapi matches its own argument
+// keys exactly and case-insensitively, and a later duplicate replaces an
+// earlier one, so an App value for these keys would replace the executor's.
+func webAPIControlParam(key string) bool {
+	switch strings.ToLower(key) {
+	case "api", "method", "version":
+		// synowebapi dispatch keys: a duplicate would call a tuple outside the approved profile.
+		return true
+	case "runner":
+		// synowebapi run-as user: a duplicate would run the call as another DSM user or as root.
+		return true
+	case "outfile":
+		// synowebapi writes the reply to this path as root; the executor sets it only for raw MIME.
+		return true
+	case "custom_event":
+		// synowebapi argument key next to api/method/runner/outfile; never set by the executor.
+		return true
+	case "compound":
+		// SYNO.Entry.Request runs each compound entry as its own API, outside the approved tuple.
+		return true
+	}
+	return false
 }
 
 type webAPICaller interface {
@@ -321,7 +347,7 @@ func (e *Executor) callWebAPI(ctx context.Context, r Request) Response {
 
 // WebAPI is deliberately separate from files.*' fixed userCalls map. The
 // executor admits the approved profile first; this adapter repeats the name
-// format and reserved-parameter checks before constructing fixed argv.
+// format and control-parameter checks before constructing fixed argv.
 func (d *liveDSM) WebAPI(ctx context.Context, runner, api, method string, version int, params map[string]any) (json.RawMessage, error) {
 	raw, err := json.Marshal(params)
 	if err != nil {
