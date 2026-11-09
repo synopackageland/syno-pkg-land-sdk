@@ -47,6 +47,9 @@ func denialMessages(r *http.Request) (string, map[string]string) {
 }
 
 func admissionCode(err error) string {
+	if errors.Is(err, errSessionChanged) {
+		return "login_required"
+	}
 	if errors.Is(err, api.ErrAppPrivilegeDenied) {
 		return "app_privilege_denied"
 	}

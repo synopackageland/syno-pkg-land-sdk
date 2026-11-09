@@ -137,28 +137,5 @@ func (f *Front) watchUpgrade(ctx context.Context, conn *checkedUpgrade, id, ip s
 }
 
 func (f *Front) upgradeAllowed(ctx context.Context, id, ip string) bool {
-	f.mu.Lock()
-	s, ok := f.sessions[id]
-	f.mu.Unlock()
-	if !ok || !f.cfg.Now().Before(s.expires) || s.ip != ip || f.cfg.Accounts == nil {
-		return false
-	}
-	name, err := f.cfg.Accounts.Name(ctx, s.subject.UID)
-	if err != nil || name != s.subject.Name || f.admitClient(ctx, s.subject, ip) != nil {
-		return false
-	}
-	// An admitted dsm-users session can still carry an obsolete admin role in
-	// injected headers or app tokens. That identity cannot be changed in an
-	// already upgraded stream, so force a new handshake on either role change.
-	if f.cfg.Mode == ModeToken || f.cfg.Mode == ModeHeader && f.cfg.Headers.Groups != "" {
-		admin, err := administrator(ctx, s.subject.Name, f.cfg.Membership)
-		if err != nil || admin != s.subject.Admin {
-			return false
-		}
-	}
-	// A concurrent logout/revocation must not be undone by a slow lookup.
-	f.mu.Lock()
-	_, ok = f.sessions[id]
-	f.mu.Unlock()
-	return ok && f.cfg.Now().Before(s.expires) && ctx.Err() == nil
+	return f.checkSession(ctx, id, ip, true) == nil
 }

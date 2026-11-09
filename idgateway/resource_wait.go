@@ -10,8 +10,8 @@ import (
 	"time"
 )
 
-// Bound pending resource work, independently of App startup time. Exhaustion
-// retains the retryable starting response. Browser disconnect cancels the work.
+// Bound active resource work, independently of App startup time. Additional
+// resources wait for capacity; browser disconnect cancels that wait.
 const resourceWaitLimit = 64
 
 var errUpstreamBusy = errors.New("upstream work limit reached")
@@ -29,6 +29,26 @@ func (t *boundedProxyTransport) RoundTrip(r *http.Request) (*http.Response, erro
 		defer func() { <-t.headers }()
 	default:
 		return nil, errUpstreamBusy
+	}
+	return t.base.RoundTrip(r)
+}
+
+// Assets must queue behind active header work instead of failing page startup.
+// Revalidate only after a slot is available: authority may change while queued.
+func (t *boundedProxyTransport) resourceRoundTrip(r *http.Request, check func() error) (*http.Response, error) {
+	select {
+	case t.headers <- struct{}{}:
+		defer func() { <-t.headers }()
+	case <-r.Context().Done():
+		return nil, r.Context().Err()
+	}
+	if err := r.Context().Err(); err != nil {
+		return nil, err
+	}
+	if check != nil {
+		if err := check(); err != nil {
+			return nil, err
+		}
 	}
 	return t.base.RoundTrip(r)
 }
@@ -69,12 +89,18 @@ func (t resourceTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 		if err := r.Context().Err(); err != nil {
 			return nil, err
 		}
-		if t.check != nil {
-			if err := t.check(); err != nil {
-				return nil, err
+		var resp *http.Response
+		var err error
+		if bounded, ok := t.RoundTripper.(*boundedProxyTransport); ok {
+			resp, err = bounded.resourceRoundTrip(r, t.check)
+		} else {
+			if t.check != nil {
+				if err := t.check(); err != nil {
+					return nil, err
+				}
 			}
+			resp, err = t.RoundTripper.RoundTrip(r)
 		}
-		resp, err := t.RoundTripper.RoundTrip(r)
 		var op *net.OpError
 		// Only retry a failed dial: no upstream connection existed, so no
 		// request was delivered. Never replay a timeout after sending, an EOF,

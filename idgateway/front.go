@@ -166,6 +166,8 @@ type session struct {
 
 // Front is the gateway handler on the app's ports.
 type Front struct {
+	checkMu         sync.Mutex
+	checks          map[sessionCheckKey]*sessionCheck
 	resourceWaiters chan struct{}
 	httpWarning     sync.Once
 	optional        *optionalPassthrough
@@ -316,6 +318,7 @@ func NewFront(cfg FrontConfig) (*Front, error) {
 		}
 		var admission *resourceAccessError
 		if errors.As(err, &admission) {
+			w.Header().Set("X-Synopkgland-Error-Stage", "admission")
 			f.writeFailure(w, r, admission.code, "", false)
 			return
 		}
@@ -459,7 +462,8 @@ func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		f.writeFailure(w, r, "login_required", "", false)
 		return
 	}
-	if err := f.admit(r, s); err != nil {
+	if err := f.admitSession(r); err != nil {
+		w.Header().Set("X-Synopkgland-Error-Stage", "admission")
 		f.writeFailure(w, r, admissionCode(err), "", isNavigation(r))
 		return
 	}
