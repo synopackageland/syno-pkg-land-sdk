@@ -28,7 +28,7 @@ var systemShareName = regexp.MustCompile(`(?i)^(homes?|users|ftp|root|admin|gues
 var nativeShareKey = regexp.MustCompile(`^[a-z][a-z0-9_]{0,31}$`)
 
 func validNativeShare(f *InstallSharedFolder) bool {
-	return f != nil && (f.Picker == "" || f.Picker == "folder" && f.Mode == "select") && (f.Mode == "select" && f.Name == "" || f.Mode == "dedicated" && dedicatedShareName.MatchString(f.Name) && !systemShareName.MatchString(f.Name)) && nativeShareKey.MatchString(f.Key) &&
+	return f != nil && (f.Picker == "" || f.Picker == "folder" && (f.Mode == "select" || f.Mode == "dedicated")) && (f.Mode == "select" && f.Name == "" || f.Mode == "dedicated" && dedicatedShareName.MatchString(f.Name) && !systemShareName.MatchString(f.Name)) && nativeShareKey.MatchString(f.Key) &&
 		!strings.HasPrefix(f.Key, "pkgwizard_") && !strings.HasPrefix(f.Key, "synopkg") && !strings.HasPrefix(f.Key, "change_") &&
 		(f.Permission == "ro" || f.Permission == "rw")
 }
@@ -72,9 +72,25 @@ func nativeShareEnvironment(f *InstallSharedFolder, dataDir, root string) (strin
 	_, answered := os.LookupEnv(f.Key)
 	if os.Getenv("SYNOPKG_PKG_STATUS") == "INSTALL" || (os.Getenv("SYNOPKG_PKG_STATUS") == "UPGRADE" && (change != "" || f.Mode == "dedicated" && answered)) {
 		name = os.Getenv(f.Key)
+		if name == "" && f.Mode == "dedicated" {
+			name = f.Name
+		}
 		if f.Picker == "folder" {
 			var present bool
 			subpath, present = os.LookupEnv(f.Key + "_subpath")
+			if !present && os.Getenv("SYNOPKG_PKG_STATUS") == "UPGRADE" {
+				names, e := sharedfolder.Names(dataDir)
+				if e != nil {
+					return "", e
+				}
+				if name == names[f.Key] {
+					paths, e := sharedfolder.Subpaths(dataDir)
+					if e != nil {
+						return "", e
+					}
+					subpath, present = paths[f.Key]
+				}
+			}
 			if !present {
 				return "", problem("COMPOSE_SHARE_INVALID", "select both the shared folder and relative folder path")
 			}
@@ -115,7 +131,7 @@ func nativeShareEnvironment(f *InstallSharedFolder, dataDir, root string) (strin
 	source, err := sharedfolder.Resolve(root, name)
 	if f.Picker == "folder" {
 		source, err = sharedfolder.ResolveSubpathForInstall(root, name, subpath)
-		if err != nil {
+		if err != nil && !(errors.Is(err, sharedfolder.ErrNotFound) && f.Mode == "dedicated" && name == f.Name && subpath == "" && os.Getenv("SYNOPKG_PKGINST_TEMP_DIR") != "") {
 			return "", fmt.Errorf("[COMPOSE_SHARE_INVALID] Folder %q is unavailable: %w. Restore the folder or select an accessible folder in the upgrade wizard; do not create an empty replacement", name+"/"+subpath, err)
 		}
 	}

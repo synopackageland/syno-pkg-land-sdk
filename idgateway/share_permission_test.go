@@ -143,3 +143,29 @@ func TestStoppedGatewayRetainsExistingChildPermissionDialogAndRetry(t *testing.T
 		t.Fatal(w.Header(), w.Body)
 	}
 }
+
+func TestNativeEntryUsesSamePermissionDialogAndRetry(t *testing.T) {
+	denied := true
+	h := entryHandlerWithShares(Config{Listen: Listen{HTTP: 28000}}, func() error { t.Fatal("native entry must not require containers"); return nil }, func() error {
+		if denied {
+			return &sharedfolder.PermissionError{Account: "ExampleApp", Name: "Media", Subpath: "Projects/Deep", Need: sharedfolder.Write, Have: sharedfolder.Read}
+		}
+		return nil
+	}, shareAuth{})
+	request := func(target string) *httptest.ResponseRecorder {
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest("GET", target, nil))
+		return w
+	}
+	w := request("https://nas.example/open.cgi")
+	for _, part := range []string{"<dialog open", "Media/Projects/Deep", "File Station", "Write", "Retry"} {
+		if !strings.Contains(w.Body.String(), part) {
+			t.Fatalf("missing %q: %s", part, w.Body)
+		}
+	}
+	denied = false
+	w = request("https://nas.example/open.cgi?sharedfolder=retry")
+	if !strings.Contains(w.Body.String(), "Package Center") || w.Header().Get("Location") != "" {
+		t.Fatal(w.Header(), w.Body)
+	}
+}

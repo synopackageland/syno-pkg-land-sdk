@@ -81,3 +81,25 @@ func TestStatusAndRequireFollowInstallerChildSelectionWithoutAppChanges(t *testi
 		}
 	}
 }
+
+func TestLegacyShareOnlySelectionMeansRootButMalformedPairsDoNot(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "config.json"), []byte(`{"schema":1,"shared_folders":{"media":"Media"}}`), 0600)
+	paths, err := Subpaths(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p, ok := paths["media"]; !ok || p != "" {
+		t.Fatalf("legacy root lost: %+v", paths)
+	}
+	for _, raw := range []string{
+		`{"schema":1,"shared_folders":{"media":"Media"},"shared_folder_paths":null}`,
+		`{"schema":1,"shared_folders":{"media":"Media"},"shared_folder_paths":{}}`,
+		`{"schema":1,"shared_folders":{"media":"Media"},"shared_folder_paths":{"media":"../escape"}}`,
+	} {
+		os.WriteFile(filepath.Join(dir, "config.json"), []byte(raw), 0600)
+		if _, err := Subpaths(dir); err == nil {
+			t.Fatalf("malformed pair accepted: %s", raw)
+		}
+	}
+}

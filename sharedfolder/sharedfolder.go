@@ -1,7 +1,7 @@
 // Package sharedfolder tells an App which Shared Folders the install wizard
 // stored and what the package account may do in each. The wizard records only
-// the folder name; DSM does not grant the package account access to a folder
-// chosen at install time, so an administrator does that afterwards (see
+// the share name and optional relative folder path. DSM data-share grants the
+// declared share access; descendant ACLs still require runtime checks (see
 // docs/shared-folder.md). The App and its daemon read the same state here:
 // the answer comes from the kernel's check for the account the process runs as,
 // never from a DSM setting, and nothing in this package needs root.
@@ -216,6 +216,9 @@ func (c Config) root() string {
 	}
 	return c.Root
 }
+
+// ValidateIdentity requires the matching non-root package account.
+func (c Config) ValidateIdentity() error { _, err := c.account(); return err }
 
 func (c Config) account() (string, error) {
 	if os.Getuid() == 0 || os.Geteuid() == 0 || os.Getuid() != os.Geteuid() || os.Getgid() != os.Getegid() {

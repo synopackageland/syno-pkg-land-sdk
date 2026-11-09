@@ -133,7 +133,7 @@ func EntryHandler(cfg Config) http.Handler {
 		auth = AccessVerifier{Next: gate, Access: cfg.Access, Groups: cfg.Groups, Membership: NewDirectory()}
 	}
 	next := entryHandlerWithAvailability(cfg, containerpreflight.Check, func() error {
-		return sharepreflight.Check(filepath.Join("/var/packages", cfg.Package, "target/compose"), filepath.Join("/var/packages", cfg.Package, "var"))
+		return sharepreflight.CheckPackage(filepath.Join("/var/packages", cfg.Package, "target"), filepath.Join("/var/packages", cfg.Package, "var"))
 	}, auth, func() MenuSources { return LoadMenuSources(cfg) }, connectInstalled, func() bool { return GatewayAvailable(cfg) })
 	return next
 }
@@ -185,7 +185,7 @@ func entryHandlerWithAvailability(cfg Config, preflight func() error, shares fun
 				return
 			}
 		}
-		if cfg.ContainerApp && shares != nil {
+		if shares != nil {
 			if err := shares(); err != nil || r.URL.Query().Get("sharedfolder") == "retry" {
 				if auth == nil {
 					writeShareSignIn(w, r)

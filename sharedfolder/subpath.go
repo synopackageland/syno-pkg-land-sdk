@@ -32,20 +32,41 @@ func ValidSubpath(path string) bool {
 	return true
 }
 
-// Subpaths reads the paired relative selections without treating missing state
-// as the share root. Older installations require an explicit upgrade selection.
+// Subpaths reads paired relative selections. Published share-only records
+// represent the share root; missing files and malformed paired records fail.
 func Subpaths(dataDir string) (map[string]string, error) {
 	raw, err := os.ReadFile(filepath.Join(dataDir, "config.json"))
 	if err != nil {
 		return nil, err
 	}
 	var state struct {
-		Schema int               `json:"schema"`
-		Paths  map[string]string `json:"shared_folder_paths"`
+		Schema   int               `json:"schema"`
+		Folders  map[string]string `json:"shared_folders"`
+		RawPaths json.RawMessage   `json:"shared_folder_paths"`
+		Paths    map[string]string `json:"-"`
 	}
 	if len(raw) > 16384 || json.Unmarshal(raw, &state) != nil || state.Schema != 1 {
 		return nil, fmt.Errorf("invalid folder selection record")
 	}
+	if state.RawPaths == nil {
+		// Published share-only records select the share root. Only absence is
+		// legacy: explicit null, corrupt paths and partial pairs remain invalid.
+		state.Paths = make(map[string]string, len(state.Folders))
+		for key, name := range state.Folders {
+			if !validName(name) {
+				return nil, fmt.Errorf("invalid shared folder selection")
+			}
+			state.Paths[key] = ""
+		}
+	} else if json.Unmarshal(state.RawPaths, &state.Paths) != nil || state.Paths == nil {
+		return nil, fmt.Errorf("invalid folder selection record")
+	}
+	for key := range state.Folders {
+		if _, ok := state.Paths[key]; !ok {
+			return nil, fmt.Errorf("incomplete folder selection record")
+		}
+	}
+
 	for _, p := range state.Paths {
 		if !ValidSubpath(p) {
 			return nil, fmt.Errorf("invalid relative folder selection")
