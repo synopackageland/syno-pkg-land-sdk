@@ -284,3 +284,22 @@ test('optional receiver fields may reuse a name from a different message type', 
  const message = {v: 1, type: 'download', id: 'd', filename: 'a', mime: 'text/plain', base64: 'YQ==', fcp: 1}
  expect(isNativeMessage(message, {allowUnknownFields: true})).toBe(true)
 })
+
+
+test('native host forwards WebView foreground signals and cancels them on disposal', () => {
+ vi.useFakeTimers()
+ try {
+  install()
+  const visibility=vi.spyOn(document,'visibilityState','get').mockReturnValue('hidden')
+  const host=createNativeHost(), listener=vi.fn()
+  expect(host.platform().host).toBe('native-shell')
+  expect(host.subscribe('window-activated',listener).status).toBe('subscribed')
+  window.dispatchEvent(new Event('focus'));vi.advanceTimersByTime(100)
+  expect(listener).not.toHaveBeenCalled()
+  visibility.mockReturnValue('visible')
+  document.dispatchEvent(new Event('visibilitychange'));window.dispatchEvent(new Event('focus'))
+  vi.advanceTimersByTime(50);expect(listener).toHaveBeenCalledOnce()
+  window.dispatchEvent(new Event('focus'));host.dispose();vi.advanceTimersByTime(100)
+  expect(listener).toHaveBeenCalledOnce()
+ } finally {vi.useRealTimers()}
+})

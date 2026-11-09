@@ -14,7 +14,7 @@ export type HostRequestResult = {status: 'requested'} |
  {status: 'unsupported' | 'unavailable' | 'invalid-input' | 'blocked' | 'failed'}
 export type HostURLResult = {status: 'requested'; windowHandleAvailable: boolean} |
  {status: 'unsupported' | 'unavailable' | 'invalid-input' | 'failed'}
-export type HostEvent = 'window-resize' | 'host-theme-change' | 'host-language-change'
+export type HostEvent = 'window-resize' | 'window-activated' | 'host-theme-change' | 'host-language-change'
 export type HostSubscriptionResult = {status: 'subscribed'; dispose(): void} |
  {status: 'unsupported' | 'unavailable' | 'invalid-input' | 'failed'}
 export type HostFileNavigationResult = {status: 'requested'; action: 'locate-folder' | 'highlight-file'} |

@@ -246,6 +246,42 @@ handoff/recheck. Keep credentials out of launch parameters.
 administrator who should install another package. DSM has no link to a single
 package. See [offering another package](../docs/install-another-package.md).
 
+## Host events
+
+`ctx.host.subscribe(event, listener)` returns `{status: 'subscribed', dispose}`
+when supported. Call the subscription's `dispose()` when its component unmounts;
+`ctx.host.dispose()` removes all subscriptions and cancels pending callbacks.
+Listeners receive no native event arguments. Subscription does not emit an
+initial notification.
+
+| HostEvent | Source and meaning |
+| --- | --- |
+| `window-resize` | The AppWindow resize in DSM, or the browser resize in a standalone host. |
+| `window-activated` | The App has returned to the foreground; use it to recheck actual state. |
+| `host-theme-change` | Reserved; unsupported without a verified host event source. |
+| `host-language-change` | Reserved; unsupported without a verified host event source. |
+
+A DSM desktop host observes its own AppWindow's `activate` event, including
+bringing it forward, showing it after minimization and switching back from
+another DSM window. It does not subscribe to the shared desktop document's
+focus/visibility events. A full-page host observes `visibilitychange` when
+visible and `window` focus. DSM standalone pages combine those with AppWindow
+activation. `createNativeHost` uses the same WebView events: the native bridge
+has no separate foreground/resume message.
+
+Adjacent signals within 50 ms are delivered once, asynchronously. Hidden pages
+do not notify; hide/deactivate cancels queued DSM delivery. Disposing a
+subscription or its host cancels any pending notification. Later returns can
+notify again. This event is a refresh hint, not evidence of external completion
+or permission. Keep a manual recheck available. Older CLI-generated DSM hosts
+return `unsupported`; rebuild the App with a CLI that implements this event.
+
+```ts
+const sub = ctx.host.subscribe('window-activated', () => { void refreshStatus() })
+// In the component's cleanup:
+if (sub.status === 'subscribed') sub.dispose()
+```
+
 ## Outside DSM
 
 A development page, a preview or a test owns the browser page and has no DSM
@@ -254,6 +290,7 @@ window. `createStandaloneContext({call})` gives it a full-page `Context`
 `call`; any other field overrides. `createStandaloneHost(platform?)` is its
 `HostAdapter`: `setTitle` titles the document, `openURL` opens an http(s)
 URL in a new tab, `subscribe('window-resize')` follows the browser window,
+`subscribe('window-activated')` follows the page returning to the foreground,
 and the DSM desktop actions answer `{status: 'unsupported'}`. Platform fields
 override the snapshot, so a test can stand in for a DSM window
 (`createStandaloneHost({host: 'dsm', dsmStandalone: false})`).

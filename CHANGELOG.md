@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.53.16 (2026-11-09)
+
+- Add `window-activated` to HostEvent; standalone and native WebView hosts coalesce
+  adjacent visible/focus signals, and disposal cancels queued delivery.
+- Support per-App DSM window activation through the matching CLI host adapter;
+  older generated hosts keep returning unsupported for this event.
+- Recheck wizard handoff state on host activation and retain the manual check.
+- Resolve packed HostEvent and standalone host declarations in NodeNext consumers.
+- Reuse the immutable executor/v0.53.5 release and its six digests.
+
 ## 0.53.15 (2026-11-09)
 
 - Read executor status immediately when the lifecycle mailbox says the app is
