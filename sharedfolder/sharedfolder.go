@@ -71,6 +71,7 @@ const (
 // Folder is one configured Shared Folder right now.
 type Folder struct {
 	Key      string `json:"key"`
+	Subpath  string `json:"subpath,omitempty"`
 	Name     string `json:"name"`
 	Path     string `json:"path,omitempty"`
 	Exists   bool   `json:"exists"`
@@ -99,6 +100,9 @@ func (s Status) Pending() bool {
 
 // Config says where the installer's state lives and what the App needs.
 type Config struct {
+	// Subpaths optionally narrows each selected share to an existing relative folder.
+	Subpaths map[string]string
+
 	// DataDir is the package's persistent directory (/var/packages/<id>/var).
 	DataDir string
 	// Root is where /volumeN lives; empty means "/". Tests set it.
@@ -242,6 +246,10 @@ func (c Config) Status() (Status, error) {
 	if err != nil {
 		return Status{}, err
 	}
+	paths, err := c.selectedSubpaths()
+	if err != nil {
+		return Status{}, err
+	}
 	keys := make([]string, 0, len(names))
 	for key := range names {
 		keys = append(keys, key)
@@ -251,6 +259,10 @@ func (c Config) Status() (Status, error) {
 	for _, key := range keys {
 		folder := Folder{Key: key, Name: names[key], Required: c.required(key), Granted: None}
 		path, err := Resolve(c.root(), folder.Name)
+		if subpath, ok := paths[key]; ok {
+			folder.Subpath = subpath
+			path, err = ResolveSubpath(c.root(), folder.Name, subpath)
+		}
 		switch {
 		case errors.Is(err, fs.ErrPermission):
 			folder.State = Pending
@@ -278,11 +290,22 @@ func (c Config) Status() (Status, error) {
 // ErrPermissionPending.
 type PermissionError struct {
 	Key, Name, Account string
+	Subpath            string
 	Need, Have         Access
 	Cause              error
 }
 
 func (e *PermissionError) Error() string {
+	if e.Subpath != "" {
+		missing := "Read and Traverse"
+		if e.Need == Write {
+			missing = "Read, Write and Traverse"
+			if e.Have == Read {
+				missing = "Write"
+			}
+		}
+		return fmt.Sprintf("Package account %q is missing %s permission on folder %q. Open File Station > %s > Properties > Permission, select system internal user %s, grant %s and check parent folder traversal, then Retry", e.Account, missing, e.Name+"/"+e.Subpath, e.Name+"/"+e.Subpath, e.Account, missing)
+	}
 	access := "Read only"
 	if e.Need == Write {
 		access = "Read/Write"
@@ -302,9 +325,12 @@ func (e *PermissionError) Unwrap() []error {
 }
 
 func (e *PermissionError) apiError() error {
-	return api.WithDetails(&api.Error{Code: "shared_folder_permission", Message: e.Error()}, map[string]string{
-		"account": e.Account, "share": e.Name, "required": string(e.Need),
-	})
+	details := map[string]string{"account": e.Account, "share": e.Name, "required": string(e.Need)}
+	if e.Subpath != "" {
+		details["subpath"] = e.Subpath
+		details["granted"] = string(e.Have)
+	}
+	return api.WithDetails(&api.Error{Code: "shared_folder_permission", Message: e.Error()}, details)
 }
 
 // Require returns the folder's current path once the account has the access
@@ -323,13 +349,20 @@ func (c Config) RequireAccess(key string, need Access) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	paths, err := c.selectedSubpaths()
+	if err != nil {
+		return "", err
+	}
 	name, ok := names[key]
 	if !ok {
 		return "", fmt.Errorf("%w: %q", ErrNotConfigured, key)
 	}
 	path, err := Resolve(c.root(), name)
+	if subpath, ok := paths[key]; ok {
+		path, err = ResolveSubpath(c.root(), name, subpath)
+	}
 	if errors.Is(err, fs.ErrPermission) {
-		return "", &PermissionError{Key: key, Name: name, Account: account, Need: need, Have: None, Cause: err}
+		return "", &PermissionError{Key: key, Name: name, Subpath: paths[key], Account: account, Need: need, Have: None, Cause: err}
 	}
 	if err != nil {
 		return "", fmt.Errorf("%w: %q", err, name)
@@ -339,7 +372,7 @@ func (c Config) RequireAccess(key string, need Access) (string, error) {
 		return "", err
 	}
 	if !have.Satisfies(need) {
-		return "", &PermissionError{Key: key, Name: name, Account: account, Need: need, Have: have}
+		return "", &PermissionError{Key: key, Name: name, Subpath: paths[key], Account: account, Need: need, Have: have}
 	}
 	return path, nil
 }
@@ -363,4 +396,16 @@ func APIError(err error) error {
 		return &api.Error{Code: "shared_folder_ambiguous", Message: err.Error()}
 	}
 	return err
+}
+
+// Existing App status/Require callers follow installer selections automatically.
+func (c Config) selectedSubpaths() (map[string]string, error) {
+	if c.Subpaths != nil {
+		return c.Subpaths, nil
+	}
+	paths, err := Subpaths(c.DataDir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	return paths, err
 }

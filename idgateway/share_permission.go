@@ -32,6 +32,7 @@ func writeSharePermission(w http.ResponseWriter, r *http.Request, err error) {
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'self'")
 	message := m["share_ready"]
 	var permission *sharedfolder.PermissionError
+	var selection *sharedfolder.SelectionError
 	code := "ready"
 	if errors.As(err, &permission) {
 		access := m["share_read"]
@@ -39,7 +40,13 @@ func writeSharePermission(w http.ResponseWriter, r *http.Request, err error) {
 			access = m["share_write"]
 		}
 		message = strings.NewReplacer("{folder}", permission.Name, "{account}", permission.Account, "{access}", access).Replace(m["share_steps"])
+		if permission.Subpath != "" {
+			message = permission.Error()
+		}
 		code = "shared_folder_permission"
+	} else if errors.As(err, &selection) {
+		message = selection.Error()
+		code = "shared_folder_unavailable"
 	} else if err != nil {
 		message = m["share_unavailable"]
 		code = "shared_folder_unavailable"

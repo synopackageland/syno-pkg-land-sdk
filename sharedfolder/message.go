@@ -12,6 +12,9 @@ func Message(err error, locale string) string {
 	if !errors.As(err, &permission) {
 		return err.Error()
 	}
+	if permission.Subpath != "" {
+		return permission.Error()
+	}
 	need := "RO"
 	if permission.Need == Write {
 		need = "RW"

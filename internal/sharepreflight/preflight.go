@@ -2,6 +2,7 @@ package sharepreflight
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,6 +16,7 @@ import (
 // InstallSharedFolder reads the existing Compose lock declaration without
 // importing the build-time Compose planner into the runtime gateway.
 type InstallSharedFolder struct {
+	Picker     string `json:"picker,omitempty"`
 	Mode       string `json:"mode"`
 	Name       string `json:"name,omitempty"`
 	Key        string `json:"key"`
@@ -27,7 +29,7 @@ var systemShareName = regexp.MustCompile(`(?i)^(homes?|users|ftp|root|admin|gues
 var shareKey = regexp.MustCompile(`^[a-z][a-z0-9_]{0,31}$`)
 
 func validNativeShare(f *InstallSharedFolder) bool {
-	return f != nil && (f.Mode == "select" && f.Name == "" || f.Mode == "dedicated" && dedicatedShareName.MatchString(f.Name) && !systemShareName.MatchString(f.Name)) && shareKey.MatchString(f.Key) && !strings.HasPrefix(f.Key, "pkgwizard_") && !strings.HasPrefix(f.Key, "synopkg") && !strings.HasPrefix(f.Key, "change_") && (f.Permission == "ro" || f.Permission == "rw")
+	return f != nil && (f.Picker == "" || f.Picker == "folder" && f.Mode == "select") && (f.Mode == "select" && f.Name == "" || f.Mode == "dedicated" && dedicatedShareName.MatchString(f.Name) && !systemShareName.MatchString(f.Name)) && shareKey.MatchString(f.Key) && !strings.HasPrefix(f.Key, "pkgwizard_") && !strings.HasPrefix(f.Key, "synopkg") && !strings.HasPrefix(f.Key, "change_") && (f.Permission == "ro" || f.Permission == "rw")
 }
 func problem(code, message string) error { return fmt.Errorf("[%s] %s", code, message) }
 
@@ -70,12 +72,51 @@ func check(project, dataDir, root string) error {
 		need = sharedfolder.Write
 	}
 	cfg := sharedfolder.Config{DataDir: dataDir, Root: root, Account: lock.Package}
+	if lock.InstallSharedFolder.Picker == "folder" {
+		paths, e := sharedfolder.Subpaths(dataDir)
+		if e != nil {
+			return e
+		}
+		if _, ok := paths[lock.InstallSharedFolder.Key]; !ok {
+			return problem("COMPOSE_SHARE_INVALID", "folder selection missing; choose a folder in the upgrade wizard")
+		}
+		cfg.Subpaths = paths
+	}
 	if lock.Package == "" {
 		return sharedfolder.ErrIdentity
 	}
-	_, err = cfg.RequireAccess(lock.InstallSharedFolder.Key, need)
+	selectedPath, err := cfg.RequireAccess(lock.InstallSharedFolder.Key, need)
 	if err != nil {
+		if lock.InstallSharedFolder.Picker == "folder" {
+			var permission *sharedfolder.PermissionError
+			if errors.As(err, &permission) {
+				return err
+			}
+			reason := "folder is missing, not a directory, or contains a symlink"
+			return &sharedfolder.SelectionError{Name: readShareName(dataDir, lock.InstallSharedFolder.Key), Subpath: cfg.Subpaths[lock.InstallSharedFolder.Key], Account: lock.Package, Reason: reason}
+		}
 		return fmt.Errorf("shared folder preflight: %w", err)
 	}
+	if lock.InstallSharedFolder.Picker == "folder" {
+		env, e := os.ReadFile(filepath.Join(project, ".env"))
+		if e != nil {
+			return e
+		}
+		expected := "SYNOPKGLAND_MOUNT_" + lock.InstallSharedFolder.Key + "='" + strings.ReplaceAll(selectedPath, "'", `\'`) + "'"
+		found := false
+		for _, line := range strings.Split(string(env), "\n") {
+			if line == expected {
+				found = true
+			}
+		}
+		if !found {
+			return &sharedfolder.SelectionError{Name: readShareName(dataDir, lock.InstallSharedFolder.Key), Subpath: cfg.Subpaths[lock.InstallSharedFolder.Key], Account: lock.Package, Reason: "folder location changed; repair or upgrade to regenerate its container bind mount"}
+		}
+	}
 	return nil
+}
+
+func readShareName(dataDir, key string) string {
+	names, _ := sharedfolder.Names(dataDir)
+	return names[key]
 }

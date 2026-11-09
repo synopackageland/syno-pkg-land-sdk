@@ -69,3 +69,19 @@ test('a successful retry cannot clear a newer real operation denial',async()=>{
  answer({account:issue.account,folders:[]});await retry
  expect(events).toHaveBeenLastCalledWith([issue])
 })
+
+test('child permission uses the existing dialog guidance and exact File Station path',async()=>{
+ const permission=createSharedFolderPermission({call:async()=>({account:'ExampleApp',folders:[]}) as any,locale:'en'})
+ let issues:any[]=[];permission.subscribe(next=>issues=[...next])
+ expect(permission.handle({code:'shared_folder_permission',details:{account:'ExampleApp',share:'Media',subpath:'Projects/Deep',required:'write',granted:'read'}})).toBe(true)
+ expect(permission.message(issues[0])).toContain('missing Write')
+ expect(permission.message(issues[0])).toContain('File Station > Media/Projects/Deep > Properties > Permission')
+ await permission.retry();expect(issues).toEqual([])
+})
+
+test('distinct child folders in the same share retain their own repair instructions',()=>{
+ const permission=createSharedFolderPermission({call:async()=>({account:'ExampleApp',folders:[]}) as any,locale:'en'})
+ let issues:any[]=[];permission.subscribe(next=>issues=[...next])
+ for(const subpath of ['Projects/One','Projects/Two'])permission.handle({code:'shared_folder_permission',details:{account:'ExampleApp',share:'Media',subpath,required:'write',granted:'read'}})
+ expect(issues.map(x=>x.subpath)).toEqual(['Projects/One','Projects/Two'])
+})

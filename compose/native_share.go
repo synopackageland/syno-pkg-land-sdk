@@ -15,6 +15,7 @@ import (
 // selects a name, never a host path or an ACL grant. DSM's administrator owns
 // permission changes; the container still runs as the fixed package account.
 type InstallSharedFolder struct {
+	Picker     string `json:"picker,omitempty"`
 	Mode       string `json:"mode"`
 	Name       string `json:"name,omitempty"`
 	Key        string `json:"key"`
@@ -27,7 +28,7 @@ var systemShareName = regexp.MustCompile(`(?i)^(homes?|users|ftp|root|admin|gues
 var nativeShareKey = regexp.MustCompile(`^[a-z][a-z0-9_]{0,31}$`)
 
 func validNativeShare(f *InstallSharedFolder) bool {
-	return f != nil && (f.Mode == "select" && f.Name == "" || f.Mode == "dedicated" && dedicatedShareName.MatchString(f.Name) && !systemShareName.MatchString(f.Name)) && nativeShareKey.MatchString(f.Key) &&
+	return f != nil && (f.Picker == "" || f.Picker == "folder" && f.Mode == "select") && (f.Mode == "select" && f.Name == "" || f.Mode == "dedicated" && dedicatedShareName.MatchString(f.Name) && !systemShareName.MatchString(f.Name)) && nativeShareKey.MatchString(f.Key) &&
 		!strings.HasPrefix(f.Key, "pkgwizard_") && !strings.HasPrefix(f.Key, "synopkg") && !strings.HasPrefix(f.Key, "change_") &&
 		(f.Permission == "ro" || f.Permission == "rw")
 }
@@ -35,10 +36,13 @@ func validNativeShare(f *InstallSharedFolder) bool {
 func nativeShares(r Request) (*InstallSharedFolder, error) {
 	var native *InstallSharedFolder
 	for key, s := range r.Shares {
+		if s.Picker != "" && (s.Picker != "folder" || s.Select != "install") {
+			return nil, problem("COMPOSE_SHARE_INVALID", "picker: folder requires select: install")
+		}
 		if s.Select != "install" {
 			continue
 		}
-		if !validNativeShare(r.InstallSharedFolder) || key != r.InstallSharedFolder.Key || s.Permission != r.InstallSharedFolder.Permission {
+		if (s.Picker != "" && s.Picker != "folder") || (r.InstallSharedFolder != nil && s.Picker != r.InstallSharedFolder.Picker) || !validNativeShare(r.InstallSharedFolder) || key != r.InstallSharedFolder.Key || s.Permission != r.InstallSharedFolder.Permission {
 			return nil, problem("COMPOSE_SHARE_INVALID", "install share must match install.sharedFolder mode: select or dedicated, key and permission")
 		}
 		f := *r.InstallSharedFolder
@@ -58,6 +62,7 @@ func nativeShareEnvironment(f *InstallSharedFolder, dataDir, root string) (strin
 		return "", problem("COMPOSE_SHARE_INVALID", "invalid native install selection")
 	}
 	name := ""
+	subpath := ""
 	change := os.Getenv("CHANGE_" + f.Key)
 	switch change {
 	case "true", "1", "yes", "on":
@@ -67,6 +72,13 @@ func nativeShareEnvironment(f *InstallSharedFolder, dataDir, root string) (strin
 	_, answered := os.LookupEnv(f.Key)
 	if os.Getenv("SYNOPKG_PKG_STATUS") == "INSTALL" || (os.Getenv("SYNOPKG_PKG_STATUS") == "UPGRADE" && (change != "" || f.Mode == "dedicated" && answered)) {
 		name = os.Getenv(f.Key)
+		if f.Picker == "folder" {
+			var present bool
+			subpath, present = os.LookupEnv(f.Key + "_subpath")
+			if !present {
+				return "", problem("COMPOSE_SHARE_INVALID", "select both the shared folder and relative folder path")
+			}
+		}
 		if name == "" && f.Mode == "dedicated" {
 			name = f.Name
 		}
@@ -76,6 +88,17 @@ func nativeShareEnvironment(f *InstallSharedFolder, dataDir, root string) (strin
 			return "", problem("COMPOSE_SHARE_INVALID", "cannot read installed share selection")
 		}
 		name = names[f.Key]
+		if f.Picker == "folder" {
+			paths, e := sharedfolder.Subpaths(dataDir)
+			if e != nil {
+				return "", e
+			}
+			var present bool
+			subpath, present = paths[f.Key]
+			if !present {
+				return "", problem("COMPOSE_SHARE_INVALID", "folder selection missing; select a folder in the upgrade wizard")
+			}
+		}
 		if name == "" && f.Mode == "dedicated" {
 			name = f.Name
 		}
@@ -86,7 +109,16 @@ func nativeShareEnvironment(f *InstallSharedFolder, dataDir, root string) (strin
 			return "", problem("COMPOSE_SHARE_INVALID", "invalid share name")
 		}
 	}
+	if f.Picker == "folder" && (len(name) > 32 || systemShareName.MatchString(name) || strings.TrimSpace(name) != name || strings.ContainsAny(name, `/:*?"<>|{}`)) {
+		return "", problem("COMPOSE_SHARE_INVALID", "folder picker requires a supported local shared folder name")
+	}
 	source, err := sharedfolder.Resolve(root, name)
+	if f.Picker == "folder" {
+		source, err = sharedfolder.ResolveSubpathForInstall(root, name, subpath)
+		if err != nil {
+			return "", fmt.Errorf("[COMPOSE_SHARE_INVALID] Folder %q is unavailable: %w. Restore the folder or select an accessible folder in the upgrade wizard; do not create an empty replacement", name+"/"+subpath, err)
+		}
+	}
 	if errors.Is(err, sharedfolder.ErrNotFound) && f.Mode == "dedicated" && name == f.Name && os.Getenv("SYNOPKG_PKGINST_TEMP_DIR") != "" {
 		// DSM acquires data-share after preinst. Its new share is on the selected
 		// package volume; never create or chmod that directory as the package user.
@@ -98,6 +130,9 @@ func nativeShareEnvironment(f *InstallSharedFolder, dataDir, root string) (strin
 	}
 	if err != nil {
 		return "", fmt.Errorf("[COMPOSE_SHARE_INVALID] selected shared folder %q is unavailable: %w", name, err)
+	}
+	if f.Picker == "folder" {
+		return "SYNOPKGLAND_MOUNT_" + f.Key + "=" + dotenvLiteral(source) + "\n", nil
 	}
 	// The administrator owns the volume/share directory entries. Never allow a
 	// symlink to turn a selected share name into an arbitrary host bind source.

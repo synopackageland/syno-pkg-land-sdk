@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.53.22 (2026-11-09)
+
+- Add opt-in installer-selected child folders for native Compose share mounts, paired with CLI 0.52.14.
+- Validate folder metadata before DSM data-share acquisition and defer package RO/RW checks until postinst/start; pending access does not fail installation or upgrade.
+- Reuse the existing startup permission Dialog and read-only Retry, preserving child-folder causes and exact repair instructions even while the gateway is stopped.
+- Follow installer child selections in existing sharedfolder status/Require APIs without App changes; reject known unsupported network/read-only mounts.
+
 ## 0.53.21 (2026-11-09)
 
 - Share in-progress admission for concurrent requests from the same gateway
