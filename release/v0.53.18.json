@@ -1,0 +1,59 @@
+{
+  "version": "0.53.18",
+  "executorVersion": "0.53.5",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.18",
+    "@synopackageland/app": "0.53.18",
+    "syno-pkg-land-app": "0.53.18",
+    "synopkgland_app": "0.53.18"
+  },
+  "executorDigests": {
+    "x86_64": "78125a96c428dd3322056669d27d7269dfcac78057a34f22d1bac9741393a957",
+    "aarch64": "ed9e21ffd6f6f46927eddd6a11a68ccd201f4ebd680846b81d266845edc180da",
+    "armv7": "21787da130a653f66fb6a71c859868c1c144cd184d896c0df44f87eb44f7c0ca",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Passed focused non-root Go delegate client/root/batch/JSON/raw WebAPI tests and executor command/reserve/root-slot tests with race detection, shared runtime budget tests, generated versions/manifests/limits, nine version/manifest/docs tests, timeout-policy tests/check, Node dist consistency, docs version check (81 files), npm builds and both package archives with generic internal-content scans. No full gate, NAS acceptance, executor release rebuild, publication or Rust build."
+  },
+  "ui": {
+    "builtAgainst": "0.23.5",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.5.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Share root.run, root.start and JSON/raw webapi.call admission by executor socket across clients in each App process; capacity is generated from unchanged executor source",
+    "Retry only explicit pre-execution ROOT_BUSY refusals with context-aware backoff; never replay transport failures, uncertain replies or other execution outcomes",
+    "A refused batch step retries as a fresh authenticated socket call without replaying previous steps or spending the remaining batch step count",
+    "Pin per-hop deadline reserves exactly and document minute-scale App budgets, queueing overhead and the DSM command work formula",
+    "Reuse the immutable executor/v0.53.5 release and its six digests"
+  ],
+  "companionCLI": {
+    "version": "0.52.11",
+    "tarball": "synopackageland-cli-0.52.11.tgz",
+    "sha256": "b9526742f8a14093ff9b5612c6c4a865639be5b51e38fa9de11185f2ebfb39c8"
+  },
+  "npmArtifacts": {
+    "synopackageland-app-0.53.18.tgz": {
+      "sha256": "4cd565a4d2e533bee9ed876bf413bc01704f8ee0e09fa81b0e920778c9bb389c"
+    },
+    "synopackageland-sdk-0.53.18.tgz": {
+      "sha256": "daf2c76f2f2c80b91622ed9eb5e7f144387b790fd84da46b0fa5f08bb2b09e63"
+    }
+  }
+}

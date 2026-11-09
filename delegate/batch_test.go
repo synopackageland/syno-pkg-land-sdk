@@ -103,3 +103,67 @@ func TestHTTPBatchSharesOneExecutorConnectionAndSingleCallsStayFresh(t *testing.
 		t.Fatalf("fresh single: %s %d %d", single, connections.Load(), verified.Load())
 	}
 }
+
+func TestBatchBusyStepRetriesFreshWithoutReplayingPriorStep(t *testing.T) {
+	socket := filepath.Join(t.TempDir(), "executor.sock")
+	listener, err := net.Listen("unix", socket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	var batchSteps, freshSteps atomic.Int32
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				defer conn.Close()
+				decode, encode := json.NewDecoder(conn), json.NewEncoder(conn)
+				var first Request
+				if decode.Decode(&first) != nil {
+					return
+				}
+				if first.Auth["dsm_cookie"] != "sid" {
+					return
+				}
+				if first.Op == "root.batch" {
+					encode.Encode(map[string]any{"ok": true, "result": map[string]any{}})
+					for {
+						var step Request
+						if decode.Decode(&step) != nil {
+							return
+						}
+						if batchSteps.Add(1) == 2 {
+							encode.Encode(map[string]any{"ok": false, "code": "ROOT_BUSY"})
+						} else {
+							encode.Encode(map[string]any{"ok": true, "result": map[string]bool{"ran": true}})
+						}
+					}
+				} else if first.Op == "root.run" {
+					freshSteps.Add(1)
+					encode.Encode(map[string]any{"ok": true, "result": map[string]bool{"ran": true}})
+				}
+			}()
+		}
+	}()
+	client := &Client{Socket: socket}
+	handler := api.Handle("demo.read", func(ctx context.Context, _ api.Caller, _ json.RawMessage) (any, error) {
+		var out json.RawMessage
+		err := client.Call(ctx, "root.run", map[string]string{"dsm_cookie": "sid"}, map[string]string{"name": "read"}, &out)
+		return out, err
+	})
+	server, err := api.NewServerWithPermissions(batchAuthn{}, []byte(`{"schema":1,"default":"administrators","methods":{}}`), handler)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := httptest.NewRequest("POST", "http://nas/api.cgi", strings.NewReader(`{"v":1,"calls":[{"method":"demo.read"},{"method":"demo.read"},{"method":"demo.read"}]}`))
+	r.Header.Set("Content-Type", "application/json")
+	r.Header.Set("Origin", "http://nas")
+	w := httptest.NewRecorder()
+	server.ServeHTTP(w, r)
+	if strings.Count(w.Body.String(), `"ran":true`) != 3 || batchSteps.Load() != 3 || freshSteps.Load() != 1 {
+		t.Fatal(w.Body.String(), batchSteps.Load(), freshSteps.Load())
+	}
+}

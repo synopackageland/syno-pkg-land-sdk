@@ -51,6 +51,84 @@ has a reviewed B exception and reason in `scripts/timeout-allowlist.json`.
 Import-free browser/Python deployment copies are checked against
 `spec/protocol/v1/timeouts.json`; changed literals fail the gate.
 
+## App deadlines on a busy NAS
+
+Do not put short per-call deadlines on DSM or executor reads. Use the default
+operation allowance, or an explicit allowance measured in minutes, never seconds.
+Slow calls are normal on a busy NAS: a single privileged `synowebapi --exec` can
+take several seconds, with account and administrator checks adding subprocesses
+before the requested work starts. A five-second read budget can expire during
+those checks. Keep cancellation, and show queued/running or "Still working" while
+the caller's request remains active.
+
+### Reply reserves are per hop
+
+For a single Go delegate socket call with an explicit parent deadline, let
+`I(t) = max(0, t - min(5 seconds, t / 4))`. The layers are:
+
+| Layer | Allowance from a 125-second parent, before elapsed work |
+| --- | --- |
+| App's parent context | 125 seconds |
+| Client socket wait: `I(parent remaining)` | 120 seconds; leaves time to answer the App |
+| Wire `deadline_ms`: `I(socket remaining)` | exactly 115000 ms; leaves time for the executor reply |
+| DSM command: `budget.Inner(executor remaining)` | 110 seconds; leaves time for command cleanup and executor processing |
+
+`executor.Connection` accepts `deadline_ms` without applying another reserve;
+`commandTimeout` / `streamCommandTimeout` apply the third reserve when starting
+a DSM subprocess. These protect separate replies, so no hop reserves the same
+reply twice. The wire allowance is truncated to whole milliseconds. The same
+calculation on a five-second parent sends 2812 ms on the wire and leaves at most
+about 2.109 seconds for the next DSM command, before elapsed work.
+
+To allow **N seconds of DSM command work**, when each layer has at least twenty
+seconds remaining, give the App at least **N + 15 seconds, plus time for queueing,
+backoff, authentication and earlier calls**. For example, 120 seconds of command
+work needs at least 135 seconds at the App before that overhead. The executor's
+approved operation policy must also allow at least N + 5 seconds, and an explicit
+`Client.Timeout` must allow at least N + 10 seconds. Every earlier deadline and
+approved program/operation limit still wins; increasing the parent alone cannot
+raise those limits. Sequential DSM commands share the same operation deadline.
+For short budgets, use the formula above rather than subtracting fifteen seconds.
+
+`root.run` has the two socket-client reserves and its approved program timeout;
+it does not apply the DSM-command reserve to the root program itself. A request
+without a parent deadline omits `deadline_ms`, retaining the executor policy and
+the client's ordinary socket allowance. Root batches use their existing shared
+batch deadline and step count; they do not send a new per-step `deadline_ms`.
+The table describes a single socket call, including a fresh attempt after a
+refused batch step.
+
+### Shared admission and safe busy retry
+
+Go `delegate.Client.Call` queues `root.run`, `root.start` and JSON/raw
+`webapi.call` by executor socket within the App process. Separately constructed
+clients share the queue. Its active capacity is generated from the executor's
+own root/WebAPI slot constant, currently two. Apps can remove their own two-slot
+semaphores and `ROOT_BUSY` backoff loops. Status, job inspection and cancellation
+bypass the queue so waiting work cannot block those control calls.
+
+Only an explicit `ROOT_BUSY` refusal is retried automatically: the root program
+or WebAPI operation has not executed. Busy retry uses increasing spacing from
+100 ms up to one second, with no separate total wait cap. Queueing and backoff
+stop at the caller's context deadline or cancellation. Use the ordinary request
+context rather than creating a short deadline for each queued read. Separate
+processes and long-lived root jobs still contend at the executor; that contention
+is handled by the same refusal retry. A successful `root.start` releases local
+admission after its reply; the executor continues to own the running job's slot.
+
+A refused root batch step retries as a fresh authenticated socket request, keeping
+the original batch's step count available for later steps. Every attempt uses the
+same caller deadline, so time spent waiting is never restored. A generic protocol
+`retryable` flag is insufficient proof of safe replay: `ROOT_TIMEOUT`,
+`DSM_FAILED`, storage failures and uncertain results can follow execution.
+Transport failures, lost replies, malformed replies and `WEBAPI_UNCERTAIN` are
+terminal for this call and are never replayed by this client.
+
+The TS frontend and Node/Python backends use the Go bridge for executor services;
+they do not have a direct executor socket client needing a separate queue.
+CLI-generated Apps should use this same request context and minute-scale
+allowance.
+
 ## Outer DSM and proxy boundaries
 
 Inspect the actual deployed route rather than assuming nginx's generic defaults.
