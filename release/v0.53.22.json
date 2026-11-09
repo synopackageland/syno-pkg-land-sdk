@@ -1,0 +1,58 @@
+{
+  "version": "0.53.22",
+  "executorVersion": "0.53.5",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.22",
+    "@synopackageland/app": "0.53.22",
+    "syno-pkg-land-app": "0.53.22",
+    "synopkgland_app": "0.53.22"
+  },
+  "executorDigests": {
+    "x86_64": "78125a96c428dd3322056669d27d7269dfcac78057a34f22d1bac9741393a957",
+    "aarch64": "ed9e21ffd6f6f46927eddd6a11a68ccd201f4ebd680846b81d266845edc180da",
+    "armv7": "21787da130a653f66fb6a71c859868c1c144cd184d896c0df44f87eb44f7c0ca",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Passed 96 related CLI tests, 32 related frontend permission/Dialog tests, affected non-root Go sharedfolder/sharepreflight/plan/Compose and gateway-entry suites, both docs version checks, Node dist/version checks, frontend and CLI builds, and package version/inventory checks. No new NAS test, full gate, cross-architecture matrix or publication. Changed-source and all three actual npm tarball internal-content scans passed."
+  },
+  "ui": {
+    "builtAgainst": "0.23.5",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.5.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Install-time folder metadata validation defers package access until after DSM data-share grant",
+    "Reuse the existing startup permission Dialog and Retry with exact child-folder recovery instructions",
+    "Generate standard dropdown and relative-path fallback for DSM 7.1 and 7.2.1",
+    "Reuse the immutable executor/v0.53.5 release"
+  ],
+  "companionCLI": {
+    "version": "0.52.14",
+    "tarball": "synopackageland-cli-0.52.14.tgz",
+    "sha256": "a181116ef5ba09ddfe0a4426fef65b7f1fbb9ea01218bceeabeda051c58ff185"
+  },
+  "npmArtifacts": {
+    "synopackageland-sdk-0.53.22.tgz": {
+      "sha256": "2483cf88cc0064c9903f4ee91e69da2aa0066defbe86c896aa63289d2bf1dc8a"
+    },
+    "synopackageland-app-0.53.22.tgz": {
+      "sha256": "07702eab57b0a30fd5fd6bb542ad133dbb3dec9e0bae426e1215c83327db7dd6"
+    }
+  }
+}

@@ -2,7 +2,9 @@ package sharedfolder
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,6 +57,16 @@ func Subpaths(dataDir string) (map[string]string, error) {
 // ResolveSubpath resolves a share afresh and rejects every symlink component.
 // It neither creates directories nor changes permissions.
 func ResolveSubpath(root, name, path string) (string, error) {
+	return resolveSubpath(root, name, path, false)
+}
+
+// ResolveSubpathForInstall checks structure before DSM grants access. An
+// inaccessible descendant is deferred, never misreported as missing.
+func ResolveSubpathForInstall(root, name, path string) (string, error) {
+	return resolveSubpath(root, name, path, true)
+}
+
+func resolveSubpath(root, name, path string, deferPermission bool) (string, error) {
 	if !ValidSubpath(path) {
 		return "", fmt.Errorf("invalid relative folder path")
 	}
@@ -65,11 +77,19 @@ func ResolveSubpath(root, name, path string) (string, error) {
 	source := filepath.Join(base, path)
 	for current := source; current != filepath.Clean(root) && current != "/" && current != "."; current = filepath.Dir(current) {
 		st, e := os.Lstat(current)
+		if deferPermission && errors.Is(e, fs.ErrPermission) {
+			continue
+		}
 		if e != nil {
 			return "", fmt.Errorf("selected folder %q: %w", name+"/"+path, e)
 		}
 		if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 {
 			return "", fmt.Errorf("selected folder must be a directory without symlink components")
+		}
+	}
+	if root == "/" {
+		if err := validateSelectedMount(source); err != nil {
+			return "", err
 		}
 	}
 	return source, nil

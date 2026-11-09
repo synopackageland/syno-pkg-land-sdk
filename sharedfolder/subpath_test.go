@@ -41,3 +41,43 @@ func TestSubpathsRejectMissingCorruptAndTraversal(t *testing.T) {
 		t.Fatal(paths)
 	}
 }
+
+func TestSelectedMountMetadataRejectsKnownUnsupportedTypes(t *testing.T) {
+	for _, kind := range []string{"nfs", "nfs4", "cifs", "smb3", "ceph", "fuse.sshfs"} {
+		raw := "1 0 8:1 / / rw - ext4 /dev/root rw\n2 1 0:3 / /volume1/Media/Remote rw - " + kind + " remote rw\n"
+		if err := validateMountInfo("/volume1/Media/Remote/Child", raw); err == nil {
+			t.Fatal(kind)
+		}
+	}
+	for _, opts := range []string{"ro", "ro,nosuid"} {
+		if err := validateMountInfo("/volume1/Media", "1 0 8:1 / / "+opts+" - btrfs /dev/root rw"); err == nil {
+			t.Fatal(opts)
+		}
+	}
+	if err := validateMountInfo("/volume1/Media/Child", "1 0 8:1 / / rw - btrfs /dev/root rw"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestStatusAndRequireFollowInstallerChildSelectionWithoutAppChanges(t *testing.T) {
+	root := t.TempDir()
+	data := t.TempDir()
+	child := filepath.Join(root, "volume1", "Media", "Projects", "Deep")
+	os.MkdirAll(child, 0700)
+	os.WriteFile(filepath.Join(data, "config.json"), []byte(`{"schema":1,"shared_folders":{"media":"Media"},"shared_folder_paths":{"media":"Projects/Deep"}}`), 0600)
+	cfg := Config{DataDir: data, Root: root, Required: map[string]Access{"media": Write}}
+	path, err := cfg.Require("media")
+	if err != nil || path != child {
+		t.Fatalf("%q %v", path, err)
+	}
+	os.Chmod(child, 0500)
+	if os.Geteuid() != 0 {
+		status, err := cfg.Status()
+		if err != nil || len(status.Folders) != 1 || status.Folders[0].State != Pending || status.Folders[0].Subpath != "Projects/Deep" {
+			t.Fatalf("%+v %v", status, err)
+		}
+		if _, err = cfg.Require("media"); err == nil {
+			t.Fatal("write denial lost")
+		}
+	}
+}

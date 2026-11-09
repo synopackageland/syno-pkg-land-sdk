@@ -27,9 +27,12 @@ func TestFolderPickerEnvironment(t *testing.T) {
 	}
 	t.Setenv("media_subpath", "Projects/Deep")
 	os.Chmod(source, 0500)
-	if os.Geteuid() != 0 {
-		if _, err := nativeShareEnvironment(f, t.TempDir(), root); err == nil || !strings.Contains(err.Error(), "No ACL was changed") {
-			t.Fatalf("write denial: %v", err)
-		}
+	if _, err := nativeShareEnvironment(f, t.TempDir(), root); err != nil {
+		t.Fatalf("preinst must not require write access: %v", err)
+	}
+	os.Chmod(filepath.Dir(source), 0000)
+	defer os.Chmod(filepath.Dir(source), 0755)
+	if _, err := nativeShareEnvironment(f, t.TempDir(), root); err != nil {
+		t.Fatalf("pre-grant traversal denial must be deferred: %v", err)
 	}
 }

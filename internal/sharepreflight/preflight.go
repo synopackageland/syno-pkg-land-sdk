@@ -2,6 +2,7 @@ package sharepreflight
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -87,7 +88,12 @@ func check(project, dataDir, root string) error {
 	selectedPath, err := cfg.RequireAccess(lock.InstallSharedFolder.Key, need)
 	if err != nil {
 		if lock.InstallSharedFolder.Picker == "folder" {
-			return fmt.Errorf("[COMPOSE_SHARE_INVALID] Selected child folder is unavailable to package account %q: %v. Restore its access in File Station > Properties > Permission, or reselect it in the upgrade wizard. No ACL was changed", lock.Package, err)
+			var permission *sharedfolder.PermissionError
+			if errors.As(err, &permission) {
+				return err
+			}
+			reason := "folder is missing, not a directory, or contains a symlink"
+			return &sharedfolder.SelectionError{Name: readShareName(dataDir, lock.InstallSharedFolder.Key), Subpath: cfg.Subpaths[lock.InstallSharedFolder.Key], Account: lock.Package, Reason: reason}
 		}
 		return fmt.Errorf("shared folder preflight: %w", err)
 	}
@@ -104,8 +110,13 @@ func check(project, dataDir, root string) error {
 			}
 		}
 		if !found {
-			return problem("COMPOSE_SHARE_INVALID", "selected folder location changed; repair or upgrade and select the folder again to regenerate the container bind mount")
+			return &sharedfolder.SelectionError{Name: readShareName(dataDir, lock.InstallSharedFolder.Key), Subpath: cfg.Subpaths[lock.InstallSharedFolder.Key], Account: lock.Package, Reason: "folder location changed; repair or upgrade to regenerate its container bind mount"}
 		}
 	}
 	return nil
+}
+
+func readShareName(dataDir, key string) string {
+	names, _ := sharedfolder.Names(dataDir)
+	return names[key]
 }

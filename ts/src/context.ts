@@ -75,6 +75,7 @@ export interface PortalAccess {
 // the package account may do in each, against what the App declared it needs.
 export type SharedFolderLevel = 'none' | 'read' | 'write'
 export interface SharedFolderItem {
+ subpath?:string
  key: string
  name: string
  path?: string

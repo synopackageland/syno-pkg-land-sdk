@@ -25,7 +25,7 @@ async function retry(){
 <template>
  <Dialog v-if="open" v-model:open="open" :title="permission.messages.pending" :description="permission.messages.pendingNote" :close-label="permission.messages.dismiss">
   <ul class="shared-folder-permission-issues">
-   <li v-for="issue in issues" :key="JSON.stringify([issue.account,issue.share,issue.required])">{{ permission.message(issue) }}</li>
+   <li v-for="issue in issues" :key="JSON.stringify([issue.account,issue.share,issue.required,issue.subpath])">{{ permission.message(issue) }}</li>
   </ul>
   <p v-if="failed" role="alert">{{ permission.messages.shared_folder_unavailable }}</p>
   <template #footer>

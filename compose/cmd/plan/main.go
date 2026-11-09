@@ -11,8 +11,10 @@ import (
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/synopackageland/syno-pkg-land-sdk/compose"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/sharepreflight"
 	"github.com/synopackageland/syno-pkg-land-sdk/sharedfolder"
 	"syscall"
 )
@@ -25,8 +27,18 @@ func main() {
 		}
 		return
 	}
-	if len(os.Args) == 2 && os.Args[1] == "preflight" {
-		if err := preflight(); err != nil {
+	if len(os.Args) == 2 && (os.Args[1] == "preflight" || os.Args[1] == "share-check") {
+		operation := preflight
+		if os.Args[1] == "share-check" {
+			operation = func() error {
+				path, e := os.Executable()
+				if e != nil {
+					return e
+				}
+				return sharepreflight.Check(filepath.Dir(path), os.Getenv("SYNOPKG_PKGVAR"))
+			}
+		}
+		if err := operation(); err != nil {
 			message := err.Error()
 			if errors.Is(err, sharedfolder.ErrPermissionPending) {
 				message = "[shared_folder_permission] " + sharedfolder.Message(err, os.Getenv("SYNOPKG_DSM_LANGUAGE"))
@@ -39,7 +51,7 @@ func main() {
 					f.Close()
 				}
 			}
-			os.Exit(1)
+			os.Exit(folderFailureExitCode(err))
 		}
 		return
 	}
@@ -108,4 +120,13 @@ func run(in io.Reader, out io.Writer) error {
 		*compose.Plan
 		Lock json.RawMessage `json:"lock"`
 	}{p, lock})
+}
+
+// A recoverable folder status must not turn an install into a failed install.
+func folderFailureExitCode(err error) int {
+	var selection *sharedfolder.SelectionError
+	if errors.Is(err, sharedfolder.ErrPermissionPending) || errors.As(err, &selection) {
+		return 2
+	}
+	return 1
 }

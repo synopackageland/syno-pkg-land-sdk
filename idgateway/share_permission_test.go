@@ -108,3 +108,38 @@ func TestSharePromptCatalogsMatchTheFrontendSteps(t *testing.T) {
 		}
 	}
 }
+
+func TestStoppedGatewayRetainsExistingChildPermissionDialogAndRetry(t *testing.T) {
+	var current error = &sharedfolder.PermissionError{Account: "ExampleApp", Name: "Media", Subpath: "Projects/Deep <private>", Need: sharedfolder.Write, Have: sharedfolder.Read}
+	handler := func(auth api.Authenticator) http.Handler {
+		return entryHandlerWithAvailability(Config{ContainerApp: true, Listen: Listen{HTTP: 28000}}, func() error { return nil }, func() error { return current }, auth, func() MenuSources { return MenuSources{} }, func() bool { return false }, func() bool { return false })
+	}
+	request := func(h http.Handler, url string) *httptest.ResponseRecorder {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("GET", url, nil)
+		r.Header.Set("Accept-Language", "en")
+		h.ServeHTTP(w, r)
+		return w
+	}
+	h := handler(shareAuth{})
+	w := request(h, "https://nas.example/open.cgi")
+	for _, text := range []string{"<dialog open", "Media/Projects/Deep &lt;private&gt;", "missing Write", "File Station", "Properties &gt; Permission", "Retry"} {
+		if !strings.Contains(w.Body.String(), text) {
+			t.Fatalf("missing %s: %s", text, w.Body)
+		}
+	}
+	w = request(handler(shareAuth{denied: true}), "https://nas.example/open.cgi")
+	if strings.Contains(w.Body.String(), "Projects") || w.Code != 401 {
+		t.Fatal(w.Code, w.Body)
+	}
+	current = &sharedfolder.SelectionError{Account: "ExampleApp", Name: "Media", Subpath: "Projects/Deep", Reason: "folder location changed"}
+	w = request(h, "https://nas.example/open.cgi")
+	if !strings.Contains(w.Body.String(), "folder location changed") {
+		t.Fatal(w.Body)
+	}
+	current = nil
+	w = request(h, "https://nas.example/open.cgi?sharedfolder=retry")
+	if !strings.Contains(w.Body.String(), "Package Center") || w.Header().Get("Location") != "" {
+		t.Fatal(w.Header(), w.Body)
+	}
+}

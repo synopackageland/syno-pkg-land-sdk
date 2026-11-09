@@ -132,16 +132,10 @@ func EntryHandler(cfg Config) http.Handler {
 	if gate != nil {
 		auth = AccessVerifier{Next: gate, Access: cfg.Access, Groups: cfg.Groups, Membership: NewDirectory()}
 	}
-	next := entryHandlerWithShares(cfg, containerpreflight.Check, func() error {
+	next := entryHandlerWithAvailability(cfg, containerpreflight.Check, func() error {
 		return sharepreflight.Check(filepath.Join("/var/packages", cfg.Package, "target/compose"), filepath.Join("/var/packages", cfg.Package, "var"))
-	}, auth)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !GatewayAvailable(cfg) {
-			writeAppStopped(w, r)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
+	}, auth, func() MenuSources { return LoadMenuSources(cfg) }, connectInstalled, func() bool { return GatewayAvailable(cfg) })
+	return next
 }
 func entryHandler(cfg Config, preflight func() error) http.Handler {
 	return entryHandlerWithShares(cfg, preflight, nil, nil)
@@ -153,6 +147,9 @@ func entryHandlerWithExternal(cfg Config, preflight func() error, shares func() 
 	return entryHandlerWithMenu(cfg, preflight, shares, auth, func() MenuSources { return MenuSources{External: external()} }, func() bool { return false })
 }
 func entryHandlerWithMenu(cfg Config, preflight func() error, shares func() error, auth api.Authenticator, sources func() MenuSources, connect func() bool) http.Handler {
+	return entryHandlerWithAvailability(cfg, preflight, shares, auth, sources, connect, nil)
+}
+func entryHandlerWithAvailability(cfg Config, preflight func() error, shares func() error, auth api.Authenticator, sources func() MenuSources, connect func() bool, available func() bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var loaded *MenuSources
 		menu := func() MenuSources {
@@ -201,6 +198,10 @@ func entryHandlerWithMenu(cfg Config, preflight func() error, shares func() erro
 				writeSharePermission(w, r, err)
 				return
 			}
+		}
+		if available != nil && !available() {
+			writeAppStopped(w, r)
+			return
 		}
 		host := r.URL.Hostname()
 		if host == "" {

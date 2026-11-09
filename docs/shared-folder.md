@@ -233,24 +233,36 @@ selects the share root. Both values are persisted in config schema 1 as
 `shared_folders` and `shared_folder_paths`. Missing child-selection state is
 an error, not permission to mount the root.
 
-The Compose preparer resolves the share on its current volume, rejects missing
-folders and symlink components, and checks actual RO/RW access as the package
-UID. This occurs before DSM grants new data-share permissions, so an existing
-folder that is not yet accessible can block a first installation. Administrators
-must prepare access and retry; the SDK never changes ACLs or runs the application
-as root. The installed preflight repeats the check and refuses a stale materialized
-mount after a volume move; repair or upgrade regenerates that source. Rename or
-deletion requires restoring or explicitly reselecting the folder.
+Preinst resolves the share and validates syntax, available existence/type metadata,
+symlink components and known unsupported mount types. It does not check package
+RO/RW before DSM grants data-share access. Permission-denied metadata below the
+share is deferred until after acquisition, not interpreted as missing.
+
+Postinst runs the package UID check as an informational result; a permission
+failure does not fail installation or upgrade. A deliberate start checks again
+and refuses to start the App until the folder is ready. The existing DSM startup
+permission Dialog works even with a stopped gateway, shows the exact child path,
+missing permission and File Station repair instructions, and retains its read-only
+Retry action. A successful Retry asks the user to start the App in Package Center.
+No new status UI, ACL changes or root App are introduced.
 
 `sharedfolder.Subpaths(dataDir)` reads the recorded relative selections.
-Set `Config.Subpaths` to those values when an App needs to resolve/check a
-selected child through `Require`/`RequireAccess`. Existing callers continue to
-check the share root. `ResolveSubpath` is a read-only resolution helper, not an
-access grant. These directory checks do not prove every descendant's ACL and
-cannot freeze concurrent filesystem or permission changes.
+Existing `Config.Status`/`Require`/`RequireAccess` callers follow these installer
+selections automatically; `Config.Subpaths` can explicitly override them. Errors
+preserve the existing permission code, with optional child-path details for the
+existing frontend Dialog. Missing folders and stale materialized mount locations
+retain a distinct repair cause. Directory checks do not prove every descendant's
+ACL and cannot freeze concurrent filesystem or permission changes.
 
 DSM data-share still grants the entire share; binding a subtree is not a
 subtree-only ACL grant. Container-root services remain unable to bind shares.
 The CLI chooses a native directory chooser on DSM 7.2.2 and newer, and standard
 share/subpath controls on older DSM versions from the same SPK. Browser visibility
 belongs to the logged-in administrator and does not prove package access.
+
+Known storage limitations: the chooser rejects special shares using administrator
+metadata; backend mount metadata rejects known network filesystems and read-only
+mounts. WORM/encryption-lock and other DSM-specific types do not have a complete
+package-readable filesystem taxonomy or full device matrix. DSM 7.1 and 7.2.1 use
+standard share dropdown/subpath fields with unit/render coverage, without a new
+old-device acceptance claim.

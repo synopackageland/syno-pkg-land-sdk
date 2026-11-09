@@ -31,6 +31,7 @@ function item(value:unknown):SharedFolderItem|undefined{
  const required=LEVELS.find(level=>level===v.required),granted=LEVELS.find(level=>level===v.granted),state=STATES.find(s=>s===v.state)
  if(!required||!granted||!state)return undefined
  const out:SharedFolderItem={key:v.key,name:v.name,exists:v.exists===true,required,granted,state}
+ if(typeof v.subpath==='string')out.subpath=v.subpath
  if(typeof v.path==='string')out.path=v.path
  if(typeof v.error==='string')out.error=v.error
  return out

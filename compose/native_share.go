@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"syscall"
 
 	"github.com/synopackageland/syno-pkg-land-sdk/sharedfolder"
 )
@@ -115,16 +114,9 @@ func nativeShareEnvironment(f *InstallSharedFolder, dataDir, root string) (strin
 	}
 	source, err := sharedfolder.Resolve(root, name)
 	if f.Picker == "folder" {
-		source, err = sharedfolder.ResolveSubpath(root, name, subpath)
+		source, err = sharedfolder.ResolveSubpathForInstall(root, name, subpath)
 		if err != nil {
 			return "", fmt.Errorf("[COMPOSE_SHARE_INVALID] Folder %q is unavailable: %w. Restore the folder or select an accessible folder in the upgrade wizard; do not create an empty replacement", name+"/"+subpath, err)
-		}
-		need := uint32(5)
-		if f.Permission == "rw" {
-			need = 7
-		}
-		if err = folderAccess(source, need); err != nil {
-			return "", fmt.Errorf("[COMPOSE_SHARE_INVALID] Package UID %d needs %s access to folder %q: %w. Ask an administrator to grant the package account access in File Station > Properties > Permission, then retry. No ACL was changed", os.Geteuid(), f.Permission, name+"/"+subpath, err)
 		}
 	}
 	if errors.Is(err, sharedfolder.ErrNotFound) && f.Mode == "dedicated" && name == f.Name && os.Getenv("SYNOPKG_PKGINST_TEMP_DIR") != "" {
@@ -139,6 +131,9 @@ func nativeShareEnvironment(f *InstallSharedFolder, dataDir, root string) (strin
 	if err != nil {
 		return "", fmt.Errorf("[COMPOSE_SHARE_INVALID] selected shared folder %q is unavailable: %w", name, err)
 	}
+	if f.Picker == "folder" {
+		return "SYNOPKGLAND_MOUNT_" + f.Key + "=" + dotenvLiteral(source) + "\n", nil
+	}
 	// The administrator owns the volume/share directory entries. Never allow a
 	// symlink to turn a selected share name into an arbitrary host bind source.
 	for current := source; current != filepath.Clean(root) && current != "/" && current != "."; current = filepath.Dir(current) {
@@ -151,5 +146,3 @@ func nativeShareEnvironment(f *InstallSharedFolder, dataDir, root string) (strin
 }
 
 func dotenvLiteral(s string) string { return "'" + strings.ReplaceAll(s, "'", `\'`) + "'" }
-
-func folderAccess(path string, need uint32) error { return syscall.Access(path, need) }

@@ -7,6 +7,8 @@ import {sharedFolderMessages} from './i18n'
 export interface SharedFolderPermissionIssue {
  account:string
  share:string
+ subpath?:string
+ granted?:'none'|'read'|'write'
  required:'read'|'write'
 }
 export interface SharedFolderPermission {
@@ -34,11 +36,15 @@ function issueFrom(error:unknown):SharedFolderPermissionIssue|undefined {
  const d=error.details
  if(!d||typeof d!=='object'||!('account' in d)||!('share' in d)||!('required' in d))return
  if(typeof d.account!=='string'||!d.account||typeof d.share!=='string'||!d.share||(d.required!=='read'&&d.required!=='write'))return
- return {account:d.account,share:d.share,required:d.required}
+ return {account:d.account,share:d.share,required:d.required,...('subpath' in d&&typeof d.subpath==='string'?{subpath:d.subpath}:{}),...('granted' in d&&(d.granted==='read'||d.granted==='none'||d.granted==='write')?{granted:d.granted}:{})}
 }
 
 /** Shared instruction text for startup checks, I/O failures and custom App UI. */
 export function sharedFolderPermissionMessage(issue:SharedFolderPermissionIssue,locale='en'):string {
+ if(issue.subpath){
+  const path=issue.share+'/'+issue.subpath,missing=issue.required==='read'?'Read and Traverse':issue.granted==='read'?'Write':'Read, Write and Traverse'
+  return `Package account "${issue.account}" is missing ${missing} permission on folder "${path}". Open File Station > ${path} > Properties > Permission, select system internal user ${issue.account}, grant ${missing} and check parent folder traversal, then Retry`
+ }
  const m=sharedFolderMessages(locale)
  return format(m.steps!,{account:issue.account,folder:issue.share,access:m[issue.required]!},locale)
 }
@@ -51,7 +57,7 @@ export function createSharedFolderPermission(options:SharedFolderPermissionOptio
  let issues:SharedFolderPermissionIssue[]=[],checked:Promise<void>|undefined,inFlight:Promise<void>|undefined,generation=0
  function publish(next:SharedFolderPermissionIssue[]) {
   const unique=new Map<string,SharedFolderPermissionIssue>()
-  for(const issue of next)unique.set(JSON.stringify([issue.account,issue.share,issue.required]),issue)
+  for(const issue of next)unique.set(JSON.stringify([issue.account,issue.share,issue.required,issue.subpath]),issue)
   issues=[...unique.values()]
   for(const listener of listeners)listener(issues)
  }
@@ -59,7 +65,7 @@ export function createSharedFolderPermission(options:SharedFolderPermissionOptio
   if(inFlight)return inFlight
   const started=generation
   inFlight=shared.status().then(status=>{
-   const pending=status.folders.filter(f=>f.state==='pending'&&f.required!=='none').map(f=>({account:status.account,share:f.name,required:f.required as 'read'|'write'}))
+   const pending=status.folders.filter(f=>f.state==='pending'&&f.required!=='none').map(f=>({account:status.account,share:f.name,required:f.required as 'read'|'write',...(f.subpath?{subpath:f.subpath,granted:f.granted}: {})}))
    // A real I/O failure arriving during a check remains more recent evidence.
    if(replace&&started===generation)publish(pending)
    else if(pending.length)publish([...pending,...issues])

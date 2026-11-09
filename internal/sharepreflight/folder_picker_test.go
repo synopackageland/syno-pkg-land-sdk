@@ -2,6 +2,8 @@ package sharepreflight
 
 import (
 	"encoding/json"
+	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/sharedfolder"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -33,6 +35,10 @@ func TestSelectedChildPreflightDetectsACLAndStaleSource(t *testing.T) {
 	if os.Geteuid() != 0 {
 		if err = check(project, data, root); err == nil || !strings.Contains(err.Error(), "File Station") {
 			t.Fatalf("child denial: %v", err)
+		}
+		var permission *sharedfolder.PermissionError
+		if !errors.As(err, &permission) || permission.Subpath != "Projects/Deep" {
+			t.Fatalf("dialog lost child permission type: %v", err)
 		}
 	}
 	os.Chmod(source, 0700)
