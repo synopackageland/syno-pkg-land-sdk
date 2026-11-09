@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.53.27 (2026-11-09)
+
+- Keep quoted numeric-looking strings in Compose as strings after DSM rewrites the worker file without quotes. Values such as `"10"`, `"0755"`, `"true"`, `"yes"`, `"null"`, `"1e3"` or `"0x1F"` in `command`, `entrypoint`, `healthcheck.test`, environment values, labels and other string positions are written as `${SYNOPKGLAND_GID:+<value>}`, which Compose interpolates back to the exact text. Exec-form healthchecks such as `["CMD", "curl", "--max-time", "10", …]` no longer fail with `healthcheck.test.N must be a string`.
+- Canonical integers and `true`/`false` stay unchanged where the Compose schema accepts a number or boolean. Apps without numeric-looking strings keep byte-identical `docker-compose.yml`, override and lock.
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.26 (2026-11-09)
 
 - Add the container init for interactive console services (`compose.services.<service>.console`): account entry for the package UID (nss_wrapper, or `/etc/passwd` with sudo), HOME, `TMPDIR` on disk scratch, `/synopkgland/bin` on `PATH`, and owner-only modes for existing credential paths owned by the package UID (no creation, no symlinks, one log line for other owners). Ordinary Apps are unchanged.

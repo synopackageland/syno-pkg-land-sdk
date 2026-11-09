@@ -151,6 +151,28 @@ is an explicit build-host JSON map of registry names to HTTPS origins; it change
 metadata transport only, never the repository or runtime reference. Mirrors are
 a build operator trust decision. `check`/`inspect` remain offline.
 
+### Numeric-looking strings
+
+DSM rewrites `docker-compose.yml` before Compose reads it and drops the quotes
+of numeric-looking scalars, so a quoted `"10"` would reach Compose as the
+number 10. In an exec-form list Compose then refuses the project, for example
+`healthcheck.test.6 must be a string` for
+`test: ["CMD", "curl", "--max-time", "10", "http://127.0.0.1/alive"]`; as an
+environment value, `"0755"` or `"yes"` could change silently.
+
+The planner keeps every such string a string. A string value that YAML 1.1 or
+1.2 reads unquoted as a number, boolean or null (`"10"`, `"0755"`, `"true"`,
+`"yes"`, `"null"`, `"~"`, `"1e3"`, `"0x1F"`, `"1_000"`, `".5"`) is written as
+`${SYNOPKGLAND_GID:+10}`. DSM sees a nonnumeric scalar; Compose interpolation
+returns exactly `10` because `SYNOPKGLAND_GID` is always set in the runtime
+`.env`. This covers `command`, `entrypoint`, `healthcheck.test`, environment
+values, labels and every other string position. Canonical integers and
+`true`/`false` stay unchanged where the Compose schema accepts a number or
+boolean (environment and label values, sizes), because Compose turns them back
+into the same text. Apps without numeric-looking strings keep the same worker
+file, override and lock. Mapping keys and empty strings are unchanged. Apps keep
+writing ordinary quoted YAML; no workaround such as `CMD-SHELL` is needed.
+
 ## Support boundary
 
 | Feature | Current behavior |
@@ -834,8 +856,9 @@ feature does not guarantee arbitrary third-party App hooks preserve data.
 
 GPU support is an opt-in and requires DSM's native `video-driver` resource.
 The runtime defers the discovered constant group ID until Compose interpolation,
-so DSM's intermediate YAML rewrite cannot turn a numeric group string into an
-integer rejected by its Compose version. The manifest cannot supply that ID.
+as for [numeric-looking strings](#numeric-looking-strings), so DSM's
+intermediate YAML rewrite cannot turn a numeric group string into an integer
+rejected by its Compose version. The manifest cannot supply that ID.
 Native resource grant timing and a real hardware transcode require device
 acceptance; a successful build does not prove hardware acceleration works.
 The general DSM provider capability behavior above also applies to GPU packages.

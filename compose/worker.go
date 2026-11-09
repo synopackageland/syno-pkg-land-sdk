@@ -40,6 +40,9 @@ func workerYAML(raw []byte) ([]byte, error) {
 			if !ownedUser && !ownedMount && !ownedRuntimeOwner {
 				n.Value = strings.ReplaceAll(n.Value, "$", "$$")
 			}
+			if deferLiteral(n.Value, path) {
+				n.Value, n.Style = literalSentinel+n.Value+"}", 0
+			}
 		}
 	}
 	walk(&doc, nil)
