@@ -251,7 +251,7 @@ package. See [offering another package](../docs/install-another-package.md).
 `ctx.host.subscribe(event, listener)` returns `{status: 'subscribed', dispose}`
 when supported. Call the subscription's `dispose()` when its component unmounts;
 `ctx.host.dispose()` removes all subscriptions and cancels pending callbacks.
-Listeners receive no native event arguments. Subscription does not emit an
+Activation listeners receive no native event arguments. Subscription does not emit an
 initial notification.
 
 | HostEvent | Source and meaning |
