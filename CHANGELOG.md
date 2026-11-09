@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.53.15
+## 0.53.15 (2026-11-09)
 
 - Read executor status immediately when the lifecycle mailbox says the app is
   starting and its socket is not listening. Status probes, including authenticated

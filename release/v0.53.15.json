@@ -25,7 +25,7 @@
     "canonicalTaskDefinitionsUnchanged": true,
     "nasAcceptance": false,
     "rustCratePublished": false,
-    "validation": "Provisional patch version pending coordinator allocation. Passed related nonroot Go race tests for delegate, bridge, api, idgateway and portal, focused startup and authenticated-batch probes, Go vet, 328 related Vue/authorization/contract tests, 33 Node tests, frontend and Node typechecks/builds, Node dist comparison, two consumer tests plus NodeNext typecheck against the retained SDK tarball, seven metadata/timeout tests, four documentation-version tests, package inventories, generic source/package scans and private identifier scans of changed sources and both retained tarballs. No full gate, NAS acceptance, QEMU, Rust build, executor release rebuild, publication, tag or merge."
+    "validation": "SDK 0.53.15 is the confirmed patch version. Passed related nonroot Go race tests for delegate, bridge, api, idgateway and portal, focused startup and authenticated-batch probes, Go vet, 328 related Vue/authorization/contract tests, 33 Node tests, frontend and Node typechecks/builds, Node dist comparison, two consumer tests plus NodeNext typecheck against the retained SDK tarball, seven metadata/timeout tests, four documentation-version tests, package inventories, generic source/package scans and private identifier scans of changed sources and both retained tarballs. No full gate, NAS acceptance, QEMU, Rust build, executor release rebuild, publication, tag or merge."
   },
   "ui": {
     "builtAgainst": "0.23.5",
