@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {computed} from 'vue'
-import {Badge,Button,Callout,Form,FormItem,Input,PathDisplay,Select,SettingsRow,SettingsSection,Skeleton} from '@synopackageland/ui'
+import {Badge,Button,Callout,Form,FormItem,Input,PathDisplay,Select,SettingsRow,SettingsSection} from '@synopackageland/ui'
 import type {Context} from '../context'
 import type {CapabilityStatus} from './executor-setup'
 import {useScopeApproval} from './use-scope-approval'
@@ -35,7 +35,7 @@ defineExpose({refresh})
   <Callout v-else-if="failure&&!('confirm' in failure)" tone="danger" role="alert"><span class="executor-alert"><span>{{ failure.code==='session_ended'?copy.session:explain(failure)??copy.setupError }}<span v-if="recovery(failure)" class="executor-reason">{{ recovery(failure) }}</span><span v-if="failure.reason" class="executor-reason">{{ failure.reason }}</span></span><Button variant="secondary" size="sm" :disabled="busy" @click="refresh">{{ copy.retry }}</Button></span></Callout>
   <Callout v-if="lifecycle" tone="info" role="status">{{ lifecycleCopy(lifecycle,locale) }}</Callout>
   <template v-else>
-   <div v-if="!status&&!confirming&&!error" class="executor-summary"><SettingsRow :label="copy.status" data-placeholder-row><Skeleton width="5rem" height="20px" /></SettingsRow></div>
+   <div v-if="!status&&!confirming&&!error" class="executor-summary"><SettingsRow :label="copy.status" data-placeholder-row><span role="status">{{ copy.loading }}</span></SettingsRow></div>
    <div v-if="(status||confirming)&&!consent" class="executor-summary">
     <SettingsRow :label="copy.status"><span role="status" :data-executor-status="state"><Badge :tone="badge.tone">{{ badge.text }}</Badge></span></SettingsRow>
     <SettingsRow v-if="status?.reason&&(status.state==='blocked'||status.state==='unsupported')" :label="copy.details"><template v-if="explain(status)">{{ explain(status) }}<span class="executor-reason">{{ status.reason }}</span></template><template v-else>{{ status.reason }}</template><span v-if="recovery(status)" class="executor-reason">{{ recovery(status) }}</span></SettingsRow>

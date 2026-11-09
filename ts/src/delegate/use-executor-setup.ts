@@ -1,5 +1,12 @@
 import {inject,ref,type InjectionKey,type Ref} from 'vue'
 import type {CapabilityStatus,ExecutorSetup} from './executor-setup'
+import {appLifecycle} from './lifecycle'
+// A status provider may reject with the lifecycle code instead of returning
+// a CapabilityStatus. Keep the same display and background retry in either case.
+export function lifecycleStatus(error:unknown):CapabilityStatus|undefined{
+ const lifecycle=appLifecycle(error)
+ return lifecycle?{state:'blocked',code:lifecycle==='stopped'?'APP_STOPPED':'APP_STARTING'}:undefined
+}
 export const ExecutorSetupKey:InjectionKey<ExecutorSetup>=Symbol('executor-setup')
 // Whether ExecutorApproval preloads these pages: mounted, hidden, while the
 // executor's first status is read. A page defers what would show outside

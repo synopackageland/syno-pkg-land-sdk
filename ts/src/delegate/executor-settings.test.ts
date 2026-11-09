@@ -35,6 +35,7 @@ test('the panel shows loading until the first status arrives',async()=>{
   app.mount(root);await settle()
   expect(root.querySelector('[aria-busy=true] [data-placeholder-row]')).not.toBeNull()
   expect(root.querySelector('[data-executor-status]')).toBeNull()
+  expect(root.querySelector('[role="status"]')?.textContent).toBe(delegateCopy('en').loading)
   answer({state:'ready'});await settle()
   expect(root.querySelector('[data-placeholder-row]')).toBeNull()
   expect(root.querySelector('[data-executor-status="ready"]')).not.toBeNull()

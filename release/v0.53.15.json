@@ -1,0 +1,54 @@
+{
+  "version": "0.53.15",
+  "executorVersion": "0.53.5",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.15",
+    "@synopackageland/app": "0.53.15",
+    "syno-pkg-land-app": "0.53.15",
+    "synopkgland_app": "0.53.15"
+  },
+  "executorDigests": {
+    "x86_64": "78125a96c428dd3322056669d27d7269dfcac78057a34f22d1bac9741393a957",
+    "aarch64": "ed9e21ffd6f6f46927eddd6a11a68ccd201f4ebd680846b81d266845edc180da",
+    "armv7": "21787da130a653f66fb6a71c859868c1c144cd184d896c0df44f87eb44f7c0ca",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Provisional patch version pending coordinator allocation. Passed related nonroot Go race tests for delegate, bridge, api, idgateway and portal, focused startup and authenticated-batch probes, Go vet, 328 related Vue/authorization/contract tests, 33 Node tests, frontend and Node typechecks/builds, Node dist comparison, two consumer tests plus NodeNext typecheck against the retained SDK tarball, seven metadata/timeout tests, four documentation-version tests, package inventories, generic source/package scans and private identifier scans of changed sources and both retained tarballs. No full gate, NAS acceptance, QEMU, Rust build, executor release rebuild, publication, tag or merge."
+  },
+  "ui": {
+    "builtAgainst": "0.23.5",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.23.5.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Probe executor status without waiting for startup socket readiness, including authenticated request batches",
+    "Preserve working request startup waits and protected approval diagnostics",
+    "Display thrown lifecycle refusals as starting or stopped and automatically refresh executor settings, approval and notice",
+    "Show localized loading text while the first settings status is unknown",
+    "Reuse the immutable executor/v0.53.5 release and its six digests; executor module and canonical tasks are unchanged"
+  ],
+  "npmArtifacts": {
+    "synopackageland-app-0.53.15.tgz": {
+      "sha256": "1b97849376b956666339d8acd4bcaef1f7af4549b11485343b26e3ef32d0bbb3"
+    },
+    "synopackageland-sdk-0.53.15.tgz": {
+      "sha256": "39a376eadf1aff19cf10f54f2bd72102dfff9b85c26efb42cf1198ed013a8edd"
+    }
+  }
+}

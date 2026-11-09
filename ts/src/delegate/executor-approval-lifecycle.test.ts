@@ -90,3 +90,32 @@ test('a ready executor is not read again on a timer',async()=>{
  await vi.advanceTimersByTimeAsync(120_000)
  expect(pkg.reads()).toBe(reads)
 })
+
+for(const [name,component,props] of [
+ ['ExecutorSettings',ExecutorSettings,{}],
+ ['ExecutorApproval',ExecutorApproval,{}],
+ ['ExecutorNotice',ExecutorNotice,{ctx:{user:{isAdmin:true}}}],
+] as const)test(`${name}: a thrown starting status recovers without an alert or approval`,async()=>{
+ let reads=0
+ const setup:ExecutorSetup={fileDelegate:false,async status(){if(++reads<3)throw {code:'APP_STARTING'};return ready},async authorize(){throw Error('must not approve')},async control(){return ready}}
+ const root=await mount(component,props,setup)
+ expect(text(root)).toContain(lifecycleCopy('starting','en'))
+ expect(root.querySelector('[role="alert"],#delegate-password')).toBeNull()
+ await vi.advanceTimersByTimeAsync(12_000)
+ expect(text(root)).not.toContain(lifecycleCopy('starting','en'))
+ expect(reads).toBe(3)
+ await vi.advanceTimersByTimeAsync(60_000)
+ expect(reads).toBe(3)
+})
+
+test('ExecutorSettings: a starting scope read keeps the status and rechecks in the background',async()=>{
+ let reads=0
+ const setup:ExecutorSetup={async status(){return ready},async authorize(){return ready},async control(){return ready}}
+ const call=vi.fn(async()=>{if(++reads<2)throw {code:'APP_STARTING'};return {}})
+ const root=await mount(ExecutorSettings,{ctx:{call}},setup)
+ expect(text(root)).toContain(lifecycleCopy('starting','en'))
+ expect(root.querySelector('[role="alert"],#delegate-password')).toBeNull()
+ await vi.advanceTimersByTimeAsync(12_000)
+ expect(root.querySelector('[data-executor-status="ready"]')).not.toBeNull()
+ expect(call).toHaveBeenCalledTimes(2)
+})

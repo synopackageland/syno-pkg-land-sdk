@@ -18,7 +18,7 @@ import {isFullPage,type Context} from '../context'
 import ExecutorSettings from './ExecutorSettings.vue'
 import ExecutorConsent from './ExecutorConsent.vue'
 import type {CapabilityState,CapabilityStatus} from './executor-setup'
-import {ExecutorPreloadKey,ExecutorSetupKey,confirmFailure} from './use-executor-setup'
+import {ExecutorPreloadKey,ExecutorSetupKey,confirmFailure,lifecycleStatus} from './use-executor-setup'
 import {delegateCopy} from './copy'
 import {appLifecycle,lifecycleCopy} from './lifecycle'
 import {useLifecycleRetry} from './use-lifecycle-retry'
@@ -34,7 +34,7 @@ let disposed=false,stopReopen:(()=>void)|undefined
 // A later check keeps what is shown until it answers, so the content stays mounted.
 async function check(){
  try{const next=await setup!.status();if(!disposed)show(next)}
- catch{if(!disposed){current.value=undefined;state.value='blocked'}}
+ catch(e){if(!disposed){const next=lifecycleStatus(e);if(next)show(next);else{current.value=undefined;state.value='blocked'}}}
 }
 const lifecycle=computed(()=>appLifecycle(current.value))
 const preloads=computed(()=>!!props.preload&&!!setup&&(state.value==='ready'||state.value==='checking'))
