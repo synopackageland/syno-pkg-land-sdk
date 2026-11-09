@@ -8,6 +8,6 @@ const installed=JSON.parse(readFileSync(resolve(__dirname,'../node_modules/@syno
 // The phone shell and AppTabBar require the current UI component contract.
 test('the Vue entry supports the UI native phone shell and is tested against stable UI',()=>{
  expect(pkg.peerDependencies['@synopackageland/ui']).toBe('>=0.23.5 <0.26.0')
- expect(pkg.devDependencies['@synopackageland/ui']).toBe('0.23.5')
- expect(installed.version).toBe('0.23.5')
+ expect(pkg.devDependencies['@synopackageland/ui']).toBe('~0.25.4')
+ expect(installed.version).toBe('0.25.4')
 })

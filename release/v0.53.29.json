@@ -1,0 +1,52 @@
+{
+  "version": "0.53.29",
+  "executorVersion": "0.53.6",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.29",
+    "@synopackageland/app": "0.53.29",
+    "syno-pkg-land-app": "0.53.29",
+    "synopkgland_app": "0.53.29"
+  },
+  "executorDigests": {
+    "x86_64": "e77dbf846ea4555355fa15ee3a6ca3b20e1b1aaa9768321243589d9ec15ffabe",
+    "aarch64": "741a7c37757b56b3acc304cef56de5e59c1ca9278a83be0f1e1ff1ad17b24dd6",
+    "armv7": "f0a3059b982d0210621254adf7d1a3343d2a89d114e053e5b3bd646898293b1a",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "TypeScript shell tests pass with both AppShell fill rules rewritten; jsdom checks the nth-child rule by its compiled text because its cascade cannot evaluate :nth-child(... of S). In Chromium, the shipped rules and the earlier selectors give the same display, flex and min-height for every element across 10 fill layouts (fill first, middle, last, nested, hidden, two fills, empty and hidden nodes), and a trace of a 253-element fill page restyles 46 elements instead of 248 after one deep insert. Vitest, vue-tsc and the browser shell, picker and portal checks pass against @synopackageland/ui 0.25.4. Both npm packages are built and packed for content scans. No full gate matrix, qemu, publication or NAS acceptance is implied."
+  },
+  "ui": {
+    "builtAgainst": "0.25.4",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.25.4.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "AppShell fill pages: keep later top-level children at their own size with :nth-child(n + 2 of :not(:empty, [hidden])) instead of a later-sibling rule, and ask each child about its siblings instead of .app-page-content:has(...), so a local change no longer restyles the whole page; computed styles are unchanged.",
+    "Build and test the Vue entry against @synopackageland/ui 0.25.4; the peer range is unchanged.",
+    "Reuse executor 0.53.6 unchanged."
+  ],
+  "npmArtifacts": {
+    "synopackageland-sdk-0.53.29.tgz": {
+      "sha256": "1ac879332280798fe68fc888cfc824b20b6655ceb405a78212b3a5f9d9fcc8df"
+    },
+    "synopackageland-app-0.53.29.tgz": {
+      "sha256": "761d692a639875f635cde3dce1b0e6411970841d75d5fc06951adc5f37304ac0"
+    }
+  }
+}
