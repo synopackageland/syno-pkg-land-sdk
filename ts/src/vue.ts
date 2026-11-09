@@ -1,7 +1,7 @@
 // Vue entry: the headless entry plus components and composables.
 export * from './index'
 export {ExecutorSetupKey, useExecutorSetup, ExecutorPreloadKey, useExecutorPreload} from './delegate/use-executor-setup'
-export {createSession, type IdentitySession, type SessionSubject} from './identity/session'
+export {createSession, type IdentitySession, type SessionOptions, type SessionSubject} from './identity/session'
 export {useNasRequest} from './nas/use-request'
 export {default as AppShell} from './shell/AppShell.vue'
 export {default as PageActions} from './shell/PageActions.vue'

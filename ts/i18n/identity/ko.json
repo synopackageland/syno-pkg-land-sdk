@@ -12,6 +12,7 @@
   "signIn": "로그인",
   "otherAccount": "다른 계정 사용",
   "continueDSM": "DSM으로 계속",
+  "retry": "재시도",
   "errors": {
     "rate_limited": "로그인 시도 횟수가 너무 많습니다. 1분 후 다시 시도하십시오",
     "https_required": "로그인하려면 HTTPS로 이 앱을 여십시오",

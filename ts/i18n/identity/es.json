@@ -12,6 +12,7 @@
   "signIn": "Iniciar sesión",
   "otherAccount": "Usar otra cuenta",
   "continueDSM": "Continuar con DSM",
+  "retry": "Volver a intentar",
   "errors": {
     "rate_limited": "Demasiados intentos de inicio de sesión. Espere un minuto e inténtelo de nuevo",
     "https_required": "Abra esta aplicación con HTTPS para iniciar sesión",

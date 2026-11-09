@@ -6,14 +6,26 @@ import {appDenial,appRefusal,type AppDenial} from '../authorization/refusal'
 import {readDsmHttpsURL} from '../dsm/https'
 
 export interface SessionSubject {user: string; uid: string; expiresAt: string}
-export function createSession(ctx: Context) {
+export interface SessionOptions {
+ /** false: this App never uses standalone identity (DSM session only); skip the identity.status probe. */
+ identity?: boolean
+ /** Delays (ms) between automatic re-probes after a failed identity.status. Default 2s, 5s, 15s, 30s. */
+ retryDelays?: readonly number[]
+}
+const defaultRetryDelays = [2000, 5000, 15000, 30000] as const
+export function createSession(ctx: Context, options: SessionOptions = {}) {
  const deniedCode = ref<AppDenial>()
  const denied = computed(() => deniedCode.value ? {code:deniedCode.value,...appRefusal({code:deniedCode.value},ctx.locale,ctx.displayName)!} : undefined)
  const enabled = ref(false)
  const ready = ref(false)
  const subject = ref<SessionSubject>()
  const notice = ref<IdentityNotice>('')
+ // identity.status could not be read (timeout, 5xx, network, restarting). Never means "enabled".
+ const unavailable = ref(false)
  let disposed = false
+ let probe: ReturnType<typeof setTimeout> | undefined
+ let probing: Promise<void> | undefined
+ let attempt = 0
  let revision = 0
  let expiry: ReturnType<typeof setTimeout> | undefined
  let poll: ReturnType<typeof setTimeout> | undefined
@@ -40,11 +52,13 @@ export function createSession(ctx: Context) {
    catch(e) {if (!disposed && revision === current && !recordDenial(e)) clear('expired')}
   }, Math.min(60000, remaining))
  }
- async function start() {
+ async function status() {
+  clearTimeout(probe)
   try {
    const status = await identityCall<{enabled: boolean}>('identity.status')
    if (disposed) return
-   deniedCode.value = undefined
+   deniedCode.value = undefined; unavailable.value = false; attempt = 0
+   if (notice.value === 'unavailable') notice.value = ''
    enabled.value = status.enabled === true
    if (enabled.value) {
     try {accept(await identityCall<SessionSubject>('identity.session', {bootstrap: true}))}
@@ -52,11 +66,31 @@ export function createSession(ctx: Context) {
    }
   } catch (e) {
    if(disposed)return
-   // Existing templates have no identity transport and retain their DSM shell.
    const code = (e as {code?: string})?.code
-   enabled.value = !appDenial(e) && !['unknown_method', 'session_required'].includes(code || '')
-   if (enabled.value) notice.value = 'unavailable'
+   // Existing templates have no identity transport and retain their DSM shell;
+   // a refusal keeps the DSM shell with its denial.
+   if (appDenial(e) || ['unknown_method', 'session_required'].includes(code || '')) {unavailable.value = false; return}
+   // Any other failure is not an answer: keep the App login off (fail closed to
+   // the DSM shell; the backend still enforces its own session) and re-probe.
+   unavailable.value = true
+   if (!enabled.value) notice.value = 'unavailable'
+   const delays = options.retryDelays ?? defaultRetryDelays
+   if (attempt < delays.length) probe = setTimeout(() => {void retry()}, delays[attempt++])
   } finally {if (!disposed) ready.value = true}
+ }
+ function run() {
+  if (!probing) probing = status().finally(() => {probing = undefined})
+  return probing
+ }
+ async function start() {
+  if (options.identity === false) {ready.value = true; return}
+  attempt = 0
+  return run()
+ }
+ /** Read identity.status again now (e.g. a Retry button while unavailable). */
+ function retry() {
+  if (disposed || options.identity === false) return Promise.resolve()
+  return run()
  }
  async function call<T = unknown>(method: string, params?: Record<string, unknown>): Promise<T> {
   const current = revision
@@ -98,11 +132,11 @@ export function createSession(ctx: Context) {
  async function logout() {
   await identityCall('identity.logout'); if (!disposed) clear()
  }
- function dispose() {disposed = true; clear()}
+ function dispose() {disposed = true; clearTimeout(probe); clear()}
  /** Best-effort HTTPS DSM link for LoginPage; unknown/ordinary users never query PortInfo. */
  function readHttpsURL(pageURL: string, signal?: AbortSignal) {
   return readDsmHttpsURL(ctx, pageURL, {signal, keepLaunchApp: true})
  }
- return {enabled, ready, subject, notice, denied, start, call, batch, login, bootstrap, logout, dispose, readHttpsURL}
+ return {enabled, ready, unavailable, subject, notice, denied, start, retry, call, batch, login, bootstrap, logout, dispose, readHttpsURL}
 }
 export type IdentitySession = ReturnType<typeof createSession>

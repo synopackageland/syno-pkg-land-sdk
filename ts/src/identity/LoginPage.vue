@@ -55,6 +55,15 @@ async function useDSM() {
  catch (e) {if (!disposed) error.value = message(e)}
  finally {if (!disposed) busy.value = false}
 }
+// Only a successful {enabled:true} offers the App's own sign-in; otherwise this page
+// never shows an account/password form (DSM-only App, or identity.status unreadable).
+const offersSignIn = computed(() => props.session.enabled.value && !props.session.denied.value)
+const retrying = ref(false)
+async function retry() {
+ if (retrying.value) return
+ retrying.value = true
+ try {await props.session.retry()} finally {if (!disposed) retrying.value = false}
+}
 function restart() {password.value = ''; otp.value = ''; needsOTP.value = false; error.value = ''}
 onUnmounted(() => {disposed = true; password.value = ''; otp.value = ''})
 </script>
@@ -69,8 +78,11 @@ onUnmounted(() => {disposed = true; password.value = ''; otp.value = ''})
    </Callout>
    <Callout v-if="session.denied.value" tone="danger"><span role="alert">{{ session.denied.value.message }}</span></Callout>
    <p v-else-if="session.notice.value" role="status">{{ copy.notices[session.notice.value] }}</p>
+   <FormActions v-if="!session.enabled.value && session.unavailable.value && !session.denied.value">
+    <Button variant="primary" :disabled="retrying" data-identity-retry @click="retry">{{ copy.retry }}</Button>
+   </FormActions>
    <Callout v-if="error&&!session.denied.value" tone="danger" :title="copy.failedTitle"><span role="alert">{{ error }}</span></Callout>
-   <Form v-if="!session.denied.value" @submit.prevent="submit">
+   <Form v-if="offersSignIn" @submit.prevent="submit">
     <FormItem :label="copy.account"><Input v-model="account" autocomplete="username" :disabled="busy || needsOTP || !secure" /></FormItem>
     <FormItem v-if="!needsOTP" :label="copy.password"><Input v-model="password" type="password" autocomplete="current-password" :disabled="busy || !secure" /></FormItem>
     <template v-else>

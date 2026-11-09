@@ -754,6 +754,17 @@ context. Otherwise it gives instructions to reopen DSM over HTTPS and ask an
 administrator for the address. Both password sign-in and Continue with DSM
 remain disabled on HTTP, including after dismissing the warning.
 
+`createSession(ctx).start()` reads `identity.status`. Only a successful
+`{enabled: true}` turns on the App's own sign-in (`enabled`). `unknown_method`,
+`session_required` and entry refusals keep the DSM shell. Any other failure
+(timeout, 5xx, network, `business_unavailable`, package restarting) keeps
+`enabled` false, sets `unavailable` and `notice: 'unavailable'`, and re-probes
+after 2, 5, 15 and 30 seconds (`retryDelays` overrides); `retry()` probes again
+at once. The backend still enforces its own session in the meantime. LoginPage
+renders the account form only while `enabled` is true and offers Retry while
+`unavailable`. An App that uses only the DSM session passes
+`createSession(ctx, {identity: false})` to skip the probe.
+
 ```vue
 <AppShell v-model="page" :ctx="ctx" :locale="ctx.locale" :pages="pages" :denied="accessError && {code: accessError.code}" />
 <AppShell v-model="page" :ctx="ctx" :locale="ctx.locale" :pages="pages" :denied="login.denied.value" />

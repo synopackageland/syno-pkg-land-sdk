@@ -12,6 +12,7 @@
   "signIn": "Se connecter",
   "otherAccount": "Utiliser un autre compte",
   "continueDSM": "Continuer avec DSM",
+  "retry": "Réessayer",
   "errors": {
     "rate_limited": "Trop de tentatives de connexion. Patientez une minute et réessayez",
     "https_required": "Ouvrez cette application en HTTPS pour vous connecter",

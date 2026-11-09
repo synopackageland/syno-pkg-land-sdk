@@ -12,6 +12,7 @@
   "signIn": "Sign in",
   "otherAccount": "Use another account",
   "continueDSM": "Continue with DSM",
+  "retry": "Retry",
   "errors": {
     "rate_limited": "Too many sign-in attempts. Wait one minute and try again",
     "https_required": "Open this app using HTTPS to sign in",
