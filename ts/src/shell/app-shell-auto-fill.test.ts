@@ -113,7 +113,18 @@ test('the end space follows the bar as it comes and goes',async()=>{
 test("the App's wrappers pass the height to the SettingsPage without CSS of their own",async()=>{
  const id='data-v-auto'
  const source=readFileSync('src/shell/AppShell.vue','utf8')
- const css=parse(source).descriptor.styles.filter(style=>style.scoped).map(style=>compileStyle({source:style.content,filename:'AppShell.vue',id,scoped:true}).code).join('\n')
+ const compiled=parse(source).descriptor.styles.filter(style=>style.scoped).map(style=>compileStyle({source:style.content,filename:'AppShell.vue',id,scoped:true}).code).join('\n')
+ // jsdom's cascade gets `:nth-child(… of S)` wrong (it drops the grow of the
+ // child after the first one that draws), so that rule is checked here by its
+ // text and by test/browser/shell-fill-rules.mjs in Chromium.
+ const later=`.app-page-fill .app-page-content[${id}] > :not(:empty, [hidden]):where(:nth-child(n + 2 of :not(:empty, [hidden]))) { flex: none;`
+ expect(compiled.replace(/>\s+/g,'> ')).toContain(later)
+ const css=compiled.split('\n').filter(line=>!line.includes(':nth-child(n + 2 of ')).join('\n')
+ expect(css).not.toBe(compiled)
+ // No later-sibling rule without a narrowed subject, and no `.app-page-content:has(...)`.
+ const rules=compiled.replace(/\/\*[\s\S]*?\*\//g,'')
+ expect(rules).not.toMatch(/:not\(:empty, \[hidden\]\) ~ \*/)
+ expect(rules).not.toMatch(/\.app-page-content(\[[^\]]+\])?:has\(/)
  const sheet=document.createElement('style');sheet.textContent=css;document.head.append(sheet)
  const page=document.createElement('div');page.className='app-page app-page-fill';page.setAttribute(id,'')
  page.innerHTML=`<div class="app-page-content" ${id}><p class="note">Note</p><div class="app"><div class="callout">Error</div><div data-page="settings"><div class="ui-section-tabs-fill" data-ui-section-tabs-fill><nav></nav><div class="ui-tab-panel"><div data-ui-settings-page></div></div></div></div><div data-page="other" hidden><div data-ui-settings-page></div></div></div><div class="ui-section-tabs-fill" data-ui-section-tabs-fill><nav></nav><div class="ui-tab-panel about"><p>About</p></div></div></div>`

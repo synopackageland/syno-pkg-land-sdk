@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.53.29 (2026-11-10)
+
+- AppShell fill pages no longer make Chrome restyle the whole page on a local change. The rule that keeps later top-level children at their own size picks each child after the first one that draws something (`:nth-child(n + 2 of …)`) instead of a later-sibling rule, and the rule for the nodes beside a `SettingsPage` or `SectionTabs fill` asks each child about its siblings instead of `.app-page-content:has(…)`. Computed styles are unchanged across the tested layouts (fill first, middle, last, nested, hidden, two fills, empty and hidden nodes); in a Chromium trace of a 253-element fill page, inserting one row inside the `SettingsPage` restyles 46 elements instead of 248. Apps that rewrote these two rules in their own build can drop that rewrite.
+- The Vue entry is built and tested against `@synopackageland/ui` 0.25.4; the peer range stays `>=0.23.5 <0.26.0`.
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.28 (2026-11-10)
 
 - `synopkgland container fix-permissions` and the console start now cap credential files at 0600 (the exec bit and special bits are removed; a narrower mode such as 0400 stays) and credential directories at 0700. Before, only group/other bits were cleared, so a key that a folder ACL created as 0777 ended at 0700. HOME, the mounted folder, `*.pub` and `known_hosts` are not changed; paths are still never created, symlinks never followed and other owners' files left with one log line.

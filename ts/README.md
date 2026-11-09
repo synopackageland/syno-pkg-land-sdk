@@ -399,7 +399,10 @@ the footer at the bottom edge of the window, and only the `SettingsPage` body
 scrolls (a tab that is not a `SettingsPage` scrolls under the strip). This
 works through the App's own wrappers, such as a template's
 `.integration-app > [data-page]`, with no CSS in the App. A page that shows a
-settings footer has no space under it, whether or not it sits in tabs.
+settings footer has no space under it, whether or not it sits in tabs. The
+shell's fill rules use no sibling or `:has()` rule that restyles the whole page
+when something under it changes, so an App needs no CSS of its own to replace
+them.
 
 `fill: true` makes any page fill: the page does not scroll and the content
 scrolls itself (a treemap, a table paged by height, a log viewer). `fill: false`

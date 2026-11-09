@@ -405,10 +405,14 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
 .app-page-fill .app-notices { flex: 0 0 auto; }
 .app-page-fill .app-page-content { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; min-height: 0; }
 /* The first child that draws something takes the height; other nodes in the
-   slot (an empty or hidden anchor, a toast host) keep their own size. */
+   slot (an empty or hidden anchor, a toast host) keep their own size. The
+   third rule picks each child after the first one that draws something; an
+   empty or hidden one already has flex: none from the first rule. Not
+   `:not(:empty, [hidden]) ~ *`: a sibling rule with nothing to narrow its
+   subject makes Chrome restyle every later child's subtree on any insert. */
 .app-page-fill .app-page-content > :deep(*) { flex: none; min-width: 0; }
 .app-page-fill .app-page-content > :deep(:not(:empty, [hidden])) { flex: 1 1 0%; min-height: 0; }
-.app-page-fill .app-page-content > :deep(:not(:empty, [hidden]) ~ *) { flex: none; }
+.app-page-fill .app-page-content > :deep(:not(:empty, [hidden]):where(:nth-child(n + 2 of :not(:empty, [hidden])))) { flex: none; }
 /* Notices share the header's padding and scroll with the page; PageContent
    spaces them from the header and the content. */
 .app-notices { display: flex; flex-direction: column; gap: var(--ui-space-2, 8px); }
@@ -440,8 +444,12 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
    a flex column taking the room its siblings leave, so the App needs no CSS to
    pass the height down. A hidden wrapper (v-show, hidden) stays hidden. */
 .app-page-fill .app-page-content :deep(:not([hidden], [data-ui-section-tabs-fill], [data-ui-settings-page]):has([data-ui-section-tabs-fill], [data-ui-settings-page])) { display: flex; flex: 1 1 0%; flex-direction: column; min-width: 0; min-height: 0; }
-/* Its other top-level nodes keep their own size instead of sharing the height. */
-.app-page-fill .app-page-content:has([data-ui-section-tabs-fill], [data-ui-settings-page]) > :deep(:not([data-ui-section-tabs-fill], [data-ui-settings-page]):not(:has([data-ui-section-tabs-fill], [data-ui-settings-page]))) { flex: none; }
+/* Its other top-level nodes keep their own size instead of sharing the height:
+   a child before or after the one that is or holds the component. Asked of the
+   child, not as `.app-page-content:has(...) > ...`, which restyles the whole
+   page whenever anything under it is inserted. Same elements, same
+   specificity. */
+.app-page-fill .app-page-content > :deep(:not([data-ui-section-tabs-fill], [data-ui-settings-page]):not(:has([data-ui-section-tabs-fill], [data-ui-settings-page])):is(:has(~ :is([data-ui-section-tabs-fill], [data-ui-settings-page]), ~ * :is([data-ui-section-tabs-fill], [data-ui-settings-page])), :is([data-ui-section-tabs-fill], [data-ui-settings-page], :has([data-ui-section-tabs-fill], [data-ui-settings-page])) ~ *)) { flex: none; }
 /* A tab that is not a SettingsPage scrolls under the strip. */
 .app-page-fill .app-page-content :deep(.ui-section-tabs-fill > .ui-tab-panel:not(:has(> [data-ui-settings-page]))) { overflow-y: auto; overscroll-behavior: contain; }
 </style>
