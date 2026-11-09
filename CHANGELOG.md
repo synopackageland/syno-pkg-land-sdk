@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.53.17 (unreleased)
+## 0.53.17 (2026-11-09)
 
 - Fix: a failed `identity.status` probe (timeout, 5xx, network, `business_unavailable`,
   package restarting) no longer turns on the App's own sign-in. `createSession` keeps

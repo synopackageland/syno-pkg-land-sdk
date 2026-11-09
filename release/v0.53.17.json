@@ -25,7 +25,7 @@
     "canonicalTaskDefinitionsUnchanged": true,
     "nasAcceptance": false,
     "rustCratePublished": false,
-    "validation": "Passed 27 identity frontend tests (session, LoginPage HTTPS/HTTP) plus 32 related shell/refusal/entry/style tests, frontend typecheck, and generated version/manifest checks. All SDK package versions are 0.53.17; companion CLI is unchanged at 0.52.11. Reuse the unchanged immutable executor release and its six digests. No full gate, NAS acceptance, Rust build, executor rebuild, publication or tag."
+    "validation": "Passed 189 frontend identity and shell tests (15 files: session, LoginPage HTTPS/HTTP, shell/refusal/entry/style), frontend typecheck, generated version/manifest checks, documentation version check (73 files), repository and both prepared-package/archive generic internal-content scans, and npm view plus raw registry metadata checks for both published packages. All SDK package versions are 0.53.17; companion CLI is unchanged at 0.52.11. Reuse the unchanged immutable executor release and its six digests. No full gate, NAS acceptance, Rust build or executor rebuild."
   },
   "ui": {
     "builtAgainst": "0.23.5",
@@ -43,6 +43,14 @@
     "LoginPage never renders the account/password form unless identity is enabled; it offers Retry while the probe is unavailable",
     "Reuse the immutable executor/v0.53.5 release and its six digests"
   ],
+  "npmArtifacts": {
+    "synopackageland-sdk-0.53.17.tgz": {
+      "sha256": "c9538843b2aa40d429869fe789a3ea9620ad7b700f915f92d888d959bb50856c"
+    },
+    "synopackageland-app-0.53.17.tgz": {
+      "sha256": "dfbb0608d9a3192a3e83aa277f9fc1d597804b798f4bcf368fad7da61141ceaa"
+    }
+  },
   "companionCLI": {
     "version": "0.52.11",
     "tarball": "synopackageland-cli-0.52.11.tgz",
