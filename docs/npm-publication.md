@@ -1,7 +1,7 @@
 # Preparing npm releases
 
 After updating the matching Node/frontend package metadata, lockfiles and Rust
-crate version, run `npm --prefix node ci` and `node scripts/sdk-version.mjs`.
+crate version, run `pnpm --dir node install` and `node scripts/sdk-version.mjs`.
 The version generator updates the Node and Python version sources and rebuilds
 the committed `node/dist` payload, including inferred declaration literals.
 Commit those generated files with the metadata. Do not hand-edit build output.
@@ -12,8 +12,8 @@ Python ships source directly; its generated `_version.py` is covered by
 `sdk-version.mjs --check`. Rust uses Cargo's package version at compile time and
 the frontend's build output is not committed to the Go module.
 
-Run `npm run gates` for basic checks before packing. Extended checks are optional
-and require `npm run gates:full` when explicitly requested. Prepare the gated archive in a new
+Run `pnpm run gates` for basic checks before packing. Extended checks are optional
+and require `pnpm run gates:full` when explicitly requested. Prepare the gated archive in a new
 private staging directory using `python3 scripts/prepare-npm-publish.py ARCHIVE DESTINATION`.
 The command rejects unsafe archive members and local dependency references,
 removes installation-only manifest fields, and verifies that repacking preserves
@@ -71,7 +71,7 @@ Before packing a release:
 3. Run `node --test scripts/executor-manifest.test.mjs` and
    `node scripts/executor-manifest.mjs --check`. The optional full gate also
    compares both builds with the declared digests only when explicitly requested
-   using `npm run gates:full`. Basic validates the committed manifest without
+   using `pnpm run gates:full`. Basic validates the committed manifest without
    rebuilding the executor matrix. Inspect the actual npm tarball and Go module archive for the manifest.
 4. Publish/tag only after release approval. Consumers lock npm integrity and Go
    module sums; the CLI reads the manifest from the resolved SDK module and

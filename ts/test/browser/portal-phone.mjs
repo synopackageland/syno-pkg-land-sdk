@@ -13,7 +13,7 @@ import {mkdirSync} from 'node:fs'
 import {fileURLToPath} from 'node:url'
 import {join} from 'node:path'
 import {createServer} from 'vite'
-const playwright=await import('playwright-core').catch(()=>{console.error('portal phone: run npm i --no-save playwright-core@1.58.2 first');process.exit(2)})
+const playwright=await import('playwright-core').catch(()=>{console.error('portal phone: run pnpm add --save-dev playwright-core first');process.exit(2)})
 const here=fileURLToPath(new URL('.',import.meta.url))
 const at=process.argv.indexOf('--shots'),shots=at<0?undefined:process.argv[at+1]
 const engine=process.argv.includes('--browser')?process.argv[process.argv.indexOf('--browser')+1]:'chromium'

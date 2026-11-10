@@ -10,7 +10,7 @@ import {fileURLToPath} from 'node:url'
 import {mkdirSync} from 'node:fs'
 import {join} from 'node:path'
 
-const {chromium}=await import('playwright-core').catch(()=>{console.error('shell layout: run npm i --no-save playwright-core@1.58.2 first');process.exit(2)})
+const {chromium}=await import('playwright-core').catch(()=>{console.error('shell layout: run pnpm add --save-dev playwright-core first');process.exit(2)})
 const here=fileURLToPath(new URL('.',import.meta.url))
 const arg=name=>{const at=process.argv.indexOf(name);return at>0?process.argv[at+1]:undefined}
 const shots=arg('--shots'),tag=arg('--tag')??''

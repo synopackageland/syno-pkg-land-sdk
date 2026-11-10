@@ -25,7 +25,7 @@ export function checkNodeDist(root = fileURLToPath(new URL('../', import.meta.ur
 if (import.meta.url === pathToFileURL(resolve(process.argv[1] ?? '')).href) {
   const changed = checkNodeDist()
   if (changed.length) {
-    console.error(`node/dist differs from a fresh build: ${changed.join(', ')}; run npm --prefix node run build`)
+    console.error(`node/dist differs from a fresh build: ${changed.join(', ')}; run pnpm --dir node run build`)
     process.exitCode = 1
   }
 }

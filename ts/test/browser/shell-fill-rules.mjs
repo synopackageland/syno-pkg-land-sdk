@@ -9,7 +9,7 @@ import {readFileSync} from 'node:fs'
 import {fileURLToPath} from 'node:url'
 import {compileStyle,parse} from '@vue/compiler-sfc'
 
-const {chromium}=await import('playwright-core').catch(()=>{console.error('shell fill rules: run npm i --no-save playwright-core@1.58.2 first');process.exit(2)})
+const {chromium}=await import('playwright-core').catch(()=>{console.error('shell fill rules: run pnpm add --save-dev playwright-core first');process.exit(2)})
 const id='data-v-fill'
 const FILL='[data-ui-section-tabs-fill], [data-ui-settings-page]'
 const current=readFileSync(fileURLToPath(new URL('../../src/shell/AppShell.vue',import.meta.url)),'utf8')

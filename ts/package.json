@@ -54,7 +54,7 @@
     "spec/api"
   ],
   "scripts": {
-    "prepack": "test -d node_modules || { echo '@synopackageland/sdk: run npm ci before npm pack' >&2; exit 1; }; npm run build",
+    "prepack": "test -d node_modules || { echo '@synopackageland/sdk: run pnpm install before npm pack' >&2; exit 1; }; npm run build",
     "build": "node ../scripts/protocol-limits.mjs --check && node ../scripts/native-contract.mjs --check && node ../scripts/executor-manifest.mjs --check && vite build && vue-tsc -p tsconfig.build.json && cp -R i18n dist/ && rm -rf spec && cp -R ../spec spec && cp -R ../api/nativehttp/schema spec/api/v3/schema",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",

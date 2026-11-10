@@ -1,5 +1,7 @@
 # Synology Package Land SDK
 
+Use pnpm for JavaScript dependencies and scripts; enable it with `corepack enable pnpm`.
+
 SDK for DSM packages built with [synopkgland](https://github.com/synopackageland/syno-pkg-land-cli).
 
 | Path | Contents |
@@ -103,8 +105,8 @@ runtime config; see [native daemon restart policy](docs/native-daemon-restart.md
 for defaults, status diagnostics and the required CLI/templates integration.
 
 ```sh
-npm run gates                  # basic checks for development and release
-npm run gates:full             # extended checks, only when explicitly requested
+pnpm run gates                  # basic checks for development and release
+pnpm run gates:full             # extended checks, only when explicitly requested
 bash scripts/gate.sh --plan    # print the default workloads without running them
 go generate ./...              # after editing protocol or delegate specs
 ```
@@ -125,13 +127,13 @@ dependencies accessible, install Git, Bash and the Go toolchain declared in
 
 ```sh
 git fetch origin
-npm run gates
+pnpm run gates
 ```
 
-Basic checks need Node.js/npm, Go and Python. Extended checks additionally use
+Basic checks need Node.js/pnpm, Go and Python. Extended checks additionally use
 `uv`, Rust/rustup and Docker for supported runtime and target checks. Rust runs
 inside a Linux container. A release uses basic checks; extended checks require
-`npm run gates:full`.
+`pnpm run gates:full`.
 Neither gate requires a NAS or DSM login.
 The root module's Compose prepare tests read Linux kernel routes from `/proc`;
 run those checks on Linux or in a Linux container. Docker SSH redirects the
@@ -141,7 +143,7 @@ Docker SSH is optional. Contributors can use their own local tools and Docker
 engine with `SYNOPKGLAND_DOCKER_SSH` unset, or an SSH-accessible Docker host:
 
 ```sh
-SYNOPKGLAND_DOCKER_SSH=builder.example npm run gates
+SYNOPKGLAND_DOCKER_SSH=builder.example pnpm run gates
 ```
 
 `builder.example` is a placeholder; supply your own host. Set
