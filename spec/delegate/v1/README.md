@@ -11,7 +11,7 @@ It generates `delegate/dtos_gen.go` and `ts/src/delegate/dtos-gen.ts` together.
 `go test ./internal/delegategen` rejects either artifact if it differs from the
 spec, including field names, types, optional fields, nullability and TS enums.
 `ts/test/delegate-dto-types.test.ts` keeps public exports and App/UI projections
-bound to those wire types during `npm run typecheck`.
+bound to those wire types during `pnpm run typecheck`.
 
 JSON Schema `required` controls field presence; `anyOf` with `null` controls
 nullability. An optional pointer with `omitempty` does not emit JSON `null`.

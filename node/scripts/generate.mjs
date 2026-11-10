@@ -58,7 +58,7 @@ for (const [name, content] of Object.entries(files)) {
   const path = new URL(name, src)
   if (!check) fs.writeFileSync(path, content)
   else if (!fs.existsSync(path) || fs.readFileSync(path, 'utf8') !== content) {
-    console.error(`src/${name} differs from spec/; run npm run generate`)
+    console.error(`src/${name} differs from spec/; run pnpm run generate`)
     stale = true
   }
 }

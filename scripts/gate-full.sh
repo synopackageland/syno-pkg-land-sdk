@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Optional integrations, used by npm run gates:full. No automatic release caller.
+# Optional integrations, used by pnpm run gates:full. No automatic release caller.
 # --fast selects integrations by changed paths for explicit targeted work.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)

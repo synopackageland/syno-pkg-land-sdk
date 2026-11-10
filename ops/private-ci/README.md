@@ -57,7 +57,7 @@ Private workflows use `[self-hosted, private-ci]`. Docker-dependent, release,
 publishing and full cross-architecture checks stay manual; no host socket or
 privileged DinD is available. `sdk-fast.sh` runs the shared basic checks. Runtime
 containers, cross-architecture and reproducibility checks require the optional
-`npm run gates:full`. Do not treat green CI as publication authorization.
+`pnpm run gates:full`. Do not treat green CI as publication authorization.
 
 Operational limits: containers share the host kernel; the dedicated bridge is
 not a hostile-code VM sandbox. Jobs can reach routable network services. This
@@ -141,5 +141,5 @@ can select `cache_probe` after the workflow is merged. Compare its `CACHE_PROBE`
 JSON and sccache statistics on two fresh jobs at the same commit. A warm cache
 is a performance aid, not product or release certification.
 
-Default release and CI checks use `npm run gates`. Run `npm run gates:full`
+Default release and CI checks use `pnpm run gates`. Run `pnpm run gates:full`
 only when explicitly requested. Cache measurement requires manual dispatch.

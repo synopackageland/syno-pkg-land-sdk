@@ -980,16 +980,16 @@ The Vue entry needs the peer dependencies `vue`, `@synopackageland/ui` and
 ## Development
 
 ```
-npm ci
-npm test
-npm run typecheck
-npm run build
+pnpm install
+pnpm test
+pnpm run typecheck
+pnpm run build
 ```
 
-`npm run test:browser` measures the NAS folder picker in headless Chromium
+`pnpm run test:browser` measures the NAS folder picker in headless Chromium
 (`test/browser/picker-layout.mjs`): loading must not move the dialog, the tree
-or the list, and nothing scrolls at 1280px or 768px. It needs `npm i --no-save
-playwright-core@1.58.2` and a Playwright Chromium (`CHROMIUM_PATH` selects
+or the list, and nothing scrolls at 1280px or 768px. It needs `pnpm add --save-dev
+playwright-core` and a Playwright Chromium (`CHROMIUM_PATH` selects
 one); `--shots DIR` saves screenshots.
 
 `jsdom` must stay at 29 or newer: the UI's `AppRoot` modal-scope mirror lists
@@ -997,16 +997,16 @@ one); `--shots DIR` saves screenshots.
 CSSOM behaviour browsers have) only since 29.
 
 After a change to `../spec/bridge/v1/errors.json`, run `node
-scripts/gen-bridge-i18n.mjs`; `npm test` fails while `i18n/bridge/` differs
+scripts/gen-bridge-i18n.mjs`; `pnpm test` fails while `i18n/bridge/` differs
 from it.
 
-`npm run build` also copies `../spec` into `spec/`. Run `npm ci` before
-`npm pack`: `prepack` builds and needs `node_modules`. `npm install
---install-links` from a checkout does not run `prepack`, so build first.
+`pnpm run build` also copies `../spec` into `spec/`. Run `pnpm install` before
+`npm pack`: `prepack` builds and needs `node_modules`. Installing a local
+checkout with pnpm does not build it, so build first.
 
 `../scripts/gate.sh` runs these and checks the `npm pack` file list. While the
 locked `@synopackageland/ui` version is not on npm, set `SYNOPKGLAND_UI_TARBALL`
-to its tarball; the gate installs it in place of `npm ci`.
+to its tarball; the gate installs it in place of `pnpm install`.
 
 License: MIT.
 

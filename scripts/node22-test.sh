@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs @synopackageland/app on the supported Node.js 22 line (DSM's Node.js_v22), in Docker: its unit tests, then the bridge's Node golden and
 # hello tests (a Go test binary built here) against the package built there.
-# The tracked tree, with its uncommitted changes, and node/node_modules (npm ci
+# The tracked tree, with its uncommitted changes, and node/node_modules (pnpm install
 # first; plain JavaScript, so any platform's will do) go in on stdin and
 # nothing is bind-mounted, so the engine may be on another host and needs no
 # registry access: SYNOPKGLAND_DOCKER_SSH=<ssh host>.
@@ -24,7 +24,7 @@ cd "$root"
 git update-index -q --refresh || true
 tree=$(git stash create)
 git archive "${tree:-HEAD}" | tar -x -C "$work"
-test -d node/node_modules || { echo "node/node_modules: run npm ci in node/ first" >&2; exit 1; }
+test -d node/node_modules || { echo "node/node_modules: run pnpm install in node/ first" >&2; exit 1; }
 cp -R node/node_modules "$work/node/"
 arch=$(engine "docker version --format '{{.Server.Arch}}'")
 CGO_ENABLED=0 GOOS=linux GOARCH=$arch go test -c -o "$work/bridge/bridge.test" ./bridge

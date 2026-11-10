@@ -18,7 +18,7 @@ import assert from 'node:assert/strict'
 import {fileURLToPath} from 'node:url'
 import {join} from 'node:path'
 import {createServer} from 'vite'
-const playwright=await import('playwright-core').catch(()=>{console.error('portal cycles: run npm i --no-save playwright-core@1.58.2 first');process.exit(2)})
+const playwright=await import('playwright-core').catch(()=>{console.error('portal cycles: run pnpm add --save-dev playwright-core first');process.exit(2)})
 const here=fileURLToPath(new URL('.',import.meta.url))
 const engine=process.argv.includes('--browser')?process.argv[process.argv.indexOf('--browser')+1]:'chromium'
 const server=await createServer({configFile:join(here,'vite.config.ts')})

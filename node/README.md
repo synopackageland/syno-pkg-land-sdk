@@ -206,10 +206,10 @@ into one file.
 ## Development
 
 ```sh
-npm ci
-npm run generate   # src/frames.ts and src/refusals.ts from spec/
-npm test           # type-checks src and test, then node:test
-npm run build      # dist/: ESM and .d.ts
+pnpm install
+pnpm run generate   # src/frames.ts and src/refusals.ts from spec/
+pnpm test           # type-checks src and test, then node:test
+pnpm run build      # dist/: ESM and .d.ts
 ```
 
 `src/frames.ts` (json-schema-to-typescript, from

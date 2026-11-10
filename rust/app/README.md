@@ -15,7 +15,7 @@ Dependencies: `serde`, `serde_json` (`raw_value`) and `libc`.
 
 ## Build and package with the CLI
 
-Install the public CLI with `npm install --global @synopackageland/cli` and
+Install the public CLI with `pnpm add --global @synopackageland/cli` and
 consult the [App documentation](https://synopkgland.com/docs/) for package
 setup. With access to the matching SDK sources (see below), create and build
 an App:

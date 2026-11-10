@@ -1,7 +1,7 @@
 # Release checks
 
-Use `npm run gates` (or `bash scripts/gate.sh`) for the basic release checks.
-Use `npm run gates:full` (or `bash scripts/gate.sh --full`) only when explicitly
+Use `pnpm run gates` (or `bash scripts/gate.sh`) for the basic release checks.
+Use `pnpm run gates:full` (or `bash scripts/gate.sh --full`) only when explicitly
 requested. `SPL_FULL_GATE=1` is an alias for `--full`. `--plan` prints the
 workloads without executing them. `--fast` and `gates:fast` alias basic.
 The root package is a private command dispatcher; the public npm packages
@@ -9,7 +9,7 @@ remain in `node/` and `ts/` and expose the same gate commands.
 
 | Entry point | Default | Explicit full |
 | --- | --- | --- |
-| `scripts/gate.sh`, `npm run gates` | Policy/version/manifest unit checks, timeout-policy guard, native Go vet/build for root and executor, core API/DSM/File Station/JSON/identity units, Python units, Node typecheck/units/build, frontend typecheck/units/build, pack and content scans | Adds the retained integration gate: complete Go race suites including daemon/gateway and conformance, Rust checks and target clippy, Python/Node runtime containers, cross-architecture Go vet/build, two executor builds including empty GOCACHE, manifest `--verify-build`, loopback npm publication |
+| `scripts/gate.sh`, `pnpm run gates` | Policy/version/manifest unit checks, timeout-policy guard, native Go vet/build for root and executor, core API/DSM/File Station/JSON/identity units, Python units, Node typecheck/units/build, frontend typecheck/units/build, pack and content scans | Adds the retained integration gate: complete Go race suites including daemon/gateway and conformance, Rust checks and target clippy, Python/Node runtime containers, cross-architecture Go vet/build, two executor builds including empty GOCACHE, manifest `--verify-build`, loopback npm publication |
 | `ops/private-ci/sdk-fast.sh`, CI | Basic | Private cache probe requires a manual dispatch input |
 | `scripts/ts-gate.sh` | Frontend typecheck/units/build, local packed consumer import, package inventory and content scan | Same checks |
 | Node/frontend `prepack` | Build and static manifest/version check | No integration checks |

@@ -1,6 +1,6 @@
 // The api golden fixture (api/golden_test.go goldenServer) as a Node App.
 import { readFileSync, writeFileSync } from 'node:fs'
-// node/dist is the built package: npm run build in node/.
+// node/dist is the built package: pnpm run build in node/.
 import { App, AppError } from '../../node/dist/index.js'
 
 const app = new App()
