@@ -25,5 +25,9 @@
   "sharedfolder.shared_folder_grant_failed": "DSM hat die Änderung nicht akzeptiert. Den Zugriff in der Systemsteuerung festlegen",
   "sharedfolder.shared_folder_grant_unverified": "DSM hat die Änderung akzeptiert, aber das App-Konto hat weiterhin keinen Zugriff. Die Berechtigungen des Ordners in der Systemsteuerung prüfen",
   "sharedfolder.dismiss": "Schließen",
-  "sharedfolder.retry": "Neuer Versuch"
+  "sharedfolder.retry": "Neuer Versuch",
+  "sharedfolder.subpathSteps": "Der App fehlt {access}. Erteilen Sie es in File Station > {folder} > Eigenschaften > Berechtigung dem internen Systembenutzer {account} samt Durchlaufen der übergeordneten Ordner und wählen Sie dann Neuer Versuch",
+  "sharedfolder.readTraverse": "Lesen und Durchlaufen",
+  "sharedfolder.writeOnly": "Schreiben",
+  "sharedfolder.readWriteTraverse": "Lesen, Schreiben und Durchlaufen"
 }

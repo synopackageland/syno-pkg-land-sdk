@@ -86,6 +86,8 @@ export function checkRepository(directory=root) {
   ['ts/src/context.ts',/DEFAULT_REQUEST_TIMEOUT=(\d+)/, allowance*1000],
   ['ts/src/dsm/session.js',/finish\(undefined\); }, (\d+)\)/,allowance*1000+spec.browser.margin_ms],
   ['ops/private-ci/runtime_budget.py',/OPERATION_SECONDS = (\d+)/,allowance],
+  ['node/src/shared-folder.ts',/const OPERATION_TIMEOUT_MS = (\d+)/,allowance*1000],
+  ['python/synopkgland_app/shared_folder.py',/OPERATION_SECONDS = (\d+)/,allowance],
  ];
  for(const [file,pattern,want] of generated) if(Number(read(file).match(pattern)?.[1])!==want) failures.push(`${file}: generated budget differs from timeout spec`);
  for(const key of ['op_s','webapi_raw_execution_s','root_run_program_default_s','start_step_s']) if(spec.executor[key]!==allowance) failures.push(`timeouts.json: executor.${key} is not the shared budget`);

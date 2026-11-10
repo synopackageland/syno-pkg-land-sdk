@@ -25,5 +25,9 @@
   "sharedfolder.shared_folder_grant_failed": "DSM 未接受此更改，请在控制面板中设置权限",
   "sharedfolder.shared_folder_grant_unverified": "DSM 已接受更改，但 App 账号仍无权限。请在控制面板中检查此文件夹的权限",
   "sharedfolder.dismiss": "关闭",
-  "sharedfolder.retry": "重试"
+  "sharedfolder.retry": "重试",
+  "sharedfolder.subpathSteps": "应用缺少{access}权限。请在 File Station > {folder} > 属性 > 权限中授予系统内部用户 {account}，并允许遍历上层文件夹，然后重试",
+  "sharedfolder.readTraverse": "读取与遍历",
+  "sharedfolder.writeOnly": "写入",
+  "sharedfolder.readWriteTraverse": "读取、写入与遍历"
 }

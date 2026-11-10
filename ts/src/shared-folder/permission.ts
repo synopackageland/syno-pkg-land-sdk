@@ -41,11 +41,11 @@ function issueFrom(error:unknown):SharedFolderPermissionIssue|undefined {
 
 /** Shared instruction text for startup checks, I/O failures and custom App UI. */
 export function sharedFolderPermissionMessage(issue:SharedFolderPermissionIssue,locale='en'):string {
- if(issue.subpath){
-  const path=issue.share+'/'+issue.subpath,missing=issue.required==='read'?'Read and Traverse':issue.granted==='read'?'Write':'Read, Write and Traverse'
-  return `Package account "${issue.account}" is missing ${missing} permission on folder "${path}". Open File Station > ${path} > Properties > Permission, select system internal user ${issue.account}, grant ${missing} and check parent folder traversal, then Retry`
- }
  const m=sharedFolderMessages(locale)
+ if(issue.subpath){
+  const access=issue.required==='read'?m.readTraverse!:issue.granted==='read'?m.writeOnly!:m.readWriteTraverse!
+  return format(m.subpathSteps!,{account:issue.account,folder:issue.share+'/'+issue.subpath,access},locale)
+ }
  return format(m.steps!,{account:issue.account,folder:issue.share,access:m[issue.required]!},locale)
 }
 

@@ -1,6 +1,8 @@
 import { execFile } from 'node:child_process';
 import { join, isAbsolute } from 'node:path';
 import { AppError } from './errors.js';
+/** The shared work allowance (spec/protocol/v1/timeouts.json request.default_s); a slow controller is not a failure. */
+const OPERATION_TIMEOUT_MS = 300000;
 /** Installer-selected folder, checked by the SDK controller as this package UID.
  * Configure this once in trusted App code. No DSM session or ACL writer is used.
  */
@@ -23,7 +25,7 @@ export class SharedFolderConfig {
             return Promise.reject(new TypeError('invalid folder key'));
         return new Promise((resolve, reject) => {
             execFile(join(this.root, 'install/control'), ['folder-path', '--root', this.root, '--package', this.options.packageId, '--key', key], {
-                env: { ...process.env, SYNOPKG_PKGVAR: this.data }, timeout: 30000, maxBuffer: 16384, encoding: 'utf8',
+                env: { ...process.env, SYNOPKG_PKGVAR: this.data }, timeout: OPERATION_TIMEOUT_MS, maxBuffer: 16384, encoding: 'utf8',
             }, (error, stdout, stderr) => {
                 if (error) {
                     let code = 'shared_folder_unavailable', message = stderr.trim() || 'Selected folder is unavailable';

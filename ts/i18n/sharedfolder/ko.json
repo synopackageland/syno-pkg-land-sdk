@@ -25,5 +25,9 @@
   "sharedfolder.shared_folder_grant_failed": "DSM이 변경을 수락하지 않았습니다. 제어판에서 권한을 설정하십시오",
   "sharedfolder.shared_folder_grant_unverified": "DSM이 변경을 수락했지만 앱 계정에 아직 권한이 없습니다. 제어판에서 이 폴더의 권한을 확인하십시오",
   "sharedfolder.dismiss": "닫기",
-  "sharedfolder.retry": "재시도"
+  "sharedfolder.retry": "재시도",
+  "sharedfolder.subpathSteps": "앱에 {access} 권한이 없습니다. File Station > {folder} > 속성 > 권한에서 시스템 내부 사용자 {account}에게 상위 폴더 트래버스와 함께 부여한 후 재시도하십시오",
+  "sharedfolder.readTraverse": "읽기 및 트래버스",
+  "sharedfolder.writeOnly": "쓰기",
+  "sharedfolder.readWriteTraverse": "읽기, 쓰기 및 트래버스"
 }

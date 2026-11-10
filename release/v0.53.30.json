@@ -1,0 +1,53 @@
+{
+  "version": "0.53.30",
+  "executorVersion": "0.53.6",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.30",
+    "@synopackageland/app": "0.53.30",
+    "syno-pkg-land-app": "0.53.30",
+    "synopkgland_app": "0.53.30"
+  },
+  "executorDigests": {
+    "x86_64": "e77dbf846ea4555355fa15ee3a6ca3b20e1b1aaa9768321243589d9ec15ffabe",
+    "aarch64": "741a7c37757b56b3acc304cef56de5e59c1ca9278a83be0f1e1ff1ad17b24dd6",
+    "armv7": "f0a3059b982d0210621254adf7d1a3343d2a89d114e053e5b3bd646898293b1a",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "ui-text tests pass: the subfolder permission message and its access names come from the sharedfolder catalogs in all nine locales, and every English catalog string is at most 160 characters. check-timeout-policy passes: the Compose sudo check uses runtimebudget.Operation and the Node and Python SharedFolderConfig controller calls use the shared 300-second allowance, checked as generated copies against spec/protocol/v1/timeouts.json. The full TypeScript vitest suite, the Node tests and the Python tests pass as a non-root user, and the Compose Go tests pass as a non-root user. Both npm packages are built and packed for content scans. No full gate matrix, qemu, publication or NAS acceptance is implied."
+  },
+  "ui": {
+    "builtAgainst": "0.25.4",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.25.4.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Shared-folder subfolder permission message: route through the sharedfolder translation catalogs in all nine locales, within 160 characters, with translated access names.",
+    "SharedFolderConfig (Node, Python) and the Compose console sudo check use the shared operation allowance instead of 30- and 10-second timeouts.",
+    "Shorten the English access-read WebAPI permission description.",
+    "Reuse executor 0.53.6 unchanged."
+  ],
+  "npmArtifacts": {
+    "synopackageland-sdk-0.53.30.tgz": {
+      "sha256": "a9b1e597f47842c48f3bfa1ec7631e60d1a5211c9dea6c574e521440a6e0c393"
+    },
+    "synopackageland-app-0.53.30.tgz": {
+      "sha256": "889ff7ab3c0188eb7ac1d2069271187fd13c535965cce0c0d2f1d46f97afd17c"
+    }
+  }
+}

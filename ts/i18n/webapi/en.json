@@ -5,7 +5,7 @@
   "precheck-read": "Read DNS, time and proxy settings to explain a failed connection",
   "signin-read": "Read sign-in, account protection, firewall, port forwarding, snapshot and encryption-key settings",
   "time-repair": "Correct the NAS clock when it is clearly wrong, so sign-in codes keep working",
-  "access-read": "Read accounts, groups, shared-folder permissions, folder ACLs, application privileges and file-service settings to explain why a user can or cannot open a folder",
+  "access-read": "Read accounts, groups, shared-folder permissions, folder ACLs, application privileges and file-service settings to explain a user’s access to a folder",
   "photos-read": "Read Synology Photos, user home and codec settings to explain why photos do not appear",
   "storage-read": "Read storage health, SMART schedules and notification enablement"
 }

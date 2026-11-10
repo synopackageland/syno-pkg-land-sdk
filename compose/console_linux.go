@@ -11,9 +11,10 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"time"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 )
 
 // NSSWrapperLibraries are the image paths the init looks for libnss_wrapper.
@@ -178,7 +179,8 @@ func appendLine(file, line string) error {
 }
 
 func checkSudo(ctx context.Context, env ConsoleEnv) error {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	// A slow PAM or NSS lookup is work, not a failure: use the shared allowance.
+	ctx, cancel := context.WithTimeout(ctx, runtimebudget.Operation)
 	defer cancel()
 	sudo := ""
 	for _, p := range sudoPaths {

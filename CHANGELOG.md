@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.53.30 (2026-11-10)
+
+- The shared-folder permission message for a subfolder now comes from the translation catalogs in all nine languages instead of English text built in code, and stays within the 160-character limit: it names the missing access, the File Station path and the system internal user to grant, then Retry. The access names (Read and Traverse, Write, Read, Write and Traverse) are translated too.
+- `SharedFolderConfig.require` in Node and Python and the console `sudo` check in Compose wait as long as other work (the shared 300-second operation allowance) instead of failing after 30 or 10 seconds; a slow controller, PAM or NSS lookup is no longer reported as unavailable.
+- The English `access-read` WebAPI permission description is shorter; its meaning is unchanged.
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.29 (2026-11-10)
 
 - AppShell fill pages no longer make Chrome restyle the whole page on a local change. The rule that keeps later top-level children at their own size picks each child after the first one that draws something (`:nth-child(n + 2 of …)`) instead of a later-sibling rule, and the rule for the nodes beside a `SettingsPage` or `SectionTabs fill` asks each child about its siblings instead of `.app-page-content:has(…)`. Computed styles are unchanged across the tested layouts (fill first, middle, last, nested, hidden, two fills, empty and hidden nodes); in a Chromium trace of a 253-element fill page, inserting one row inside the `SettingsPage` restyles 46 elements instead of 248. Apps that rewrote these two rules in their own build can drop that rewrite.

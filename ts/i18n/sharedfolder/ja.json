@@ -25,5 +25,9 @@
   "sharedfolder.shared_folder_grant_failed": "DSM が変更を受け付けませんでした。コントロール パネルで権限を設定してください",
   "sharedfolder.shared_folder_grant_unverified": "DSM は変更を受け付けましたが、アプリのアカウントにはまだ権限がありません。コントロール パネルでこのフォルダの権限を確認してください",
   "sharedfolder.dismiss": "閉じる",
-  "sharedfolder.retry": "再試行"
+  "sharedfolder.retry": "再試行",
+  "sharedfolder.subpathSteps": "アプリに {access} がありません。File Station > {folder} > プロパティ > 権限 で、システム内部ユーザー {account} に親フォルダのトラバースを含めて付与してから 再試行 してください",
+  "sharedfolder.readTraverse": "読み取りとトラバース",
+  "sharedfolder.writeOnly": "書き込み",
+  "sharedfolder.readWriteTraverse": "読み取り、書き込み、トラバース"
 }
