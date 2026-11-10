@@ -5,6 +5,10 @@ import re
 import subprocess
 from pathlib import Path
 
+# The shared work allowance (spec/protocol/v1/timeouts.json request.default_s);
+# a slow controller is not a failure.
+OPERATION_SECONDS = 300
+
 
 class SharedFolderConfig:
     """Configure trusted package paths once; never pass user-supplied paths."""
@@ -26,7 +30,7 @@ class SharedFolderConfig:
             [str(Path(self.root) / "install/control"), "folder-path", "--root", self.root,
              "--package", self.package_id, "--key", key],
             env=dict(os.environ, SYNOPKG_PKGVAR=self.data),
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30, check=False,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=OPERATION_SECONDS, check=False,
         )
         if result.returncode:
             raise OSError(result.stderr[:16384].decode("utf-8", errors="replace").strip()

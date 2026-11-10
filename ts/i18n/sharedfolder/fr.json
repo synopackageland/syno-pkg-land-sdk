@@ -25,5 +25,9 @@
   "sharedfolder.shared_folder_grant_failed": "DSM n’a pas accepté la modification. Définir l’accès dans le Panneau de configuration",
   "sharedfolder.shared_folder_grant_unverified": "DSM a accepté la modification, mais le compte de l’application n’a toujours pas accès. Vérifier les autorisations du dossier dans le Panneau de configuration",
   "sharedfolder.dismiss": "Fermer",
-  "sharedfolder.retry": "Réessayer"
+  "sharedfolder.retry": "Réessayer",
+  "sharedfolder.subpathSteps": "Il manque {access} à l’application. Dans File Station > {folder} > Propriétés > Permission, accordez-le à l’utilisateur interne du système {account} avec le parcours des dossiers parents, puis Réessayer",
+  "sharedfolder.readTraverse": "Lecture et parcours",
+  "sharedfolder.writeOnly": "Écriture",
+  "sharedfolder.readWriteTraverse": "Lecture, écriture et parcours"
 }

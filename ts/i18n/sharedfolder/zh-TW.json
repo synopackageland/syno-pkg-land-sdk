@@ -25,5 +25,9 @@
   "sharedfolder.shared_folder_grant_failed": "DSM 未接受此變更，請在控制台設定權限",
   "sharedfolder.shared_folder_grant_unverified": "DSM 已接受變更，但 App 帳號仍無權限。請在控制台檢查此資料夾的權限",
   "sharedfolder.dismiss": "關閉",
-  "sharedfolder.retry": "重試"
+  "sharedfolder.retry": "重試",
+  "sharedfolder.subpathSteps": "應用程式缺少{access}權限。請在 File Station > {folder} > 內容 > 權限中授予系統內部使用者 {account}，並允許周遊上層資料夾，然後重試",
+  "sharedfolder.readTraverse": "讀取與周遊",
+  "sharedfolder.writeOnly": "寫入",
+  "sharedfolder.readWriteTraverse": "讀取、寫入與周遊"
 }

@@ -25,5 +25,9 @@
   "sharedfolder.shared_folder_grant_failed": "DSM non ha accettato la modifica. Impostare l’accesso in Pannello di controllo",
   "sharedfolder.shared_folder_grant_unverified": "DSM ha accettato la modifica, ma l’account dell’app non ha ancora accesso. Verificare le autorizzazioni della cartella in Pannello di controllo",
   "sharedfolder.dismiss": "Chiudi",
-  "sharedfolder.retry": "Riprova"
+  "sharedfolder.retry": "Riprova",
+  "sharedfolder.subpathSteps": "All’app manca {access}. In File Station > {folder} > Proprietà > Permesso, concederlo all’utente interno di sistema {account} con l’attraversamento delle cartelle superiori, quindi Riprova",
+  "sharedfolder.readTraverse": "Lettura e attraversamento",
+  "sharedfolder.writeOnly": "Scrittura",
+  "sharedfolder.readWriteTraverse": "Lettura, scrittura e attraversamento"
 }

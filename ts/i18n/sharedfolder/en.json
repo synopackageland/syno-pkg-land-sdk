@@ -25,5 +25,9 @@
   "sharedfolder.shared_folder_grant_failed": "DSM did not accept the change. Set the access in Control Panel",
   "sharedfolder.shared_folder_grant_unverified": "DSM accepted the change, but the app account still lacks access. Check the folder’s permissions in Control Panel",
   "sharedfolder.dismiss": "Dismiss",
-  "sharedfolder.retry": "Retry"
+  "sharedfolder.retry": "Retry",
+  "sharedfolder.subpathSteps": "The app is missing {access}. In File Station > {folder} > Properties > Permission, grant it to system internal user {account} with parent traversal, then Retry",
+  "sharedfolder.readTraverse": "Read and Traverse",
+  "sharedfolder.writeOnly": "Write",
+  "sharedfolder.readWriteTraverse": "Read, Write and Traverse"
 }

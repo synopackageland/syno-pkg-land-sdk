@@ -25,5 +25,9 @@
   "sharedfolder.shared_folder_grant_failed": "DSM no aceptó el cambio. Definir el acceso en Panel de control",
   "sharedfolder.shared_folder_grant_unverified": "DSM aceptó el cambio, pero la cuenta de la aplicación sigue sin acceso. Revisar los permisos de la carpeta en Panel de control",
   "sharedfolder.dismiss": "Cerrar",
-  "sharedfolder.retry": "Volver a intentar"
+  "sharedfolder.retry": "Volver a intentar",
+  "sharedfolder.subpathSteps": "A la aplicación le falta {access}. En File Station > {folder} > Propiedades > Permiso, concédalo al usuario interno del sistema {account} con recorrido de carpetas superiores y luego Volver a intentar",
+  "sharedfolder.readTraverse": "Lectura y recorrido",
+  "sharedfolder.writeOnly": "Escritura",
+  "sharedfolder.readWriteTraverse": "Lectura, escritura y recorrido"
 }
