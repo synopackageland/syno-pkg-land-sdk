@@ -137,7 +137,26 @@ still in progress. Completed permission results are never cached: the next
 request checks DSM again. Each waiter independently checks the account name,
 session expiry, client address and revocation after waiting. Disconnecting one
 request does not cancel other waiters; disconnecting the last cancels the shared
-work. Waiting adds no wall-clock admission deadline. Resource retries and active
+work. Transient verification failures (connection refused/reset, single-attempt
+network or native timeouts, temporary resource/busy errors and truncated native
+or NSS responses) retry automatically while the browser request waits. Retry
+spacing grows from 250 ms to at most 8 seconds with equal jitter. All attempts
+share the five-minute operation allowance and each attempt may use its remaining
+time; no shorter attempt deadline cuts off a slow DSM check. Request cancellation
+stops its waiter immediately. The same rules cover CGI verification, assertion
+redemption, and OIDC admission. In-flight CGI checks with identical session
+carriers and client address also share work within the handler process; separate
+CGI processes have separate in-flight state. No result is cached by this mechanism.
+
+Invalid or expired sessions, missing accounts, administrator/group/App privilege
+denials and invalid assertions are definitive and never retried. Unknown errors,
+invalid native protocol responses and permanent setup errors fail closed without
+retry. Native DSM role/privilege bridges provide a boolean or an execution error,
+not HTTP statuses or a DSM busy-code catalog. Retry logs use the existing logger
+and include only the attempt number and a fixed error class, with no raw error,
+credential, session identifier or account name.
+
+Resource retries and active
 WebSockets retain their checks of the administrator role injected into the App.
 Asset reads also wait for resource and upstream-header capacity, retaining the
 existing active-work bounds. Admission is checked again after the header wait;

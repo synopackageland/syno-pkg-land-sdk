@@ -59,6 +59,9 @@ func (a *Authenticator) Authenticate(r *http.Request) (api.Identity, error) {
 	ctx, cancel := context.WithTimeout(r.Context(), a.Timeout)
 	defer cancel()
 	out, err := a.run(ctx, AuthenticateCGI, sessionEnv(r, cookie))
+	if ctx.Err() != nil {
+		return api.Identity{}, ctx.Err()
+	}
 	var exit interface{ ExitCode() int }
 	if errors.As(err, &exit) {
 		return api.Identity{}, api.ErrNoSession

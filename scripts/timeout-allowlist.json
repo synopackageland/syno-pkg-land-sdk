@@ -766,5 +766,17 @@
     "statement": "setTimeout(() => { timer = undefined if(active && document.visibilityState === 'visible') listener() }, 50)",
     "class": "B",
     "reason": "Existing visibility/focus event debounce only; does not expire requests or queued work"
+  },
+  {
+    "file": "idgateway/verification_retry.go",
+    "statement": "const verifyBackoff = 250 * time.Millisecond",
+    "class": "B",
+    "reason": "Jittered retry spacing only; does not shorten any attempt or operation allowance"
+  },
+  {
+    "file": "idgateway/verification_retry.go",
+    "statement": "const verifyBackoffMax = 8 * time.Second",
+    "class": "B",
+    "reason": "Jittered retry spacing only; does not shorten any attempt or operation allowance"
   }
 ]

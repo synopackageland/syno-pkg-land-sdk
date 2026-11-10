@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
+	"io"
 	"os/exec"
 	"time"
 )
@@ -53,7 +55,11 @@ func commandOutput(cmd *exec.Cmd, limit int) ([]byte, error) {
 func runCGI(ctx context.Context, path string, env []string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, path)
 	cmd.Env = env
-	return commandOutput(cmd, 1026)
+	out, err := commandOutput(cmd, 1026)
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	return out, err
 }
 
 func parseNativeRole(out []byte, err error) (bool, error) {
@@ -64,9 +70,11 @@ func parseNativeRole(out []byte, err error) (bool, error) {
 // including a failed run, is the caller's unavailable error.
 func parseNativeBit(out []byte, err, unavailable error) (bool, error) {
 	if err != nil {
-		return false, unavailable
+		return false, fmt.Errorf("%w: %w", unavailable, err)
 	}
 	switch string(out) {
+	case "", "0", "1":
+		return false, fmt.Errorf("%w: %w", unavailable, io.ErrUnexpectedEOF)
 	case "1\n":
 		return true, nil
 	case "0\n":

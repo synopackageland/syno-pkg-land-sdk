@@ -3,7 +3,9 @@ package idgateway
 import (
 	"context"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"net/http"
+	"sync"
 )
 
 var errSessionChanged = errors.New("gateway session is no longer current")
@@ -21,35 +23,43 @@ func (f *Front) admitSession(r *http.Request) error {
 type sessionCheckKey struct {
 	id, ip       string
 	injectedRole bool
+	phase        string
 }
 
-type sessionCheck struct {
+type verificationChecks[T any] struct {
+	checkMu sync.Mutex
+	checks  map[sessionCheckKey]*sessionCheck[T]
+}
+
+type sessionCheck[T any] struct {
 	done    chan struct{}
 	cancel  context.CancelFunc
 	waiters int
 	err     error
+	value   T
 }
 
-// shareSessionCheck retains only work that is still running. Each caller can
+// do retains only work that is still running. Each caller can
 // disconnect independently; the last waiter cancels the native work. There is
 // no admission TTL and no queue timeout that could turn a busy page into 503.
-func (f *Front) shareSessionCheck(ctx context.Context, key sessionCheckKey, work func(context.Context) error) error {
+func (f *verificationChecks[T]) do(ctx context.Context, key sessionCheckKey, work func(context.Context) (T, error)) (T, error) {
+	var zero T
 	if err := ctx.Err(); err != nil {
-		return err
+		return zero, err
 	}
 	f.checkMu.Lock()
 	check := f.checks[key]
 	if check == nil {
-		shared, cancel := context.WithCancel(context.WithoutCancel(ctx))
-		check = &sessionCheck{done: make(chan struct{}), cancel: cancel}
+		shared, cancel := context.WithTimeout(context.WithoutCancel(ctx), runtimebudget.Operation)
+		check = &sessionCheck[T]{done: make(chan struct{}), cancel: cancel}
 		if f.checks == nil {
-			f.checks = make(map[sessionCheckKey]*sessionCheck)
+			f.checks = make(map[sessionCheckKey]*sessionCheck[T])
 		}
 		f.checks[key] = check
 		go func() {
-			err := work(shared)
+			value, err := work(shared)
 			f.checkMu.Lock()
-			check.err = err
+			check.err, check.value = err, value
 			if f.checks[key] == check {
 				delete(f.checks, key)
 			}
@@ -73,21 +83,30 @@ func (f *Front) shareSessionCheck(ctx context.Context, key sessionCheckKey, work
 	}()
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return zero, ctx.Err()
 	case <-check.done:
-		return check.err
+		return check.value, check.err
 	}
 }
 
+func (f *Front) shareSessionCheck(ctx context.Context, key sessionCheckKey, work func(context.Context) error) error {
+	_, err := f.verificationChecks.do(ctx, key, func(shared context.Context) (struct{}, error) {
+		return struct{}{}, retryVerification(shared, work)
+	})
+	return err
+}
+
 func (f *Front) checkSession(ctx context.Context, id, ip string, injectedRole bool) error {
+	ctx, cancel := context.WithTimeout(ctx, runtimebudget.Operation)
+	defer cancel()
 	f.mu.Lock()
 	s, ok := f.sessions[id]
 	f.mu.Unlock()
 	if !ok || s.ip != ip || !f.cfg.Now().Before(s.expires) || f.cfg.Accounts == nil {
 		return errSessionChanged
 	}
-	err := f.shareSessionCheck(ctx, sessionCheckKey{id, ip, injectedRole}, func(shared context.Context) error {
-		if err := f.admitClient(shared, s.subject, ip); err != nil {
+	err := f.shareSessionCheck(ctx, sessionCheckKey{id: id, ip: ip, injectedRole: injectedRole}, func(shared context.Context) error {
+		if err := f.admitClientOnce(shared, s.subject, ip); err != nil {
 			return err
 		}
 		if injectedRole && (f.cfg.Mode == ModeToken || f.cfg.Mode == ModeHeader && f.cfg.Headers.Groups != "") {
@@ -106,9 +125,8 @@ func (f *Front) checkSession(ctx context.Context, id, ip string, injectedRole bo
 	}
 	// Work may have waited behind slow DSM lookups. Every waiter independently
 	// rechecks account identity, expiry, address and revocation before forwarding.
-	name, err := f.cfg.Accounts.Name(ctx, s.subject.UID)
-	if err != nil || name != s.subject.Name {
-		return errSessionChanged
+	if err := f.checkAccount(ctx, id, ip, s); err != nil {
+		return err
 	}
 	f.mu.Lock()
 	current, ok := f.sessions[id]
@@ -117,4 +135,14 @@ func (f *Front) checkSession(ctx context.Context, id, ip string, injectedRole bo
 		return errSessionChanged
 	}
 	return ctx.Err()
+}
+
+func (f *Front) checkAccount(ctx context.Context, id, ip string, s session) error {
+	return f.shareSessionCheck(ctx, sessionCheckKey{id: id, ip: ip, phase: "account"}, func(ctx context.Context) error {
+		name, err := f.cfg.Accounts.Name(ctx, s.subject.UID)
+		if errors.Is(err, ErrNoAccount) || err == nil && name != s.subject.Name {
+			return errSessionChanged
+		}
+		return err
+	})
 }

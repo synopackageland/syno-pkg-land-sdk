@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.53.32 (2026-11-10)
+
+- SDK documentation and setup hints recommend pnpm for installation and development.
+
+- The identity gateway waits and retries transient DSM session, account, group and privilege verification failures with jittered backoff inside the shared five-minute operation allowance. Concurrent checks of the same session share the active retry stream; disconnecting the last waiter cancels the work. Slow attempts retain the remaining allowance.
+- Definitive sign-in, administrator, group, App privilege and assertion denials keep their existing responses. Retry logs contain only the attempt number and a fixed error class.
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.30 (2026-11-10)
 
 - The shared-folder permission message for a subfolder now comes from the translation catalogs in all nine languages instead of English text built in code, and stays within the 160-character limit: it names the missing access, the File Station path and the system internal user to grant, then Retry. The access names (Read and Traverse, Write, Read, Write and Traverse) are translated too.

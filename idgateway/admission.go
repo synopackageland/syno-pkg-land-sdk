@@ -80,6 +80,10 @@ func (f *Front) admit(r *http.Request, s Subject) error {
 }
 
 func (f *Front) admitClient(ctx context.Context, s Subject, ip string) error {
+	return retryVerification(ctx, func(ctx context.Context) error { return f.admitClientOnce(ctx, s, ip) })
+}
+
+func (f *Front) admitClientOnce(ctx context.Context, s Subject, ip string) error {
 	if err := admissionError(ctx, s, f.cfg.Access, f.cfg.Groups, f.cfg.Membership); err != nil {
 		return err
 	}
@@ -113,11 +117,16 @@ type AccessVerifier struct {
 }
 
 func (v AccessVerifier) Authenticate(r *http.Request) (api.Identity, error) {
-	id, err := v.Next.Authenticate(r)
+	var id api.Identity
+	err := retryVerification(r.Context(), func(ctx context.Context) error {
+		var err error
+		id, err = v.Next.Authenticate(r.WithContext(ctx))
+		if err != nil {
+			return err
+		}
+		return admissionError(ctx, Subject{Name: id.User, Admin: id.Admin}, v.Access, v.Groups, v.Membership)
+	})
 	if err != nil {
-		return id, err
-	}
-	if err := admissionError(r.Context(), Subject{Name: id.User, Admin: id.Admin}, v.Access, v.Groups, v.Membership); err != nil {
 		return api.Identity{}, err
 	}
 	return id, nil

@@ -85,7 +85,11 @@ func runBridgeLimit(ctx context.Context, bridges map[string][]byte, limit int, a
 	cmd.ExtraFiles = []*os.File{file}
 	// In particular, never inherit LD_PRELOAD/LD_LIBRARY_PATH or credentials.
 	cmd.Env = []string{"LANG=C", "LC_ALL=C"}
-	return commandOutput(cmd, limit)
+	out, err := commandOutput(cmd, limit)
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	return out, err
 }
 
 // memfdCreate is the sealing primitive; tests replace it to model old kernels.

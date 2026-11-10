@@ -68,7 +68,12 @@ protected App request, so demotion takes effect on the next request.
 | 403 | `dsm_group_required` | `gateway.group_required` | Ask the DSM administrator about App access |
 | 403 | `dsm_app_privilege_denied` | `gateway.app_privilege_denied` | Ask the DSM administrator to grant this App's privilege |
 | 401 | `dsm_sign_in_required` | `gateway.sign_in_required` | Sign in to DSM at this address, then retry |
-| 503 | `dsm_verification_failed` | `gateway.verification_failed` | Retry when DSM verification is available |
+| 503 | `dsm_verification_failed` | `gateway.verification_failed` | Verification exhausted its operation allowance or returned a final failure |
+
+Transient DSM verification errors retry with jitter while the request waits,
+within the shared five-minute operation allowance and the request context.
+Identical active session checks share a retry stream. Definitive denials never
+retry. See [verification behavior](identity-gateway.md#dsm-sign-in-and-stopped-services).
 
 A failed membership lookup is a verification failure, not evidence that the
 account lacks permission. Backend error details are never returned to browsers.
