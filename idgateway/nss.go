@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/synopackageland/syno-pkg-land-sdk/internal/dsmverify"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"os"
 	"os/exec"
@@ -65,6 +66,9 @@ func (d *Directory) Name(ctx context.Context, uid int) (string, error) {
 		return "", ErrNoAccount
 	}
 	out, err := d.lookup(ctx, "-nu", strconv.Itoa(uid))
+	if dsmverify.Class(err) != "" || errors.Is(err, context.Canceled) {
+		return "", err
+	}
 	if err != nil || out == "" {
 		return "", ErrNoAccount
 	}
@@ -83,6 +87,9 @@ func (d *Directory) ask(ctx context.Context, flag, name string) (int, error) {
 		return 0, ErrNoAccount
 	}
 	out, err := d.lookup(ctx, flag, name)
+	if dsmverify.Class(err) != "" || errors.Is(err, context.Canceled) {
+		return 0, err
+	}
 	if err != nil {
 		return 0, ErrNoAccount
 	}
@@ -139,5 +146,8 @@ func runID(ctx context.Context, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, "/usr/bin/id", append(args[:1:1], "--", args[1])...)
 	cmd.Env = []string{"LANG=C", "LC_ALL=C"}
 	out, err := cmd.Output()
+	if ctx.Err() != nil {
+		return "", ctx.Err()
+	}
 	return strings.TrimSpace(string(out)), err
 }

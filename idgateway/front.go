@@ -166,8 +166,7 @@ type session struct {
 
 // Front is the gateway handler on the app's ports.
 type Front struct {
-	checkMu         sync.Mutex
-	checks          map[sessionCheckKey]*sessionCheck
+	verificationChecks[struct{}]
 	resourceWaiters chan struct{}
 	httpWarning     sync.Once
 	optional        *optionalPassthrough
@@ -453,8 +452,16 @@ func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		f.serveProxy(w, r)
 		return
 	}
-	s, ok := f.session(w, r)
-	if !ok {
+	verifyCtx, stopVerify := context.WithTimeout(r.Context(), runtimebudget.Operation)
+	defer stopVerify()
+	verifiedRequest := r.WithContext(verifyCtx)
+	s, sessionErr := f.lookupSession(w, verifiedRequest)
+	if sessionErr != nil && !errors.Is(sessionErr, errSessionChanged) {
+		w.Header().Set("X-Synopkgland-Error-Stage", "admission")
+		f.writeFailure(w, r, "temporarily_unavailable", "", isNavigation(r))
+		return
+	}
+	if sessionErr != nil {
 		if isNavigation(r) {
 			f.bounce(w, r, txn{returnTo: r.URL.RequestURI()}, origin)
 			return
@@ -462,11 +469,12 @@ func (f *Front) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		f.writeFailure(w, r, "login_required", "", false)
 		return
 	}
-	if err := f.admitSession(r); err != nil {
+	if err := f.admitSession(verifiedRequest); err != nil {
 		w.Header().Set("X-Synopkgland-Error-Stage", "admission")
 		f.writeFailure(w, r, admissionCode(err), "", isNavigation(r))
 		return
 	}
+	stopVerify()
 	if f.cfg.ComposeBlocked {
 		f.composeSettings(w, r, s)
 		return
@@ -707,23 +715,36 @@ func (f *Front) logout(w http.ResponseWriter, r *http.Request, origin string) {
 // expires, arrives from another address, or its uid no longer resolves to the
 // same DSM name (account deleted or renamed).
 func (f *Front) session(w http.ResponseWriter, r *http.Request) (Subject, bool) {
+	s, err := f.lookupSession(w, r)
+	return s, err == nil
+}
+
+func (f *Front) lookupSession(w http.ResponseWriter, r *http.Request) (Subject, error) {
 	c, err := r.Cookie(f.sessionCookie(r))
 	if err != nil {
-		return Subject{}, false
+		return Subject{}, errSessionChanged
 	}
 	f.mu.Lock()
 	s, ok := f.sessions[c.Value]
 	f.mu.Unlock()
 	if ok && !f.cfg.Now().After(s.expires) && s.ip == remoteIP(r) {
-		if name, err := f.cfg.Accounts.Name(r.Context(), s.subject.UID); err == nil && name == s.subject.Name {
-			return s.subject, true
+		err := f.checkAccount(r.Context(), c.Value, remoteIP(r), s)
+		if err == nil {
+			f.mu.Lock()
+			current, exists := f.sessions[c.Value]
+			f.mu.Unlock()
+			if exists && current == s && f.cfg.Now().Before(s.expires) {
+				return s.subject, nil
+			}
+		} else if !errors.Is(err, errSessionChanged) {
+			return Subject{}, err
 		}
 	}
 	f.mu.Lock()
 	delete(f.sessions, c.Value)
 	f.mu.Unlock()
 	setCookie(w, r, f.sessionCookie(r), "")
-	return Subject{}, false
+	return Subject{}, errSessionChanged
 }
 
 // RevokeUID ends the gateway sessions of the account uid and, in oidc mode,

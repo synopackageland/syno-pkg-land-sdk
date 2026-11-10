@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
+	"io"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -18,7 +19,7 @@ const maxDirectoryGroups = 256
 // DSM's dynamic /usr/bin/id uses libc NSS; os/user in the static CGI does not.
 // A fixed executable, a single validated username argument and a clean locale
 // environment keep the browser's credentials and process environment out of NSS.
-// No SDK cache: query once per authenticated request, with a two-second limit.
+// No SDK cache: query fresh within the caller's remaining operation allowance.
 type directoryLookup struct {
 	timeout time.Duration
 	run     func(context.Context, string, []string, []string) ([]byte, error)
@@ -35,9 +36,15 @@ func (d directoryLookup) groups(ctx context.Context, user string) ([]string, err
 		return nil, fmt.Errorf("directory groups: %w", ctx.Err())
 	}
 	if err != nil {
-		return nil, errors.New("directory group lookup failed")
+		return nil, fmt.Errorf("directory group lookup failed: %w", err)
 	}
-	return parseDirectoryGroups(out)
+	groups, err := parseDirectoryGroups(out)
+	// A prefix of the exact id protocol can be an interrupted response. Other
+	// malformed/ambiguous output stays final and can never establish membership.
+	if err != nil && len(out) < maxDirectoryOutput && (len(out) == 0 || strings.HasPrefix(string(out), "uid=") && !strings.HasSuffix(string(out), ")\n") && !strings.HasSuffix(string(out), ")")) {
+		return nil, fmt.Errorf("directory groups: %w", io.ErrUnexpectedEOF)
+	}
+	return groups, err
 }
 
 // Bounded stdout also bounds memory if a directory returns an excessive list.

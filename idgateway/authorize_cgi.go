@@ -3,7 +3,9 @@ package idgateway
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html"
@@ -41,6 +43,7 @@ type Accounts interface {
 // resolves the account's uid and returns the browser to the gateway with a
 // sealed Assertion or an OAuth-style error.
 type AuthorizeCGI struct {
+	checks       verificationChecks[verifiedAccount]
 	IngressPath  string
 	External     func() External
 	AppHTTPSPort int
@@ -146,11 +149,23 @@ func (h *AuthorizeCGI) verify(w http.ResponseWriter, r *http.Request, ret *url.U
 	session := r.Clone(r.Context())
 	session.Header.Set("X-SYNO-TOKEN", token)
 	q := url.Values{"txn": {txn}}
-	id, err := h.Verifier.Authenticate(session)
-	var uid int
-	if err == nil {
-		uid, err = h.Accounts.UID(r.Context(), id.User)
-	}
+	// Only identical carriers and client addresses share authority. The digest
+	// is process-local, never logged or persisted; transaction assertions stay separate.
+	carriers, _ := json.Marshal([3]string{session.Header.Get("Cookie"), token, remoteIP(session)})
+	digest := sha256.Sum256(carriers)
+	account, err := h.checks.do(r.Context(), sessionCheckKey{id: string(digest[:])}, func(ctx context.Context) (verifiedAccount, error) {
+		var account verifiedAccount
+		err := retryVerification(ctx, func(ctx context.Context) error {
+			var err error
+			account.id, err = h.Verifier.Authenticate(session.WithContext(ctx))
+			if err == nil {
+				account.uid, err = h.Accounts.UID(ctx, account.id.User)
+			}
+			return err
+		})
+		return account, err
+	})
+	id, uid := account.id, account.uid
 	switch {
 	case errors.Is(err, api.ErrAppPrivilegeDenied):
 		q.Set("error", "access_denied")
@@ -202,4 +217,9 @@ func randomID(n int) string {
 		panic(err)
 	}
 	return base64.RawURLEncoding.EncodeToString(b)
+}
+
+type verifiedAccount struct {
+	id  api.Identity
+	uid int
 }
