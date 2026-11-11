@@ -196,7 +196,7 @@ func Export(dataDir string, w io.Writer, c Config, o Options) (err error) {
 			}
 			if isSQLite(p) {
 				wals++
-				if err := exportSQLite(tw, o, p, name, info, filepath.Join(staging, strconv.Itoa(wals)+"-wal")); err != nil {
+				if err := exportSQLite(tw, o, p, name, filepath.Join(staging, strconv.Itoa(wals)+"-wal")); err != nil {
 					return fmt.Errorf("export %s: %w", rel, err)
 				}
 				return nil
@@ -245,7 +245,7 @@ func writeEntry(tw *tar.Writer, name string, info os.FileInfo, link string, r io
 // process holds a read transaction while the database file is read in place
 // and the WAL is copied to walCopy; docs/app-backup.md#online-sqlite gives the
 // consistency argument. Writers keep committing meanwhile.
-func exportSQLite(tw *tar.Writer, o Options, db, name string, info os.FileInfo, walCopy string) error {
+func exportSQLite(tw *tar.Writer, o Options, db, name, walCopy string) error {
 	if !walMode(db) {
 		return fmt.Errorf("%w: online backup needs SQLite WAL mode", ErrInvalid)
 	}
@@ -284,7 +284,13 @@ func exportSQLite(tw *tar.Writer, o Options, db, name string, info os.FileInfo, 
 		return err
 	}
 	defer f.Close()
-	// A checkpoint may shorten the file only past the snapshot's last page.
+	// Size the entry inside the read transaction: a stat before it may predate
+	// a commit and checkpoint that grew the file. A checkpoint may shorten it
+	// only past the snapshot's last page.
+	info, err := f.Stat()
+	if err != nil {
+		return err
+	}
 	if err := writeEntry(tw, name, info, "", io.MultiReader(f, zeros{})); err != nil {
 		return err
 	}

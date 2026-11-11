@@ -226,6 +226,42 @@ func TestOfflineExportKeepsSQLiteJournalsVerbatim(t *testing.T) {
 	}
 }
 
+// The walk stats a database before its read transaction begins. A commit and
+// a full checkpoint in between grow the file; the export must archive the
+// length the transaction sees, or the restore misses the new pages. Before
+// the fix the restore was malformed.
+func TestOnlineExportSizesTheDatabaseInsideTheReadTransaction(t *testing.T) {
+	tool := sqlite3Tool(t)
+	src := t.TempDir()
+	db := filepath.Join(src, "app.db")
+	query(t, tool, db, "PRAGMA journal_mode=WAL; CREATE TABLE t(id INTEGER PRIMARY KEY, b BLOB); INSERT INTO t(b) VALUES(randomblob(100));")
+	stale, err := os.Stat(db) // what the walk saw
+	if err != nil {
+		t.Fatal(err)
+	}
+	query(t, tool, db, "WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM c WHERE x<200) INSERT INTO t(b) SELECT randomblob(4000) FROM c; PRAGMA wal_checkpoint(TRUNCATE);")
+	if grown, _ := os.Stat(db); grown.Size() <= stale.Size() {
+		t.Fatalf("database did not grow: %d -> %d", stale.Size(), grown.Size())
+	}
+	var archive bytes.Buffer
+	tw := tar.NewWriter(&archive)
+	raw, _ := json.Marshal(Header{Format: Format, Package: "demo", DataVersion: "1.2", Online: true})
+	tw.WriteHeader(&tar.Header{Name: HeaderName, Mode: 0o600, Size: int64(len(raw)), Typeflag: tar.TypeReg})
+	tw.Write(raw)
+	if err := exportSQLite(tw, Options{SQLite: tool}, db, "data/app.db", filepath.Join(t.TempDir(), "wal")); err != nil {
+		t.Fatal(err)
+	}
+	tw.Close()
+	dst := t.TempDir()
+	if err := Import(dst, &archive, cfg(), Options{}); err != nil {
+		t.Fatal(err)
+	}
+	out, _ := exec.Command(tool, filepath.Join(dst, "app.db"), "PRAGMA integrity_check; SELECT count(*) FROM t;").CombinedOutput()
+	if got := strings.TrimSpace(string(out)); got != "ok\n201" {
+		t.Fatalf("restored database: %q", got)
+	}
+}
+
 // Each transaction inserts ten rows and rewrites older ones, and checkpoints
 // run every few commits, so a restore that mixed two states would show a row
 // count that is not a multiple of ten, a gap, or a failed integrity check.
