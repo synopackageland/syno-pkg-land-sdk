@@ -83,6 +83,11 @@ func TestConfigValidate(t *testing.T) {
 		"version-text": func(c *Config) { c.DataVersion = "1.x" },
 		"hook-abs":     func(c *Config) { c.Hook = "/bin/sh" },
 		"hook-parent":  func(c *Config) { c.Hook = "../bin/hook" },
+		"exclude-abs":  func(c *Config) { c.Exclude = []string{"/tmp"} },
+		"exclude-up":   func(c *Config) { c.Exclude = []string{"../x"} },
+		"exclude-dot":  func(c *Config) { c.Exclude = []string{"a/./b"} },
+		"exclude-set":  func(c *Config) { c.Exclude = []string{"[ab]"} },
+		"exclude-tail": func(c *Config) { c.Exclude = []string{"tmp/"} },
 	} {
 		c := cfg()
 		mutate(&c)
@@ -200,14 +205,40 @@ func TestOnlineExportArchivesSQLiteAndItsWALButNotTheIndex(t *testing.T) {
 	}
 }
 
-func TestOnlineExportRefusesARollbackJournalDatabase(t *testing.T) {
+func TestOnlineExportArchivesARollbackJournalDatabase(t *testing.T) {
 	tool := sqlite3Tool(t)
 	src := t.TempDir()
-	query(t, tool, filepath.Join(src, "app.db"), "CREATE TABLE t(v);")
+	query(t, tool, filepath.Join(src, "app.db"), "CREATE TABLE t(v); INSERT INTO t VALUES('kept');")
 	c := cfg()
 	c.Online = true
-	if err := Export(src, io.Discard, c, Options{SQLite: tool}); !errors.Is(err, ErrInvalid) {
-		t.Fatalf("err = %v, want ErrInvalid", err)
+	var archive bytes.Buffer
+	if err := Export(src, &archive, c, Options{SQLite: tool}); err != nil {
+		t.Fatal(err)
+	}
+	dst := t.TempDir()
+	if err := Import(dst, &archive, c, Options{}); err != nil {
+		t.Fatal(err)
+	}
+	if got := query(t, tool, filepath.Join(dst, "app.db"), "PRAGMA integrity_check; SELECT v FROM t;"); got != "ok\nkept" {
+		t.Fatalf("restored = %q", got)
+	}
+}
+
+func TestExportLeavesOutExcludedPaths(t *testing.T) {
+	src := t.TempDir()
+	for _, f := range []string{"keep/exports/a", "keep/b.tmp", "exports/1/files.db", ".backup-app-7/state.db", "c.tmp", "d"} {
+		write(t, filepath.Join(src, f), "x")
+	}
+	c := cfg()
+	c.Exclude = []string{"exports", ".backup-app-*", "*.tmp"}
+	var archive bytes.Buffer
+	if err := Export(src, &archive, c, Options{}); err != nil {
+		t.Fatal(err)
+	}
+	names := entries(t, archive.Bytes())
+	sort.Strings(names)
+	if want := []string{"data/d", "data/keep/", "data/keep/b.tmp", "data/keep/exports/", "data/keep/exports/a", HeaderName}; !reflect.DeepEqual(names, want) {
+		t.Fatalf("entries = %v, want %v", names, want)
 	}
 }
 
