@@ -1,0 +1,53 @@
+{
+  "version": "0.53.35",
+  "executorVersion": "0.53.6",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.35",
+    "@synopackageland/app": "0.53.35",
+    "syno-pkg-land-app": "0.53.35",
+    "synopkgland_app": "0.53.35"
+  },
+  "executorDigests": {
+    "x86_64": "e77dbf846ea4555355fa15ee3a6ca3b20e1b1aaa9768321243589d9ec15ffabe",
+    "aarch64": "741a7c37757b56b3acc304cef56de5e59c1ca9278a83be0f1e1ff1ad17b24dd6",
+    "armv7": "f0a3059b982d0210621254adf7d1a3343d2a89d114e053e5b3bd646898293b1a",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Hyper Backup application backup streams SQLite in place and honours backup.exclude. appbackup Go tests, go build and go vet on a Linux runner, sdk-version, executor manifest and documentation version checks, and an internal-content scan of the packed npm tarballs. npm packages packed from this commit. No full gate, target matrix, executor rebuild, Rust build, crate publication or NAS acceptance."
+  },
+  "ui": {
+    "builtAgainst": "0.25.4",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.25.4.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Online application backup streams each SQLite database into the archive in place under a sqlite3 read transaction instead of copying it; a WAL database copies only its WAL, re-copied if a writer restarted it, and writers keep committing. Writers of a rollback-journal database wait until its file has been read.",
+    "appbackup.Options.SnapshotSQLite is removed.",
+    "backup.exclude (appbackup.Config.Exclude) lists glob patterns of data-folder files and folders left out of the archive. Apps that declare it need CLI 0.53.13 or later.",
+    "Reuse executor 0.53.6 unchanged."
+  ],
+  "npmArtifacts": {
+    "synopackageland-app-0.53.35.tgz": {
+      "sha256": "dab1be5f10c3102a926054df306300dfdc7ea21711875d2f0f4fc520486b01b5"
+    },
+    "synopackageland-sdk-0.53.35.tgz": {
+      "sha256": "828efc43549e79fa366a73d1c4056a4deb54e81ffcf61f62d0fbb8b80737e594"
+    }
+  }
+}
