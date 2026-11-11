@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path"
@@ -188,7 +189,7 @@ func Export(dataDir string, w io.Writer, c Config, o Options) (err error) {
 	}
 	wals := 0
 	err = filepath.WalkDir(dataDir, func(p string, d os.DirEntry, err error) error {
-		if err != nil || p == dataDir {
+		if p == dataDir {
 			return err
 		}
 		rel, _ := filepath.Rel(dataDir, p)
@@ -202,42 +203,10 @@ func Export(dataDir string, w io.Writer, c Config, o Options) (err error) {
 				return nil
 			}
 		}
-		info, err := d.Info()
-		if err != nil {
-			return err
+		if err := exportEntry(tw, c, o, p, "data/"+filepath.ToSlash(rel), d, err, staging, &wals); err != nil {
+			return fmt.Errorf("export %s: %w", rel, err)
 		}
-		mode := info.Mode()
-		if !mode.IsRegular() && !mode.IsDir() && mode&os.ModeSymlink == 0 {
-			return nil // sockets, pipes and devices are runtime state
-		}
-		name := "data/" + filepath.ToSlash(rel)
-		if c.Online && mode.IsRegular() {
-			if journalOfSQLite(p) {
-				return nil
-			}
-			if isSQLite(p) {
-				wals++
-				if err := exportSQLite(tw, o, p, name, filepath.Join(staging, strconv.Itoa(wals)+"-wal")); err != nil {
-					return fmt.Errorf("export %s: %w", rel, err)
-				}
-				return nil
-			}
-		}
-		link := ""
-		if mode&os.ModeSymlink != 0 {
-			if link, err = os.Readlink(p); err != nil {
-				return err
-			}
-		}
-		if !mode.IsRegular() {
-			return writeEntry(tw, name, info, link, nil)
-		}
-		f, err := os.Open(p)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		return writeEntry(tw, name, info, "", f)
+		return nil
 	})
 	if err != nil {
 		return err
@@ -245,6 +214,64 @@ func Export(dataDir string, w io.Writer, c Config, o Options) (err error) {
 	return tw.Close()
 }
 
+// exportEntry archives one walked path. The App may keep running, so a file
+// or folder it removes or renames between the listing and the read is left
+// out, as if the walk had come a moment later. Every other error fails the
+// export.
+func exportEntry(tw *tar.Writer, c Config, o Options, p, name string, d os.DirEntry, walkErr error, staging string, wals *int) error {
+	if walkErr != nil {
+		return vanished(walkErr)
+	}
+	info, err := d.Info()
+	if err != nil {
+		return vanished(err)
+	}
+	mode := info.Mode()
+	switch {
+	case mode.IsDir():
+		return writeEntry(tw, name, info, "", nil)
+	case mode&os.ModeSymlink != 0:
+		link, err := os.Readlink(p)
+		if err != nil {
+			return vanished(err)
+		}
+		return writeEntry(tw, name, info, link, nil)
+	case !mode.IsRegular():
+		return nil // sockets, pipes and devices are runtime state
+	}
+	if c.Online {
+		if journalOfSQLite(p) {
+			return nil
+		}
+		if isSQLite(p) {
+			*wals++
+			return exportSQLite(tw, o, p, name, filepath.Join(staging, strconv.Itoa(*wals)+"-wal"))
+		}
+	}
+	f, err := os.Open(p)
+	if err != nil {
+		return vanished(err)
+	}
+	defer f.Close()
+	// Size the entry from the opened file: the App may have replaced the
+	// listed one since.
+	if info, err = f.Stat(); err != nil {
+		return err
+	}
+	return writeEntry(tw, name, info, "", f)
+}
+
+// vanished drops the error of a path that no longer exists.
+func vanished(err error) error {
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	return err
+}
+
+// writeEntry writes a header for info and h.Size bytes of r. A file the App
+// shortens while it is read is padded with zeros to the size in the header,
+// which keeps the archive readable.
 func writeEntry(tw *tar.Writer, name string, info os.FileInfo, link string, r io.Reader) error {
 	h, err := tar.FileInfoHeader(info, link)
 	if err != nil {
@@ -258,7 +285,7 @@ func writeEntry(tw *tar.Writer, name string, info os.FileInfo, link string, r io
 	if err := tw.WriteHeader(h); err != nil || r == nil {
 		return err
 	}
-	_, err = io.CopyN(tw, r, h.Size)
+	_, err = io.CopyN(tw, io.MultiReader(r, zeros{}), h.Size)
 	return err
 }
 
@@ -305,12 +332,12 @@ func exportSQLite(tw *tar.Writer, o Options, db, name, walCopy string) error {
 	defer f.Close()
 	// Size the entry inside the read transaction: a stat before it may predate
 	// a commit and checkpoint that grew the file. A checkpoint may shorten it
-	// only past the snapshot's last page.
+	// only past the snapshot's last page, which writeEntry pads.
 	info, err := f.Stat()
 	if err != nil {
 		return err
 	}
-	if err := writeEntry(tw, name, info, "", io.MultiReader(f, zeros{})); err != nil {
+	if err := writeEntry(tw, name, info, "", f); err != nil {
 		return err
 	}
 	if wal == nil {

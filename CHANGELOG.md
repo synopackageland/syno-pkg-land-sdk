@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Online application backup no longer fails when the App removes or renames a file while the export walks its data folder, such as a temporary file it renames into place: the file is left out. A file the App replaces is archived as the export opened it, and one it shortens during the read is padded with zeros. Permission, I/O and SQLite errors still fail the export.
+- A failed `backup/control export` or `import` writes one line tagged `synopkgland-backup` to the system log, with the package, the path it stopped at and the error, because Hyper Backup discards the scripts' output.
+
 ## 0.53.35 (2026-11-11)
 
 - Online application backup no longer copies SQLite databases. Each database is streamed into the archive in place while a `sqlite3` read transaction is open; for a WAL-mode database only its WAL is copied, and copied again if a writer restarted it meanwhile, and writers keep committing. Writers of a rollback-journal database wait until its file has been read. A 979 MiB database exported in 0.36 s with no extra disk write, against 4.4 s and 979 MiB written for the earlier `sqlite3 .backup` copy alone. See [Online SQLite](docs/app-backup.md#online-sqlite). `appbackup.Options.SnapshotSQLite` is removed.

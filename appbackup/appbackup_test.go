@@ -529,3 +529,90 @@ func TestExportAndImportFollowASymlinkedDataDirectory(t *testing.T) {
 		t.Fatalf("data directory link replaced: %v %v", info, err)
 	}
 }
+
+// A running App removes and replaces files while an online export walks its
+// data folder: Studio Office rewrites state.holder through state.holder.tmp
+// and its generation marker through .generation-*. A fake sqlite3 changes the
+// folder after the walk has listed it, when the first database is archived.
+// Before the fix the export failed on the removed file.
+func TestOnlineExportSkipsFilesTheAppRemovesDuringTheWalk(t *testing.T) {
+	src := t.TempDir()
+	write(t, filepath.Join(src, "a.db"), "SQLite format 3\x00pages")
+	write(t, filepath.Join(src, "m.holder"), `{"old":1}`)
+	write(t, filepath.Join(src, "m.holder.tmp"), `{"holder":"tick"}`)
+	write(t, filepath.Join(src, "turns/1/result.json"), "{}")
+	write(t, filepath.Join(src, "z.txt"), "kept")
+	tool := filepath.Join(t.TempDir(), "sqlite3")
+	write(t, tool, `#!/bin/sh
+d=$(dirname "$2")
+mv "$d/m.holder.tmp" "$d/m.holder"
+rm -r "$d/turns"
+echo 1
+cat >/dev/null
+`)
+	if err := os.Chmod(tool, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	c := cfg()
+	c.Online = true
+	var archive bytes.Buffer
+	if err := Export(src, &archive, c, Options{SQLite: tool}); err != nil {
+		t.Fatalf("Export: %v", err)
+	}
+	names := entries(t, archive.Bytes())
+	sort.Strings(names)
+	if want := []string{"data/a.db", "data/m.holder", "data/z.txt", HeaderName}; !reflect.DeepEqual(names, want) {
+		t.Fatalf("entries = %v, want %v", names, want)
+	}
+	dst := t.TempDir()
+	if err := Import(dst, &archive, c, Options{}); err != nil {
+		t.Fatal(err)
+	}
+	if got := tree(t, dst)["m.holder"]; got != `{"holder":"tick"}` {
+		t.Fatalf("m.holder = %q, want the replacing file whole", got)
+	}
+}
+
+// A file the App shortens in place while it is read keeps the archive
+// readable. Before the fix the export failed with EOF.
+func TestExportPadsAFileShortenedDuringTheRead(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "log")
+	write(t, p, "abcdef")
+	info, err := os.Stat(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Open(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if err := os.Truncate(p, 2); err != nil {
+		t.Fatal(err)
+	}
+	var archive bytes.Buffer
+	tw := tar.NewWriter(&archive)
+	if err := writeEntry(tw, "data/log", info, "", f); err != nil {
+		t.Fatalf("writeEntry: %v", err)
+	}
+	tw.Close()
+	r := tar.NewReader(&archive)
+	if _, err := r.Next(); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := io.ReadAll(r); string(got) != "ab\x00\x00\x00\x00" {
+		t.Fatalf("entry = %q", got)
+	}
+}
+
+// A failing export names the path it stopped at, for the system log.
+func TestExportErrorNamesThePath(t *testing.T) {
+	src := t.TempDir()
+	write(t, filepath.Join(src, "app.db"), "SQLite format 3\x00pages")
+	c := cfg()
+	c.Online = true
+	err := Export(src, io.Discard, c, Options{SQLite: "/nonexistent/sqlite3"})
+	if err == nil || !strings.Contains(err.Error(), "export app.db:") {
+		t.Fatalf("err = %v, want it to name app.db", err)
+	}
+}
