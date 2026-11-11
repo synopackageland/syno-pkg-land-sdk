@@ -1,9 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.53.35 (2026-11-11)
 
 - Online application backup no longer copies SQLite databases. Each database is streamed into the archive in place while a `sqlite3` read transaction is open; for a WAL-mode database only its WAL is copied, and copied again if a writer restarted it meanwhile, and writers keep committing. Writers of a rollback-journal database wait until its file has been read. A 979 MiB database exported in 0.36 s with no extra disk write, against 4.4 s and 979 MiB written for the earlier `sqlite3 .backup` copy alone. See [Online SQLite](docs/app-backup.md#online-sqlite). `appbackup.Options.SnapshotSQLite` is removed.
-- `backup.exclude` (`appbackup.Config.Exclude`) lists glob patterns of files and folders, relative to the data folder, left out of the archive, such as scratch folders and SQLite files still being written. Apps need a CLI that writes `exclude` into `backup/config.json`. See [Excluded paths](docs/app-backup.md#excluded-paths).
+- `backup.exclude` (`appbackup.Config.Exclude`) lists glob patterns of files and folders, relative to the data folder, left out of the archive, such as scratch folders and SQLite files still being written. See [Excluded paths](docs/app-backup.md#excluded-paths).
+- Apps that declare `backup.exclude` need CLI 0.53.13 or later.
+- Executor 0.53.6 is unchanged.
 
 ## 0.53.34 (2026-11-11)
 
