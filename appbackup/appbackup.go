@@ -14,6 +14,8 @@ package appbackup
 
 import (
 	"archive/tar"
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -63,8 +65,8 @@ type Config struct {
 	// DataVersion is "major.minor". A backup restores into the same major
 	// version with the same or a newer minor version.
 	DataVersion string `json:"dataVersion"`
-	// Online exports while the App runs. SQLite databases are then copied
-	// through SQLite's backup API instead of byte for byte.
+	// Online exports while the App runs. SQLite databases, which must use WAL
+	// mode, are then archived under a read transaction; see exportSQLite.
 	Online bool `json:"online,omitempty"`
 	// Hook is an optional executable, relative to the package target. It runs
 	// as `<hook> freeze` before an export and `<hook> thaw` after it.
@@ -83,11 +85,9 @@ type Header struct {
 type Options struct {
 	// Target is the package target folder the hook path is relative to.
 	Target string
-	// SQLite is the sqlite3 tool used for online snapshots; default
-	// /usr/bin/sqlite3.
+	// SQLite is the sqlite3 tool that holds the read transaction of an online
+	// export; default /usr/bin/sqlite3.
 	SQLite string
-	// SnapshotSQLite replaces the sqlite3 tool, for tests.
-	SnapshotSQLite func(from, to string) error
 }
 
 // Validate checks c.
@@ -172,7 +172,7 @@ func Export(dataDir string, w io.Writer, c Config, o Options) (err error) {
 	if _, err := tw.Write(raw); err != nil {
 		return err
 	}
-	snapshots := 0
+	wals := 0
 	err = filepath.WalkDir(dataDir, func(p string, d os.DirEntry, err error) error {
 		if err != nil || p == dataDir {
 			return err
@@ -189,22 +189,17 @@ func Export(dataDir string, w io.Writer, c Config, o Options) (err error) {
 		if !mode.IsRegular() && !mode.IsDir() && mode&os.ModeSymlink == 0 {
 			return nil // sockets, pipes and devices are runtime state
 		}
-		source := p
+		name := "data/" + filepath.ToSlash(rel)
 		if c.Online && mode.IsRegular() {
 			if journalOfSQLite(p) {
 				return nil
 			}
 			if isSQLite(p) {
-				snapshots++
-				snap := filepath.Join(staging, strconv.Itoa(snapshots))
-				if err := snapshot(o, p, snap); err != nil {
-					return fmt.Errorf("snapshot %s: %w", rel, err)
+				wals++
+				if err := exportSQLite(tw, o, p, name, info, filepath.Join(staging, strconv.Itoa(wals)+"-wal")); err != nil {
+					return fmt.Errorf("export %s: %w", rel, err)
 				}
-				snapInfo, err := os.Stat(snap)
-				if err != nil {
-					return err
-				}
-				info, source = sized{info, snapInfo.Size()}, snap
+				return nil
 			}
 		}
 		link := ""
@@ -213,28 +208,15 @@ func Export(dataDir string, w io.Writer, c Config, o Options) (err error) {
 				return err
 			}
 		}
-		h, err := tar.FileInfoHeader(info, link)
-		if err != nil {
-			return err
-		}
-		h.Name = "data/" + filepath.ToSlash(rel)
-		if mode.IsDir() {
-			h.Name += "/"
-		}
-		h.Uid, h.Gid, h.Uname, h.Gname, h.Format = 0, 0, "", "", tar.FormatPAX
-		if err := tw.WriteHeader(h); err != nil {
-			return err
-		}
 		if !mode.IsRegular() {
-			return nil
+			return writeEntry(tw, name, info, link, nil)
 		}
-		f, err := os.Open(source)
+		f, err := os.Open(p)
 		if err != nil {
 			return err
 		}
 		defer f.Close()
-		_, err = io.CopyN(tw, f, h.Size)
-		return err
+		return writeEntry(tw, name, info, "", f)
 	})
 	if err != nil {
 		return err
@@ -242,7 +224,133 @@ func Export(dataDir string, w io.Writer, c Config, o Options) (err error) {
 	return tw.Close()
 }
 
-// sized reports a snapshot's size with the live file's name, mode and time.
+func writeEntry(tw *tar.Writer, name string, info os.FileInfo, link string, r io.Reader) error {
+	h, err := tar.FileInfoHeader(info, link)
+	if err != nil {
+		return err
+	}
+	h.Name = name
+	if info.IsDir() {
+		h.Name += "/"
+	}
+	h.Uid, h.Gid, h.Uname, h.Gname, h.Format = 0, 0, "", "", tar.FormatPAX
+	if err := tw.WriteHeader(h); err != nil || r == nil {
+		return err
+	}
+	_, err = io.CopyN(tw, r, h.Size)
+	return err
+}
+
+// exportSQLite archives a live WAL-mode database without copying it. A sqlite3
+// process holds a read transaction while the database file is read in place
+// and the WAL is copied to walCopy; docs/app-backup.md#online-sqlite gives the
+// consistency argument. Writers keep committing meanwhile.
+func exportSQLite(tw *tar.Writer, o Options, db, name string, info os.FileInfo, walCopy string) error {
+	if !walMode(db) {
+		return fmt.Errorf("%w: online backup needs SQLite WAL mode", ErrInvalid)
+	}
+	tool := o.SQLite
+	if tool == "" {
+		tool = "/usr/bin/sqlite3"
+	}
+	cmd := exec.Command(tool, "-bail", db)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	in, err := cmd.StdinPipe()
+	if err != nil {
+		return err
+	}
+	out, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	// Closing stdin ends sqlite3 and its read transaction, also when this
+	// process dies.
+	defer func() { in.Close(); cmd.Wait() }()
+	fmt.Fprint(in, ".timeout 30000\nBEGIN;\nSELECT count(*) FROM sqlite_master;\n")
+	if _, err := bufio.NewReader(out).ReadString('\n'); err != nil {
+		in.Close()
+		return fmt.Errorf("read transaction: %v %s", cmd.Wait(), strings.TrimSpace(stderr.String()))
+	}
+	wal, err := copyWAL(db+"-wal", walCopy)
+	if err != nil {
+		return err
+	}
+	f, err := os.Open(db)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	// A checkpoint may shorten the file only past the snapshot's last page.
+	if err := writeEntry(tw, name, info, "", io.MultiReader(f, zeros{})); err != nil {
+		return err
+	}
+	if wal == nil {
+		return nil
+	}
+	w, err := os.Open(walCopy)
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+	return writeEntry(tw, name+"-wal", wal, "", w)
+}
+
+// copyWAL copies a WAL that no writer restarted or truncated during the copy.
+// It returns nil when there is no WAL.
+func copyWAL(wal, to string) (os.FileInfo, error) {
+	for range 3 {
+		f, err := os.Open(wal)
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		info, stable, err := copyStable(f, to)
+		f.Close()
+		if err != nil || stable {
+			return info, err
+		}
+	}
+	return nil, errors.New("the WAL was restarted during every copy")
+}
+
+// copyStable reports whether f's 32-byte WAL header, which a restart or a
+// truncation rewrites before any frame, stayed the same during the copy.
+func copyStable(f *os.File, to string) (os.FileInfo, bool, error) {
+	info, err := f.Stat()
+	if err != nil {
+		return nil, false, err
+	}
+	before, after := make([]byte, 32), make([]byte, 32)
+	nb, _ := f.ReadAt(before, 0)
+	w, err := os.Create(to)
+	if err != nil {
+		return nil, false, err
+	}
+	n, err := io.Copy(w, io.NewSectionReader(f, 0, info.Size()))
+	if cerr := w.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	na, _ := f.ReadAt(after, 0)
+	return sized{info, n}, n == info.Size() && bytes.Equal(before[:nb], after[:na]), nil
+}
+
+type zeros struct{}
+
+func (zeros) Read(b []byte) (int, error) {
+	clear(b)
+	return len(b), nil
+}
+
+// sized reports a copy's size with the live file's name, mode and time.
 type sized struct {
 	os.FileInfo
 	size int64
@@ -261,6 +369,18 @@ func isSQLite(p string) bool {
 	return err == nil && string(magic) == "SQLite format 3\x00"
 }
 
+// walMode reports the file format version bytes of a WAL-mode database.
+func walMode(p string) bool {
+	f, err := os.Open(p)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	b := make([]byte, 2)
+	_, err = f.ReadAt(b, 18)
+	return err == nil && b[0] == 2 && b[1] == 2
+}
+
 func journalOfSQLite(p string) bool {
 	for _, suffix := range []string{"-wal", "-shm", "-journal"} {
 		if base, ok := strings.CutSuffix(p, suffix); ok && isSQLite(base) {
@@ -268,24 +388,6 @@ func journalOfSQLite(p string) bool {
 		}
 	}
 	return false
-}
-
-func snapshot(o Options, from, to string) error {
-	if o.SnapshotSQLite != nil {
-		return o.SnapshotSQLite(from, to)
-	}
-	if strings.ContainsAny(to, `'"`) || !filepath.IsAbs(from) {
-		return ErrInvalid
-	}
-	tool := o.SQLite
-	if tool == "" {
-		tool = "/usr/bin/sqlite3"
-	}
-	out, err := exec.Command(tool, "-bail", from, ".backup '"+to+"'").CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
-	}
-	return nil
 }
 
 func runHook(c Config, o Options, action string) error {

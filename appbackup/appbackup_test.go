@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -13,6 +14,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 )
 
 func cfg() Config { return Config{Schema: 1, Package: "demo", DataVersion: "1.2"} }
@@ -139,37 +141,73 @@ func TestExportSkipsSocketsAndStagingDirectories(t *testing.T) {
 	}
 }
 
-func TestOnlineExportSnapshotsSQLiteAndSkipsItsJournals(t *testing.T) {
+func sqlite3Tool(t *testing.T) string {
+	t.Helper()
+	tool, err := exec.LookPath("sqlite3")
+	if err != nil {
+		t.Skip("sqlite3 not installed")
+	}
+	return tool
+}
+
+func query(t *testing.T, tool, db, sql string) string {
+	t.Helper()
+	out, err := exec.Command(tool, "-bail", db, sql).CombinedOutput()
+	if err != nil {
+		t.Fatalf("%s: %v %s", sql, err, out)
+	}
+	return strings.TrimSpace(string(out))
+}
+
+func TestOnlineExportArchivesSQLiteAndItsWALButNotTheIndex(t *testing.T) {
+	tool := sqlite3Tool(t)
 	src := t.TempDir()
-	write(t, filepath.Join(src, "db.sqlite"), "SQLite format 3\x00live pages")
-	write(t, filepath.Join(src, "db.sqlite-wal"), "wal")
-	write(t, filepath.Join(src, "db.sqlite-shm"), "shm")
+	db := filepath.Join(src, "app.db")
+	query(t, tool, db, "PRAGMA journal_mode=WAL; CREATE TABLE t(v); INSERT INTO t VALUES('kept');")
+	// An open writer keeps the WAL and its index next to the database.
+	w := exec.Command(tool, db)
+	in, _ := w.StdinPipe()
+	if err := w.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { in.Close(); w.Wait() }()
+	io.WriteString(in, "PRAGMA wal_autocheckpoint=0; INSERT INTO t VALUES('in wal');\n")
+	for start := time.Now(); ; time.Sleep(10 * time.Millisecond) {
+		if info, err := os.Stat(db + "-wal"); err == nil && info.Size() > 0 {
+			break
+		} else if time.Since(start) > 5*time.Second {
+			t.Fatal("no WAL")
+		}
+	}
 	write(t, filepath.Join(src, "notes.txt"), "plain")
-	var snapped []string
-	opts := Options{SnapshotSQLite: func(from, to string) error {
-		snapped = append(snapped, filepath.Base(from))
-		return os.WriteFile(to, []byte("SQLite format 3\x00snapshot"), 0o600)
-	}}
 	c := cfg()
 	c.Online = true
 	var archive bytes.Buffer
-	if err := Export(src, &archive, c, opts); err != nil {
+	if err := Export(src, &archive, c, Options{SQLite: tool}); err != nil {
 		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(snapped, []string{"db.sqlite"}) {
-		t.Fatalf("snapshots = %v", snapped)
 	}
 	names := entries(t, archive.Bytes())
 	sort.Strings(names)
-	if want := []string{"data/db.sqlite", "data/notes.txt", HeaderName}; !reflect.DeepEqual(names, want) {
+	if want := []string{"data/app.db", "data/app.db-wal", "data/notes.txt", HeaderName}; !reflect.DeepEqual(names, want) {
 		t.Fatalf("entries = %v, want %v", names, want)
 	}
 	dst := t.TempDir()
 	if err := Import(dst, &archive, c, Options{}); err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := os.ReadFile(filepath.Join(dst, "db.sqlite")); string(b) != "SQLite format 3\x00snapshot" {
-		t.Fatalf("restored database = %q, want the snapshot", b)
+	if got := query(t, tool, filepath.Join(dst, "app.db"), "SELECT group_concat(v) FROM t;"); got != "kept,in wal" {
+		t.Fatalf("restored rows = %q", got)
+	}
+}
+
+func TestOnlineExportRefusesARollbackJournalDatabase(t *testing.T) {
+	tool := sqlite3Tool(t)
+	src := t.TempDir()
+	query(t, tool, filepath.Join(src, "app.db"), "CREATE TABLE t(v);")
+	c := cfg()
+	c.Online = true
+	if err := Export(src, io.Discard, c, Options{SQLite: tool}); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("err = %v, want ErrInvalid", err)
 	}
 }
 
@@ -177,9 +215,8 @@ func TestOfflineExportKeepsSQLiteJournalsVerbatim(t *testing.T) {
 	src := t.TempDir()
 	write(t, filepath.Join(src, "db.sqlite"), "SQLite format 3\x00pages")
 	write(t, filepath.Join(src, "db.sqlite-wal"), "wal")
-	opts := Options{SnapshotSQLite: func(string, string) error { t.Fatal("offline export must not snapshot"); return nil }}
 	var archive bytes.Buffer
-	if err := Export(src, &archive, cfg(), opts); err != nil {
+	if err := Export(src, &archive, cfg(), Options{SQLite: "/nonexistent/sqlite3"}); err != nil {
 		t.Fatal(err)
 	}
 	names := entries(t, archive.Bytes())
@@ -189,30 +226,90 @@ func TestOfflineExportKeepsSQLiteJournalsVerbatim(t *testing.T) {
 	}
 }
 
-func TestSQLiteSnapshotWithTheSystemTool(t *testing.T) {
-	sqlite, err := exec.LookPath("sqlite3")
-	if err != nil {
-		t.Skip("sqlite3 not installed")
-	}
+// Each transaction inserts ten rows and rewrites older ones, and checkpoints
+// run every few commits, so a restore that mixed two states would show a row
+// count that is not a multiple of ten, a gap, or a failed integrity check.
+func TestOnlineExportWhileAWriterCommits(t *testing.T) {
+	tool := sqlite3Tool(t)
 	src := t.TempDir()
 	db := filepath.Join(src, "app.db")
-	if out, err := exec.Command(sqlite, db, "PRAGMA journal_mode=WAL; CREATE TABLE t(v); INSERT INTO t VALUES('kept');").CombinedOutput(); err != nil {
-		t.Fatalf("seed: %v %s", err, out)
+	w := exec.Command(tool, "-bail", db)
+	var werr bytes.Buffer
+	w.Stderr = &werr
+	in, _ := w.StdinPipe()
+	if err := w.Start(); err != nil {
+		t.Fatal(err)
 	}
+	io.WriteString(in, ".timeout 5000\nPRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=16; PRAGMA journal_size_limit=0; CREATE TABLE t(id INTEGER PRIMARY KEY, b BLOB);\n")
+	stop := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for i := 0; ; i++ {
+			select {
+			case <-stop:
+				return
+			case <-time.After(20 * time.Millisecond):
+			}
+			fmt.Fprintf(in, "BEGIN; WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM c WHERE x<10) INSERT INTO t(b) SELECT randomblob(3000) FROM c; UPDATE t SET b=randomblob(3000) WHERE id%%7=%d; COMMIT;\n", i%7)
+		}
+	}()
+	defer func() {
+		close(stop)
+		<-done
+		in.Close()
+		if err := w.Wait(); err != nil {
+			t.Errorf("writer: %v %s", err, werr.String())
+		}
+	}()
+	time.Sleep(300 * time.Millisecond)
 	c := cfg()
 	c.Online = true
-	var archive bytes.Buffer
-	if err := Export(src, &archive, c, Options{SQLite: sqlite}); err != nil {
+	for i := range 5 {
+		var archive bytes.Buffer
+		if err := Export(src, &archive, c, Options{SQLite: tool}); err != nil {
+			t.Fatalf("export %d: %v", i, err)
+		}
+		dst := t.TempDir()
+		if err := Import(dst, &archive, c, Options{}); err != nil {
+			t.Fatal(err)
+		}
+		got := query(t, tool, filepath.Join(dst, "app.db"), "PRAGMA integrity_check; SELECT count(*), max(id) FROM t;")
+		lines := strings.Split(got, "\n")
+		var n, max int
+		if len(lines) != 2 || lines[0] != "ok" {
+			t.Fatalf("export %d: %q", i, got)
+		}
+		fmt.Sscanf(lines[1], "%d|%d", &n, &max)
+		if n == 0 || n%10 != 0 || n != max {
+			t.Fatalf("export %d: rows %d, max id %d: not a committed state", i, n, max)
+		}
+		t.Logf("export %d: %d rows", i, n)
+		time.Sleep(400 * time.Millisecond)
+	}
+}
+
+// APPBACKUP_MEASURE=1 times an online export of a generated 1 GB database
+// against the earlier full copy with sqlite3 .backup.
+func TestMeasureOnlineExport(t *testing.T) {
+	if os.Getenv("APPBACKUP_MEASURE") == "" {
+		t.Skip("set APPBACKUP_MEASURE=1")
+	}
+	tool := sqlite3Tool(t)
+	src := t.TempDir()
+	db := filepath.Join(src, "app.db")
+	query(t, tool, db, "PRAGMA journal_mode=WAL; CREATE TABLE t(id INTEGER PRIMARY KEY, b BLOB); WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM c WHERE x<250000) INSERT INTO t(b) SELECT randomblob(4000) FROM c;")
+	info, _ := os.Stat(db)
+	c := cfg()
+	c.Online = true
+	start := time.Now()
+	if err := Export(src, io.Discard, c, Options{SQLite: tool}); err != nil {
 		t.Fatal(err)
 	}
-	dst := t.TempDir()
-	if err := Import(dst, &archive, c, Options{}); err != nil {
-		t.Fatal(err)
-	}
-	out, err := exec.Command(sqlite, filepath.Join(dst, "app.db"), "SELECT v FROM t;").CombinedOutput()
-	if err != nil || strings.TrimSpace(string(out)) != "kept" {
-		t.Fatalf("restored rows = %q, %v", out, err)
-	}
+	online := time.Since(start)
+	start = time.Now()
+	query(t, tool, db, ".backup '"+filepath.Join(t.TempDir(), "copy")+"'")
+	t.Logf("database %d MiB: online export to io.Discard %v (no copy); sqlite3 .backup copy alone %v", info.Size()>>20, online, time.Since(start))
 }
 
 func TestHookFreezesAndThawsAroundExport(t *testing.T) {

@@ -28,13 +28,59 @@ the current data, so a refused or broken archive leaves it unchanged.
   are, including SQLite journals, which is consistent because nothing writes
   while the App is stopped.
 - **Online** (`backup: { online: true }`). The App keeps running. Each SQLite
-  database (detected by its file header) is copied through SQLite's backup API
-  (`sqlite3 .backup`) into a consistent snapshot, and its `-wal`, `-shm` and
-  `-journal` files are left out. Other files are copied as they are, so an
-  App that writes other files during a backup should use offline mode or a
-  hook.
+  database (detected by its file header) must use WAL mode; another journal
+  mode stops the export with `APP_BACKUP_INVALID`. A database is archived
+  in place under a read transaction, without a copy of it (see
+  [Online SQLite](#online-sqlite)); its `-shm` and `-journal` files are left
+  out. Other files are copied as they are, so an App that writes other files
+  during a backup should use offline mode or a hook.
 
 Hyper Backup always stops the App before a restore.
+
+## Online SQLite
+
+For each database the export starts `sqlite3 <db>` as the package account,
+opens a read transaction (`BEGIN; SELECT count(*) FROM sqlite_master;`), and
+while it is open:
+
+1. copies `<db>-wal` into a private folder in the data folder, and copies it
+   again (at most three times) if its 32-byte header changed or the file got
+   shorter during the copy;
+2. streams the live database file into the archive;
+3. adds the WAL copy as `<db>-wal`.
+
+Closing sqlite3's input then ends the transaction. Writers keep committing the
+whole time; nothing waits on the export except a `FULL`, `RESTART` or
+`TRUNCATE` checkpoint, which waits for readers within its busy timeout and
+then reports busy. The extra disk write is the WAL, not the database.
+
+A restore opens the database without a `-shm`, so SQLite rebuilds the WAL
+index by reading the WAL from its header and stops at the first frame whose
+salt or checksum does not match; only whole committed transactions count.
+Why the restored database is a committed state (`wal.c` of SQLite 3.46):
+
+- **The WAL had frames not yet copied into the database when the transaction
+  began.** The reader holds a read lock with a WAL mark. Restarting or
+  truncating the WAL needs every such lock exclusively (`walRestartLog`,
+  `walCheckpoint`), so the WAL only grows during the export. A checkpoint
+  copies only frames up to the lowest reader mark into the database
+  (`mxSafeFrame`), so every database page that changed, even half-written
+  when it was read, has a frame in the copied WAL, and replaying the WAL
+  replaces it. Frames appended later replay as later whole transactions; a
+  partly written last frame fails its checksum.
+- **The WAL was already fully copied into the database.** The reader holds
+  read lock 0 and ignores the WAL. Any checkpoint copy needs read lock 0
+  exclusively, so the database file does not change during the export. A
+  writer may still restart the WAL from its start, or a `TRUNCATE` checkpoint
+  empty it. A copy taken across such a change could pair the old header with
+  part of the old frames and replay old page versions over the database, so
+  the copy is checked: a restart writes a new header (new salts) before any
+  frame, and a truncation shortens the file. A copy with an unchanged header
+  and full length holds either the old WAL whole, whose frames the database
+  already has, or new frames written on top of the unchanged database.
+- A checkpoint can shorten the database file only to the size of the latest
+  commit, and only when no reader's mark is behind it; bytes missing past the
+  read size are archived as zeros, beyond the snapshot's last page.
 
 ## Quiesce hook
 
