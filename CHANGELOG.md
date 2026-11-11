@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-- Online application backup no longer copies SQLite databases. Each database is streamed into the archive in place while a `sqlite3` read transaction is open; only its WAL is copied, and copied again if a writer restarted it meanwhile. Writers keep committing. A 979 MiB database exported in 0.36 s with no extra disk write, against 4.4 s and 979 MiB written for the earlier `sqlite3 .backup` copy alone. See [Online SQLite](docs/app-backup.md#online-sqlite).
-- **Breaking:** online backup requires SQLite WAL mode. A database in another journal mode (including `VACUUM INTO` output, which is in rollback mode) stops the whole export with `APP_BACKUP_INVALID`, so the Hyper Backup task fails. Other files are read as they are; a non-SQLite file being written during the export may be inconsistent. `appbackup.Options.SnapshotSQLite` is removed.
+- Online application backup no longer copies SQLite databases. Each database is streamed into the archive in place while a `sqlite3` read transaction is open; for a WAL-mode database only its WAL is copied, and copied again if a writer restarted it meanwhile, and writers keep committing. Writers of a rollback-journal database wait until its file has been read. A 979 MiB database exported in 0.36 s with no extra disk write, against 4.4 s and 979 MiB written for the earlier `sqlite3 .backup` copy alone. See [Online SQLite](docs/app-backup.md#online-sqlite). `appbackup.Options.SnapshotSQLite` is removed.
+- `backup.exclude` (`appbackup.Config.Exclude`) lists glob patterns of files and folders, relative to the data folder, left out of the archive, such as scratch folders and SQLite files still being written. Apps need a CLI that writes `exclude` into `backup/config.json`. See [Excluded paths](docs/app-backup.md#excluded-paths).
 
 ## 0.53.34 (2026-11-11)
 

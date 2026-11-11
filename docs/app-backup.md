@@ -28,14 +28,26 @@ the current data, so a refused or broken archive leaves it unchanged.
   are, including SQLite journals, which is consistent because nothing writes
   while the App is stopped.
 - **Online** (`backup: { online: true }`). The App keeps running. Each SQLite
-  database (detected by its file header) must use WAL mode; another journal
-  mode stops the export with `APP_BACKUP_INVALID`. A database is archived
-  in place under a read transaction, without a copy of it (see
-  [Online SQLite](#online-sqlite)); its `-shm` and `-journal` files are left
-  out. Other files are copied as they are, so an App that writes other files
-  during a backup should use offline mode or a hook.
+  database (detected by its file header) is archived in place under a read
+  transaction, without a copy of it (see [Online SQLite](#online-sqlite));
+  its `-shm` and `-journal` files are left out. Other files are read as they
+  are, so a file being written during the export may be inconsistent: list
+  scratch folders in `exclude`, or use offline mode or a hook.
 
 Hyper Backup always stops the App before a restore.
+
+## Excluded paths
+
+`backup: { exclude: [<pattern>, ...] }` leaves files and folders out of the
+archive, in both modes. Each pattern is a `path.Match` glob relative to the
+data folder, with `/` between folders: letters, digits, `.`, `_`, `-`, `*`
+and `?`, at most 64 patterns of up to 255 characters, no `.` or `..` folder.
+`*` does not cross `/`, and a matching folder is left out whole. For example
+`[exports, ".restore-*", "cache/*.tmp"]`. Use it for scratch data the App
+rebuilds or discards, especially SQLite files that are still being written
+(for example by `VACUUM INTO`): online backup would otherwise wait for their
+lock or archive them half written. A restore removes excluded paths with the
+rest of the data folder.
 
 ## Online SQLite
 
@@ -49,15 +61,24 @@ while it is open:
 2. streams the live database file into the archive;
 3. adds the WAL copy as `<db>-wal`.
 
-Closing sqlite3's input then ends the transaction. Writers keep committing the
-whole time; nothing waits on the export except a `FULL`, `RESTART` or
-`TRUNCATE` checkpoint, which waits for readers within its busy timeout and
-then reports busy. The extra disk write is the WAL, not the database.
+Closing sqlite3's input then ends the transaction. In WAL mode writers keep
+committing the whole time; nothing waits on the export except a `FULL`,
+`RESTART` or `TRUNCATE` checkpoint, which waits for readers within its busy
+timeout and then reports busy. The extra disk write is the WAL, not the
+database.
+
+A database in a rollback-journal mode (`DELETE`, `TRUNCATE`, `PERSIST`; also
+what `VACUUM INTO` writes) has no WAL to copy. Its read transaction holds a
+SHARED lock, and a writer changes the database file only under an EXCLUSIVE
+lock, so the file read is the last committed state; a hot journal left by a
+crash is rolled back before the read. Its writers wait, within their own busy
+timeout, until the file has been read, so keep databases written while the App
+runs in WAL mode.
 
 A restore opens the database without a `-shm`, so SQLite rebuilds the WAL
 index by reading the WAL from its header and stops at the first frame whose
 salt or checksum does not match; only whole committed transactions count.
-Why the restored database is a committed state (`wal.c` of SQLite 3.46):
+Why a restored WAL-mode database is a committed state (`wal.c` of SQLite 3.46):
 
 - **The WAL had frames not yet copied into the database when the transaction
   began.** The reader holds a read lock with a WAL mark. Restarting or

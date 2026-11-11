@@ -55,6 +55,7 @@ var (
 )
 
 var packagePattern = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]{0,63}$`)
+var excludePattern = regexp.MustCompile(`^[A-Za-z0-9._*?-]+(/[A-Za-z0-9._*?-]+)*$`)
 var versionPattern = regexp.MustCompile(`^(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]{0,3})$`)
 
 // Config is the build-time backup configuration the CLI ships next to the
@@ -65,12 +66,17 @@ type Config struct {
 	// DataVersion is "major.minor". A backup restores into the same major
 	// version with the same or a newer minor version.
 	DataVersion string `json:"dataVersion"`
-	// Online exports while the App runs. SQLite databases, which must use WAL
-	// mode, are then archived under a read transaction; see exportSQLite.
+	// Online exports while the App runs. SQLite databases are then archived
+	// under a read transaction; see exportSQLite.
 	Online bool `json:"online,omitempty"`
 	// Hook is an optional executable, relative to the package target. It runs
 	// as `<hook> freeze` before an export and `<hook> thaw` after it.
 	Hook string `json:"hook,omitempty"`
+	// Exclude lists path.Match patterns, relative to the data directory with
+	// "/" separators, of files and folders left out of the archive, such as
+	// scratch folders. A matching folder is left out whole. A restore removes
+	// them, like everything else in the data directory.
+	Exclude []string `json:"exclude,omitempty"`
 }
 
 // Header is the archive's first entry.
@@ -97,6 +103,14 @@ func (c Config) Validate() error {
 	}
 	if c.Hook != "" && (path.Clean(c.Hook) != c.Hook || !filepath.IsLocal(c.Hook) || strings.Contains(c.Hook, `\`)) {
 		return ErrInvalid
+	}
+	if len(c.Exclude) > 64 {
+		return ErrInvalid
+	}
+	for _, e := range c.Exclude {
+		if len(e) > 255 || !excludePattern.MatchString(e) || path.Clean(e) != e || !filepath.IsLocal(e) {
+			return ErrInvalid
+		}
 	}
 	return nil
 }
@@ -181,6 +195,13 @@ func Export(dataDir string, w io.Writer, c Config, o Options) (err error) {
 		if !strings.Contains(rel, string(filepath.Separator)) && strings.HasPrefix(rel, stagingPrefix) {
 			return filepath.SkipDir
 		}
+		for _, e := range c.Exclude {
+			if ok, _ := path.Match(e, filepath.ToSlash(rel)); ok && d.IsDir() {
+				return filepath.SkipDir
+			} else if ok {
+				return nil
+			}
+		}
 		info, err := d.Info()
 		if err != nil {
 			return err
@@ -241,14 +262,12 @@ func writeEntry(tw *tar.Writer, name string, info os.FileInfo, link string, r io
 	return err
 }
 
-// exportSQLite archives a live WAL-mode database without copying it. A sqlite3
+// exportSQLite archives a live database without copying it. A sqlite3
 // process holds a read transaction while the database file is read in place
 // and the WAL is copied to walCopy; docs/app-backup.md#online-sqlite gives the
-// consistency argument. Writers keep committing meanwhile.
+// consistency argument. WAL-mode writers keep committing meanwhile; a
+// rollback-journal database's writers wait until its file is read.
 func exportSQLite(tw *tar.Writer, o Options, db, name, walCopy string) error {
-	if !walMode(db) {
-		return fmt.Errorf("%w: online backup needs SQLite WAL mode", ErrInvalid)
-	}
 	tool := o.SQLite
 	if tool == "" {
 		tool = "/usr/bin/sqlite3"
@@ -373,18 +392,6 @@ func isSQLite(p string) bool {
 	magic := make([]byte, 16)
 	_, err = io.ReadFull(f, magic)
 	return err == nil && string(magic) == "SQLite format 3\x00"
-}
-
-// walMode reports the file format version bytes of a WAL-mode database.
-func walMode(p string) bool {
-	f, err := os.Open(p)
-	if err != nil {
-		return false
-	}
-	defer f.Close()
-	b := make([]byte, 2)
-	_, err = f.ReadAt(b, 18)
-	return err == nil && b[0] == 2 && b[1] == 2
 }
 
 func journalOfSQLite(p string) bool {
