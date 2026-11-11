@@ -32,7 +32,14 @@ the current data, so a refused or broken archive leaves it unchanged.
   transaction, without a copy of it (see [Online SQLite](#online-sqlite));
   its `-shm` and `-journal` files are left out. Other files are read as they
   are, so a file being written during the export may be inconsistent: list
-  scratch folders in `exclude`, or use offline mode or a hook.
+  scratch folders in `exclude`, or use offline mode or a hook. A file or
+  folder the App removes or renames after the export listed its folder is
+  left out, a file it replaces is archived as the export opened it, and a
+  file it shortens while it is read is padded with zeros to its earlier size.
+
+A failed export or import also writes one line, tagged `synopkgland-backup`,
+to the system log with the package, the path it stopped at and the error:
+Hyper Backup discards the output of the backup scripts.
 
 Hyper Backup always stops the App before a restore.
 
