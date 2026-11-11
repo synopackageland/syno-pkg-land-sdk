@@ -1,9 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.53.36 (2026-11-12)
 
 - Online application backup no longer fails when the App removes or renames a file while the export walks its data folder, such as a temporary file it renames into place: the file is left out. A file the App replaces is archived as the export opened it, and one it shortens during the read is padded with zeros. Permission, I/O and SQLite errors still fail the export.
 - A failed `backup/control export` or `import` writes one line tagged `synopkgland-backup` to the system log, with the package, the path it stopped at and the error, because Hyper Backup discards the scripts' output.
+- Executor 0.53.6 is unchanged.
 
 ## 0.53.35 (2026-11-11)
 
