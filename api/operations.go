@@ -35,15 +35,23 @@ type Operation struct {
 	Audit   string            `json:"audit,omitempty"`
 	MCP     string            `json:"mcp,omitempty"`
 	Labels  map[string]string `json:"labels,omitempty"`
+	// CTL narrows ctl exposure like MCP narrows MCP exposure. Gateway names a
+	// hidden invoke operation that ctl and external MCP callers reach this
+	// operation through, for Apps that route them via an audited engine.
+	CTL     string `json:"ctl,omitempty"`
+	Gateway string `json:"gateway,omitempty"`
 	// DynamicProvider marks a carrier operation that App runtime namespaces
 	// bind tools to; generators note that its tool list is completed at runtime.
 	DynamicProvider bool `json:"dynamicProvider,omitempty"`
 }
 
 type operationRegistry struct {
-	Format     string               `json:"format"`
-	Version    int                  `json:"version"`
-	Operations map[string]Operation `json:"operations"`
+	Format  string `json:"format"`
+	Version int    `json:"version"`
+	// Defs are optional shared schema definitions. An operation schema's
+	// "#/$defs/<name>" reference resolves to its own $defs first, then here.
+	Defs       map[string]json.RawMessage `json:"$defs,omitempty"`
+	Operations map[string]Operation       `json:"operations"`
 }
 
 func infrastructureOperation(name string) bool {
@@ -66,6 +74,9 @@ func ValidateOperationRegistry(raw, permissions []byte, routes ...Route) error {
 	}
 	if doc.Format != "synopkgland.api" || doc.Version != 2 || doc.Operations == nil || len(doc.Operations) > MaxPermissionMethods {
 		return fmt.Errorf("expected synopkgland.api v2 operations")
+	}
+	if err := validateSharedDefs(doc); err != nil {
+		return err
 	}
 	actual, err := DescribeRoutes(permissions, routes...)
 	if err != nil {

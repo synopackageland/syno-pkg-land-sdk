@@ -113,6 +113,20 @@ func (op Operation) MCPExposure() string {
 	return "hidden"
 }
 
+// CtlExposure is the declared ctl exposure, or the default: every class
+// except hidden is a ctl command.
+func (op Operation) CtlExposure() string {
+	switch {
+	case op.CTL != "":
+		return op.CTL
+	case op.AI == AIHidden:
+		return "hidden"
+	}
+	return "exposed"
+}
+
+var effectRank = map[string]int{"read": 0, "write": 1, "destructive": 2}
+
 var (
 	semanticToken = regexp.MustCompile(`^[a-z][a-z0-9-]{0,31}$`)
 	tierToken     = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,15}$`)
@@ -203,10 +217,10 @@ func validateOperationClass(name string, op Operation, ops map[string]Operation)
 		}
 	}
 	switch op.Audit {
-	case "", "change":
-	case "read", "sensitive-read", "none":
+	case "", "change", "sensitive-read":
+	case "read", "none":
 		if op.Effect != "read" {
-			return fmt.Errorf("audit of a change must be change: %s", name)
+			return fmt.Errorf("audit of a change must be change or sensitive-read: %s", name)
 		}
 	default:
 		return fmt.Errorf("audit must be change, sensitive-read, read or none: %s", name)
@@ -225,6 +239,20 @@ func validateOperationClass(name string, op Operation, ops map[string]Operation)
 	default:
 		return fmt.Errorf("mcp must be exposed, hidden or human-only: %s", name)
 	}
+	switch op.CTL {
+	case "", "hidden":
+	case "exposed":
+		if op.AI == AIHidden {
+			return fmt.Errorf("ctl cannot expose a hidden operation: %s", name)
+		}
+	default:
+		return fmt.Errorf("ctl must be exposed or hidden: %s", name)
+	}
+	if op.Gateway != "" {
+		if err := validateGateway(name, op, ops); err != nil {
+			return err
+		}
+	}
 	if op.DynamicProvider && !AITool(op.AI) {
 		return fmt.Errorf("dynamicProvider requires an AI tool class: %s", name)
 	}
@@ -234,6 +262,33 @@ func validateOperationClass(name string, op Operation, ops map[string]Operation)
 	for key, value := range op.Labels {
 		if !semanticToken.MatchString(key) || len(value) > 128 || strings.ContainsAny(value, "\n\r") {
 			return fmt.Errorf("labels need lowercase keys and one-line values up to 128 bytes: %s", name)
+		}
+	}
+	return nil
+}
+
+// validateGateway checks that ctl reaches name through a dedicated hidden
+// invoke route whose route record (permission, audit) matches the operation
+// and whose execution floor is never weaker.
+func validateGateway(name string, op Operation, ops map[string]Operation) error {
+	g, ok := ops[op.Gateway]
+	switch {
+	case op.CtlExposure() != "exposed":
+		return fmt.Errorf("gateway applies only to an operation exposed to ctl: %s", name)
+	case op.Gateway == name || !ok:
+		return fmt.Errorf("gateway must name another registered operation: %s", name)
+	case g.AI != AIHidden || g.Flow.Type != "invoke" || g.Gateway != "":
+		return fmt.Errorf("gateway must name a hidden invoke operation without its own gateway: %s", name)
+	case g.Permission != op.Permission:
+		return fmt.Errorf("gateway must name an operation with the same permission: %s", name)
+	case effectRank[g.Effect] < effectRank[op.Effect]:
+		return fmt.Errorf("gateway effect must be at least the operation's effect: %s", name)
+	case g.AuditClass() != op.AuditClass():
+		return fmt.Errorf("gateway audit must equal the operation's audit class: %s", name)
+	}
+	for other, spec := range ops {
+		if other < name && spec.Gateway == op.Gateway {
+			return fmt.Errorf("gateway serves only one operation: %s", name)
 		}
 	}
 	return nil

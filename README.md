@@ -201,9 +201,10 @@ an explicit `ai` class: read, preview, draft, propose, local, one-click,
 human-only or hidden. Reads and previews cannot mutate; drafts require a
 non-mutating preview and human confirmation; local changes need the turn's
 Allow changes. Long operations use a fixed job flow. Optional consent, targets,
-risk, tier, undo, audit, MCP exposure, runtime-tool carriers and labels are
-described in [AI operation semantics](docs/ai-operation-semantics.md), together
-with `api.NewToolCatalog` for runtime namespaces.
+risk, tier, undo, audit, MCP and ctl exposure, ctl gateways, runtime-tool
+carriers, labels and shared schema `$defs` are described in
+[AI operation semantics](docs/ai-operation-semantics.md), together with
+`api.NewToolCatalog` for runtime namespaces.
 
 Go Apps embed the generated full registry and construct the server with
 `api.NewServerWithOperations`; `ValidateOperationRegistry` checks exact handler,

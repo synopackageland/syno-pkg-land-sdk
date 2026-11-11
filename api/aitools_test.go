@@ -189,3 +189,87 @@ func TestToolUndoAction(t *testing.T) {
 	}
 	t.Fatal("notes.save missing")
 }
+
+func TestToolGateCtlHidden(t *testing.T) {
+	raw, _, _ := semanticsRegistry(t, withGateway)
+	catalog, err := NewToolCatalog(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tools, _ := catalog.Tools("app")
+	gate := map[string]Tool{}
+	for _, tool := range tools {
+		gate[tool.Method] = tool
+	}
+	export := gate["notes.export"]
+	if export.Gate(Turn{Via: ViaCtl}) != GateRefuse || export.Gate(Turn{Via: ViaAI}) != GateCard || export.Gate(Turn{Via: ViaMCP}) != GateCard {
+		t.Fatal("ctl hidden must refuse ctl only")
+	}
+	if gate["notes.list"].Gate(Turn{Via: ViaCtl}) != GateRun || gate["notes.save"].Gate(Turn{Via: ViaCtl, AllowChanges: true}) != GateRun {
+		t.Fatal("gatewayed ops keep their ctl gate")
+	}
+	if gate["notes.list"].Gateway != "ctl.notes.list" || gate["rows.read"].Gateway != "" {
+		t.Fatal("tool gateway")
+	}
+}
+
+func TestToolCatalogForGateway(t *testing.T) {
+	raw, _, _ := semanticsRegistry(t, withGateway)
+	catalog, err := NewToolCatalog(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tool, ok := catalog.ForGateway("ctl.notes.save")
+	if !ok || tool.Method != "notes.save" || tool.Gateway != "ctl.notes.save" || tool.Operation.AI != AILocal || tool.AuditClass() != "change" {
+		t.Fatalf("served tool %+v %v", tool, ok)
+	}
+	if tool.Gate(Turn{Via: ViaCtl}) != GateRefuse || tool.Gate(Turn{Via: ViaCtl, AllowChanges: true}) != GateRun {
+		t.Fatal("served gate")
+	}
+	if undo, ok := tool.Undo(json.RawMessage(`{"undo_id":"e1"}`)); !ok || undo.Method != "notes.undo" {
+		t.Fatal("served undo")
+	}
+	if tool.Consent(nil).Category != "inventory" {
+		t.Fatal("served consent")
+	}
+	for _, unknown := range []string{"ctl.notes.none", "notes.list", ""} {
+		if _, ok := catalog.ForGateway(unknown); ok {
+			t.Fatalf("unknown gateway %q found", unknown)
+		}
+	}
+	// notes.save is a dynamicProvider with a gateway: runtime tools inherit it.
+	tools, err := catalog.Tools("app", RuntimeNamespace{Name: "plugin", Tools: []RuntimeTool{{Name: "save", Description: "Save a plugin note when asked", Method: "notes.save", Fixed: map[string]any{"source": "plugin"}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if last := tools[len(tools)-1]; !last.Runtime || last.Gateway != "ctl.notes.save" {
+		t.Fatalf("runtime tool gateway %+v", last)
+	}
+}
+
+// A registry without the ctl fields or shared $defs gives the same catalog
+// as before: every tool's params are the operation's bytes and no tool has a
+// gateway; ctl gates as AI.
+func TestToolCatalogWithoutCtlFieldsUnchanged(t *testing.T) {
+	raw, _, _ := semanticsRegistry(t, nil)
+	var doc operationRegistry
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatal(err)
+	}
+	catalog, err := NewToolCatalog(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tools, _ := catalog.Tools("app")
+	for _, tool := range tools {
+		if string(tool.Params) != string(doc.Operations[tool.Method].ParamsSchema) || tool.Gateway != "" {
+			t.Fatalf("%s changed", tool.Method)
+		}
+		for _, allow := range []bool{false, true} {
+			ctl, ai := tool.Gate(Turn{Via: ViaCtl, AllowChanges: allow}), tool.Gate(Turn{Via: ViaAI, AllowChanges: allow})
+			if ctl != ai && !(ai == GateIntentRequired || ai == GateCard) {
+				t.Fatalf("%s ctl %s ai %s", tool.Method, ctl, ai)
+			}
+		}
+	}
+}
