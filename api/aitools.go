@@ -13,7 +13,9 @@ import (
 // metadata only: the App runtime still authenticates, authorizes, audits and
 // dispatches every call through its registered handlers.
 type ToolCatalog struct {
-	ops map[string]Operation
+	ops       map[string]Operation
+	defs      map[string]json.RawMessage
+	gatewayOf map[string]string
 }
 
 // NewToolCatalog validates the registry's operation metadata. Route equality
@@ -26,12 +28,19 @@ func NewToolCatalog(registry []byte) (*ToolCatalog, error) {
 	if doc.Format != "synopkgland.api" || doc.Version != 2 || doc.Operations == nil {
 		return nil, fmt.Errorf("expected synopkgland.api v2 operations")
 	}
+	if err := validateSharedDefs(doc); err != nil {
+		return nil, err
+	}
+	gatewayOf := map[string]string{}
 	for name, op := range doc.Operations {
 		if err := validateOperationClass(name, op, doc.Operations); err != nil {
 			return nil, err
 		}
+		if op.Gateway != "" {
+			gatewayOf[op.Gateway] = name
+		}
 	}
-	return &ToolCatalog{ops: doc.Operations}, nil
+	return &ToolCatalog{ops: doc.Operations, defs: doc.Defs, gatewayOf: gatewayOf}, nil
 }
 
 // Operation returns one operation's metadata.
@@ -64,6 +73,7 @@ type RuntimeTool struct {
 }
 
 // Tool is one model-facing tool: a static operation or a runtime binding.
+// Gateway is the operation's ctl gateway; a runtime tool inherits its carrier's.
 type Tool struct {
 	Name        string // namespace__tool, as a model writes it
 	Namespace   string
@@ -73,6 +83,29 @@ type Tool struct {
 	Fixed       map[string]any
 	Operation   Operation
 	Runtime     bool
+	Gateway     string
+}
+
+// ForGateway returns the static tool a gateway route serves, so the gateway
+// handler takes Gate, Consent, AuditClass and Undo from the served operation
+// instead of its own name table. Method is the served operation; Name and
+// Namespace stay empty because no model namespace is involved.
+func (c *ToolCatalog) ForGateway(method string) (Tool, bool) {
+	name, ok := c.gatewayOf[method]
+	if !ok {
+		return Tool{}, false
+	}
+	op := c.ops[name]
+	return Tool{Description: op.Summary, Params: c.schema(op.ParamsSchema), Method: name, Operation: op, Gateway: method}, true
+}
+
+// schema makes an operation schema self-contained when the registry declares
+// shared $defs; otherwise it returns the schema unchanged.
+func (c *ToolCatalog) schema(raw json.RawMessage) json.RawMessage {
+	if c.defs == nil {
+		return raw
+	}
+	return expandSchema(raw, c.defs)
 }
 
 var namespaceName = regexp.MustCompile(`^[a-z][a-z0-9_.-]{0,63}$`)
@@ -112,7 +145,7 @@ func (c *ToolCatalog) Tools(namespace string, runtime ...RuntimeNamespace) ([]To
 	}
 	for _, name := range names {
 		op := c.ops[name]
-		if err := add(Tool{Name: ToolIdentifier(namespace) + "__" + ToolIdentifier(name), Namespace: namespace, Description: op.Summary, Params: op.ParamsSchema, Method: name, Operation: op}); err != nil {
+		if err := add(Tool{Name: ToolIdentifier(namespace) + "__" + ToolIdentifier(name), Namespace: namespace, Description: op.Summary, Params: c.schema(op.ParamsSchema), Method: name, Operation: op, Gateway: op.Gateway}); err != nil {
 			return nil, err
 		}
 	}
@@ -130,12 +163,12 @@ func (c *ToolCatalog) Tools(namespace string, runtime ...RuntimeNamespace) ([]To
 			}
 			params := rt.Params
 			if params == nil {
-				params = op.ParamsSchema
+				params = c.schema(op.ParamsSchema)
 			}
 			if !schemaObject(params) {
 				return nil, fmt.Errorf("runtime tool %s.%s needs an object parameter schema", ns.Name, rt.Name)
 			}
-			if err := add(Tool{Name: ToolIdentifier(ns.Name) + "__" + ToolIdentifier(rt.Name), Namespace: ns.Name, Description: rt.Description, Params: params, Method: rt.Method, Fixed: rt.Fixed, Operation: op, Runtime: true}); err != nil {
+			if err := add(Tool{Name: ToolIdentifier(ns.Name) + "__" + ToolIdentifier(rt.Name), Namespace: ns.Name, Description: rt.Description, Params: params, Method: rt.Method, Fixed: rt.Fixed, Operation: op, Runtime: true, Gateway: op.Gateway}); err != nil {
 				return nil, err
 			}
 		}
@@ -202,7 +235,11 @@ const (
 func (t Tool) Gate(turn Turn) GateDecision {
 	op := t.Operation
 	switch turn.Via {
-	case ViaAI, ViaCtl:
+	case ViaAI:
+	case ViaCtl:
+		if op.CtlExposure() == "hidden" {
+			return GateRefuse
+		}
 	case ViaMCP:
 		switch op.MCPExposure() {
 		case "exposed":

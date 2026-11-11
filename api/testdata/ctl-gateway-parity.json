@@ -1,0 +1,351 @@
+{
+ "comment": "SDK and CLI must refuse each case with the same message. Keep api/testdata/ctl-gateway-parity.json in the SDK and test/fixtures/ctl-gateway-parity.json in the CLI byte-identical.",
+ "registry": {
+  "format": "synopkgland.api",
+  "version": 2,
+  "operations": {
+   "notes.list": {
+    "summary": "Change notes.list when the person asks for it",
+    "ai": "read",
+    "effect": "read",
+    "permission": "administrators",
+    "cli": [
+     "notes",
+     "list"
+    ],
+    "paramsSchema": {
+     "type": "object",
+     "properties": {
+      "id": {
+       "type": "string"
+      }
+     }
+    },
+    "resultSchema": {
+     "type": "object"
+    },
+    "flow": {
+     "type": "invoke",
+     "method": "notes.list"
+    },
+    "gateway": "ctl.notes.list"
+   },
+   "notes.save": {
+    "summary": "Change notes.save when the person asks for it",
+    "ai": "local",
+    "effect": "write",
+    "permission": "administrators",
+    "cli": [
+     "notes",
+     "save"
+    ],
+    "paramsSchema": {
+     "type": "object",
+     "properties": {
+      "id": {
+       "type": "string"
+      }
+     }
+    },
+    "resultSchema": {
+     "type": "object"
+    },
+    "flow": {
+     "type": "invoke",
+     "method": "notes.save"
+    },
+    "gateway": "ctl.notes.save"
+   },
+   "notes.export": {
+    "summary": "Change notes.export when the person asks for it",
+    "ai": "one-click",
+    "effect": "write",
+    "permission": "administrators",
+    "cli": [
+     "notes",
+     "export"
+    ],
+    "paramsSchema": {
+     "type": "object",
+     "properties": {
+      "id": {
+       "type": "string"
+      }
+     }
+    },
+    "resultSchema": {
+     "type": "object"
+    },
+    "flow": {
+     "type": "invoke",
+     "method": "notes.export"
+    },
+    "audit": "sensitive-read",
+    "ctl": "hidden"
+   },
+   "notes.purge": {
+    "summary": "Change notes.purge when the person asks for it",
+    "ai": "human-only",
+    "effect": "destructive",
+    "permission": "administrators",
+    "cli": [
+     "notes",
+     "purge"
+    ],
+    "paramsSchema": {
+     "type": "object",
+     "properties": {
+      "id": {
+       "type": "string"
+      }
+     }
+    },
+    "resultSchema": {
+     "type": "object"
+    },
+    "flow": {
+     "type": "invoke",
+     "method": "notes.purge"
+    }
+   },
+   "rows.read": {
+    "summary": "Change rows.read when the person asks for it",
+    "ai": "read",
+    "effect": "read",
+    "permission": "administrators",
+    "cli": [
+     "rows",
+     "read"
+    ],
+    "paramsSchema": {
+     "type": "object",
+     "properties": {
+      "id": {
+       "type": "string"
+      }
+     }
+    },
+    "resultSchema": {
+     "type": "object"
+    },
+    "flow": {
+     "type": "invoke",
+     "method": "rows.read"
+    }
+   },
+   "ctl.notes.list": {
+    "summary": "Change ctl.notes.list when the person asks for it",
+    "ai": "hidden",
+    "effect": "read",
+    "permission": "administrators",
+    "cli": [
+     "ctl",
+     "notes",
+     "list"
+    ],
+    "paramsSchema": {
+     "type": "object",
+     "required": [
+      "scope"
+     ],
+     "properties": {
+      "scope": {
+       "type": "string"
+      }
+     }
+    },
+    "resultSchema": {
+     "type": "object"
+    },
+    "flow": {
+     "type": "invoke",
+     "method": "ctl.notes.list"
+    }
+   },
+   "ctl.notes.save": {
+    "summary": "Change ctl.notes.save when the person asks for it",
+    "ai": "hidden",
+    "effect": "write",
+    "permission": "administrators",
+    "cli": [
+     "ctl",
+     "notes",
+     "save"
+    ],
+    "paramsSchema": {
+     "type": "object",
+     "properties": {
+      "id": {
+       "type": "string"
+      }
+     }
+    },
+    "resultSchema": {
+     "type": "object"
+    },
+    "flow": {
+     "type": "invoke",
+     "method": "ctl.notes.save"
+    }
+   }
+  }
+ },
+ "cases": [
+  {
+   "name": "accepted",
+   "patch": {}
+  },
+  {
+   "name": "ctl must be exposed or hidden",
+   "patch": {
+    "notes.list": {
+     "ctl": "public"
+    }
+   },
+   "operation": "notes.list",
+   "message": "ctl must be exposed or hidden"
+  },
+  {
+   "name": "ctl exposed on a hidden operation",
+   "patch": {
+    "ctl.notes.list": {
+     "ctl": "exposed"
+    }
+   },
+   "operation": "ctl.notes.list",
+   "message": "ctl cannot expose a hidden operation"
+  },
+  {
+   "name": "gateway missing",
+   "patch": {
+    "notes.list": {
+     "gateway": "ctl.notes.none"
+    }
+   },
+   "operation": "notes.list",
+   "message": "gateway must name another registered operation"
+  },
+  {
+   "name": "gateway names itself",
+   "patch": {
+    "notes.list": {
+     "gateway": "notes.list"
+    }
+   },
+   "operation": "notes.list",
+   "message": "gateway must name another registered operation"
+  },
+  {
+   "name": "gateway not hidden",
+   "patch": {
+    "ctl.notes.list": {
+     "ai": "human-only"
+    }
+   },
+   "operation": "notes.list",
+   "message": "gateway must name a hidden invoke operation without its own gateway"
+  },
+  {
+   "name": "gateway not invoke",
+   "patch": {
+    "ctl.notes.list": {
+     "flow": {
+      "type": "ndjson",
+      "method": "ctl.notes.list"
+     }
+    }
+   },
+   "operation": "notes.list",
+   "message": "gateway must name a hidden invoke operation without its own gateway"
+  },
+  {
+   "name": "gateway permission differs",
+   "patch": {
+    "ctl.notes.list": {
+     "permission": "authenticated"
+    }
+   },
+   "operation": "notes.list",
+   "message": "gateway must name an operation with the same permission"
+  },
+  {
+   "name": "gateway weaker effect",
+   "patch": {
+    "ctl.notes.save": {
+     "effect": "read"
+    }
+   },
+   "operation": "notes.save",
+   "message": "gateway effect must be at least the operation's effect"
+  },
+  {
+   "name": "gateway audit differs",
+   "patch": {
+    "ctl.notes.list": {
+     "audit": "sensitive-read"
+    }
+   },
+   "operation": "notes.list",
+   "message": "gateway audit must equal the operation's audit class"
+  },
+  {
+   "name": "gateway shared by two operations",
+   "patch": {
+    "rows.read": {
+     "gateway": "ctl.notes.list"
+    }
+   },
+   "operation": "rows.read",
+   "message": "gateway serves only one operation"
+  },
+  {
+   "name": "gateway of a ctl hidden operation",
+   "patch": {
+    "notes.list": {
+     "ctl": "hidden"
+    }
+   },
+   "operation": "notes.list",
+   "message": "gateway applies only to an operation exposed to ctl"
+  },
+  {
+   "name": "gateway on a hidden operation",
+   "patch": {
+    "notes.purge": {
+     "ai": "hidden",
+     "gateway": "rows.read"
+    }
+   },
+   "operation": "notes.purge",
+   "message": "gateway applies only to an operation exposed to ctl"
+  },
+  {
+   "name": "sensitive-read audit on destructive",
+   "patch": {
+    "notes.purge": {
+     "audit": "sensitive-read"
+    }
+   }
+  },
+  {
+   "name": "read audit on a write",
+   "patch": {
+    "notes.purge": {
+     "audit": "read"
+    }
+   },
+   "operation": "notes.purge",
+   "message": "audit of a change must be change or sensitive-read"
+  },
+  {
+   "name": "none audit on a write",
+   "patch": {
+    "notes.export": {
+     "audit": "none"
+    }
+   },
+   "operation": "notes.export",
+   "message": "audit of a change must be change or sensitive-read"
+  }
+ ]
+}

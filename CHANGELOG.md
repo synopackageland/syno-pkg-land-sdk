@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.53.34 (2026-11-11)
+
+- The v2 operation registry adds two optional fields. `ctl: hidden` keeps an operation off ctl; like `mcp` it can only narrow. `gateway: "<method>"` names a dedicated hidden `invoke` operation that ctl and external callers reach the operation through, for Apps that run ctl through an audited tool engine. `ValidateOperationRegistry` and `NewToolCatalog` require the gateway to have the same permission and audit class, at least the same effect, no gateway of its own, and to serve one operation. See [AI operation semantics](docs/ai-operation-semantics.md#ctl-gateways).
+- `Operation.CtlExposure()` returns the declared or default ctl exposure. `Tool.Gate` refuses `ViaCtl` for `ctl: hidden`; nothing else in the gate changes. `Tool.Gateway` carries the gateway (runtime tools inherit their carrier's), and `ToolCatalog.ForGateway(method)` returns the tool a gateway route serves, so its handler takes gate, consent, audit class and undo from the served operation.
+- `audit: sensitive-read` is accepted on write and destructive operations, for exports and reveals that keep a write execution floor but write their own access record. `read` and `none` stay refused for changes.
+- A registry may declare shared top-level `$defs`. Operation schema references resolve to the schema's own `$defs` first, then the shared ones; every reference must resolve, and `NewToolCatalog` gives self-contained tool parameter schemas.
+- Registries without the new fields validate unchanged and give the same tool catalog. Apps that declare them need CLI 0.53.9 or later.
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.33 (2026-11-11)
 
 - The v2 operation registry describes how AI assistants, external MCP clients and ctl may use each operation. New `ai` classes: `propose` (stores a proposal when the turn allows changes), `local` (a reversible App-local change that runs only with the turn's Allow changes, otherwise a card the person presses) and `one-click` (always a card). New optional fields: `consent`, `targets`, `risk`, `tier`, `undo`, `audit`, `mcp`, `dynamicProvider` and `labels`. See [AI operation semantics](docs/ai-operation-semantics.md).
