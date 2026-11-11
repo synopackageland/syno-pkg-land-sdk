@@ -24,6 +24,20 @@ type Operation struct {
 	} `json:"flow"`
 	Preview     string `json:"preview,omitempty"`
 	LongRunning bool   `json:"longRunning,omitempty"`
+
+	// Optional AI semantics. Omitted fields keep the earlier v2 behaviour;
+	// the SDK runtime and the App enforce them, the metadata grants nothing.
+	Consent *OperationConsent `json:"consent,omitempty"`
+	Targets *OperationTargets `json:"targets,omitempty"`
+	Risk    string            `json:"risk,omitempty"`
+	Tier    string            `json:"tier,omitempty"`
+	Undo    *OperationUndo    `json:"undo,omitempty"`
+	Audit   string            `json:"audit,omitempty"`
+	MCP     string            `json:"mcp,omitempty"`
+	Labels  map[string]string `json:"labels,omitempty"`
+	// DynamicProvider marks a carrier operation that App runtime namespaces
+	// bind tools to; generators note that its tool list is completed at runtime.
+	DynamicProvider bool `json:"dynamicProvider,omitempty"`
 }
 
 type operationRegistry struct {
@@ -87,19 +101,8 @@ func ValidateOperationRegistry(raw, permissions []byte, routes ...Route) error {
 		if op.Permission == IntegrationPermission && op.AI != "hidden" {
 			return fmt.Errorf("integration routes must be hidden: %s", name)
 		}
-		switch op.AI {
-		case "read", "preview":
-			if op.Effect != "read" {
-				return fmt.Errorf("read/preview operation mutates: %s", name)
-			}
-		case "draft":
-			p, ok := doc.Operations[op.Preview]
-			if op.Effect == "read" || !ok || p.AI != "preview" || p.Effect != "read" {
-				return fmt.Errorf("draft requires a non-mutating preview: %s", name)
-			}
-		case "human-only", "hidden":
-		default:
-			return fmt.Errorf("operation requires explicit ai class: %s", name)
+		if err := validateOperationClass(name, op, doc.Operations); err != nil {
+			return err
 		}
 		first := op.Flow.Method
 		if op.Flow.Type == "job" {

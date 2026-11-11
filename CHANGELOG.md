@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.53.33 (2026-11-11)
+
+- The v2 operation registry describes how AI assistants, external MCP clients and ctl may use each operation. New `ai` classes: `propose` (stores a proposal when the turn allows changes), `local` (a reversible App-local change that runs only with the turn's Allow changes, otherwise a card the person presses) and `one-click` (always a card). New optional fields: `consent`, `targets`, `risk`, `tier`, `undo`, `audit`, `mcp`, `dynamicProvider` and `labels`. See [AI operation semantics](docs/ai-operation-semantics.md).
+- `ValidateOperationRegistry` checks the new fields with errors that name the field. Registries without them validate and generate unchanged.
+- `api.NewToolCatalog` lists an App's static AI tools together with runtime namespaces the App builds per turn. A runtime tool binds to a `dynamicProvider` operation with fixed parameters and inherits its gate, consent, audit and undo; `Tool.Gate` gives the same decision for static and runtime tools.
+- Apps using the new fields need CLI 0.53.6 or later to generate and to read their descriptions with ctl.
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.32 (2026-11-10)
 
 - SDK documentation and setup hints recommend pnpm for installation and development.
