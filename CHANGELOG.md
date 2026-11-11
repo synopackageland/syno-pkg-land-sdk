@@ -3,7 +3,7 @@
 ## Unreleased
 
 - Online application backup no longer copies SQLite databases. Each database is streamed into the archive in place while a `sqlite3` read transaction is open; only its WAL is copied, and copied again if a writer restarted it meanwhile. Writers keep committing. A 979 MiB database exported in 0.36 s with no extra disk write, against 4.4 s and 979 MiB written for the earlier `sqlite3 .backup` copy alone. See [Online SQLite](docs/app-backup.md#online-sqlite).
-- Online backup requires WAL mode: a database in another journal mode stops the export with `APP_BACKUP_INVALID`. `appbackup.Options.SnapshotSQLite` is removed.
+- **Breaking:** online backup requires SQLite WAL mode. A database in another journal mode (including `VACUUM INTO` output, which is in rollback mode) stops the whole export with `APP_BACKUP_INVALID`, so the Hyper Backup task fails. Other files are read as they are; a non-SQLite file being written during the export may be inconsistent. `appbackup.Options.SnapshotSQLite` is removed.
 
 ## 0.53.34 (2026-11-11)
 
