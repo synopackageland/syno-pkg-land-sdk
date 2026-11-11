@@ -25,7 +25,7 @@
     "canonicalTaskDefinitionsUnchanged": true,
     "nasAcceptance": false,
     "rustCratePublished": false,
-    "validation": "Rebased onto main including pnpm documentation and setup hints. Relevant non-root idgateway/DSM/retry-classifier race suites, touched-package Go vet/build, Node/frontend builds, documentation/version checks, and rebuilt npm pack/content scans. No full gate, target matrix, executor rebuild, publication or NAS acceptance."
+    "validation": "AI operation semantics in the v2 registry. Non-root api and bridge Go tests in the SDK gate image (new per-field validation, defaults, gate table, undo receipt and runtime-namespace coexistence tests), gofmt, sdk-version and documentation version checks, and an internal-content scan of the repository. Unchanged generation was checked against existing v2 App registries and the native-go/node/python templates with CLI before/after artifacts. npm packages rebuilt by prepack from the merged release commit and content-scanned. No full gate, target matrix, executor rebuild, Rust build, publication or NAS acceptance."
   },
   "ui": {
     "builtAgainst": "0.25.4",
@@ -37,17 +37,18 @@
     "minimum": "22"
   },
   "changes": [
-    "SDK documentation and setup hints recommend pnpm for installation and development.",
-    "Retry transient DSM identity, NSS and privilege verification with jitter inside the shared operation allowance.",
-    "Coalesce active checks per session, cancel when no waiters remain, and retain definitive authentication and privilege denials.",
+    "The v2 operation registry adds the ai classes propose, local and one-click and optional consent, targets, risk, tier, undo, audit, mcp, dynamicProvider and labels fields.",
+    "ValidateOperationRegistry checks the new fields with errors that name the field; registries without them validate unchanged.",
+    "api.NewToolCatalog lists static AI tools with per-turn runtime namespaces; runtime tools bind to dynamicProvider operations and inherit their gate, consent, audit and undo.",
+    "Apps using the new fields need CLI 0.53.7 or later.",
     "Reuse executor 0.53.6 unchanged."
   ],
   "npmArtifacts": {
     "synopackageland-app-0.53.33.tgz": {
-      "sha256": "ce5ff95fc15e620a1837779fb1178a18c245b7a11c2bc7d97e9eedac90dda9f8"
+      "sha256": "ed4005f6c40b3bebae2a7a18ea72b763c14b08fbed7746d1985ea020d52c222c"
     },
     "synopackageland-sdk-0.53.33.tgz": {
-      "sha256": "2e57f8832a47e645a942599cb39379b02532069b74ff68320ae864072418a3d6"
+      "sha256": "43b97ee44817cda65670ad91f90ef7b2d5acc1545e64ae19607bb839d1f48357"
     }
   }
 }
