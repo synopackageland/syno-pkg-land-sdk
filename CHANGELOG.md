@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Online application backup no longer copies SQLite databases. Each database is streamed into the archive in place while a `sqlite3` read transaction is open; only its WAL is copied, and copied again if a writer restarted it meanwhile. Writers keep committing. A 979 MiB database exported in 0.36 s with no extra disk write, against 4.4 s and 979 MiB written for the earlier `sqlite3 .backup` copy alone. See [Online SQLite](docs/app-backup.md#online-sqlite).
+- Online backup requires WAL mode: a database in another journal mode stops the export with `APP_BACKUP_INVALID`. `appbackup.Options.SnapshotSQLite` is removed.
+
 ## 0.53.34 (2026-11-11)
 
 - The v2 operation registry adds two optional fields. `ctl: hidden` keeps an operation off ctl; like `mcp` it can only narrow. `gateway: "<method>"` names a dedicated hidden `invoke` operation that ctl and external callers reach the operation through, for Apps that run ctl through an audited tool engine. `ValidateOperationRegistry` and `NewToolCatalog` require the gateway to have the same permission and audit class, at least the same effect, no gateway of its own, and to serve one operation. See [AI operation semantics](docs/ai-operation-semantics.md#ctl-gateways).
