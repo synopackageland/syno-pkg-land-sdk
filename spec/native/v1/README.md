@@ -82,11 +82,13 @@ DSM admission and App backend permissions apply independently of registration.
 
 ## Injection and trust
 
-Inject `window.SynoPkgNative` before content load **only in a registered App's main frame at the NAS profile origin**. Its shape is `NativeBridge`: `{protocol: 1, shell: {name, version, platform}, caps, post(message)}`. `platform` is `android` or `ios`. No bridge is injected for desktop-view/unregistered Apps, another origin, or any subframe. A child frame must not receive a forwarding shim. Recheck the frame URL on every navigation and incoming message; do not rely on a page-supplied origin. `canInjectNativeBridge` implements the origin/main-frame predicate; registration is checked separately by the shell.
+Inject `window.SynoPkgNative` before content load **only in a registered App's main frame at the NAS profile origin**. Its shape is `NativeBridge`: `{protocol: 1, shell: {name, version, platform}, caps, features?, post(message)}`. `platform` is `android` or `ios`. No bridge is injected for desktop-view/unregistered Apps, another origin, or any subframe. A child frame must not receive a forwarding shim. Recheck the frame URL on every navigation and incoming message; do not rely on a page-supplied origin. `canInjectNativeBridge` implements the origin/main-frame predicate; registration is checked separately by the shell.
 
 The trust unit is the **NAS origin**, not a package path. All packages at that origin share trust; these checks do not create isolation between packages. The SDK's main-frame check is a defence in depth, not an authentication mechanism.
 
 The bridge provides user-mediated actions only. It never returns cookies, tokens, local file paths or cross-origin credentialed requests. Log message types and sizes only, including for validation failures. Intake contents, download URLs and their query tokens must never be logged.
+
+`features` is optional: page → shell requests this shell understands beyond the frozen v1 baseline (currently `close`). It sits beside `caps`, not in it, because SDK releases before the stable freeze validate `caps` without unknown fields and would drop the whole bridge. A page shows a control for a feature only when it is listed; a bridge without `features` offers none.
 
 ## Wire protocol
 
@@ -99,6 +101,7 @@ The bridge provides user-mediated actions only. It never returns cookies, tokens
 | `openExternal` | HTTP(S) `url` only; require user activation, at most once per second, then open the system browser. Validate this in the shell even if the SDK validated it |
 | `intake.take` | `id` is the opaque intake handle, also used to correlate its reply. Delete from the shell store before replying |
 | `ready` | `fcp`: finite nonnegative milliseconds from page navigation to first contentful paint. Hide the splash |
+| `close` | No fields. Leave the App for the shell's App list, as the shell's own Back does at the App's first page. Only offered when the bridge's `features` lists `close`; require user activation within the last second, ignore it from an App that is not on screen |
 
 | Shell → page | Fields |
 | --- | --- |

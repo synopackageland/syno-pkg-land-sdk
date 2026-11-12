@@ -269,6 +269,15 @@ test('future optional shell and capability fields preserve detection and support
  dispose()
 })
 
+test('close is a page message, and a bridge listing features beside caps is still detected', () => {
+ expect(isNativeMessage({v: 1, type: 'close'})).toBe(true)
+ expect(isNativeMessage({v: 1, type: 'close', link: '/'})).toBe(false)
+ const bridge = install()
+ Object.assign(bridge, {features: ['close']})
+ expect(nativeBridge()).toBe(bridge)
+ expect(nativeBridge()?.features).toEqual(['close'])
+})
+
 test('receiver mode ignores optional fields while retaining known-field and download-mode checks', () => {
  const receiver = {allowUnknownFields: true}
  expect(isNativeMessage({v: 1, type: 'ready', fcp: 1, optionalHint: true}, receiver)).toBe(true)

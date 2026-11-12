@@ -306,6 +306,22 @@
       ],
       "additionalProperties": false
     },
+    "NativeClose": {
+      "type": "object",
+      "properties": {
+        "v": {
+          "const": 1
+        },
+        "type": {
+          "const": "close"
+        }
+      },
+      "required": [
+        "v",
+        "type"
+      ],
+      "additionalProperties": false
+    },
     "NativeLaunch": {
       "type": "object",
       "properties": {
@@ -467,6 +483,9 @@
         },
         {
           "$ref": "#/$defs/NativeReady"
+        },
+        {
+          "$ref": "#/$defs/NativeClose"
         }
       ]
     },
