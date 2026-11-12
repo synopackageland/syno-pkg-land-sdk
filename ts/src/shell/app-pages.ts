@@ -1,7 +1,7 @@
 // The pages an AppShell lays out. An App lists its own pages; the built-in
 // 'status' and 'background' ids stay available as ready-made entries.
 import type {Component} from 'vue'
-import type {AppSidebarGroup} from '@synopackageland/ui'
+import type {AppSidebarGroup, AppTabBarItem} from '@synopackageland/ui'
 import {Info, Timer} from '@lucide/vue'
 import type {ShellCopy} from './i18n'
 import type {ShellPage} from './pages'
@@ -77,4 +77,19 @@ export function sidebarGroups(pages: readonly AppShellPage[]): AppSidebarGroup[]
     group.items.push({key:page.id,label:page.title,icon:page.icon,badge:page.badge})
   }
   return bottom.items.length ? [...groups.values(), bottom] : [...groups.values()]
+}
+
+/**
+ * The phone's bottom tabs: the sidebar's items in its order, so the same pages
+ * are listed (hidden pages are not). A numeric badge stays a count; any other
+ * badge text, which the tab bar cannot show, becomes a dot.
+ */
+export function phoneTabItems(groups: readonly AppSidebarGroup[]): AppTabBarItem[] {
+  return groups.flatMap(group => group.items).map(item => ({key:item.key,label:item.label,icon:item.icon,badge:tabBadge(item.badge)}))
+}
+
+function tabBadge(badge: string | number | undefined): number | boolean | undefined {
+  if(typeof badge === 'number') return badge
+  if(badge === undefined || badge === '') return undefined
+  return /^\d+$/.test(badge) ? Number(badge) : true
 }

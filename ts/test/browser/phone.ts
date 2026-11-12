@@ -11,6 +11,8 @@ const pages=[{id:'home',title:'Overview',icon:Home},{id:'books',title:'Books',ic
 const tabs=pages.slice(0,2).map(p=>({key:p.id,label:p.title,icon:p.icon}))
 const params=new URLSearchParams(location.search)
 const accessory=ref(params.has('accessory'))
+// tabs=auto leaves #tabbar out: the shell draws its default tab bar from pages.
+const autoTabs=params.get('tabs')==='auto'
 createApp({render:()=>h(AppShell,{
  appRoot:true,locale:'en',modelValue:page.value,'onUpdate:modelValue':(value:string)=>{page.value=value},
  pages,brandName:'Library',ctx:{fullPage:params.get('window')!=='1'},
@@ -18,7 +20,7 @@ createApp({render:()=>h(AppShell,{
  onHeaderAction:(key:string)=>{document.documentElement.dataset.headerAction=key},
 },{
  accessory:({page,phone}:{page:string;phone:boolean})=>accessory.value?h('button',{'data-running-task':'',style:'display:block;width:100%;height:48px'},`Running task: ${page} (${phone?'phone':'desktop'})`):null,
- tabbar:({page:current}:{page:string})=>h(AppTabBar,{items:tabs,modelValue:current==='live'?'home':current,'onUpdate:modelValue':(value:string)=>{page.value=value}}),
+ ...(autoTabs?{}:{tabbar:({page:current}:{page:string})=>h(AppTabBar,{items:tabs,modelValue:current==='live'?'home':current,'onUpdate:modelValue':(value:string)=>{page.value=value}})}),
  actions:()=>h(Button,{variant:'secondary'},()=>'Add book'),
  default:({page:current,phone}:{page:string;phone:boolean})=>current==='live'?h('div',{'data-phone':String(!!phone)},[
   h(PageHeader,{title:'Live reading',back:true,onBack:()=>{page.value='home'}}),

@@ -16,11 +16,11 @@ function viewport(width:number,coarse=false){
  return (matches:boolean)=>{Object.assign(media,{matches});media.dispatchEvent(Object.assign(new Event('change'),{matches}))}
 }
 
-test.each([false,true])('the forwarded tabbar owns phone navigation and hiding it restores the menu (appRoot=%s)',async appRoot=>{
+test.each([false,true])('the forwarded tabbar owns phone navigation, the default replaces it and none restores the menu (appRoot=%s)',async appRoot=>{
  viewport(390,true)
- const page=ref('home'),tabbar=ref(true),more=ref(true)
+ const page=ref('home'),tabbar=ref(true),more=ref(true),phoneTabs=ref<'auto'|'none'>('auto')
  const root=document.createElement('div');document.body.append(root)
- const render=()=>h(AppShell,{appRoot,locale:'en',pages,modelValue:page.value,'onUpdate:modelValue':(key:string)=>{page.value=key}},tabbar.value?{
+ const render=()=>h(AppShell,{appRoot,locale:'en',pages,phoneTabs:phoneTabs.value,modelValue:page.value,'onUpdate:modelValue':(key:string)=>{page.value=key}},tabbar.value?{
   tabbar:({page:current,phone}:{page:string;phone:boolean})=>h(AppTabBar,{items,modelValue:current,more:more.value,ariaLabel:`Phone ${phone}`,'onUpdate:modelValue':(key:string)=>{page.value=key}}),
  }:undefined)
  const app=createApp({render:()=>appRoot?render():h(AppRoot,null,{default:render})})
@@ -38,6 +38,9 @@ test.each([false,true])('the forwarded tabbar owns phone navigation and hiding i
   expect(root.querySelector('[data-ui-tab-bar-more]')).toBeNull()
   expect(root.querySelector('[data-ui-mobile-menu]')).toBeNull()
   tabbar.value=false;await settle()
+  expect(root.querySelector('[data-ui-tab-bar]')?.getAttribute('aria-label')).toBe('Quick navigation')
+  expect(root.querySelector('[data-ui-mobile-menu]')).toBeNull()
+  phoneTabs.value='none';await settle()
   expect(root.querySelector('[data-ui-tab-bar]')).toBeNull()
   expect(root.querySelector('[data-ui-mobile-menu]')).not.toBeNull()
  }finally{app.unmount();root.remove();vi.unstubAllGlobals()}
@@ -142,7 +145,7 @@ test.each([false,true])('footer and denied scopes read the app-local phone signa
  viewport(390,true)
  const root=document.createElement('div');document.body.append(root)
  const name=denied?'denied':'sidebar-footer'
- const app=createApp({render:()=>h(AppShell,{appRoot:true,locale:'en',pages,modelValue:'home',denied},{[name]:({phone}:{phone:boolean})=>h('span',{'data-phone-slot':name},String(phone))})})
+ const app=createApp({render:()=>h(AppShell,{appRoot:true,locale:'en',pages,phoneTabs:'none',modelValue:'home',denied},{[name]:({phone}:{phone:boolean})=>h('span',{'data-phone-slot':name},String(phone))})})
  try{
   app.mount(root);await settle()
   if(!denied){root.querySelector<HTMLButtonElement>('[data-ui-mobile-menu]')!.click();await settle()}

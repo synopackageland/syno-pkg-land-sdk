@@ -106,6 +106,34 @@ try{
    await page.locator('[data-ui-bottom-accessory]').waitFor({state:'hidden'})
    console.log(`shell accessory: ${label} ok`)
   }
+  if(!baseline){
+   // Without #tabbar the shell's default tab bar lists the sidebar's pages,
+   // icon only, on a phone; desktop and a DSM window draw none.
+   await page.setViewportSize({width,height:width===390?844:800})
+   await page.goto(`${server.resolvedUrls.local[0]}phone.html?window=${fullPage?'0':'1'}&tabs=auto&accessory=1`)
+   await page.waitForSelector('[data-phone]')
+   await page.waitForTimeout(400)
+   assert.equal(await page.locator('[data-ui-tab-bar]').count(),width===390?1:0)
+   if(width===390){
+    assert.deepEqual(await page.locator('[data-ui-tab-bar-item]').evaluateAll(items=>items.map(item=>[item.getAttribute('data-ui-tab-bar-item'),item.hasAttribute('data-icon-only')])),[['home',true],['books',true],['settings',true]])
+    assert.equal(await page.locator('[data-ui-tab-bar-more]').count(),1)
+    assert.equal(await page.locator('[data-ui-mobile-menu]').count(),0,'More takes the menu button')
+    assert.equal(await page.locator('[data-ui-mobile-navigation]').getAttribute('data-ui-mobile-bar-title'),'none')
+    const docked=await page.evaluate(()=>{
+     const accessory=document.querySelector('[data-ui-bottom-accessory]').getBoundingClientRect()
+     const tabs=document.querySelector('[data-ui-tab-bar]').getBoundingClientRect()
+     return {gap:Math.abs(accessory.bottom-tabs.top),tabBottom:tabs.bottom,viewport:innerHeight,height:tabs.height}
+    })
+    assert.ok(docked.gap<=1,'the accessory docks above the default tabs')
+    assert.ok(Math.abs(docked.tabBottom-docked.viewport)<=1,'the default tabs sit at the bottom')
+    assert.ok(docked.height<=56,'the tab bar keeps the UI height')
+    if(shots)await page.screenshot({path:join(shots,`${label}-auto-tabs.png`)})
+    await page.locator('[data-ui-tab-bar-item="books"]').tap()
+    assert.equal(await page.locator('h1.app-page-title').innerText(),'Books')
+    assert.equal(await page.locator('[data-ui-tab-bar-item="books"]').getAttribute('aria-current'),'page')
+   }
+   console.log(`shell auto tabs: ${label} ok`)
+  }
   console.log(`shell phone: ${label} ok${baseline?' (baseline)':''}`)
   await context.close()
  }
