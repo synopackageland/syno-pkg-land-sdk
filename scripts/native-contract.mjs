@@ -75,6 +75,8 @@ export interface NativeBridge {
  readonly protocol: typeof NATIVE_PROTOCOL
  readonly shell: NativeShell
  readonly caps: NativeCapabilities
+ /** Optional page → shell requests the shell understands beyond the v1 baseline, such as \`close\` */
+ readonly features?: readonly string[]
  post(message: NativeMessage): void
 }
 const schema = ${JSON.stringify(contract.$defs)} as Record<string, Rule>
