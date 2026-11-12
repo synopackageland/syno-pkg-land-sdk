@@ -9,7 +9,7 @@
 // is the current page.
 import {computed, provide, ref, useTemplateRef, watch, watchEffect, type FunctionalComponent} from 'vue'
 import {CircleUser, LogOut} from '@lucide/vue'
-import {AppLayout, AppRoot, AppSidebar, AppSidebarUser, AppToolbar, Button, Callout, Dialog, IconButton, ConfigProvider, LoadingArea, PageContent, PageHeader, ensureDeviceViewport, type DropdownMenuEntry, type WideLayout} from '@synopackageland/ui'
+import {AppLayout, AppRoot, AppSidebar, AppSidebarUser, AppTabBar, AppToolbar, Button, Callout, Dialog, IconButton, ConfigProvider, LoadingArea, PageContent, PageHeader, ensureDeviceViewport, type DropdownMenuEntry, type WideLayout} from '@synopackageland/ui'
 import {isFullPage, type ShellContext} from '../context'
 import {appRefusal} from '../authorization/refusal'
 import {shellCopy} from './i18n'
@@ -17,7 +17,7 @@ import {collapsePortalHeader, fitPortalHeader, readPortalChrome, watchPortalName
 import {uiLocale} from '../i18n'
 import {fillState, hasContent, rendersContent, rendersOwnContent} from './slot-content'
 import type {ShellPage} from './pages'
-import {resolvePages, sidebarGroups, type AppShellDenied, type AppShellPageEntry, type AppShellPageSurface} from './app-pages'
+import {phoneTabItems, resolvePages, sidebarGroups, type AppShellDenied, type AppShellPageEntry, type AppShellPageSurface} from './app-pages'
 import ExecutorNotice from '../delegate/ExecutorNotice.vue'
 import UiUpdateNotice from './UiUpdateNotice.vue'
 import ShellPhone from './ShellPhone.vue'
@@ -66,7 +66,13 @@ const props = withDefaults(defineProps<{
   loading?: boolean
   /** Where #accessory goes off a phone: 'bottom' (default), the layout's bottom row; 'notices', after the page's notices at its top. A phone keeps it above the tab bar. */
   accessoryDesktop?: 'bottom' | 'notices'
-}>(), {hideOnScroll: undefined})
+  /**
+   * 'auto' (default): on a phone outside a DSM window, a bottom tab bar lists
+   * the sidebar's pages (icon only; More opens the drawer). 'none': no tab bar,
+   * the drawer is the navigation. A tabbar slot the App fills always wins.
+   */
+  phoneTabs?: 'auto' | 'none'
+}>(), {hideOnScroll: undefined, phoneTabs: 'auto'})
 const emit = defineEmits<{'update:modelValue': [value: string]; brand: [event: MouseEvent]; headerAction: [key: string]}>()
 // Apps can use @brand.prevent to replace the default home selection.
 function onBrand(event: MouseEvent) {
@@ -78,6 +84,9 @@ const copy = computed(() => shellCopy(props.locale))
 const pages = computed(() => resolvePages(props.pages, copy.value))
 const groups = computed(() => sidebarGroups(pages.value))
 const current = computed(() => pages.value.find(page => page.id === props.modelValue))
+// The tab bar a phone shows when the App fills no tabbar slot: the sidebar's
+// pages, at least two of them (one page needs no navigation).
+const tabItems = computed(() => phoneTabItems(groups.value))
 const page = current
 // 'shown': the shell's PageHeader (header: true; hidden on a phone's tab page). 'hidden', the default: a
 // visually hidden title. 'own': the page draws its own header (header: false).
@@ -183,6 +192,7 @@ watch(layout, (component, _, onCleanup) => {
 // nothing. A sub-page keeps its Back, title and actions. A tab page is the page
 // whose own tab is current: a page outside the tab bar (a detail or live page)
 // keeps its title bar even while the App marks a tab current.
+const autoTabs = computed(() => props.phoneTabs !== 'none' && !inWindow.value && tabItems.value.length > 1)
 const phoneTab = computed(() => phoneShell.value.phone && !inWindow.value && phoneShell.value.tab !== undefined && phoneShell.value.tab === props.modelValue)
 // A tab page that opts in (phoneTitle: true, a live screen) keeps its title bar.
 const untitledTab = computed(() => phoneTab.value && page.value?.phoneTitle !== true)
@@ -336,6 +346,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
     </template>
     <template v-if="slots.accessory && (phone || accessoryDesktop !== 'notices')" #accessory><slot name="accessory" :page="modelValue" :phone="phone" /></template>
     <template v-if="slots.tabbar" #tabbar><slot name="tabbar" :page="modelValue" :phone="phone" /></template>
+    <template v-else-if="phone && autoTabs" #tabbar><AppTabBar :items="tabItems" :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)" /></template>
     <template v-if="slots.toolbar || headerMode !== 'shown'" #toolbar>
       <slot name="toolbar" :page="modelValue" :phone="phone" />
       <div v-if="headerMode !== 'shown'" ref="page-bar" class="app-page-bar" :hidden="pageBarEmpty" data-app-page-bar>

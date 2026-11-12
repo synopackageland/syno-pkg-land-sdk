@@ -497,7 +497,8 @@ keeps the space.
 
 On a phone outside a DSM window, a tab page draws no title row: the tab bar
 already shows where the user is. A tab page is a page whose own tab is drawn
-in the `#tabbar` and is current, so the tab keys must be the page ids. No App
+in the tab bar (the default one, or the App's `#tabbar`) and is current, so an
+App's own tab keys must be the page ids. No App
 icon or page name is repeated, and the shell's `title` prop and a page's
 `header: true` heading are not shown there (the page keeps a heading for
 screen readers). The one top bar holds only the account and the App's
@@ -520,7 +521,7 @@ Every other page keeps the bar as below: a page reached from the tab bar's
 More, a page that is not in the tab bar at all (a hidden detail or live page,
 even while the App keeps its parent tab marked current), a sub-page (a
 `PageHeader` with `back`, which shows Back, its title and actions), an App
-without a tab bar and a DSM window. A page with `header: false` names itself
+without a tab bar (`phone-tabs="none"`) and a DSM window. A page with `header: false` names itself
 through its own `PageHeader`, which stays.
 
 The account joins that bar where it would otherwise be a second control: on
@@ -555,12 +556,34 @@ const phoneActions: DropdownMenuEntry[] = [
 ]
 ```
 
-Place an `AppTabBar` in `#tabbar`; the shell forwards this slot to `AppLayout`,
-which renders it only in the mobile presentation. Its More tab opens the
-shell's navigation drawer and replaces the phone bar's menu button. Without
-a tabbar, or with `AppTabBar :more="false"`, the menu button remains available.
-The App controls its tabs and selection; bind the tab bar to the same page
-model as the shell.
+#### Phone tab bar
+
+On a phone outside a DSM window the shell draws a bottom `AppTabBar` by
+default. Its tabs are the sidebar's pages in the sidebar's order, so a
+`hidden` page is not a tab and a `placement: 'bottom'` page comes last. Each
+tab shows the page's `icon` only (the `title` is its accessible name and long
+press label); a page without an icon shows its title. A numeric `badge` is a
+count and any other badge text a dot. The current tab follows `v-model`, and
+a tab press emits `update:modelValue` as the sidebar does. The More tab opens
+the navigation drawer in place of the phone bar's menu button; pages the bar
+cannot hold (more than four beside More) are listed under it. With fewer than
+two listed pages there is no tab bar. Desktop widths, a narrow window used with
+a mouse and a DSM window are unchanged.
+
+`phone-tabs="none"` turns the default off: the drawer behind the menu button
+is the navigation. The `#tabbar` slot replaces the default bar whatever
+`phone-tabs` says.
+
+```vue
+<AppShell v-model="page" :pages="pages" :locale="ctx.locale" :ctx="ctx" phone-tabs="none" />
+```
+
+To draw the tab bar yourself, place an `AppTabBar` in `#tabbar`; the shell
+forwards this slot to `AppLayout`, which renders it only in the mobile
+presentation. Its More tab opens the shell's navigation drawer and replaces
+the phone bar's menu button. With `phone-tabs="none"` and no slot, or with
+`AppTabBar :more="false"`, the menu button remains available. The App controls
+its tabs and selection; bind the tab bar to the same page model as the shell.
 
 The `default`, `actions`, `meta`, `toolbar`, `notices` and `tabbar` slot scopes
 include `{page, phone}`. The `sidebar-footer` and `denied` scopes include
