@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.53.38 (2026-11-12)
+
+- `AppShell` forwards the UI's aside: an `#aside` slot (an `AsidePanel`) on every page, `v-model:aside` and `v-model:aside-width`, and `aside-dock` (`'wide'` docks an open aside beside the page in a DSM window at least 960px wide, with UI 0.25.10 or later). Without the slot nothing changes. See [Aside](ts/README.md#aside).
+- Built and tested against UI 0.25.10. The UI peer range is unchanged.
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.37 (2026-11-12)
 
 - `AppShell` draws a bottom tab bar on a phone outside a DSM window by default: the UI's `AppTabBar` with the sidebar's pages (icon only, hidden pages left out, the current page from `v-model`, the same `update:modelValue` on a press). Pages it cannot hold go under its More tab, which also opens the navigation drawer in place of the phone bar's menu button. Fewer than two listed pages draw no tab bar. Desktop widths and DSM windows are unchanged. See [Phone tab bar](ts/README.md#phone-tab-bar).
