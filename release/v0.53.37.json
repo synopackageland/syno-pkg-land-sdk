@@ -1,0 +1,52 @@
+{
+  "version": "0.53.37",
+  "executorVersion": "0.53.6",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.37",
+    "@synopackageland/app": "0.53.37",
+    "syno-pkg-land-app": "0.53.37",
+    "synopkgland_app": "0.53.37"
+  },
+  "executorDigests": {
+    "x86_64": "e77dbf846ea4555355fa15ee3a6ca3b20e1b1aaa9768321243589d9ec15ffabe",
+    "aarch64": "741a7c37757b56b3acc304cef56de5e59c1ca9278a83be0f1e1ff1ad17b24dd6",
+    "armv7": "f0a3059b982d0210621254adf7d1a3343d2a89d114e053e5b3bd646898293b1a",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "AppShell draws the UI's AppTabBar from its pages on a phone outside a DSM window, with phoneTabs: 'none' to turn it off. Frontend vitest for the shell and related layout tests, typecheck, vite build, a Chromium phone-layout check, sdk-version, executor manifest and documentation version checks, and an internal-content scan of the packed npm tarballs. npm packages packed from this commit. No full gate, target matrix, executor rebuild, Rust build, crate publication or NAS acceptance."
+  },
+  "ui": {
+    "builtAgainst": "0.25.4",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.25.4.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "AppShell shows a bottom tab bar on a phone outside a DSM window by default: the UI's AppTabBar with the sidebar's pages, icon only, the current page from v-model; pages it cannot hold go under More, which also opens the navigation drawer. Fewer than two listed pages draw no tab bar. Desktop widths and DSM windows are unchanged.",
+    "phoneTabs: 'none' keeps the drawer as the phone navigation; an App's own tabbar slot still replaces the default bar.",
+    "Reuse executor 0.53.6 unchanged."
+  ],
+  "npmArtifacts": {
+    "synopackageland-app-0.53.37.tgz": {
+      "sha256": "788c47cb6faf9248237bea138ad8cbc52cde1a18babba8b9c3c5b50127866107"
+    },
+    "synopackageland-sdk-0.53.37.tgz": {
+      "sha256": "3efd294685fee452e95cc20d45f29a4f82d57feb79314eb870586582c4904c4e"
+    }
+  }
+}

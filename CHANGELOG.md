@@ -1,9 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.53.37 (2026-11-12)
 
 - `AppShell` draws a bottom tab bar on a phone outside a DSM window by default: the UI's `AppTabBar` with the sidebar's pages (icon only, hidden pages left out, the current page from `v-model`, the same `update:modelValue` on a press). Pages it cannot hold go under its More tab, which also opens the navigation drawer in place of the phone bar's menu button. Fewer than two listed pages draw no tab bar. Desktop widths and DSM windows are unchanged. See [Phone tab bar](ts/README.md#phone-tab-bar).
 - `phone-tabs="none"` keeps the earlier phone navigation (the drawer behind the menu button). An App's own `#tabbar` slot still replaces the default bar.
+- Executor 0.53.6 is unchanged.
 
 ## 0.53.36 (2026-11-12)
 
