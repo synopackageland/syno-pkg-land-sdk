@@ -72,7 +72,19 @@ const props = withDefaults(defineProps<{
    * the drawer is the navigation. A tabbar slot the App fills always wins.
    */
   phoneTabs?: 'auto' | 'none'
-}>(), {hideOnScroll: undefined, phoneTabs: 'auto'})
+  /**
+   * Forwarded to AppLayout with the #aside slot: 'wide' also docks an open
+   * aside beside the page in a DSM window at least 960px wide (UI 0.25.10 or
+   * later); omitted keeps the UI default, docking in the web layout only.
+   */
+  asideDock?: 'web' | 'wide'
+}>(), {hideOnScroll: undefined, phoneTabs: 'auto', asideDock: undefined})
+/**
+ * The #aside region's state and open width (AppLayout's v-model:aside and
+ * v-model:aside-width); bind them to useAsidePreference to keep them.
+ */
+const asideState = defineModel<'open' | 'collapsed' | 'expanded'>('aside', {default: 'collapsed'})
+const asideWidth = defineModel<number>('asideWidth', {default: 380})
 const emit = defineEmits<{'update:modelValue': [value: string]; brand: [event: MouseEvent]; headerAction: [key: string]}>()
 // Apps can use @brand.prevent to replace the default home selection.
 function onBrand(event: MouseEvent) {
@@ -133,6 +145,8 @@ const slots = defineSlots<{
   tabbar?: (scope: {page: string; phone: boolean}) => unknown
   /** Bottom bar forwarded to AppLayout; requires a UI that supports the accessory slot. */
   accessory?: (scope: {page: string; phone: boolean}) => unknown
+  /** The right side region forwarded to AppLayout (an AsidePanel), on every page; its scope is AppLayout's. */
+  aside?: (scope: {state: 'open' | 'collapsed' | 'expanded'; overlay: boolean; width: number; presentation: 'mobile' | 'window' | 'web'}) => unknown
   'sidebar-footer'?: (scope: {phone: boolean}) => unknown
   denied?: (scope: {phone: boolean}) => unknown
 }>()
@@ -337,7 +351,8 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
     <slot name="denied" :phone="phone"><Callout tone="danger"><span role="alert">{{ denied.message ?? refusal?.message ?? copy.deniedMessage }}</span></Callout></slot>
   </PageContent>
   <AppLayout v-else ref="layout" :class="['app-shell', {'app-shell-fill': fill, 'app-shell-portal-brand': portalChrome.brand}]" min-height="0" :wide-layout="wideLayout ?? (fullPage ? 'web' : 'window')" :sidebar-storage-key="sidebarStorageKey"
-    :navigation="navigation" :hide-on-scroll="hideOnScroll" :title="props.title ?? barTitle" :phone-bar-title="untitledTab ? 'none' : 'auto'" :header-actions="barActions" @header-action="onHeaderAction" :brand-name="brandName ?? ctx?.displayName" :brand-icon="brandIcon ?? ctx?.appIcon" @brand="onBrand">
+    :navigation="navigation" :hide-on-scroll="hideOnScroll" :title="props.title ?? barTitle" :phone-bar-title="untitledTab ? 'none' : 'auto'" :header-actions="barActions" @header-action="onHeaderAction" :brand-name="brandName ?? ctx?.displayName" :brand-icon="brandIcon ?? ctx?.appIcon" @brand="onBrand"
+    :aside-dock="asideDock" v-model:aside="asideState" v-model:aside-width="asideWidth">
     <template #sidebar>
       <AppSidebar :model-value="modelValue" :groups="groups" @update:model-value="emit('update:modelValue', $event)" />
     </template>
@@ -345,6 +360,7 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
       <slot name="sidebar-footer" :phone="phone"><div v-if="user" class="app-shell-account"><AppSidebarUser :name="user.name" :detail="user.isAdmin ? copy.administrator : copy.dsmUser" /><IconButton v-if="canSignOut" class="app-shell-sign-out" variant="ghost" :label="copy.signOut" @click="signOut"><LogOut :size="16" aria-hidden="true" /></IconButton></div></slot>
     </template>
     <template v-if="slots.accessory && (phone || accessoryDesktop !== 'notices')" #accessory><slot name="accessory" :page="modelValue" :phone="phone" /></template>
+    <template v-if="slots.aside" #aside="scope"><slot name="aside" v-bind="scope" /></template>
     <template v-if="slots.tabbar" #tabbar><slot name="tabbar" :page="modelValue" :phone="phone" /></template>
     <template v-else-if="phone && autoTabs" #tabbar><AppTabBar :items="tabItems" :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)" /></template>
     <template v-if="slots.toolbar || headerMode !== 'shown'" #toolbar>

@@ -578,6 +578,30 @@ is the navigation. The `#tabbar` slot replaces the default bar whatever
 <AppShell v-model="page" :pages="pages" :locale="ctx.locale" :ctx="ctx" phone-tabs="none" />
 ```
 
+#### Aside
+
+The `#aside` slot is the UI's AppLayout aside region at the shell's right
+edge, on every page: put an `AsidePanel` (an assistant) in it. Its 48px rail
+stays while it is collapsed; on a phone a button opens it as a bottom sheet.
+`v-model:aside` (`collapsed`, `open` or `expanded`) and `v-model:aside-width`
+are AppLayout's; bind them to the UI's `useAsidePreference` to keep them in
+the browser. AppShell keeps both itself when they are not bound.
+`aside-dock="wide"` (UI 0.25.10 or later) also docks an open aside beside the
+page, with its resize handle, in a DSM window at least 960px wide; without it
+only a full page (the web layout) docks it and a DSM window floats it over the
+page. An aside the App gives only later (once a read says the feature is on)
+needs UI 0.25.10 or later.
+
+```vue
+<script setup lang="ts">
+import {AsidePanel, useAsidePreference} from '@synopackageland/ui'
+const {state, width} = useAsidePreference('myapp.aside', 'shell')
+</script>
+<AppShell v-model="page" v-model:aside="state" v-model:aside-width="width" aside-dock="wide" :pages="pages" :locale="ctx.locale" :ctx="ctx">
+  <template #aside><AsidePanel :title="t('Assistant')" :icon="Sparkles">…</AsidePanel></template>
+</AppShell>
+```
+
 To draw the tab bar yourself, place an `AppTabBar` in `#tabbar`; the shell
 forwards this slot to `AppLayout`, which renders it only in the mobile
 presentation. Its More tab opens the shell's navigation drawer and replaces
