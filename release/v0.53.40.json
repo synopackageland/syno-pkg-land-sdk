@@ -1,0 +1,53 @@
+{
+  "version": "0.53.40",
+  "executorVersion": "0.53.6",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.40",
+    "@synopackageland/app": "0.53.40",
+    "syno-pkg-land-app": "0.53.40",
+    "synopkgland_app": "0.53.40"
+  },
+  "executorDigests": {
+    "x86_64": "e77dbf846ea4555355fa15ee3a6ca3b20e1b1aaa9768321243589d9ec15ffabe",
+    "aarch64": "741a7c37757b56b3acc304cef56de5e59c1ca9278a83be0f1e1ff1ad17b24dd6",
+    "armv7": "f0a3059b982d0210621254adf7d1a3343d2a89d114e053e5b3bd646898293b1a",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Stale-socket recovery for ipc.ServeUnix/StartUnix and the executor-tier ipc.StartPeerUnix, and appbackup skipping unreadable or vanished SQLite files. Go tests for ipc (non-root, Linux container) and appbackup, go build ./... and go vet for both packages, sdk-version and executor manifest checks, npm pack of both packages and an internal-content scan of the packed tarballs. No frontend change, browser check, full gate, target matrix, executor rebuild, Rust build, crate publication or NAS acceptance."
+  },
+  "ui": {
+    "builtAgainst": "0.25.10",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.25.10.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "appbackup skips a detected SQLite database it cannot read, or one that vanishes during the export, with a per-file warning, and keeps exporting the healthy files (from #207).",
+    "ipc.ServeUnix/StartUnix replace a stale socket owned by this account that refuses connections, after an unchanged inode/device check; live, foreign and non-socket paths are refused and kept (from #208).",
+    "ipc.StartPeerUnix (executor-tier builds) recovers a stale socket the same way while keeping its root-owned 0660 contract (from #209).",
+    "Reuse executor 0.53.6 unchanged: executor sources and build inputs are unchanged and it does not import ipc."
+  ],
+  "npmArtifacts": {
+    "synopackageland-app-0.53.40.tgz": {
+      "sha256": "7801a5057575797d46c1c13db275d33dee40520aef07040ecc07234b0131afb3"
+    },
+    "synopackageland-sdk-0.53.40.tgz": {
+      "sha256": "9622c19fbc7238f1b5fff8be5ab2d10d18de1231a6bfe4af715deb4b3714ddd1"
+    }
+  }
+}
