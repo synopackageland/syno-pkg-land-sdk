@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.53.40 (2026-11-13)
+
+- `appbackup` skips a detected SQLite database it cannot read, or one that vanishes during the export, with a per-file warning, and keeps exporting the healthy files. It opens sources through escaped read-only SQLite URIs and never creates empty files for vanished ones.
+- `ipc.ServeUnix`/`StartUnix` replace a stale socket left by a crash, SIGKILL or an upgrade that skipped cleanup, instead of failing with "socket path already exists". Only a socket owned by this account that refuses connections is unlinked, after an unchanged inode/device check; a live listener, another file type or a foreign owner is still refused and kept.
+- `ipc.StartPeerUnix` (executor-tier builds) recovers a stale socket the same way while keeping its root-owned 0660 contract: live, foreign-owned, wrong-mode and non-socket paths are refused and kept.
+- Executor 0.53.6 is unchanged: its sources and build inputs did not change, and it does not use `ipc`.
+
 ## 0.53.39 (2026-11-13)
 
 - `PageMeta` puts a page's own controls, such as a volume or device picker, at the start of `AppShell`'s page bar (on the title line with `header: true`), before the page's `PageInfo` and the App's `#meta`. They leave with the page; outside an `AppShell` it renders nothing. `PageMetaTarget` lets a page be tested without the shell. `PageInfo` and `PageActions` are unchanged. See [App pages](ts/README.md#app-pages).
