@@ -31,8 +31,10 @@ func socketPath(path string) (string, string, error) {
 }
 
 // ServeUnix serves h until ctx is canceled. The SDK creates a mode-0600 socket
-// in the package's private mode-0700 var/run directory and refuses existing
-// paths, including stale sockets. It never changes process-wide umask.
+// in the package's private mode-0700 var/run directory. It replaces a stale
+// socket owned by this account only after a refused/missing connection and an
+// unchanged inode/device check; other existing paths are refused and kept.
+// It never changes process-wide umask.
 func ServeUnix(ctx context.Context, path string, h http.Handler) error {
 	run, name, err := socketPath(path)
 	if err != nil {

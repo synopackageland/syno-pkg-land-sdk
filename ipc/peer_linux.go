@@ -91,8 +91,12 @@ func startPeerUnix(ctx context.Context, run, name string, policy PeerPolicy, h f
 		}
 	}()
 	var st unix.Stat_t
-	if err := unix.Fstatat(fd, name, &st, unix.AT_SYMLINK_NOFOLLOW); err != unix.ENOENT {
-		return nil, errors.New("ipc: executor socket already exists or cannot be inspected")
+	// Keep the executor's stricter root/0660 contract before applying the
+	// same liveness and inode checks as the package HTTP socket.
+	if stale, err := peerSocket(fd, name); err != unix.ENOENT {
+		if err != nil || removeStaleSocket(fd, name, &stale) != nil {
+			return nil, errors.New("ipc: executor socket already exists or cannot be inspected")
+		}
 	}
 	l, err := net.ListenUnix("unix", &net.UnixAddr{Name: fmt.Sprintf("/proc/self/fd/%d/%s", fd, name), Net: "unix"})
 	if err != nil {

@@ -3,6 +3,7 @@ package ipc
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -11,6 +12,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 func TestPeerServerRequiresExecutorBindingAndRoot(t *testing.T) {
@@ -174,5 +177,108 @@ func TestPeerCredentialsOnRealUnixConnection(t *testing.T) {
 	c.Close()
 	if err := <-done; err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestPeerExecutorReplacesStaleSocketOnly(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("run in an isolated root container to exercise the executor boundary")
+	}
+	oldID, oldTier := packageID, executorTier
+	t.Cleanup(func() { packageID, executorTier = oldID, oldTier })
+	packageID, executorTier = fmt.Sprintf("PeerStale%d", os.Getpid()), "executor"
+	fd, err := peerRun(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unix.Close(fd)
+	run := "/var/run/synopkgland/" + packageID
+	t.Cleanup(func() { os.RemoveAll(run) })
+	path := filepath.Join(run, "helper.sock")
+	policy := PeerPolicy{UID: 0, GID: 65534}
+	handler := func(_ context.Context, c net.Conn, _ PeerCredentials) {
+		defer c.Close()
+		_, _ = io.WriteString(c, "live")
+	}
+	for _, kind := range []string{"stale", "file", "directory", "symlink", "foreign-owner", "wrong-mode"} {
+		t.Run(kind, func(t *testing.T) {
+			defer os.RemoveAll(path)
+			switch kind {
+			case "file":
+				err = os.WriteFile(path, []byte("keep"), 0600)
+			case "directory":
+				err = os.Mkdir(path, 0700)
+			case "symlink":
+				err = os.Symlink("missing.sock", path)
+			default:
+				var l *net.UnixListener
+				l, err = net.ListenUnix("unix", &net.UnixAddr{Name: path, Net: "unix"})
+				if err == nil {
+					l.SetUnlinkOnClose(false)
+					err = l.Close()
+				}
+				if err == nil {
+					err = os.Chmod(path, 0660)
+				}
+				if err == nil && kind == "foreign-owner" {
+					err = os.Chown(path, 65534, 65534)
+				}
+				if err == nil && kind == "wrong-mode" {
+					err = os.Chmod(path, 0600)
+				}
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			before, err := os.Lstat(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			s, err := StartPeerUnix(context.Background(), path, policy, handler)
+			if kind != "stale" {
+				if err == nil {
+					s.Close()
+					t.Fatal("unsafe existing path replaced")
+				}
+				after, err := os.Lstat(path)
+				if err != nil || !os.SameFile(before, after) || before.Mode() != after.Mode() {
+					t.Fatalf("refused path changed: %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("stale socket not replaced: %v", err)
+			}
+			defer s.Close()
+			created, err := peerSocket(fd, "helper.sock")
+			if err != nil || created.Gid != policy.GID {
+				t.Fatalf("replacement ownership/mode: %+v %v", created, err)
+			}
+			if duplicate, err := StartPeerUnix(context.Background(), path, policy, handler); err == nil {
+				duplicate.Close()
+				t.Fatal("live socket replaced")
+			}
+			current, err := peerSocket(fd, "helper.sock")
+			if err != nil || current.Ino != created.Ino || current.Dev != created.Dev {
+				t.Fatalf("live socket changed: %v", err)
+			}
+			// Refusing a second server must leave the original server usable.
+			c, err := DialPeerUnix(context.Background(), path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer c.Close()
+			c.SetDeadline(time.Now().Add(time.Second))
+			data, err := io.ReadAll(c)
+			if err != nil || string(data) != "live" {
+				t.Fatalf("replacement round trip: %q %v", data, err)
+			}
+			if err := s.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := os.Lstat(path); !os.IsNotExist(err) {
+				t.Fatalf("replacement socket retained: %v", err)
+			}
+		})
 	}
 }
