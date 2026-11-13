@@ -618,6 +618,12 @@
     "reason": "Retry spacing during socket identity inspection"
   },
   {
+    "file": "ipc/socket_linux.go",
+    "statement": "conn, err := net.DialTimeout(\"unix\", fmt.Sprintf(\"/proc/self/fd/%d/%s\", fd, name), time.Second)",
+    "class": "B",
+    "reason": "Bounded stale-socket liveness probe; timeout preserves the path and refuses startup"
+  },
+  {
     "file": "ipc/unix_linux.go",
     "statement": "http: &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second},",
     "class": "B",

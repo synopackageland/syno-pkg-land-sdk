@@ -47,7 +47,9 @@ func peerPath(path string) (string, string, error) {
 // five-second initial deadline.
 // The handler must bound frame sizes, validate protocol/authorization, honor
 // cancellation and manage deadlines for longer exchanges. No listener or
-// privilege elevation is exposed. Existing sockets are always refused.
+// privilege elevation is exposed. A stale root-owned 0660 socket is replaced
+// only after a refused/missing connection and an unchanged inode/device check.
+// Live sockets, other owners, modes and file types are refused and kept.
 func StartPeerUnix(ctx context.Context, path string, policy PeerPolicy, h func(context.Context, net.Conn, PeerCredentials)) (*PeerServer, error) {
 	if executorTier != "executor" {
 		return nil, errors.New("ipc: peer server requires a separately approved executor-tier build")
