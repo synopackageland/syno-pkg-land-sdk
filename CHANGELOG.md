@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.53.39 (2026-11-13)
+
+- `PageMeta` puts a page's own controls, such as a volume or device picker, at the start of `AppShell`'s page bar (on the title line with `header: true`), before the page's `PageInfo` and the App's `#meta`. They leave with the page; outside an `AppShell` it renders nothing. `PageMetaTarget` lets a page be tested without the shell. `PageInfo` and `PageActions` are unchanged. See [App pages](ts/README.md#app-pages).
+- In the mobile layout, a `PageMeta` with `menu` (`DropdownMenuEntry` items) shows those entries first in the phone bar's "…", before the App's `header-actions`, in place of its controls, and emits `select` with the chosen key; the App's `headerAction` does not see it. Without `menu` the controls stay in the page bar.
+- Native v1 adds the `close` page message and the bridge's optional `features` list. See [Native v1](spec/native/v1/README.md).
+- Built and tested against UI 0.25.10. The UI peer range is unchanged.
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.38 (2026-11-12)
 
 - `AppShell` forwards the UI's aside: an `#aside` slot (an `AsidePanel`) on every page, `v-model:aside` and `v-model:aside-width`, and `aside-dock` (`'wide'` docks an open aside beside the page in a DSM window at least 960px wide, with UI 0.25.10 or later). Without the slot nothing changes. See [Aside](ts/README.md#aside).

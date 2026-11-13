@@ -7,7 +7,7 @@
 // mounted (v-show) so provider leases and job polling keep running while the
 // user moves between pages; a page's own component is rendered only while it
 // is the current page.
-import {computed, provide, ref, useTemplateRef, watch, watchEffect, type FunctionalComponent} from 'vue'
+import {computed, provide, ref, shallowRef, useTemplateRef, watch, watchEffect, type FunctionalComponent} from 'vue'
 import {CircleUser, LogOut} from '@lucide/vue'
 import {AppLayout, AppRoot, AppSidebar, AppSidebarUser, AppTabBar, AppToolbar, Button, Callout, Dialog, IconButton, ConfigProvider, LoadingArea, PageContent, PageHeader, ensureDeviceViewport, type DropdownMenuEntry, type WideLayout} from '@synopackageland/ui'
 import {isFullPage, type ShellContext} from '../context'
@@ -23,6 +23,7 @@ import UiUpdateNotice from './UiUpdateNotice.vue'
 import ShellPhone from './ShellPhone.vue'
 import {PageActionsTarget} from './page-actions'
 import {PageInfoTarget, ShellLocale} from './page-info'
+import {entryKeys, PageMetaMenu, PageMetaTarget} from './page-meta'
 
 const props = withDefaults(defineProps<{
   locale: string
@@ -163,8 +164,8 @@ const layout = useTemplateRef<{$el: HTMLElement}>('layout')
 // What AppLayout shows on a phone, read from its markup: the phone signal, the
 // key of the tab bar's current tab, its own top bar (with Back on a sub-page)
 // and bars hidden on scroll. A UI without the phone shell reads none.
-interface PhoneShell {phone: boolean; tab: string | undefined; bar: boolean; back: boolean; pageActions: boolean; barsHidden: boolean}
-const noPhoneShell: PhoneShell = {phone:false,tab:undefined,bar:false,back:false,pageActions:false,barsHidden:false}
+interface PhoneShell {phone: boolean; mobile: boolean; tab: string | undefined; bar: boolean; back: boolean; pageActions: boolean; barsHidden: boolean}
+const noPhoneShell: PhoneShell = {phone:false,mobile:false,tab:undefined,bar:false,back:false,pageActions:false,barsHidden:false}
 const phoneShell = ref<PhoneShell>(noPhoneShell)
 const currentTab = '[data-ui-tab-bar-item][aria-current="page"]'
 function readPhoneShell(root: HTMLElement): PhoneShell {
@@ -175,6 +176,8 @@ function readPhoneShell(root: HTMLElement): PhoneShell {
   const bar = navigation && !(navigation as HTMLElement).hidden ? navigation : undefined
   return {
     phone: root.hasAttribute('data-ui-phone'),
+    // The mobile layout, phone or narrow window: where PageMeta's menu takes the place of its controls.
+    mobile: root.getAttribute('data-ui-layout-mode') === 'mobile',
     // Only a tab drawn in the bar counts: More (a page under it) is not a tab item.
     tab: chrome.map(child => child.matches(currentTab) ? child : child.querySelector(currentTab)).find(item => item)?.getAttribute('data-ui-tab-bar-item') ?? undefined,
     bar: !!bar,
@@ -196,7 +199,7 @@ watch(layout, (component, _, onCleanup) => {
   read()
   const observer = new MutationObserver(read)
   // One observe call: observing the same node again replaces its options.
-  observer.observe(root, {attributes: true, attributeFilter: ['data-ui-phone', 'data-ui-bars-hidden', 'aria-current', 'hidden'], childList: true, subtree: true})
+  observer.observe(root, {attributes: true, attributeFilter: ['data-ui-phone', 'data-ui-layout-mode', 'data-ui-bars-hidden', 'aria-current', 'hidden'], childList: true, subtree: true})
   onCleanup(() => observer.disconnect())
 }, {flush: 'post', immediate: true})
 // A phone outside a DSM window (a full page or no ctx) draws no title, App
@@ -217,7 +220,19 @@ const canSignOut = computed(() => {
   return typeof host?.signOut === 'function' && host.platform().host === 'dsm'
 })
 function signOut() {accountOpen.value = false; pageCtx.value?.host?.signOut?.()}
-const appActions = computed(() => props.headerActions ?? [])
+// A page's PageMeta menus lead the bar's "…" in the mobile layout, before the App's actions.
+interface MetaMenu {entries: () => readonly DropdownMenuEntry[]; select: (key: string) => void}
+const metaMenus = shallowRef<readonly MetaMenu[]>([])
+const metaShown = computed(() => phoneShell.value.mobile ? metaMenus.value.filter(menu => menu.entries().length) : [])
+const metaEntries = computed<DropdownMenuEntry[]>(() => metaShown.value.flatMap((menu, index) => [
+  ...(index ? [{type: 'separator', key: `synopkgland-page-meta-separator-${index}`} as const] : []),
+  ...menu.entries(),
+]))
+const appActions = computed<DropdownMenuEntry[]>(() => {
+  const own = props.headerActions ?? []
+  if(!metaEntries.value.length) return own
+  return own.length ? [...metaEntries.value, {type: 'separator', key: 'synopkgland-page-meta-separator'}, ...own] : metaEntries.value
+})
 // Whether AppLayout draws its top bar, leaving the account out of it.
 const barWithoutAccount = computed(() => !untitledTab.value || appActions.value.length > 0 || phoneShell.value.back || phoneShell.value.pageActions)
 // On a phone the account joins the one top bar: always where DSM shows no
@@ -234,7 +249,9 @@ const barActions = computed<DropdownMenuEntry[]>(() => {
   return appActions.value.length ? [...appActions.value, {type: 'separator', key: `${accountKey}-separator`}, account] : [account]
 })
 function onHeaderAction(key: string) {
-  if(key === accountKey && accountInBar.value) accountOpen.value = true
+  const meta = metaShown.value.find(menu => entryKeys(menu.entries()).includes(key))
+  if(meta) meta.select(key)
+  else if(key === accountKey && accountInBar.value) accountOpen.value = true
   else emit('headerAction', key)
 }
 watch(accountInBar, shown => {if(!shown) accountOpen.value = false})
@@ -311,6 +328,16 @@ const user = computed(() => !portalChrome.value.user && !accountInBar.value && p
 provide(PageActionsTarget, useTemplateRef<HTMLElement>('page-actions'))
 // A page component's PageInfo renders on the title line (or the page bar), before the App's meta.
 provide(PageInfoTarget, useTemplateRef<HTMLElement>('page-info'))
+// A page component's PageMeta renders at the start of the bar (or the title line), before its PageInfo.
+provide(PageMetaTarget, useTemplateRef<HTMLElement>('page-meta'))
+provide(PageMetaMenu, {
+  collapsed: computed(() => phoneShell.value.mobile),
+  register(entries, select) {
+    const menu: MetaMenu = {entries, select}
+    metaMenus.value = [...metaMenus.value, menu]
+    return () => {metaMenus.value = metaMenus.value.filter(other => other !== menu)}
+  },
+})
 provide(ShellLocale, computed(() => props.locale))
 // The notices block shows by what its slot renders: a notice component that
 // renders nothing passes the slot a vnode all the same.
@@ -367,14 +394,14 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
       <slot name="toolbar" :page="modelValue" :phone="phone" />
       <div v-if="headerMode !== 'shown'" ref="page-bar" class="app-page-bar" :hidden="pageBarEmpty" data-app-page-bar>
         <AppToolbar>
-          <div class="app-page-slot app-page-meta"><span ref="page-info" class="app-page-slot app-page-info" /><slot name="meta" :page="modelValue" :phone="phone" /></div>
+          <div class="app-page-slot app-page-meta"><span ref="page-meta" class="app-page-slot app-page-lead" /><span ref="page-info" class="app-page-slot app-page-info" /><slot name="meta" :page="modelValue" :phone="phone" /></div>
           <template #actions><div class="app-page-slot app-page-bar-actions"><div ref="page-actions" class="app-page-slot app-page-actions" /><slot v-if="!loading" name="actions" :page="modelValue" :phone="phone" /></div></template>
         </AppToolbar>
       </div>
     </template>
     <PageContent ref="scroller" :class="['app-page', {'app-page-fill': fill, 'app-page-untitled': headerMode === 'hidden', 'app-page-flush': flush}]" :width="pageWidth" :surface="pageSurface" :hide-on-scroll="page?.hideOnScroll">
       <PageHeader v-if="headerMode === 'shown'" :title="title">
-        <template #meta><span ref="page-info" class="app-page-info" /><slot name="meta" :page="modelValue" :phone="phone" /></template>
+        <template #meta><span ref="page-meta" class="app-page-lead" /><span ref="page-info" class="app-page-info" /><slot name="meta" :page="modelValue" :phone="phone" /></template>
         <template #actions><div ref="page-actions" class="app-page-actions" /><slot v-if="!loading" name="actions" :page="modelValue" :phone="phone" /></template>
       </PageHeader>
       <h1 v-else-if="headerMode === 'hidden'" class="app-page-title">{{ title }}</h1>
@@ -412,9 +439,9 @@ watchEffect(onCleanup => {if(fullPage.value) onCleanup(ensureDeviceViewport())})
 .app-shell-account { display: flex; flex: 1 1 auto; align-items: center; gap: var(--ui-space-1, 4px); min-width: 0; }
 .app-shell[data-ui-sidebar-collapsed] .app-shell-account { flex: 0 0 auto; flex-direction: column; }
 /* Lays a page's own actions and notes out as the header's own items. */
-.app-page-actions, .app-page-info { display: contents; }
-/* A page without the shell's header: its notes sit at the start of a bar above
-   the page and its actions at the end, as the header placed them. The bar
+.app-page-actions, .app-page-info, .app-page-lead { display: contents; }
+/* A page without the shell's header: its controls (PageMeta) and notes sit at
+   the start of a bar above the page and its actions at the end, as the header placed them. The bar
    stays while the page scrolls and shows only while it holds something. */
 .app-page-bar[hidden] { display: none; }
 .app-page-meta, .app-page-bar-actions { display: flex; align-items: center; gap: var(--ui-space-2, 8px); min-width: 0; }

@@ -7,7 +7,7 @@ App's `backend/go.mod`.
 | Import | Contents |
 |---|---|
 | `@synopackageland/sdk` | Headless: `Context` and the other types, `createBackgroundSaveFacade`, `createNasProvider`, `scopedPicker`, `createPortalAccess`, copy catalogs (`uiLocale`, `saveCopy`, …). Never imports Vue. |
-| `@synopackageland/sdk/vue` | Everything above plus the components (`AppShell`, `PageActions`, `PageInfo`, `FilesPage`, `NasPicker`, `LoginPage`, `PortalSettings`, `BackgroundPanel`, `ExecutorSettings`, `ExecutorApproval`, `ExecutorNotice`, `UiUpdateNotice`, `DelegatePanel`, `BackgroundSavePanel`, `BackgroundSaveSettings`, `AuthorizationGate`, `AuthorizationSettings`, `EntryGuard`) and composables (`createSession`, `useExecutorSetup`, `ExecutorSetupKey`, `useAuthorization`). |
+| `@synopackageland/sdk/vue` | Everything above plus the components (`AppShell`, `PageActions`, `PageInfo`, `PageMeta`, `FilesPage`, `NasPicker`, `LoginPage`, `PortalSettings`, `BackgroundPanel`, `ExecutorSettings`, `ExecutorApproval`, `ExecutorNotice`, `UiUpdateNotice`, `DelegatePanel`, `BackgroundSavePanel`, `BackgroundSaveSettings`, `AuthorizationGate`, `AuthorizationSettings`, `EntryGuard`) and composables (`createSession`, `useExecutorSetup`, `ExecutorSetupKey`, `useAuthorization`). |
 | `@synopackageland/sdk/vue/style.css` | The component stylesheet. Import it once next to `@synopackageland/ui`'s theme in the App entry. |
 | `@synopackageland/sdk/entry` | [Full-page entry boot](../docs/entry-page.md), shared App context and sign-in display caches |
 | `@synopackageland/sdk/mobile` | [Native mobile actions](../spec/native/v1/README.md#page-integration), launch events and host adapter, with browser fallbacks |
@@ -329,9 +329,9 @@ last, after every group (an App's settings), `header`, `fill`, `hideOnScroll` an
 
 The sidebar already names the page, so a page shows no title of its own and no
 subtitle. A visually hidden `h1` with the page's `title` still names it for
-screen readers. The `#actions` slot, `PageActions`, the `#meta` slot and
-`PageInfo` sit in a bar above the page: notes at the start, actions at the
-end. The bar stays in place while the page scrolls and shows only while it
+screen readers. The `#actions` slot, `PageActions`, the `#meta` slot,
+`PageMeta` and `PageInfo` sit in a bar above the page: a page's controls and
+notes at the start, actions at the end. The bar stays in place while the page scrolls and shows only while it
 holds something. `header: true` shows the shell's `PageHeader` with the title
 and puts the notes and actions on its line instead. `header: false` is for a
 page that draws its own header: the shell adds no title, and its actions still
@@ -448,6 +448,25 @@ tested on its own provides `PageInfoTarget` as it does `PageActionsTarget`.
 ```vue
 <PageInfo :notes="[t('notes.sizes'), stale ? t('notes.stale') : '']" />
 <PageInfo inline side="left" :notes="[t('notes.searchLimit')]" />
+```
+
+A page's own controls for the whole page, such as a volume or device picker,
+go in `PageMeta` anywhere in its template: they start the page bar, before the
+page's `PageInfo` and the App's `#meta` (on the title line with
+`header: true`), and leave with the page. Outside an `AppShell`, `PageMeta`
+renders nothing; a page tested on its own provides `PageMetaTarget`.
+
+In the mobile layout (a phone, or a window as narrow as one) a field does not
+fit the 44px bar. Give `menu` the same choice as `DropdownMenuEntry` items and
+the phone bar's "…" shows them first, before the App's `header-actions`, in
+place of the controls; a selection emits `select` with the entry's key and
+does not reach the App's `headerAction`. Without `menu` the controls stay in
+the page bar under the phone bar. Wider layouts ignore `menu`.
+
+```vue
+<PageMeta :menu="[{key: 'volume', label: t('volume'), children: volumes.map(v => ({key: v.id, label: v.name, checked: v.id === current}))}]" @select="current = $event">
+  <Select v-model="current" :options="volumes.map(v => ({value: v.id, label: v.name}))" />
+</PageMeta>
 ```
 
 `navigation="top"` forwards to `AppLayout` and places the App's pages in a
