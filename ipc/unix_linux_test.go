@@ -116,3 +116,59 @@ func TestPrivateRunRefusesModesAndSymlinks(t *testing.T) {
 		t.Fatal("run symlink accepted")
 	}
 }
+
+func TestStartUnixReplacesStaleSocketOnly(t *testing.T) {
+	run := filepath.Join(t.TempDir(), "run")
+	if err := os.Mkdir(run, 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(run, "stale.sock")
+	// A crashed process leaves its socket file behind with no listener.
+	l, err := net.ListenUnix("unix", &net.UnixAddr{Name: path, Net: "unix"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.SetUnlinkOnClose(false)
+	l.Close()
+	if _, err := os.Lstat(path); err != nil {
+		t.Fatalf("stale socket missing: %v", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	s, err := startUnix(ctx, run, "stale.sock", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, "live")
+	}))
+	if err != nil {
+		t.Fatalf("stale socket not replaced: %v", err)
+	}
+	transport := &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+		return dialUnix(ctx, run, "stale.sock")
+	}}
+	defer transport.CloseIdleConnections()
+	response, err := (&http.Client{Transport: transport}).Get("http://ipc/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, _ := io.ReadAll(response.Body)
+	response.Body.Close()
+	if string(data) != "live" {
+		t.Fatalf("response %q", data)
+	}
+	// A live listener is never replaced.
+	if _, err := startUnix(ctx, run, "stale.sock", http.NotFoundHandler()); err == nil {
+		t.Fatal("live socket replaced")
+	}
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	// A non-socket file at the path is refused and kept.
+	if err := os.WriteFile(path, []byte("keep"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := startUnix(ctx, run, "stale.sock", http.NotFoundHandler()); err == nil {
+		t.Fatal("regular file replaced")
+	}
+	if data, err := os.ReadFile(path); err != nil || string(data) != "keep" {
+		t.Fatalf("regular file removed: %q %v", data, err)
+	}
+}
