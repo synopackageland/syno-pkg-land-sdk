@@ -224,6 +224,113 @@ func TestOnlineExportArchivesARollbackJournalDatabase(t *testing.T) {
 	}
 }
 
+func TestOnlineExportSkipsCorruptSQLiteWithWarningAndContinues(t *testing.T) {
+	tool := sqlite3Tool(t)
+	src := t.TempDir()
+	for _, name := range []string{"a.db", "z.db"} {
+		query(t, tool, filepath.Join(src, name), "CREATE TABLE t(v); INSERT INTO t VALUES('kept');")
+	}
+	write(t, filepath.Join(src, "m-corrupt.db"), "SQLite format 3\x00pages")
+	write(t, filepath.Join(src, "m-corrupt.db-wal"), "bad wal")
+	write(t, filepath.Join(src, "m-corrupt.db-shm"), "bad index")
+	var warnings []error
+	c := cfg()
+	c.Online = true
+	var archive bytes.Buffer
+	if err := Export(src, &archive, c, Options{SQLite: tool, Warn: func(err error) {
+		warnings = append(warnings, err)
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	if len(warnings) != 1 || !errors.Is(warnings[0], errSQLiteRead) ||
+		!strings.Contains(warnings[0].Error(), "demo export: skipped SQLite data/m-corrupt.db:") {
+		t.Fatalf("warnings = %v, want one warning naming the package and skipped file", warnings)
+	}
+	if got, want := entries(t, archive.Bytes()), []string{HeaderName, "data/a.db", "data/z.db"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("entries = %v, want %v", got, want)
+	}
+	dst := t.TempDir()
+	if err := Import(dst, &archive, c, Options{}); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"a.db", "z.db"} {
+		if got := query(t, tool, filepath.Join(dst, name), "PRAGMA integrity_check; SELECT v FROM t;"); got != "ok\nkept" {
+			t.Fatalf("restored %s = %q", name, got)
+		}
+	}
+}
+
+func TestOnlineExportSQLiteURIHandlesSpecialFileNames(t *testing.T) {
+	tool := sqlite3Tool(t)
+	src := t.TempDir()
+	name := "資料 #1?mode=rw%20.db"
+	query(t, tool, filepath.Join(src, name), "CREATE TABLE t(v); INSERT INTO t VALUES('kept');")
+	c := cfg()
+	c.Online = true
+	var archive bytes.Buffer
+	if err := Export(src, &archive, c, Options{SQLite: tool, Warn: func(err error) { t.Errorf("unexpected warning: %v", err) }}); err != nil {
+		t.Fatal(err)
+	}
+	dst := t.TempDir()
+	if err := Import(dst, &archive, c, Options{}); err != nil {
+		t.Fatal(err)
+	}
+	if got := query(t, tool, filepath.Join(dst, name), "SELECT v FROM t;"); got != "kept" {
+		t.Fatalf("restored = %q", got)
+	}
+}
+
+// The wrapper runs after isSQLite, removes the source and then uses the real
+// sqlite3. A writable open would create an empty file at the old path.
+func TestOnlineExportSkipsVanishedSQLiteWithoutCreatingAFile(t *testing.T) {
+	tool := sqlite3Tool(t)
+	for _, removeFolder := range []bool{false, true} {
+		t.Run(fmt.Sprintf("remove-folder=%t", removeFolder), func(t *testing.T) {
+			src := t.TempDir()
+			db := filepath.Join(src, "app/app.db")
+			write(t, db, "SQLite format 3\x00pages")
+			write(t, filepath.Join(src, "z.txt"), "kept")
+			remove := db
+			if removeFolder {
+				remove = filepath.Dir(db)
+			}
+			quote := func(s string) string { return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'" }
+			wrapper := filepath.Join(t.TempDir(), "sqlite3")
+			write(t, wrapper, fmt.Sprintf("#!/bin/sh\nrm -rf -- %s\nexec %s \"$@\"\n", quote(remove), quote(tool)))
+			if err := os.Chmod(wrapper, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			c := cfg()
+			c.Online = true
+			var archive bytes.Buffer
+			if err := Export(src, &archive, c, Options{SQLite: wrapper, Warn: func(err error) { t.Errorf("vanished file warned: %v", err) }}); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := os.Stat(db); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("sqlite3 recreated the source: %v", err)
+			}
+			if got, want := entries(t, archive.Bytes()), []string{HeaderName, "data/app/", "data/z.txt"}; !reflect.DeepEqual(got, want) {
+				t.Fatalf("entries = %v, want %v", got, want)
+			}
+		})
+	}
+}
+
+func TestOnlineExportDoesNotSkipArchiveWriteErrors(t *testing.T) {
+	tool := sqlite3Tool(t)
+	db := filepath.Join(t.TempDir(), "app.db")
+	query(t, tool, db, "CREATE TABLE t(v);")
+	want := errors.New("archive destination failed")
+	err := exportSQLite(tar.NewWriter(failingWriter{want}), Options{SQLite: tool}, db, "data/app.db", filepath.Join(t.TempDir(), "wal"))
+	if !errors.Is(err, want) || errors.Is(err, errSQLiteRead) {
+		t.Fatalf("err = %v, want the fatal archive write error", err)
+	}
+}
+
+type failingWriter struct{ err error }
+
+func (w failingWriter) Write([]byte) (int, error) { return 0, w.err }
+
 func TestExportLeavesOutExcludedPaths(t *testing.T) {
 	src := t.TempDir()
 	for _, f := range []string{"keep/exports/a", "keep/b.tmp", "exports/1/files.db", ".backup-app-7/state.db", "c.tmp", "d"} {
@@ -544,7 +651,8 @@ func TestOnlineExportSkipsFilesTheAppRemovesDuringTheWalk(t *testing.T) {
 	write(t, filepath.Join(src, "z.txt"), "kept")
 	tool := filepath.Join(t.TempDir(), "sqlite3")
 	write(t, tool, `#!/bin/sh
-d=$(dirname "$2")
+uri=${2#file://}
+d=$(dirname "${uri%\?mode=ro}")
 mv "$d/m.holder.tmp" "$d/m.holder"
 rm -r "$d/turns"
 echo 1
