@@ -23,6 +23,8 @@ import (
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
 	"io"
 	"io/fs"
+	"log/syslog"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -46,6 +48,8 @@ const HeaderName = "synopkgland-backup.json"
 const stagingPrefix = ".synopkgland-backup-"
 
 const hookTimeout = runtimebudget.Operation
+
+var errSQLiteRead = errors.New("cannot read SQLite database")
 
 var (
 	// ErrInvalid reports an invalid configuration or an unsafe archive.
@@ -95,6 +99,10 @@ type Options struct {
 	// SQLite is the sqlite3 tool that holds the read transaction of an online
 	// export; default /usr/bin/sqlite3.
 	SQLite string
+	// Warn receives a warning for each SQLite database skipped by an online
+	// export. By default warnings go to stderr and the synopkgland-backup
+	// system log. A skipped database does not fail the export.
+	Warn func(error)
 }
 
 // Validate checks c.
@@ -216,8 +224,8 @@ func Export(dataDir string, w io.Writer, c Config, o Options) (err error) {
 
 // exportEntry archives one walked path. The App may keep running, so a file
 // or folder it removes or renames between the listing and the read is left
-// out, as if the walk had come a moment later. Every other error fails the
-// export.
+// out, as if the walk had come a moment later. An unreadable SQLite database
+// is skipped with a warning; other errors fail the export.
 func exportEntry(tw *tar.Writer, c Config, o Options, p, name string, d os.DirEntry, walkErr error, staging string, wals *int) error {
 	if walkErr != nil {
 		return vanished(walkErr)
@@ -245,7 +253,23 @@ func exportEntry(tw *tar.Writer, c Config, o Options, p, name string, d os.DirEn
 		}
 		if isSQLite(p) {
 			*wals++
-			return exportSQLite(tw, o, p, name, filepath.Join(staging, strconv.Itoa(*wals)+"-wal"))
+			err := exportSQLite(tw, o, p, name, filepath.Join(staging, strconv.Itoa(*wals)+"-wal"))
+			if errors.Is(err, errSQLiteRead) {
+				warning := fmt.Errorf("%s export: skipped SQLite %s: %w", c.Package, name, err)
+				if o.Warn != nil {
+					o.Warn(warning)
+				} else {
+					fmt.Fprintln(os.Stderr, warning)
+					// Hyper Backup discards stderr; keep the warning in the
+					// same system log as the control binary's fatal errors.
+					if l, e := syslog.New(syslog.LOG_WARNING|syslog.LOG_USER, "synopkgland-backup"); e == nil {
+						l.Warning(warning.Error())
+						l.Close()
+					}
+				}
+				return nil
+			}
+			return err
 		}
 	}
 	f, err := os.Open(p)
@@ -299,7 +323,14 @@ func exportSQLite(tw *tar.Writer, o Options, db, name, walCopy string) error {
 	if tool == "" {
 		tool = "/usr/bin/sqlite3"
 	}
-	cmd := exec.Command(tool, "-bail", db)
+	// URI mode=ro prevents sqlite3 from creating an empty database if the App
+	// moves it after isSQLite. Escape URI metacharacters in real file names.
+	abs, err := filepath.Abs(db)
+	if err != nil {
+		return err
+	}
+	uri := url.URL{Scheme: "file", Path: abs, RawQuery: "mode=ro"}
+	cmd := exec.Command(tool, "-bail", uri.String())
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	in, err := cmd.StdinPipe()
@@ -319,7 +350,13 @@ func exportSQLite(tw *tar.Writer, o Options, db, name, walCopy string) error {
 	fmt.Fprint(in, ".timeout 30000\nBEGIN;\nSELECT count(*) FROM sqlite_master;\n")
 	if _, err := bufio.NewReader(out).ReadString('\n'); err != nil {
 		in.Close()
-		return fmt.Errorf("read transaction: %v %s", cmd.Wait(), strings.TrimSpace(stderr.String()))
+		waitErr := cmd.Wait()
+		// sqlite3's error is not an fs.PathError. Recheck the source to
+		// distinguish an unreadable database from one the App moved away.
+		if _, statErr := os.Stat(db); errors.Is(statErr, fs.ErrNotExist) {
+			return nil
+		}
+		return fmt.Errorf("%w: read transaction: %v %s", errSQLiteRead, waitErr, strings.TrimSpace(stderr.String()))
 	}
 	wal, err := copyWAL(db+"-wal", walCopy)
 	if err != nil {
@@ -327,7 +364,7 @@ func exportSQLite(tw *tar.Writer, o Options, db, name, walCopy string) error {
 	}
 	f, err := os.Open(db)
 	if err != nil {
-		return err
+		return vanished(err)
 	}
 	defer f.Close()
 	// Size the entry inside the read transaction: a stat before it may predate
