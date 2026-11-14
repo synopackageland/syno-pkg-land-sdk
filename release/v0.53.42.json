@@ -1,0 +1,52 @@
+{
+  "version": "0.53.42",
+  "executorVersion": "0.53.6",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.42",
+    "@synopackageland/app": "0.53.42",
+    "syno-pkg-land-app": "0.53.42",
+    "synopkgland_app": "0.53.42"
+  },
+  "executorDigests": {
+    "x86_64": "e77dbf846ea4555355fa15ee3a6ca3b20e1b1aaa9768321243589d9ec15ffabe",
+    "aarch64": "741a7c37757b56b3acc304cef56de5e59c1ca9278a83be0f1e1ff1ad17b24dd6",
+    "armv7": "f0a3059b982d0210621254adf7d1a3343d2a89d114e053e5b3bd646898293b1a",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Targeted patch validation: Go selfrestart and background tests; Go root module build; Node typecheck, unit tests and build; frontend typecheck, self-restart tests and build; packed consumer import; documentation, generated version, native contract and executor manifest checks; both npm tarballs scanned for internal content and secrets before publication. No full gate, QEMU, executor rebuild, Rust build, crate publication or NAS acceptance."
+  },
+  "ui": {
+    "builtAgainst": "0.25.10",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.25.10.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Add Go selfrestart admission and durable owner-bound readback plus createSelfRestart in the native frontend entry. Restarts require fresh administrator confirmation and target only the pinned installed package/version (from #215).",
+    "Allow trusted background worker assembly to opt out of the total work time limit with Runner.NoTimeout while retaining cancellation and package lifecycle handling (from #214).",
+    "Reuse executor 0.53.6 unchanged: executor sources and build inputs are unchanged."
+  ],
+  "npmArtifacts": {
+    "synopackageland-app-0.53.42.tgz": {
+      "sha256": "c56a487daca647a2ea1723ea46417becea0d4dfe1a27ac1035e04dc17e290039"
+    },
+    "synopackageland-sdk-0.53.42.tgz": {
+      "sha256": "8e56a9b6d62dc57a2cc57efcf702e257f38638ec990c225bf04b01aefc5ec1da"
+    }
+  }
+}

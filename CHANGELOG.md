@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.53.42 (2026-11-14)
+
+- Add controlled self-package restarts with Go `selfrestart` and `createSelfRestart` from `@synopackageland/sdk/native`. An App pins its installed package and version, requires fresh administrator confirmation, and asks DSM to stop and start that same package. Durable owner-bound records support readback after the connection drops; uncertain outcomes require reconciliation instead of an automatic retry. See [Safe self-package restart](docs/self-package-restart.md).
+- Trusted background worker assembly can set `Runner.NoTimeout = true` to run work without a total time limit. Job cancellation and package shutdown still propagate through the context; the default remains time-limited. See [Background results](docs/background-results.md).
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.41 (2026-11-14)
 
 - `api.IngressTime(ctx)` returns when the request reached the SDK. The outermost SDK handler (`ServeIngress`, `WithRequestDeadline`, `WithObserver`, `WithDescription` or the `Server`) records it before it reads the body, checks the origin or authenticates the session. Authenticators, route handlers, raw `HandleHTTP` handlers and the observer all see the same time, also for refused requests. Outside an SDK handler, for example in a test, it is the zero time. No App code runs before authentication, and there is no new option to register. See [Request ingress time](docs/http-boundaries.md#request-ingress-time).
