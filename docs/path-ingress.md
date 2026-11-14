@@ -19,6 +19,31 @@ policy prefixes, redirects, OIDC client callback paths, browser helpers and the
 launcher are scoped once. Sessions and upstream cookies stay under the package
 path. DSM cookies and other gateway cookies are stripped before proxying.
 
+## Unix socket upstream
+
+`idgateway.UnixUpstreamVersion = 1` lets the gateway `"upstream"` be
+`"unix:/var/packages/<Package>/var/run/<name>.sock"` instead of an
+`http://127.0.0.1:<port>` address. The socket is the App's own private SDK IPC
+socket (`ipc.StartUnix`/`ipc.ServeUnix`), so the App needs no TCP port or
+listener: nginx, the mTLS Unix socket and the gateway reach it under the DSM
+origin. `<Package>` must equal the gateway's `package` exactly and `<name>.sock`
+must be a direct child of `var/run` (clean absolute path, `.sock` suffix, name at
+most 64 characters); anything else, and combining it with `compose_ingress`, is
+refused when the configuration loads. The gateway dials through
+`ipc.DialPackageUnix`, which checks the directory and socket ownership and
+modes like `ipc.DialUnix` but takes the package from the configuration, because
+the CLI does not bind `ipc.packageID` into the gateway binary.
+
+Admission, `upstream_auth_paths`, the `Host` header, `X-Synopkgland-*` handling
+and path scoping do not change; `/_spl/ping` and the readiness check never touch
+the upstream. The gateway sets no deadline on an upgraded connection: it ends only when
+the browser or the App closes it, the DSM session is revoked (protected paths), or the
+gateway stops. `response_header_timeout_seconds` (default none) only bounds
+waiting for response headers, including the `101`. The gateway's own server limits
+(30 s to read request headers, 2 minutes idle between requests) do not apply
+after the upgrade; nginx's `proxy_read_timeout 3600s` (the CLI default) does, so a quiet tunnel needs
+traffic or pings within that interval.
+
 Login authorization permits only a return URL on the CGI's own DSM origin and
 this package's exact callback path. Cold-login resume uses a transaction-bound
 path token rather than choosing an App port. The nginx hop supplies the original

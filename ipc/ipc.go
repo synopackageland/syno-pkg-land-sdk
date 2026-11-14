@@ -19,10 +19,14 @@ var packageID string
 var packageName = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_-]{0,63}$`)
 
 func socketPath(path string) (string, string, error) {
-	if !packageName.MatchString(packageID) {
+	return socketPathFor(packageID, path)
+}
+
+func socketPathFor(pkg, path string) (string, string, error) {
+	if !packageName.MatchString(pkg) {
 		return "", "", errors.New("ipc: package identity is not bound by the build")
 	}
-	run := "/var/packages/" + packageID + "/var/run"
+	run := "/var/packages/" + pkg + "/var/run"
 	if !filepath.IsAbs(path) || filepath.Clean(path) != path || filepath.Dir(path) != run ||
 		!strings.HasSuffix(filepath.Base(path), ".sock") || len(filepath.Base(path)) > 64 {
 		return "", "", errors.New("ipc: socket must be a direct .sock child of this package's var/run")
@@ -55,4 +59,21 @@ func DialUnix(ctx context.Context, path string) (net.Conn, error) {
 		return nil, err
 	}
 	return dialUnix(ctx, run, name)
+}
+
+// DialPackageUnix is DialUnix for a binary that was not built with the package
+// identity bound (the identity gateway): the caller names the package, and the
+// same path rules and ownership/mode checks apply.
+func DialPackageUnix(ctx context.Context, pkg, path string) (net.Conn, error) {
+	run, name, err := socketPathFor(pkg, path)
+	if err != nil {
+		return nil, err
+	}
+	return dialUnix(ctx, run, name)
+}
+
+// ValidPackageSocket reports whether path is a direct .sock child of pkg's var/run.
+func ValidPackageSocket(pkg, path string) error {
+	_, _, err := socketPathFor(pkg, path)
+	return err
 }

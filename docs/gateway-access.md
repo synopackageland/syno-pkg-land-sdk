@@ -54,6 +54,9 @@ the static entry policy digest into the gateway. Editing the entry mode,
 upstream-auth paths or passthrough settings without rebuilding refuses startup
 and CGI loading. Build with matching SDK and CLI releases with gateway access support.
 
+A path-ingress App can serve these paths, including a WebSocket, from its private IPC
+socket instead of a TCP port; see [Unix socket upstream](path-ingress.md#unix-socket-upstream).
+
 The identity gateway distinguishes DSM authentication from App admission. A
 verified DSM session does not grant administrator or admitted-group membership.
 The authorize CGI returns `access_denied` for admission refusals, including DSM

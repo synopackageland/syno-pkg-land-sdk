@@ -9,6 +9,7 @@ import (
 	"github.com/synopackageland/syno-pkg-land-sdk/dsm"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/composeingress"
 	"github.com/synopackageland/syno-pkg-land-sdk/internal/runtimebudget"
+	"github.com/synopackageland/syno-pkg-land-sdk/ipc"
 	"io"
 	"log"
 	"net"
@@ -107,6 +108,8 @@ type FrontConfig struct {
 	Mode                  Mode
 	// Upstream is the loopback or package-derived Compose bridge base URL.
 	Upstream string
+	// dialUnix replaces ipc.DialPackageUnix in tests.
+	dialUnix func(ctx context.Context, pkg, path string) (net.Conn, error)
 	// Key is shared with the authorize CGI.
 	Key []byte
 	// AuthorizeCGI is the CGI's path on the DSM origin.
@@ -235,17 +238,29 @@ func NewFront(cfg FrontConfig) (*Front, error) {
 	if len(cfg.OptionalPassthrough) > 0 && !filepath.IsAbs(cfg.StateDir) {
 		return nil, errors.New("optional passthrough needs an absolute state directory")
 	}
-	up, err := url.Parse(cfg.Upstream)
-	valid := err == nil && up.Scheme == "http" && (up.Path == "" || up.Path == "/") && up.User == nil && up.RawQuery == "" && up.Fragment == "" && net.ParseIP(up.Hostname()) != nil
-	if valid && cfg.ComposeIngress != nil {
-		a, e := composeingress.Allocate(cfg.Package, cfg.ComposeIngress.Candidate)
-		port, e2 := strconv.Atoi(up.Port())
-		valid = e == nil && e2 == nil && port > 0 && port <= 65535 && up.Hostname() == a.Address
-	} else if valid {
-		valid = net.ParseIP(up.Hostname()).IsLoopback()
+	unixPath, err := parseUnixUpstream(cfg.Package, cfg.Upstream, cfg.ComposeIngress != nil)
+	if err != nil {
+		return nil, err
 	}
-	if !valid {
-		return nil, fmt.Errorf("upstream %q must be an http loopback or exact package Compose ingress address", cfg.Upstream)
+	var up *url.URL
+	if unixPath != "" {
+		// Only the Host header and redirect comparison see this name; the
+		// transport dials the validated socket instead.
+		up = &url.URL{Scheme: "http", Host: "unix.invalid"}
+	} else {
+		var err error
+		up, err = url.Parse(cfg.Upstream)
+		valid := err == nil && up.Scheme == "http" && (up.Path == "" || up.Path == "/") && up.User == nil && up.RawQuery == "" && up.Fragment == "" && net.ParseIP(up.Hostname()) != nil
+		if valid && cfg.ComposeIngress != nil {
+			a, e := composeingress.Allocate(cfg.Package, cfg.ComposeIngress.Candidate)
+			port, e2 := strconv.Atoi(up.Port())
+			valid = e == nil && e2 == nil && port > 0 && port <= 65535 && up.Hostname() == a.Address
+		} else if valid {
+			valid = net.ParseIP(up.Hostname()).IsLoopback()
+		}
+		if !valid {
+			return nil, fmt.Errorf("upstream %q must be an http loopback, this package's unix socket, or exact package Compose ingress address", cfg.Upstream)
+		}
 	}
 	if len(cfg.Key) < MinKeySize || !strings.HasPrefix(cfg.AuthorizeCGI, "/webman/3rdparty/") || cfg.Package == "" {
 		return nil, errors.New("gateway needs a key, the authorize CGI path and the package name")
@@ -308,6 +323,17 @@ func NewFront(cfg FrontConfig) (*Front, error) {
 	}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.DialContext = (&net.Dialer{Timeout: runtimebudget.Operation, KeepAlive: 30 * time.Second}).DialContext
+	if unixPath != "" {
+		dial := cfg.dialUnix
+		if dial == nil {
+			dial = ipc.DialPackageUnix
+		}
+		transport.DialContext = func(ctx context.Context, _, _ string) (net.Conn, error) {
+			ctx, cancel := context.WithTimeout(ctx, runtimebudget.Operation)
+			defer cancel()
+			return dial(ctx, cfg.Package, unixPath)
+		}
+	}
 	transport.ResponseHeaderTimeout = cfg.ResponseHeaderTimeout
 	transport.TLSHandshakeTimeout = runtimebudget.Operation
 	f.proxy = &httputil.ReverseProxy{Rewrite: f.rewrite, ModifyResponse: f.modifyProxyResponse, Transport: &boundedProxyTransport{base: transport, headers: make(chan struct{}, resourceWaitLimit)}, ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {

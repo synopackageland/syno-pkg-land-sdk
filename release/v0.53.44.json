@@ -1,0 +1,52 @@
+{
+  "version": "0.53.44",
+  "executorVersion": "0.53.6",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.44",
+    "@synopackageland/app": "0.53.44",
+    "syno-pkg-land-app": "0.53.44",
+    "synopkgland_app": "0.53.44"
+  },
+  "executorDigests": {
+    "x86_64": "e77dbf846ea4555355fa15ee3a6ca3b20e1b1aaa9768321243589d9ec15ffabe",
+    "aarch64": "741a7c37757b56b3acc304cef56de5e59c1ca9278a83be0f1e1ff1ad17b24dd6",
+    "armv7": "f0a3059b982d0210621254adf7d1a3343d2a89d114e053e5b3bd646898293b1a",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Basic release gate (bash scripts/gate.sh) run as root, where the Node and Python tests that refuse to run as root and the Go tests that need the package account fail identically on the previous release; policy, version and executor manifest checks, Go vet/build and units, Node typecheck/build, frontend gate, packed consumer import, pack and content scans; both npm tarballs scanned for internal content and secrets before publication. New idgateway and ipc unix-upstream tests pass under the race detector. No full gate, QEMU, executor rebuild, Rust build, crate publication or NAS acceptance."
+  },
+  "ui": {
+    "builtAgainst": "0.25.10",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.25.10.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "The identity gateway upstream can be unix:/var/packages/<Package>/var/run/<name>.sock, the App's own private SDK IPC socket, so an App behind path ingress needs no TCP port (idgateway.UnixUpstreamVersion = 1). Other packages' paths, nested or relative paths, non-.sock names and compose_ingress are refused at configuration load. Upgraded connections have no gateway deadline.",
+    "Add ipc.DialPackageUnix, ipc.DialUnix with an explicit package for binaries without a bound identity.",
+    "Reuse executor 0.53.6 unchanged: executor sources and build inputs are unchanged."
+  ],
+  "npmArtifacts": {
+    "synopackageland-app-0.53.44.tgz": {
+      "sha256": "68810833f99c66851f7ee48b45c4b699ca3176ef788517040faef3150646a0a7"
+    },
+    "synopackageland-sdk-0.53.44.tgz": {
+      "sha256": "32bcdaca01363ddb6795193e4282f4dc4a387a5c11da2a80e968251af61d9ae7"
+    }
+  }
+}
