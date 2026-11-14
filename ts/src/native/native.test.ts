@@ -4,8 +4,8 @@ import assert from 'node:assert/strict'
 import {AUTHORIZATION_RUNTIME, ROOT_RUNTIME} from '../native'
 import * as native from '../native'
 // Native products such as Reclaim render both runtimes into their own DSM window.
-test('the native entry exports the authorization and root runtimes; the Vue gate ships in @synopackageland/sdk/vue', () => {
- assert.deepEqual(Object.keys(native).sort(),['AUTHORIZATION_RUNTIME','ROOT_RUNTIME']);
+test('the native entry exports the authorization and root runtimes and self-restart; the Vue gate ships in @synopackageland/sdk/vue', () => {
+ assert.deepEqual(Object.keys(native).sort(),['AUTHORIZATION_RUNTIME','ROOT_RUNTIME','createSelfRestart','createSelfRestartTransport']);
  assert.match(AUTHORIZATION_RUNTIME,/function createAuthorizationAccess/);
  assert.match(ROOT_RUNTIME,/function createRootAccess/);
 });

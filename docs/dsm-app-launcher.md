@@ -77,6 +77,50 @@ Punctuation and Unicode round-trip without changing the target.
 `dsmLaunchURL(origin, packageId, params)` remains available with its existing
 behavior for packages using `SYNO.SDS.<packageId>.Instance`.
 
+## Control Panel pages
+
+`openControlPanel(page, options?)` opens a page of DSM Control Panel
+(`CONTROL_PANEL_APP`, `SYNO.SDS.AdminCenter.Application`) through the same
+desktop dispatch and returns the same `DsmAppLaunchResult`.
+`controlPanelTarget(page)` returns the `DsmAppTarget`, for a link with
+`dsmAppLaunchURL` or an injected launcher.
+
+```ts
+import {openControlPanel, controlPanelTarget, dsmAppLaunchURL} from '@synopackageland/sdk'
+
+await openControlPanel({page: 'shared-folder', select: 'Media'})
+await openControlPanel({page: 'login-portal', tab: 'applications'})
+const href = dsmAppLaunchURL(dsmOrigin, controlPanelTarget({page: 'shared-folder', select: 'Media'}))
+```
+
+| Page | Launch parameters | Opens |
+| --- | --- | --- |
+| `{page: 'shared-folder'}` | `fn: 'SYNO.SDS.AdminCenter.Share.Main'` | Shared Folder |
+| `{page: 'shared-folder', select}` | adds `c2share_name: select` | Shared Folder with that share's row selected and expanded |
+| `{page: 'login-portal'}` | `fn: 'SYNO.SDS.AdminCenter.Login.Main'` | Login Portal |
+| `{page: 'login-portal', tab: 'applications'}` | adds `tab: 'applications'` | Login Portal's Applications tab |
+
+Control Panel passes the launch config to the page's `activate()`. Shared
+Folder stores `c2share_name` and selects that row once its list has loaded; the
+list is keyed by share name. This works whether Control Panel is already open
+or not.
+
+The Edit dialog cannot be opened from launch parameters: DSM opens it from a
+loaded list record, not from a name. There is no `edit` action. Tell the
+administrator to click **Edit** on the selected share and tick the setting.
+
+`select` must be a shared-folder name: 1 to 255 characters, no `/` or `\`,
+not `.` or `..`, and no control characters. An invalid name or an unknown page
+or tab returns `invalid-input` from `openControlPanel` without dispatch;
+`controlPanelTarget` throws instead, like `dsmAppLaunchURL`. As with any launch,
+`requested` means dispatch only, and Control Panel itself checks that the
+viewer is an administrator.
+
+`sharedFolderAccessFor(ctx).openControlPanel()` now opens Shared Folder itself:
+it dispatches through this page's DSM desktop, because the host's
+`openApp(appId)` takes no parameters, and falls back to `ctx.host.openApp`
+outside a DSM desktop.
+
 ## Verify the target
 
 The MailPlus example comes from a supplied read-only metadata observation on

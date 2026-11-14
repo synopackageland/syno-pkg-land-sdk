@@ -1,5 +1,7 @@
 import type {Context,SharedFolderAccess,SharedFolderItem,SharedFolderStatus} from '../context'
 import {sharedFolderMessages} from './i18n'
+import {requestDsmApp} from '../dsm/app-launch'
+import {controlPanelTarget} from '../dsm/control-panel'
 
 // Shared Folder access for the package account: what the backend's
 // sharedfolder.status (Go sharedfolder.Config.Status) measured as that
@@ -84,7 +86,7 @@ export function createSharedFolderAccess(options:SharedFolderOptions):SharedFold
    if(next.folders.find(f=>f.key===key)?.state!=='ready')throw {code:'shared_folder_grant_unverified'}
    return next
   },
-  openControlPanel(){options.launch?.('SYNO.SDS.AdminCenter.Application',{fn:'SYNO.SDS.AdminCenter.Share.Main'})},
+  openControlPanel(){const target=controlPanelTarget({page:'shared-folder'});options.launch?.(target.appId,{...target.params})},
  }
  return access
 }
@@ -95,7 +97,9 @@ export function sharedFolderAccessFor(ctx:Pick<Context,'call'|'webApi'|'user'|'l
   call:(method,params)=>ctx.call(method,params),
   send:ctx.webApi,
   isAdmin:()=>ctx.user?.isAdmin===true,
-  launch:(app)=>{ctx.host.openApp(app)},
+  // The host's openApp takes an app ID only and would drop the page: launch
+  // through this page's DSM desktop, and fall back to the host outside it.
+  launch:(app,params)=>{if(requestDsmApp({appId:app,params}).status==='unsupported')ctx.host.openApp(app)},
   locale:ctx.locale,
  })
 }

@@ -1,4 +1,4 @@
-import {expect,test} from 'vitest'
+import {afterEach,expect,test,vi} from 'vitest'
 import {createSharedFolderAccess,sharedFolderAccessFor,type SharedFolderOptions} from './access'
 
 type Sent={api:string;method:string;version:number;params:Record<string,unknown>}
@@ -15,6 +15,7 @@ function access(o:{admin?:boolean;noSend?:boolean;backend:Array<unknown>;dsm?:(s
  })
  return {shared,sent,calls,launched}
 }
+afterEach(()=>vi.unstubAllGlobals())
 const code=(expected:string)=>expect.objectContaining({code:expected})
 
 test('status is what the backend measured for the package account, with pending derived',async()=>{
@@ -121,8 +122,17 @@ test('the context helper takes the call, DSM channel, admin flag and launcher fr
  })
  expect(shared.canGrant()).toBe(true)
  expect((await shared.status()).account).toBe('OpenList')
+ const desktop:unknown[]=[]
+ vi.stubGlobal('SYNO',{SDS:{AppLaunch:(id:string,params:unknown)=>{desktop.push([id,params])}}})
  shared.openControlPanel()
  expect(sent).toEqual(['sharedfolder.status'])
+ // The DSM desktop gets Control Panel's Shared Folder page, not its home page.
+ expect(desktop).toEqual([['SYNO.SDS.AdminCenter.Application',{fn:'SYNO.SDS.AdminCenter.Share.Main'}]])
+ expect(opened).toEqual([])
+ // Outside a DSM desktop the host's app-ID-only launcher is the fallback.
+ vi.stubGlobal('SYNO',undefined)
+ shared.openControlPanel()
  expect(opened).toEqual(['SYNO.SDS.AdminCenter.Application'])
+ expect(desktop).toHaveLength(1)
  expect(sharedFolderAccessFor({call:(async()=>({})) as never,user:{name:'a',isAdmin:false},locale:'en',host:{} as never}).canGrant()).toBe(false)
 })

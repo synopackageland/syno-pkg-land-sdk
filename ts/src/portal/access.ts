@@ -1,5 +1,6 @@
 import type {PortalAccess,PortalStatus} from '../context'
 import {portalMessages} from './i18n'
+import {controlPanelTarget} from '../dsm/control-panel'
 
 // The DSM window's portal runtime (cli portal-window.ts) for an App that mounts
 // itself in DSM. An administrator reads and sets the alias with DSM's own
@@ -118,7 +119,7 @@ export function createPortalAccess(options:PortalOptions):PortalAccess{
    return set(alias)
   },
   disable:()=>set(null),
-  openControlPanel(){options.launch('SYNO.SDS.AdminCenter.Application',{fn:'SYNO.SDS.AdminCenter.Login.Main',tab:'applications'})},
+  openControlPanel(){const target=controlPanelTarget({page:'login-portal',tab:'applications'});options.launch(target.appId,{...target.params})},
  }
  if(options.entry){
   access.register=()=>change('portal.register')
