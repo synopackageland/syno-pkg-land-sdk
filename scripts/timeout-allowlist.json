@@ -790,5 +790,11 @@
     "statement": "fmt.Fprint(in, \".timeout 30000\\nBEGIN;\\nSELECT count(*) FROM sqlite_master;\\n\")",
     "class": "B",
     "reason": "SQLite busy-lock wait for the read snapshot only; a still-locked database is skipped with a per-file warning and the export keeps the caller's budget"
+  },
+  {
+    "file": "selfrestart/store.go",
+    "statement": "case <-time.After(5 * time.Millisecond):",
+    "class": "B",
+    "reason": "Journal lock retry spacing only; acquisition keeps the caller context and cancels immediately when it ends"
   }
 ]
