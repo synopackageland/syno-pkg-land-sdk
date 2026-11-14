@@ -784,5 +784,11 @@
     "statement": "const verifyBackoffMax = 8 * time.Second",
     "class": "B",
     "reason": "Jittered retry spacing only; does not shorten any attempt or operation allowance"
+  },
+  {
+    "file": "appbackup/appbackup.go",
+    "statement": "fmt.Fprint(in, \".timeout 30000\\nBEGIN;\\nSELECT count(*) FROM sqlite_master;\\n\")",
+    "class": "B",
+    "reason": "SQLite busy-lock wait for the read snapshot only; a still-locked database is skipped with a per-file warning and the export keeps the caller's budget"
   }
 ]

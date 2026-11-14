@@ -605,11 +605,12 @@ stays while it is collapsed; on a phone a button opens it as a bottom sheet.
 `v-model:aside` (`collapsed`, `open` or `expanded`) and `v-model:aside-width`
 are AppLayout's; bind them to the UI's `useAsidePreference` to keep them in
 the browser. AppShell keeps both itself when they are not bound.
-`aside-dock="wide"` (UI 0.25.10 or later) also docks an open aside beside the
+`aside-dock="wide"` also docks an open aside beside the
 page, with its resize handle, in a DSM window at least 960px wide; without it
 only a full page (the web layout) docks it and a DSM window floats it over the
-page. An aside the App gives only later (once a read says the feature is on)
-needs UI 0.25.10 or later.
+page. Docking and an aside the App gives only later (once a read says the
+feature is on) need the UI release the SDK is built against (`ui.builtAgainst`
+in the SDK's release record under `release/`).
 
 ```vue
 <script setup lang="ts">
