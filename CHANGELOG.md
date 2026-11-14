@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.53.43 (2026-11-14)
+
+- `openControlPanel(page, options?)` opens a page of DSM Control Panel from a DSM window, and `controlPanelTarget(page)` returns the same target for `dsmAppLaunchURL`. `{page: 'shared-folder', select: 'Media'}` opens Shared Folder with that share selected and expanded, whether Control Panel is already open or not; `{page: 'login-portal', tab: 'applications'}` opens Login Portal's Applications tab. An invalid share name, page or tab returns `invalid-input` without opening anything. Launch parameters cannot open a share's Edit dialog, so the administrator clicks Edit and ticks the setting. See [Control Panel pages](docs/dsm-app-launcher.md#control-panel-pages).
+- `sharedFolderAccessFor(ctx).openControlPanel()` opens Control Panel's Shared Folder page; it opened Control Panel's home page before.
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.42 (2026-11-14)
 
 - Add controlled self-package restarts with Go `selfrestart` and `createSelfRestart` from `@synopackageland/sdk/native`. An App pins its installed package and version, requires fresh administrator confirmation, and asks DSM to stop and start that same package. Durable owner-bound records support readback after the connection drops; uncertain outcomes require reconciliation instead of an automatic retry. See [Safe self-package restart](docs/self-package-restart.md).
