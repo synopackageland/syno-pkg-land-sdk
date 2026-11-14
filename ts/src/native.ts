@@ -3,3 +3,4 @@
 // Importing this entry creates no task or grant, and it never imports vue.
 export {ROOT_RUNTIME, type RootTask} from './native/root-runtime'
 export {AUTHORIZATION_RUNTIME} from './native/authorization-runtime'
+export {createSelfRestart,createSelfRestartTransport,type SelfRestartOptions,type RestartNativeRequest,type RestartOperation,type RestartPreview} from './native/self-restart'
