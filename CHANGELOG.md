@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.53.41 (2026-11-14)
+
+- `api.IngressTime(ctx)` returns when the request reached the SDK. The outermost SDK handler (`ServeIngress`, `WithRequestDeadline`, `WithObserver`, `WithDescription` or the `Server`) records it before it reads the body, checks the origin or authenticates the session. Authenticators, route handlers, raw `HandleHTTP` handlers and the observer all see the same time, also for refused requests. Outside an SDK handler, for example in a test, it is the zero time. No App code runs before authentication, and there is no new option to register. See [Request ingress time](docs/http-boundaries.md#request-ingress-time).
+- `Outcome.Duration` runs from that ingress time.
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.40 (2026-11-13)
 
 - `appbackup` skips a detected SQLite database it cannot read, or one that vanishes during the export, with a per-file warning, and keeps exporting the healthy files. It opens sources through escaped read-only SQLite URIs and never creates empty files for vanished ones.
