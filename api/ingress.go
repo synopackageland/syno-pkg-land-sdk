@@ -112,6 +112,7 @@ func serveIngress(ctx context.Context, socket string, h http.Handler) error {
 
 func ingressHandler(h http.Handler, prefix string, o ingressOptions) http.Handler {
 	return &routeWrapper{next: h, Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r = arrived(r)
 		if !strings.HasPrefix(r.URL.Path, prefix) {
 			http.NotFound(w, r)
 			return

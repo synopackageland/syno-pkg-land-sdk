@@ -53,6 +53,7 @@ func WithDescriptionData(next http.Handler, auth Authenticator, raw []byte) http
 
 func withDescription(next http.Handler, auth Authenticator, strictEntry bool, load func() ([]byte, *Error)) http.Handler {
 	return &routeWrapper{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r = arrived(r)
 		if HTTPRouteMethod(next, r) != "" {
 			next.ServeHTTP(w, r)
 			return
