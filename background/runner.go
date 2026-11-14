@@ -101,8 +101,12 @@ var (
 
 // Runner claims jobs from the Store and runs them one at a time.
 type Runner struct {
-	Store      *Store
-	Work       Work
+	Store *Store
+	Work  Work
+	// NoTimeout explicitly opts a trusted worker out of the total job time
+	// limit. Parent cancellation, Store cancellation and pause still apply.
+	// NewRunner keeps the default limit; never set this from job input.
+	NoTimeout  bool
 	Timeout    time.Duration
 	Poll       time.Duration
 	CancelPoll time.Duration
@@ -168,8 +172,10 @@ func (r *Runner) heartbeat(ctx context.Context) {
 func (r *Runner) Process(parent context.Context, job *Job) {
 	ctx, cancel := context.WithCancelCause(parent)
 	defer cancel(nil)
-	timer := time.AfterFunc(r.Timeout, func() { cancel(errTimeout) })
-	defer timer.Stop()
+	if !r.NoTimeout {
+		timer := time.AfterFunc(r.Timeout, func() { cancel(errTimeout) })
+		defer timer.Stop()
+	}
 	task := &Task{Job: *job, checkpoint: job.Checkpoint}
 	var watcher sync.WaitGroup
 	watcher.Add(1)

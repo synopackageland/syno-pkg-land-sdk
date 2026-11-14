@@ -223,3 +223,44 @@ func TestSlowJobKeepsProgressAfterSubmittingRequestEnds(t *testing.T) {
 		}
 	})
 }
+
+// Unlimited local maintenance can outlive any request while retaining the same
+// journal, progress and explicit cancel protocol. The ordinary default is tested
+// by TestRunnerTimesOutLongJob.
+func TestRunnerNoTimeoutStillHonorsCancel(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, _ := newStore(t)
+		job := submit(t, s, "unlimited", []byte("input"))
+		claimed, err := s.Claim(context.Background())
+		if err != nil || claimed == nil {
+			t.Fatal(claimed, err)
+		}
+		r := NewRunner(s.dir, WorkerInfo{UID: 5})
+		r.NoTimeout = true
+		r.CancelPoll = time.Hour // Keep the virtual-day assertion to 24 journal polls
+		started := make(chan struct{})
+		r.Work = func(ctx context.Context, task *Task) (Result, error) {
+			task.Report(Progress{Phase: "maintenance"})
+			close(started)
+			<-ctx.Done()
+			return Result{}, ctx.Err()
+		}
+		done := make(chan struct{})
+		go func() { r.Process(context.Background(), claimed); close(done) }()
+		<-started
+		time.Sleep(24 * time.Hour)
+		synctest.Wait()
+		pending, err := s.Get(context.Background(), job.ID)
+		if err != nil || pending.State != StateRunning || pending.Progress == nil {
+			t.Fatal(pending, err)
+		}
+		if _, err = s.Cancel(context.Background(), job.ID); err != nil {
+			t.Fatal(err)
+		}
+		<-done
+		ended, err := s.Get(context.Background(), job.ID)
+		if err != nil || ended.State != StateCanceled {
+			t.Fatal(ended, err)
+		}
+	})
+}
