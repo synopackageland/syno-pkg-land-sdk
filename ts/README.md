@@ -240,6 +240,10 @@ For a verified application ID that differs from the package ID, use
 `unsupported`. See [DSM App launcher](../docs/dsm-app-launcher.md) for parameter
 bounds, the MailPlus Server metadata example, manual fallback and WizardStep
 handoff/recheck. Keep credentials out of launch parameters.
+`openControlPanel({page: 'shared-folder', select: name})` opens DSM Control
+Panel on Shared Folder with that share selected; `controlPanelTarget(page)`
+returns the same target for `dsmAppLaunchURL`. See
+[Control Panel pages](../docs/dsm-app-launcher.md#control-panel-pages).
 
 `packageCenterUrl(origin?)` is the link that opens DSM's Package Center
 (`/?launchApp=SYNO.SDS.PkgManApp.Instance`, or on `origin`), for an
