@@ -223,3 +223,123 @@ func TestSlowJobKeepsProgressAfterSubmittingRequestEnds(t *testing.T) {
 		}
 	})
 }
+
+// Unlimited local maintenance can outlive any request while retaining the same
+// journal, progress and explicit cancel protocol. The ordinary default is tested
+// by TestRunnerTimesOutLongJob.
+func TestRunnerNoTimeoutStillHonorsCancel(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		s, _ := newStore(t)
+		job := submit(t, s, "unlimited", []byte("input"))
+		claimed, err := s.Claim(context.Background())
+		if err != nil || claimed == nil {
+			t.Fatal(claimed, err)
+		}
+		r := NewRunner(s.dir, WorkerInfo{UID: 5})
+		r.NoTimeout = true
+		r.CancelPoll = time.Hour // Keep the virtual-day assertion to 24 journal polls
+		started := make(chan struct{})
+		r.Work = func(ctx context.Context, task *Task) (Result, error) {
+			task.Report(Progress{Phase: "maintenance"})
+			close(started)
+			<-ctx.Done()
+			return Result{}, ctx.Err()
+		}
+		done := make(chan struct{})
+		go func() { r.Process(context.Background(), claimed); close(done) }()
+		<-started
+		time.Sleep(24 * time.Hour)
+		synctest.Wait()
+		pending, err := s.Get(context.Background(), job.ID)
+		if err != nil || pending.State != StateRunning || pending.Progress == nil {
+			t.Fatal(pending, err)
+		}
+		if _, err = s.Cancel(context.Background(), job.ID); err != nil {
+			t.Fatal(err)
+		}
+		<-done
+		ended, err := s.Get(context.Background(), job.ID)
+		if err != nil || ended.State != StateCanceled {
+			t.Fatal(ended, err)
+		}
+	})
+}
+
+func TestRunnerNoTimeoutPauseStopAndRecovery(t *testing.T) {
+	for _, reason := range []string{PauseUser, PauseStopped} {
+		t.Run(string(reason), func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				s, dir := newStore(t)
+				job := submit(t, s, "unlimited", []byte("input"))
+				claimed, err := s.Claim(context.Background())
+				if err != nil || claimed == nil {
+					t.Fatal(claimed, err)
+				}
+				r := NewRunner(dir, WorkerInfo{UID: 5})
+				r.NoTimeout, r.CancelPoll = true, time.Hour
+				started := make(chan struct{})
+				r.Work = func(ctx context.Context, task *Task) (Result, error) {
+					if err := task.Checkpoint("durable-step"); err != nil {
+						t.Error(err)
+					}
+					task.Report(Progress{Phase: "maintenance"})
+					close(started)
+					<-ctx.Done()
+					return Result{}, ctx.Err()
+				}
+				ctx, stop := context.WithCancel(context.Background())
+				defer stop()
+				done := make(chan struct{})
+				go func() { r.Process(ctx, claimed); close(done) }()
+				<-started
+				time.Sleep(24 * time.Hour)
+				synctest.Wait()
+				if reason == PauseUser {
+					if _, err := s.PauseFor(context.Background(), job.ID, Access{Admin: true}); err != nil {
+						t.Fatal(err)
+					}
+				} else {
+					stop()
+				}
+				<-done
+				fresh := NewStore(dir)
+				got, err := fresh.Get(context.Background(), job.ID)
+				if err != nil || got.State != StatePaused || got.PauseReason != reason || got.Checkpoint != "durable-step" || got.Progress == nil {
+					t.Fatalf("paused journal: %+v %v", got, err)
+				}
+				if err := fresh.Recover(context.Background()); err != nil {
+					t.Fatal(err)
+				}
+				got, err = fresh.Get(context.Background(), job.ID)
+				want := StatePaused
+				if reason == PauseStopped {
+					want = StateQueued
+				}
+				if err != nil || got.State != want || got.Checkpoint != "durable-step" {
+					t.Fatalf("recovery: %+v %v", got, err)
+				}
+			})
+		})
+	}
+}
+
+func TestRunnerNoTimeoutCrashDoesNotReplay(t *testing.T) {
+	s, dir := newStore(t)
+	job := submit(t, s, "unlimited", []byte("input"))
+	if _, err := s.Claim(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	// NoTimeout is runner configuration; it creates no lease or replay permission
+	// in the journal. A replacement store cannot take over a running operation.
+	fresh := NewStore(dir)
+	if err := fresh.Recover(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	got, err := fresh.Get(context.Background(), job.ID)
+	if err != nil || got.State != StateInterrupted || got.ErrorCode != "worker-stopped" {
+		t.Fatalf("%+v %v", got, err)
+	}
+	if next, err := fresh.Claim(context.Background()); err != nil || next != nil {
+		t.Fatalf("replayed: %+v %v", next, err)
+	}
+}

@@ -41,7 +41,7 @@ Configure the existing Runner's Work in the package worker assembly:
 
 ```go
 runner := background.NewRunner(spool, workerInfo)
-runner.Timeout = 30 * time.Minute // The default; choose a finite budget for this fixed Work.
+runner.Timeout = 30 * time.Minute // Explicit allowance; NewRunner defaults to five minutes.
 runner.Work = func(ctx context.Context, task *background.Task) (background.Result, error) {
     task.Report(background.Progress{Phase: "searching", Done: 0, Total: 0})
     // Decode task.Input and call the App's context-aware, fixed operation.
@@ -60,6 +60,22 @@ known. The UI can label a long-running phase as "Still working" or "Slow NAS"
 while continuing to poll; these are presentation hints over `running`, not new
 terminal journal states. `BackgroundPanel` keeps showing Running and polling.
 Do not change a job to failed because a browser timer or one status read expires.
+
+Trusted package worker assembly may set `runner.NoTimeout = true` when a fixed
+operation has no meaningful total wall-clock limit. Never derive this flag from
+job input, an HTTP parameter or AI output. It disables only the total job timer,
+including an explicitly configured `Timeout`; it does not detach the worker
+from its package context. Work must cooperate with context cancellation and use
+bounded individual I/O calls. Store cancel, user pause, progress/checkpoint
+journaling and worker heartbeats continue normally. The default remains five
+minutes unless trusted assembly opts in or changes `Timeout`.
+
+NoTimeout grants no lease extension, authority lifetime or crash replay. A clean
+package stop records `paused` / `stopped` and resumes from its checkpoint on
+recovery; user-paused jobs stay paused. A crash leaving a job `running` becomes
+`interrupted` / `worker-stopped` without replay. Delegated operations retain
+their own grant expiry and executor recovery rules. This option cannot make a
+worker survive its own package being stopped.
 
 Keep the worker under the package's own lifecycle context, independent of the
 submitting HTTP context. Do not start a goroutine in CGI and expect it to survive
