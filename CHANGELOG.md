@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.53.44 (2026-11-14)
+
+- The identity gateway `upstream` can be `unix:/var/packages/<Package>/var/run/<name>.sock`, the App's own private SDK IPC socket, so an App behind path ingress needs no TCP port, including for WebSocket `upstream_auth_paths`. `idgateway.UnixUpstreamVersion = 1` identifies it; other packages' paths, nested or relative paths, non-`.sock` names and `compose_ingress` are refused at configuration load. Upgraded connections have no gateway deadline. `ipc.DialPackageUnix` is `ipc.DialUnix` with an explicit package for binaries without a bound identity. See [Unix socket upstream](docs/path-ingress.md#unix-socket-upstream).
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.43 (2026-11-14)
 
 - `openControlPanel(page, options?)` opens a page of DSM Control Panel from a DSM window, and `controlPanelTarget(page)` returns the same target for `dsmAppLaunchURL`. `{page: 'shared-folder', select: 'Media'}` opens Shared Folder with that share selected and expanded, whether Control Panel is already open or not; `{page: 'login-portal', tab: 'applications'}` opens Login Portal's Applications tab. An invalid share name, page or tab returns `invalid-input` without opening anything. Launch parameters cannot open a share's Edit dialog, so the administrator clicks Edit and ticks the setting. See [Control Panel pages](docs/dsm-app-launcher.md#control-panel-pages).

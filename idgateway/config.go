@@ -179,6 +179,9 @@ func (c Config) validate() error {
 	if err := validateEntry(c.Entry, c.Access, c.UpstreamAccess, len(c.Passthrough), len(c.OptionalPassthrough), c.UpstreamAuthPaths); err != nil {
 		return err
 	}
+	if _, err := parseUnixUpstream(c.Package, c.Upstream, c.ComposeIngress != nil); err != nil {
+		return err
+	}
 	if err := c.External.validate(); err != nil {
 		return err
 	}
