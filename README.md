@@ -6,7 +6,7 @@ SDK for DSM packages built with [synopkgland](https://github.com/synopackageland
 
 | Path | Contents |
 |---|---|
-| `/` | Go module `github.com/synopackageland/syno-pkg-land-sdk`: `api`, `appbackup`, `background`, `datamigrate`, `delegate`, `dsm`, `filestation`, `identity`, `ipc`, `jsonlimits`, `portal`, `sharedfolder` |
+| `/` | Go module `github.com/synopackageland/syno-pkg-land-sdk`: `api`, `appbackup`, `background`, `datamigrate`, `delegate`, `dsm`, `filestation`, `identity`, `ipc`, `jsonlimits`, `portal`, `selfrestart`, `sharedfolder` |
 | `executor/` | Go module `github.com/synopackageland/syno-pkg-land-sdk/executor`: the delegated executor; pins the root Go SDK for the shared DSM role provider |
 | `ts/` | npm package `@synopackageland/sdk` (`.` headless, `./vue` components, `./native`, `./entry`, `./mobile`, `./mobile/shell`) |
 | `spec/protocol/v1/` | Executor protocol: rules (RFC 2119), op schemas, `errors.json`, vectors |
@@ -60,6 +60,9 @@ should not add it. Writes, AI and streams never auto-replay.
 
 For owner-bound asynchronous Go work, structured results and ctl integration, see
 [Structured background jobs](docs/background-results.md).
+
+[Safe self-package restart](docs/self-package-restart.md) provides a pinned
+native DSM stop/start flow with protected confirmation and durable references.
 
 For shared executor admission, per-call `delegate.Client.WorkBudget` after
 queueing, and `delegate.NotSent(err)` with mutation readback after an unknown
