@@ -30,7 +30,8 @@ type Outcome struct {
 	// request succeeded or a raw handler answered it itself.
 	Code string
 	// Status is the HTTP status written; 200 when nothing set one.
-	Status   int
+	Status int
+	// Duration runs from the request's IngressTime to the end of the response.
 	Duration time.Duration
 }
 
@@ -90,10 +91,11 @@ type observerHandler struct {
 
 func (h *observerHandler) Unwrap() http.Handler { return h.next }
 func (h *observerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	r = arrived(r)
 	seen := &observation{}
 	r = r.WithContext(context.WithValue(r.Context(), observationKey{}, seen))
 	response := &observedResponse{ResponseWriter: w, seen: seen}
-	started := time.Now()
+	started := IngressTime(r.Context())
 	h.next.ServeHTTP(response, r)
 	if h.observe == nil {
 		return

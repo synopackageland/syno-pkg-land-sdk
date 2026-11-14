@@ -83,6 +83,35 @@ App API. The CLI route audit accepts `api.WithObserver` at the CGI root like
 `api.WithRequestDeadline`; its `observe` function is App code and must not
 serve HTTP itself.
 
+## Request ingress time
+
+The SDK records when each request reached it. The outermost SDK handler
+(`api.ServeIngress`, `api.WithRequestDeadline`, `api.WithObserver`,
+`api.WithDescription` or the `api.Server`) stores the time in the request
+context before it reads the body, checks the origin or authenticates the
+session. Read it with `api.IngressTime`:
+
+```go
+func (a *appAuth) Authenticate(r *http.Request) (api.Identity, error) {
+	waited := time.Since(api.IngressTime(r.Context()))
+	// ...
+}
+
+func list(ctx context.Context, c api.Caller, params json.RawMessage) (any, error) {
+	if time.Since(api.IngressTime(ctx)) > budget {
+		// log a slow request
+	}
+	// ...
+}
+```
+
+Authenticators, route handlers, raw `HandleHTTP` handlers and the observer's
+request all see the same time, including for requests the SDK refuses.
+`Outcome.Duration` runs from it to the end of the response. A context that did
+not pass through an SDK handler, such as one a test builds, returns the zero
+`time.Time`. The value is read-only: no App code runs before authentication,
+and nothing new needs to be registered or audited. This is a Go App API.
+
 ## Integration callbacks
 
 Some callers cannot hold a DSM session: Chat button and slash-command

@@ -58,6 +58,7 @@ func WithRequestDeadline(next http.Handler, opts ...DeadlineOption) http.Handler
 		panic("api.Timeout must be positive")
 	}
 	return &routeWrapper{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r = arrived(r)
 		ctx, cancel := context.WithTimeout(r.Context(), o.timeout)
 		defer cancel()
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -201,6 +202,7 @@ type request struct {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	r = arrived(r)
 	ctx, cancel := r.Context(), context.CancelFunc(func() {})
 	if _, ok := ctx.Deadline(); !ok {
 		ctx, cancel = context.WithTimeout(ctx, DefaultRequestTimeout)
