@@ -44,11 +44,28 @@ missing metadata does not announce an update.
 The token read uses same-origin cookies, forbids redirects and keeps tokens out
 of URLs and storage. After four seconds it sends one parallel token read and
 takes the first completed answer. Neither request is aborted; if both stay
-pending, boot keeps waiting. A definite token failure or missing identity hands
-off to DSM's App start with the App's launch intent preserved.
+pending, boot keeps waiting.
 
 Identity/language display hints are cached for the package and sign-in. A miss
-calls `app.status` once and mounts directly. The status may return `lang` (DSM's
+calls `app.status` and mounts directly once it answers. A failure that is not
+a refusal (`busy`, `request_timeout`, an unreadable reply or a network error)
+is retried after each wait in `ENTRY_STATUS_RETRY_DELAYS_MS` (250, 500, 1000
+and 2000 ms, so at most five attempts). The number of attempts bounds the
+retries; no clock fails a slow attempt, which keeps the client's own request
+deadline.
+
+The boot hands off to a DSM sign-in only when the caller cannot be verified:
+no token, an EntryGate refusal (`session_required`, `admin_required`,
+`app_privilege_denied`), a status without an identity, or every attempt
+failing. With `portal`, it first probes the alias (`/<alias>/`, or the
+entry's own alias prefix). An active alias shows the App's branded DSM sign-in
+and keeps the query across it, so the boot goes there with the entry's query
+(without `launch`) and hash; a hash route such as `#/a/notes/42` also becomes
+`?link=/a/notes/42` when `link` is absent, because DSM's sign-in replaces the
+hash. An inactive (404) or unreachable alias, or one that has not answered
+within `PORTAL_FALLBACK_PROBE_MS` (4 s), sends the visitor to DSM's App start
+instead, with the App's launch intent preserved. Without `portal` the boot
+goes straight to DSM's App start. The status may return `lang` (DSM's
 code, for example `cht`) and `locale` (for example `zh-TW`); missing language
 falls back to the browser. These hints never authorize requests: the App CGI
 checks the session, entry policy and method permissions each time.

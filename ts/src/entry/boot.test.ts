@@ -2,7 +2,7 @@
 // @vitest-environment-options {"url":"https://localhost/"}
 import {afterEach, beforeEach, expect, test, vi} from 'vitest'
 import type {Context} from '../context'
-import {bootEntryPage, createAppContext, entryLaunchParams} from '../entry'
+import {bootEntryPage, createAppContext, entryLaunchParams, ENTRY_STATUS_RETRY_DELAYS_MS, PORTAL_FALLBACK_PROBE_MS} from '../entry'
 
 const entryURL = 'https://localhost/webman/3rdparty/ExampleApp/app/entry.html?launch=123&link=%2Fadd&intake=item'
 const account = {user: 'alice', admin: false, lang: 'cht', locale: 'zh-TW'}
@@ -223,4 +223,122 @@ test.each(['https://outside.example/app.js', '//outside.example/app.js', 'javasc
  expect(document.querySelector('link[rel=modulepreload]')).toBeNull()
  expect(request).not.toHaveBeenCalled()
  expect(opts.mount).not.toHaveBeenCalled()
+})
+
+const reply = (code: string) => new Response(JSON.stringify({success: false, error: {code}}))
+const statusCalls = (request: ReturnType<typeof vi.fn>) => request.mock.calls.filter(([, init]) => String((init as RequestInit | undefined)?.body ?? '').includes('"app.status"')).length
+
+test.each([
+ ['busy', () => reply('busy')],
+ ['request_timeout', () => reply('request_timeout')],
+ ['a network error', () => Promise.reject(new TypeError('Failed to fetch'))],
+ ['an unreadable reply', () => new Response('<html>502</html>', {status: 502})],
+])('app.status %s retries with backoff and mounts without leaving the entry', async (_name, failure) => {
+ vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']})
+ const opts = options()
+ let attempts = 0
+ const request = vi.fn<typeof globalThis.fetch>(async () => ++attempts <= 2 ? failure() : json(account))
+ const pending = bootEntryPage({...opts, fetch: request, portal: {defaultAlias: 'example'}})
+ await vi.advanceTimersByTimeAsync(0)
+ expect(attempts).toBe(1)
+ await vi.advanceTimersByTimeAsync(ENTRY_STATUS_RETRY_DELAYS_MS[0]!)
+ expect(attempts).toBe(2)
+ await vi.advanceTimersByTimeAsync(ENTRY_STATUS_RETRY_DELAYS_MS[1]!)
+ const ctx = await pending
+ expect(statusCalls(request)).toBe(3)
+ expect(opts.mount).toHaveBeenCalledOnce()
+ expect(opts.navigate).not.toHaveBeenCalled()
+ expect(ctx?.user).toEqual({name: 'alice', isAdmin: false})
+ ctx!.host.dispose()
+})
+
+test('the retries stop after a fixed number of attempts, not a clock, then fall back', async () => {
+ vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']})
+ const opts = options()
+ const request = vi.fn<typeof globalThis.fetch>(async () => reply('busy'))
+ const pending = bootEntryPage({...opts, fetch: request})
+ await vi.advanceTimersByTimeAsync(ENTRY_STATUS_RETRY_DELAYS_MS.reduce((a, b) => a + b, 0))
+ expect(await pending).toBeUndefined()
+ expect(statusCalls(request)).toBe(ENTRY_STATUS_RETRY_DELAYS_MS.length + 1)
+ expect(opts.mount).not.toHaveBeenCalled()
+ expect(opts.navigate).toHaveBeenCalledOnce()
+ expect(new URL(opts.navigate.mock.calls[0]![0]).searchParams.get('launchApp')).toBe('SYNO.SDS.ExampleApp.Instance')
+})
+
+test('a slow attempt is never failed by a retry clock', async () => {
+ vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']})
+ const opts = options()
+ let answer!: (response: Response) => void
+ const request = vi.fn<typeof globalThis.fetch>(() => new Promise(resolve => {answer = resolve}))
+ const pending = bootEntryPage({...opts, fetch: request, requestTimeout: 3_600_000})
+ await vi.advanceTimersByTimeAsync(60_000)
+ expect(statusCalls(request)).toBe(1)
+ expect(opts.navigate).not.toHaveBeenCalled()
+ answer(json(account))
+ const ctx = await pending
+ expect(opts.mount).toHaveBeenCalledOnce()
+ ctx!.host.dispose()
+})
+
+test.each(['session_required', 'app_privilege_denied', 'admin_required'])('a %s refusal falls back at once without a retry', async code => {
+ const opts = options()
+ const request = vi.fn<typeof globalThis.fetch>(async () => reply(code))
+ expect(await bootEntryPage({...opts, fetch: request})).toBeUndefined()
+ expect(statusCalls(request)).toBe(1)
+ expect(opts.mount).not.toHaveBeenCalled()
+ expect(opts.navigate).toHaveBeenCalledOnce()
+})
+
+test('an active portal alias takes the fallback to its branded sign-in, keeping link and the launch intent', async () => {
+ const opts = options()
+ const request = vi.fn<typeof globalThis.fetch>(async (url, init) => init?.method === 'GET'
+  ? new Response('', {status: String(url) === 'https://localhost/example/' ? 200 : 404}) : reply('session_required'))
+ expect(await bootEntryPage({...opts, fetch: request, portal: {defaultAlias: 'example'}})).toBeUndefined()
+ expect(opts.navigate).toHaveBeenCalledExactlyOnceWith('https://localhost/example/?link=%2Fadd&intake=item')
+ expect(request.mock.calls.find(([, init]) => init?.method === 'GET')![1]).toMatchObject({redirect: 'error', cache: 'no-store', mode: 'same-origin'})
+})
+
+test('an anonymous visitor reaches the alias sign-in with a hash route carried as link', async () => {
+ const opts = {...options(), token: undefined, entryURL: 'https://localhost/webman/3rdparty/ExampleApp/app/entry.html?launch=9#/a/notes/42'}
+ const request = vi.fn<typeof globalThis.fetch>(async url => String(url).includes('login.cgi')
+  ? new Response(JSON.stringify({success: false})) : new Response('', {status: 200}))
+ await bootEntryPage({...opts, fetch: request, portal: {defaultAlias: 'example'}})
+ expect(statusCalls(request)).toBe(0)
+ const url = new URL(opts.navigate.mock.calls[0]![0])
+ expect(url.pathname).toBe('/example/')
+ expect(url.searchParams.get('link')).toBe('/a/notes/42')
+ expect(url.searchParams.has('launch')).toBe(false)
+ expect(url.hash).toBe('#/a/notes/42')
+})
+
+test('an entry below the alias falls back to that alias', async () => {
+ const opts = {...options(), entryURL: 'https://localhost/notes/webman/3rdparty/ExampleApp/app/entry.html?link=%2Fx'}
+ const request = vi.fn<typeof globalThis.fetch>(async (url, init) => init?.method === 'GET'
+  ? new Response('', {status: String(url) === 'https://localhost/notes/' ? 200 : 404}) : reply('session_required'))
+ await bootEntryPage({...opts, fetch: request, portal: {defaultAlias: 'example'}})
+ expect(opts.navigate).toHaveBeenCalledExactlyOnceWith('https://localhost/notes/?link=%2Fx')
+})
+
+test.each([
+ ['an inactive alias', async () => new Response('', {status: 404})],
+ ['an unreachable alias', async () => {throw new TypeError('Failed to fetch')}],
+])('%s falls back to DSM App start', async (_name, alias) => {
+ const opts = options()
+ const request = vi.fn<typeof globalThis.fetch>(async (_url, init) => init?.method === 'GET' ? alias() : reply('session_required'))
+ await bootEntryPage({...opts, fetch: request, portal: {defaultAlias: 'example'}})
+ const url = new URL(opts.navigate.mock.calls[0]![0])
+ expect(url.pathname).toBe('/')
+ expect(url.searchParams.get('launchParam')).toContain('link=%2Fadd')
+})
+
+test('a hung alias probe picks DSM App start after the probe wait', async () => {
+ vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout']})
+ const opts = options()
+ const request = vi.fn<typeof globalThis.fetch>(async (_url, init) => init?.method === 'GET' ? new Promise<Response>(() => {}) : reply('session_required'))
+ const pending = bootEntryPage({...opts, fetch: request, portal: {defaultAlias: 'example'}})
+ await vi.advanceTimersByTimeAsync(PORTAL_FALLBACK_PROBE_MS - 1)
+ expect(opts.navigate).not.toHaveBeenCalled()
+ await vi.advanceTimersByTimeAsync(1)
+ await pending
+ expect(new URL(opts.navigate.mock.calls[0]![0]).searchParams.get('launchApp')).toBe('SYNO.SDS.ExampleApp.Instance')
 })

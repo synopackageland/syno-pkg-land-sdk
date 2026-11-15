@@ -1,5 +1,5 @@
 // Headless entry runtime; the CLI bundles it into each package's entry module.
-export {bootEntryPage, type EntryPageOptions} from './entry/boot'
+export {bootEntryPage, ENTRY_STATUS_RETRY_DELAYS_MS, PORTAL_FALLBACK_PROBE_MS, type EntryPageOptions} from './entry/boot'
 export {createAppContext, entryLaunchParams, type AppContextOptions} from './entry/context'
 export {createSignInCache} from './entry/cache'
 export {fetchEntryToken, TOKEN_HEDGE_DELAY_MS} from './entry/token'
