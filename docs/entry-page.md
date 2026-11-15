@@ -34,12 +34,13 @@ Pass this option from the App entry or generator to enable early loading. It
 is optional for existing callers; the SDK cannot infer a module URL hidden in
 a mount callback. A missing or failed preload keeps the ordinary import path.
 
-The generated HTML contains
-`<meta name="synopkgland-build" content="the-cli-build-hash">`. The same hash
-stamps the entry module, App script, CSS and icons with `?v=`, and the mobile
-registration's `build`. `ctx.uiUpdate.check()` reads the entry HTML with
-`cache: 'no-store'` and compares the exact meta value. An unavailable page or
-missing metadata does not announce an update.
+The CLI names the build in the entry's `entry.json` (`{"v": 1, "build": …}`);
+older entry pages carry `<meta name="synopkgland-build" content="…">` instead.
+The same hash stamps the entry module, App script, CSS and icons with `?v=`,
+and the mobile registration's `build`. `ctx.uiUpdate.check()` reads
+`entry.json` with `cache: 'no-store'`, then the entry HTML's meta when there is
+no pointer, and compares the exact value. An unavailable page or missing
+metadata does not announce an update.
 
 The token read uses same-origin cookies, forbids redirects and keeps tokens out
 of URLs and storage. After four seconds it sends one parallel token read and
@@ -70,12 +71,41 @@ code, for example `cht`) and `locale` (for example `zh-TW`); missing language
 falls back to the browser. These hints never authorize requests: the App CGI
 checks the session, entry policy and method permissions each time.
 
-Without `portal`, the page keeps its entry URL. With it, after mounting the App,
-the SDK probes the alias and rewrites the displayed address only on success.
-A 404 or failed probe leaves the working entry URL. A slow probe does not delay
-mounting. CGI, WebAPI and update URLs stay anchored to the original entry URL.
-Use absolute package asset URLs in the App; relative assets must also work
-when the displayed URL changes to the alias.
+The page keeps its entry URL: a reload opens the entry again, without DSM's
+desktop. `rewriteToAlias: true` (with `portal`) restores the earlier
+behaviour: after mounting, the SDK probes the alias and shows it in the
+address bar only on success; a 404 or failed probe leaves the entry URL, and a
+slow probe does not delay mounting. CGI, WebAPI and update URLs stay anchored
+to the original entry URL either way.
+
+DSM's sign-in, and DSM's redirect from an alias or a launch link to a url
+launcher, drop the entry's query and hash. Before handing off to a sign-in,
+the boot keeps the App's route (`link`, or a `#/…` hash route) and `intake`
+in this tab's sessionStorage. The next entry boot in the tab that carries
+neither restores them once, as `?link=`/`?intake=` in the address and in
+`ctx.launchParams`; a hand-off older than `LAUNCH_HANDOFF_MAX_AGE_MS` (30
+minutes) or malformed is dropped. A launch DSM forwards to the entry as
+`launchParam` (including the per-character form a url launcher receives) is
+read into `ctx.launchParams` too; the page's own query wins.
+
+## Links and DSM Apps
+
+`ctx.entryURL` is the App's address to share or bookmark, without a hash: the
+short path on DSM's origin (`https://<nas>/<path>`) when the CLI passes
+`shortPath` (a `ui.short_paths` entry, DSM 7.2 and later), otherwise the entry
+page `/webman/3rdparty/<package>/app/entry.html`, below the alias prefix when
+the page is. Add the App's route as `?link=/…`: DSM's sign-in keeps the query
+but replaces the hash. An explicit same-origin `entryURL` option wins. The
+short path exists on DSM's own server (5000/5001 and DSM's custom domain), not
+on an Application Portal's own domain or port.
+
+A full page outside DSM's desktop has no `SYNO.SDS.AppLaunch`. Its browser
+host opens DSM's launch link (`/?launchApp=…&launchParam=…`) in a new tab for
+`ctx.host.openApp(appId)`, `openFileManager(path)` and `revealFile(path)`
+(File Station's `opendir`/`openfile`, with the DSM window's shared-folder path
+rule), and for `ctx.portal.openControlPanel()`. A native shell keeps its own
+host. `ctx.portal.mountPanel(element)` renders the plain portal panel for UIs
+without their own, as in a DSM window.
 
 ## A shared context
 
@@ -83,8 +113,9 @@ when the displayed URL changes to the alias.
 the window's `host`, `appWindow`, `session`, `fullPage`, `reopen`, `onLaunch`,
 `launchParams`, `user`, `executor`, `portalAccess` and `webApi` when present.
 Pass `uiUpdate` to retain a window's existing config/hash check when it does
-not generate an entry page. `packageId` and `build` are required. `entryURL` is the original absolute URL
-before any rewrite; it defaults to `location.href`. `requestTimeout` matches
+not generate an entry page. `packageId` and `build` are required. `pageURL` is the original absolute URL
+of the page; it defaults to `location.href`. `shortPath` and `entryURL` set
+`ctx.entryURL` (see above). `requestTimeout` matches
 the backend's request deadline in milliseconds. `messages` holds the App's
 catalogs by locale, with English fallback and `{name}`/plural formatting.
 

@@ -9,7 +9,7 @@ const account = {user: 'alice', admin: false, lang: 'cht', locale: 'zh-TW'}
 const json = (data: unknown) => new Response(JSON.stringify({success: true, data}))
 const root = () => document.querySelector<HTMLElement>('.dsmapp-root')!
 const statusFetch = () => vi.fn<typeof globalThis.fetch>(async () => json(account))
-const options = () => ({packageId: 'ExampleApp', build: 'build-a', token: 'sign-in', entryURL, root: root(), mount: vi.fn<(root: HTMLElement, ctx: Context) => unknown>(), navigate: vi.fn<(url: string) => void>()})
+const options = () => ({packageId: 'ExampleApp', build: 'build-a', token: 'sign-in', pageURL: entryURL, root: root(), mount: vi.fn<(root: HTMLElement, ctx: Context) => unknown>(), navigate: vi.fn<(url: string) => void>()})
 
 beforeEach(() => {
  localStorage.clear()
@@ -76,7 +76,7 @@ test('valid portal rewrites after a probe; a missing alias retains the working e
    if(init?.method === 'POST' && String(init.body).includes('app.status')) return json(account)
    return new Response('', {status: String(url) === 'https://localhost/example/' ? status : 404})
   })
-  const ctx = await bootEntryPage({...opts, fetch: request, portal: {defaultAlias: 'example'}})
+  const ctx = await bootEntryPage({...opts, fetch: request, portal: {defaultAlias: 'example'}, rewriteToAlias: true})
   expect(location.pathname).toBe(status === 200 ? '/example/' : '/webman/3rdparty/ExampleApp/app/entry.html')
   if(status === 200) expect(location.search).toBe('?link=%2Fadd&intake=item')
   expect(opts.mount).toHaveBeenCalledOnce()
@@ -88,22 +88,35 @@ test('valid portal rewrites after a probe; a missing alias retains the working e
 test('uiUpdate compares the exact CLI hash and handles missing metadata, refusals and offline', async () => {
  let html = '<meta name="synopkgland-build" content="abc">'
  const request = vi.fn<typeof globalThis.fetch>(async () => new Response(html))
- const ctx = createAppContext({packageId: 'ExampleApp', build: 'abc', token: 'token', entryURL, fetch: request})
+ const ctx = createAppContext({packageId: 'ExampleApp', build: 'abc', token: 'token', pageURL: entryURL, fetch: request})
  expect(await ctx.uiUpdate!.check()).toBe(false)
  html = '<meta content="abcd" name="synopkgland-build">'
  expect(await ctx.uiUpdate!.check()).toBe(true)
  html = '<script src="app.js?v=another-build"></script>'
  expect(await ctx.uiUpdate!.check()).toBe(false)
- request.mockRejectedValueOnce(new Error('offline'))
+ request.mockRejectedValue(new Error('offline'))
  expect(await ctx.uiUpdate!.check()).toBe(false)
- expect(String(request.mock.calls[0]![0])).toContain('/app/entry.html?launch=')
+ expect(String(request.mock.calls[0]![0])).toContain('/app/entry.json?launch=')
+ expect(String(request.mock.calls[1]![0])).toContain('/app/entry.html?launch=')
  expect(request.mock.calls[0]![1]).toMatchObject({cache: 'no-store'})
+ ctx.host.dispose()
+})
+
+test('uiUpdate reads the build from the fixed entry page pointer first', async () => {
+ let build = 'abc'
+ const request = vi.fn<typeof globalThis.fetch>(async url => String(url).includes('entry.json')
+  ? new Response(JSON.stringify({v: 1, build})) : new Response('<meta name="synopkgland-build" content="other">'))
+ const ctx = createAppContext({packageId: 'ExampleApp', build: 'abc', token: 'token', pageURL: entryURL, fetch: request})
+ expect(await ctx.uiUpdate!.check()).toBe(false)
+ build = 'def'
+ expect(await ctx.uiUpdate!.check()).toBe(true)
+ expect(request.mock.calls.every(([url]) => String(url).includes('entry.json'))).toBe(true)
  ctx.host.dispose()
 })
 
 test('a hung portal probe does not hold up mount or navigate away', async () => {
  const opts = options()
- const ctx = await bootEntryPage({...opts, portal: {defaultAlias: 'example'}, fetch: async (_url, init) => {
+ const ctx = await bootEntryPage({...opts, portal: {defaultAlias: 'example'}, rewriteToAlias: true, fetch: async (_url, init) => {
   if(init?.method === 'GET') return new Promise<Response>(() => {})
   return json(account)
  }})
@@ -117,7 +130,7 @@ test('native warm launches compose with the window and all subscriptions dispose
  vi.stubGlobal('SynoPkgNative', {protocol: 1, shell: {name: 'Test shell', version: '1', platform: 'android'},
   caps: {download: false, openExternal: false, intake: true, camera: false}, post: vi.fn()})
  const stopWindow = vi.fn(), dsm = vi.fn(() => stopWindow), listener = vi.fn()
- const ctx = createAppContext({packageId: 'ExampleApp', build: 'a', entryURL, onLaunch: dsm})
+ const ctx = createAppContext({packageId: 'ExampleApp', build: 'a', pageURL: entryURL, onLaunch: dsm})
  expect(ctx.host.platform().host).toBe('native-shell')
  const dispose = ctx.onLaunch!(listener)
  window.dispatchEvent(new CustomEvent('synopkgnative', {detail: {v: 1, type: 'launch', link: '/next', intake: 'next'}}))
@@ -134,7 +147,7 @@ test('native warm launches compose with the window and all subscriptions dispose
 
 test('portal rewrite preserves the route the App opened while the probe was pending', async () => {
  let answer!: (value: Response) => void
- const ctx = await bootEntryPage({...options(), portal: {defaultAlias: 'example'}, fetch: async (_url, init) => {
+ const ctx = await bootEntryPage({...options(), portal: {defaultAlias: 'example'}, rewriteToAlias: true, fetch: async (_url, init) => {
   if(init?.method === 'GET') return new Promise<Response>(resolve => {answer = resolve})
   return json(account)
  }})
@@ -159,7 +172,7 @@ test('native entry reports an observed FCP without changing the mounted page', a
 
 test('shared ctx keeps supplied window adapters and translates App catalogs', async () => {
  const request = statusFetch(), reopen = vi.fn(() => () => {}), launch = vi.fn(() => () => {})
- const ctx = createAppContext({packageId: 'ExampleApp', build: 'a', entryURL, token: 'token', fetch: request,
+ const ctx = createAppContext({packageId: 'ExampleApp', build: 'a', pageURL: entryURL, token: 'token', fetch: request,
   locale: 'zh-TW', fullPage: false, reopen, onLaunch: launch, messages: {en: {hello: 'Hello {name}'}, 'zh-TW': {hello: '你好 {name}'}}})
  expect(ctx.t!('hello', {name: 'Alice'})).toBe('你好 Alice')
  expect(ctx.t!('missing')).toBe('missing')
@@ -299,7 +312,7 @@ test('an active portal alias takes the fallback to its branded sign-in, keeping 
 })
 
 test('an anonymous visitor reaches the alias sign-in with a hash route carried as link', async () => {
- const opts = {...options(), token: undefined, entryURL: 'https://localhost/webman/3rdparty/ExampleApp/app/entry.html?launch=9#/a/notes/42'}
+ const opts = {...options(), token: undefined, pageURL: 'https://localhost/webman/3rdparty/ExampleApp/app/entry.html?launch=9#/a/notes/42'}
  const request = vi.fn<typeof globalThis.fetch>(async url => String(url).includes('login.cgi')
   ? new Response(JSON.stringify({success: false})) : new Response('', {status: 200}))
  await bootEntryPage({...opts, fetch: request, portal: {defaultAlias: 'example'}})
@@ -312,7 +325,7 @@ test('an anonymous visitor reaches the alias sign-in with a hash route carried a
 })
 
 test('an entry below the alias falls back to that alias', async () => {
- const opts = {...options(), entryURL: 'https://localhost/notes/webman/3rdparty/ExampleApp/app/entry.html?link=%2Fx'}
+ const opts = {...options(), pageURL: 'https://localhost/notes/webman/3rdparty/ExampleApp/app/entry.html?link=%2Fx'}
  const request = vi.fn<typeof globalThis.fetch>(async (url, init) => init?.method === 'GET'
   ? new Response('', {status: String(url) === 'https://localhost/notes/' ? 200 : 404}) : reply('session_required'))
  await bootEntryPage({...opts, fetch: request, portal: {defaultAlias: 'example'}})
