@@ -4,7 +4,7 @@ import {nativeBridge} from '../mobile/index'
 import {dsmLaunchURL, launchRoute} from '../launch'
 import {uiLocale} from '../i18n'
 import {createSignInCache} from './cache'
-import {createAppContext, entryLaunchParams, entryURLs, type AppContextOptions} from './context'
+import {createAppContext, entryLaunchParams, entryURLs, statusEndpoint, statusFetch, type AppContextOptions} from './context'
 import {fetchEntryToken} from './token'
 
 export interface EntryPageOptions extends AppContextOptions {
@@ -88,6 +88,7 @@ export async function bootEntryPage(options: EntryPageOptions): Promise<Context 
  const request = options.fetch ?? globalThis.fetch
  const urls = entryURLs(options.packageId, at.href)
  const navigate = options.navigate ?? (url => location.replace(url))
+ const ingress = statusEndpoint(options.packageId, at.href, options.daemonIngress)
  // Below DSM's alias the prefix is the alias; otherwise the declared default.
  const prefix = new URL(urls.base).pathname
  const alias = () => new URL(prefix !== '/' ? prefix : `/${options.portal!.defaultAlias}/`, at.origin)
@@ -140,7 +141,8 @@ export async function bootEntryPage(options: EntryPageOptions): Promise<Context 
  const cache = createSignInCache(options.packageId)
  let account = cache.get('entry', token, isAccount)
  if(!account) {
-  const client = createClient({endpoint: urls.cgi, requestTimeout: options.requestTimeout, fetch: request, token: () => token})
+  const client = createClient({endpoint: ingress ?? urls.cgi, requestTimeout: options.requestTimeout,
+   fetch: ingress ? statusFetch(request, ingress, urls.cgi) : request, token: () => token})
   account = await readAccount(client)
   if(!account) return fallback()
   cache.set('entry', token, account)
