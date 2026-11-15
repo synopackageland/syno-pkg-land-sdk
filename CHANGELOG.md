@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.53.46 (2026-11-15)
+
+- `ctx.entryURL` names `launch.html`, the fixed entry page that the CLI's url launcher, `app` short path and mobile registration open (with a short path or an explicit `entryURL` it is unchanged). Browsers keep DSM's package files for years without asking, and older CLIs wrote the build into `entry.html`; `entry.html` stays as the same fixed page for older links, and `ctx.uiUpdate` still reads `entry.json`, then `entry.html`'s meta (#225). Use it with a CLI that writes `launch.html`.
+- `bootEntryPage` downloads the App's first screen while the token and `app.status` reads run: `appScript` preloads a classic App script (`<link rel="preload" as="script">`, reused by the `<script>` that `mount` adds) and `preload` lists more ES modules for `modulepreload`, such as the App's main chunk. Every URL follows the `appBundle` rules and all are checked before any download starts; App code still runs only after the identity is verified. Under `api.ServeIngress`, `api.AcceptTime(ctx)` returns when the daemon accepted the connection from nginx, before net/http read the request header; `IngressTime` minus `AcceptTime` is the wait outside the App's handler. Zero under CGI (#226). See [Entry pages](docs/entry-page.md) and [Request ingress time](docs/http-boundaries.md#request-ingress-time).
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.45 (2026-11-15)
 
 - The identity gateway's ingress ownership check also reads a stopped package's `etc/short-paths-nginx.conf` (CLI `ui.short_paths`), for other packages and for the package's own upgrade, so a gateway install cannot take a short path that package claims again on start (#220).

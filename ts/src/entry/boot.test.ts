@@ -242,7 +242,7 @@ test('preloads a classic App script and first-screen modules before the token, w
  expect(script?.as).toBe('script')
  expect(script?.href).toBe('https://localhost/webman/3rdparty/ExampleApp/app/app.js?v=build-a')
  expect(script?.crossOrigin).toBeNull()
- expect([...document.querySelectorAll<HTMLLinkElement>('link[rel=modulepreload]')].map(link => [link.href, link.crossOrigin])).toEqual([
+ expect(Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel=modulepreload]')).map(link => [link.href, link.crossOrigin])).toEqual([
   ['https://localhost/webman/3rdparty/ExampleApp/app/chunks/main-1a2b.js', 'anonymous'],
   ['https://localhost/webman/3rdparty/ExampleApp/app/chunks/vendor-3c4d.js', 'anonymous'],
  ])
