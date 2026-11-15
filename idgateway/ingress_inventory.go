@@ -17,6 +17,11 @@ func CheckIngressOwnership(pkg, prefix string) error {
 	return checkIngressOwnership("/", pkg, prefix)
 }
 
+// packageNginxConfigs are the nginx files a CLI-built package can register
+// with DSM's web-config worker: gateway ingress, daemon ingress and
+// ui.short_paths redirects. A stopped package's file still reserves its paths.
+var packageNginxConfigs = []string{"sso/native-nginx.conf", "daemon/ingress-nginx.conf", "etc/short-paths-nginx.conf"}
+
 func pathsOverlap(a, b string) bool {
 	a, b = strings.TrimSuffix(a, "/"), strings.TrimSuffix(b, "/")
 	return a == b || strings.HasPrefix(a, b+"/") || strings.HasPrefix(b, a+"/")
@@ -126,7 +131,7 @@ func checkIngressOwnership(root, pkg, prefix string) error {
 	ownConfigs := map[string]bool{}
 	for _, p := range packages {
 		if p.Name() == pkg {
-			for _, rel := range []string{"sso/native-nginx.conf", "daemon/ingress-nginx.conf"} {
+			for _, rel := range packageNginxConfigs {
 				file := filepath.Join(root, "var/packages", pkg, "target", rel)
 				if target, e := filepath.EvalSymlinks(file); e == nil {
 					ownConfigs[target] = true
@@ -134,7 +139,7 @@ func checkIngressOwnership(root, pkg, prefix string) error {
 			}
 			continue
 		}
-		for _, rel := range []string{"sso/native-nginx.conf", "daemon/ingress-nginx.conf", "etc/portal.json"} {
+		for _, rel := range append([]string{"etc/portal.json"}, packageNginxConfigs...) {
 			data, err := read(filepath.Join("var/packages", p.Name(), "target", rel))
 			if errors.Is(err, os.ErrNotExist) {
 				continue
