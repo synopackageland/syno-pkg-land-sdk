@@ -45,6 +45,12 @@ function shareableEntryURL(options: AppContextOptions, at: URL, entry: string): 
  return entry
 }
 
+/** The entry page the CLI's launcher opens. Browsers keep DSM's package files
+ * for years without asking, and older CLIs put the build in entry.html,
+ * so a browser that opened it keeps that build; launch.html never had
+ * other bytes. entry.html stays as the same page for older links. */
+const ENTRY_PAGE = 'launch.html'
+
 export function entryURLs(packageId: string, href: string) {
  if(!/^[A-Za-z][A-Za-z0-9]{1,63}$/.test(packageId)) throw new Error('Invalid package id')
  const at = new URL(href)
@@ -52,7 +58,7 @@ export function entryURLs(packageId: string, href: string) {
  const index = at.pathname.indexOf(marker)
  const prefix = index < 0 ? new URL('./', at).pathname.replace(/\/$/, '') : at.pathname.slice(0, index)
  const base = `${at.origin}${prefix}/`
- return {base, cgi: `${base}webman/3rdparty/${packageId}/cgi/api.cgi`, entry: `${base}webman/3rdparty/${packageId}/app/entry.html`, webApi: `${base}webapi/entry.cgi`, token: `${base}webman/login.cgi?enable_syno_token=yes`}
+ return {base, cgi: `${base}webman/3rdparty/${packageId}/cgi/api.cgi`, entry: `${base}webman/3rdparty/${packageId}/app/${ENTRY_PAGE}`, webApi: `${base}webapi/entry.cgi`, token: `${base}webman/login.cgi?enable_syno_token=yes`}
 }
 
 /** The same-origin status endpoint, or undefined without daemon.ingress.

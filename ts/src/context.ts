@@ -185,7 +185,7 @@ export interface Context {
  t?: (key: string, params?: Record<string, unknown>) => string
  // The App's link to share or bookmark, without a hash: its short path on
  // DSM's origin (ui.short_paths, DSM 7.2+) when the CLI declared one, else its
- // entry page /webman/3rdparty/<package>/app/entry.html. Add the App's own
+ // entry page /webman/3rdparty/<package>/app/launch.html. Add the App's own
  // ?link=/route; DSM's sign-in keeps the query but replaces the hash. Set by
  // the SDK entry context; DSM windows of older CLIs leave it out.
  entryURL?: string

@@ -22,14 +22,17 @@ afterEach(() => {vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks()
 
 test('ctx.entryURL is the entry page, the declared short path, or a same-origin override', () => {
  const make = (extra: Record<string, unknown>) => createAppContext({packageId: 'ExampleApp', build: 'b', token: 't', pageURL: `${pageURL}?link=%2Fx#/x`, ...extra})
- expect(make({}).entryURL).toBe(pageURL)
+ // The launcher's page, also from the earlier entry.html, which browsers may keep with an old build.
+ const launchPage = 'https://localhost/webman/3rdparty/ExampleApp/app/launch.html'
+ expect(make({}).entryURL).toBe(launchPage)
+ expect(make({pageURL: launchPage}).entryURL).toBe(launchPage)
  expect(make({shortPath: '/notes'}).entryURL).toBe('https://localhost/notes')
- expect(make({shortPath: '/Not Valid'}).entryURL).toBe(pageURL)
- expect(make({shortPath: '//evil.example'}).entryURL).toBe(pageURL)
+ expect(make({shortPath: '/Not Valid'}).entryURL).toBe(launchPage)
+ expect(make({shortPath: '//evil.example'}).entryURL).toBe(launchPage)
  expect(make({entryURL: 'https://localhost/notes?keep=1#drop'}).entryURL).toBe('https://localhost/notes?keep=1')
  expect(make({entryURL: 'https://evil.example/notes', shortPath: '/notes'}).entryURL).toBe('https://localhost/notes')
  expect(make({pageURL: 'https://localhost/notes/webman/3rdparty/ExampleApp/app/entry.html'}).entryURL)
-  .toBe('https://localhost/notes/webman/3rdparty/ExampleApp/app/entry.html')
+  .toBe('https://localhost/notes/webman/3rdparty/ExampleApp/app/launch.html')
 })
 
 test('the entry keeps its own address by default, even with an active alias', async () => {
