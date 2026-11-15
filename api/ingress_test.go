@@ -148,3 +148,42 @@ func TestServeIngressSocketLifecycle(t *testing.T) {
 		t.Fatal("socket left behind")
 	}
 }
+
+func TestAcceptTimePrecedesTheRequestHeader(t *testing.T) {
+	dir, err := os.MkdirTemp("/tmp", "ia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+	socket := filepath.Join(dir, "s.sock")
+	type times struct{ accept, ingress time.Time }
+	seen := make(chan times, 1)
+	app := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seen <- times{AcceptTime(r.Context()), IngressTime(r.Context())}
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go serveIngress(ctx, socket, ingressHandler(app, "/synopkgland/App/", ingressOptions{request: time.Minute, stream: time.Minute}))
+	var conn net.Conn
+	for i := 0; i < 100; i++ {
+		if conn, err = net.Dial("unix", socket); err == nil {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	// The header arrives in two parts; the gap is wait outside the handler.
+	io.WriteString(conn, "GET /synopkgland/App/x HTTP/1.1\r\nHost: nas.local\r\n")
+	time.Sleep(50 * time.Millisecond)
+	io.WriteString(conn, "X-Real-IP: 192.0.2.1\r\n\r\n")
+	got := <-seen
+	if got.accept.IsZero() || got.ingress.Sub(got.accept) < 40*time.Millisecond {
+		t.Fatalf("accept %v, ingress %v", got.accept, got.ingress)
+	}
+	if !AcceptTime(context.Background()).IsZero() {
+		t.Fatal("accept time outside ServeIngress")
+	}
+}

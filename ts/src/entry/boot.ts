@@ -11,6 +11,12 @@ export interface EntryPageOptions extends AppContextOptions {
  root: HTMLElement
  /** Same-origin module URL to preload without execution while identity is pending. */
  appBundle?: string
+ /** Same-origin classic script URL (the App's app.js) to download without
+  * execution while identity is pending; `mount` adds the script element. */
+ appScript?: string
+ /** More same-origin ES modules the first screen imports, such as the App's
+  * main chunk, to modulepreload with the bundle. */
+ preload?: readonly string[]
  mount(root: HTMLElement, ctx: Context): unknown | Promise<unknown>
  /** Override navigation for an embedding host. */
  navigate?: (url: string) => void
@@ -124,16 +130,24 @@ export async function bootEntryPage(options: EntryPageOptions): Promise<Context 
   return undefined
  }
  if(options.portal && !/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(options.portal.defaultAlias)) throw new Error('Invalid portal alias')
- if(options.appBundle !== undefined) {
-  let bundle: URL
-  try {bundle = new URL(options.appBundle, at)} catch {throw new Error('Invalid App bundle URL')}
-  if(!/^https?:$/.test(bundle.protocol) || bundle.origin !== at.origin || bundle.username || bundle.password) throw new Error('Invalid App bundle URL')
-  // modulepreload fetches (and may parse dependencies) but never evaluates the
-  // App. Only the authenticated mount below may import and execute it.
-  const preload = document.createElement('link')
-  preload.rel = 'modulepreload'; preload.href = bundle.href; preload.crossOrigin = 'anonymous'
-  document.head.append(preload)
- }
+ // Preloading fetches (and may parse module dependencies) but never evaluates
+ // the App: only the authenticated mount below may import and execute it.
+ // Every URL is checked before any download starts.
+ const preloads = [
+  ...(options.appBundle !== undefined ? [{href: options.appBundle, module: true}] : []),
+  ...(options.appScript !== undefined ? [{href: options.appScript, module: false}] : []),
+  ...(options.preload ?? []).map(href => ({href, module: true})),
+ ].map(({href, module}) => {
+  let url: URL
+  try {url = new URL(href, at)} catch {throw new Error('Invalid App bundle URL')}
+  if(!/^https?:$/.test(url.protocol) || url.origin !== at.origin || url.username || url.password) throw new Error('Invalid App bundle URL')
+  const link = document.createElement('link')
+  // A module preload must match the import's CORS mode; a classic one the plain <script>'s.
+  if(module) {link.rel = 'modulepreload'; link.crossOrigin = 'anonymous'} else {link.rel = 'preload'; link.as = 'script'}
+  link.href = url.href
+  return link
+ })
+ document.head.append(...preloads)
  let token: string | undefined
  try {token = options.session ? await options.session.ready() : options.token ?? await fetchEntryToken(urls.token, request)}
  catch {return fallback()}

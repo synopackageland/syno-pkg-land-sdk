@@ -112,6 +112,19 @@ not pass through an SDK handler, such as one a test builds, returns the zero
 `time.Time`. The value is read-only: no App code runs before authentication,
 and nothing new needs to be registered or audited. This is a Go App API.
 
+Under `api.ServeIngress`, `api.IngressTime` is when net/http finished reading
+the request header. `api.AcceptTime` is when the daemon accepted the
+connection from nginx, before the header; the difference is the wait outside
+the App's handler (a slow or partial header from nginx, a busy daemon):
+
+```go
+headerWait := api.IngressTime(ctx).Sub(api.AcceptTime(ctx))
+```
+
+nginx opens one connection per request to the ingress socket, so the accept
+time is the request's own. It is the zero `time.Time` under CGI and in tests
+that do not serve the socket.
+
 ## Integration callbacks
 
 Some callers cannot hold a DSM session: Chat button and slash-command
