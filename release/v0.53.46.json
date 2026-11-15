@@ -1,0 +1,53 @@
+{
+  "version": "0.53.46",
+  "executorVersion": "0.53.6",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.46",
+    "@synopackageland/app": "0.53.46",
+    "syno-pkg-land-app": "0.53.46",
+    "synopkgland_app": "0.53.46"
+  },
+  "executorDigests": {
+    "x86_64": "e77dbf846ea4555355fa15ee3a6ca3b20e1b1aaa9768321243589d9ec15ffabe",
+    "aarch64": "741a7c37757b56b3acc304cef56de5e59c1ca9278a83be0f1e1ff1ad17b24dd6",
+    "armv7": "f0a3059b982d0210621254adf7d1a3343d2a89d114e053e5b3bd646898293b1a",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Basic release gate (bash scripts/basic-gate.sh) run as root: docs, policy, version, protocol/admission limit and executor manifest checks, internal-content repo scan, Go vet/build (SDK and executor) and units (api, dsm, filestation, jsonlimits, identity), Node typecheck/build, frontend gate (typecheck, 1429 units, build, packed consumer import, pack contents), package content scans. The Node and Python run tests that refuse to run as root fail as root and pass as a non-root account (Node 34/34, Python 27/27). The gate found two problems from #226, fixed in this release: a changed audited ingress statement (timeout policy) and a test typecheck error. Both npm tarballs scanned for internal content before publication. No full gate, QEMU, executor rebuild, Rust build, crate publication or NAS acceptance."
+  },
+  "ui": {
+    "builtAgainst": "0.25.10",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.25.10.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "ctx.entryURL (without a short path or an explicit entryURL) names launch.html, the fixed entry page the CLI's launcher opens; entry.html stays the same page for older links, and the update check still reads entry.json, then entry.html's meta (from #225).",
+    "bootEntryPage preloads the App's first screen while the token and app.status reads run: appScript preloads a classic App script (preload as=script) and preload lists ES modules (modulepreload); all URLs are checked before any download and nothing runs before the identity is verified. Under ServeIngress, api.AcceptTime(ctx) returns when the daemon accepted the connection, before the request header (from #226).",
+    "Release fixes for #226: the ingress server sets ConnContext on its own line so the audited ReadHeaderTimeout statement is unchanged (timeout policy), and a boot test no longer spreads a NodeList (typecheck).",
+    "Reuse executor 0.53.6 unchanged: executor sources and build inputs are unchanged."
+  ],
+  "npmArtifacts": {
+    "synopackageland-app-0.53.46.tgz": {
+      "sha256": "f43a40baff837c636f4a03cf23c822dabf2a7744428ba45d700d062f43e59c79"
+    },
+    "synopackageland-sdk-0.53.46.tgz": {
+      "sha256": "aaba60b9cb393fa0307e05babf96fb7078f7429cd2f4a660cd3c59503cf2e517"
+    }
+  }
+}
