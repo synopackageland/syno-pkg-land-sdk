@@ -125,8 +125,63 @@ export function createPortalAccess(options:PortalOptions):PortalAccess{
   access.register=()=>change('portal.register')
   access.unregister=()=>change('portal.unregister')
  }
+ access.mountPanel=element=>mountPortalPanel(access,element)
  // The window reads the status when it opens, so its settings page shows the
  // section as it is.
  void status()
  return access
+}
+
+type Node_=HTMLElement
+function node(tag:string,attrs:Record<string,string>,children:Node_[]=[]):Node_{
+ const out=document.createElement(tag)
+ for(const [key,value] of Object.entries(attrs)){if(key==='text')out.textContent=value;else out.setAttribute(key,value)}
+ out.append(...children)
+ return out
+}
+function button(text:string,onClick:()=>void):Node_{
+ const out=node('button',{type:'button',text})
+ out.addEventListener('click',event=>{event.preventDefault();onClick()})
+ return out
+}
+/** The plain panel the CLI's DSM window gives UIs without their own
+ * (portal-window.ts), for the same access on an entry page. Vue apps use
+ * portal/PortalSettings.vue. */
+export function mountPortalPanel(access:PortalAccess,element:HTMLElement):{refresh():Promise<void>;dispose():void}{
+ const messages=access.messages
+ let disposed=false
+ function render(current:PortalStatus,error?:unknown){
+  if(disposed)return
+  const parts:Node_[]=[node('h2',{text:messages.title??''})]
+  const settle=(next:Promise<PortalStatus>|undefined)=>{void next?.then(fresh=>render(fresh),failure=>render(current,failure))}
+  if(current.state==='active'&&current.url)parts.push(node('p',{},[node('span',{text:`${messages.link} `}),node('a',{href:current.url,target:'_blank',rel:'noopener',text:current.url})]))
+  if(current.canManage&&current.entry&&current.entry!=='registered'){
+   const off=current.entry==='unregistered'
+   parts.push(node('p',{text:(off?messages.entryOff:messages.cleanupRequired)??''}))
+   parts.push(off?button(messages.register??'',()=>settle(access.register?.())):button(messages.unregister??'',()=>settle(access.unregister?.())))
+  }else if(current.canManage){
+   if(current.state!=='active')parts.push(node('p',{text:messages.inactive??''}))
+   const input=node('input',{type:'text',maxlength:'64',autocomplete:'off','aria-label':messages.alias??''}) as HTMLInputElement
+   input.value=current.alias||current.defaultAlias
+   const form=node('form',{class:'dsmapp-portal-form'},[node('label',{text:messages.alias??''}),input,node('button',{type:'submit',text:messages.apply??''})])
+   form.addEventListener('submit',event=>{event.preventDefault();settle(access.apply(input.value))})
+   if(current.state==='active')form.append(button(messages.disable??'',()=>settle(access.disable())))
+   parts.push(form,button(messages.advanced??'',()=>access.openControlPanel()))
+   if(current.entry)parts.push(button(messages.unregister??'',()=>settle(access.unregister?.())))
+  }else if(current.controlPanel){
+   parts.push(button(messages.controlPanel??'',()=>access.openControlPanel()))
+  }else if(current.state!=='active'){
+   parts.push(node('p',{text:messages.askAdmin??''}))
+  }
+  if(error!==undefined){
+   const code=(error as {code?:unknown}|null)?.code
+   parts.push(node('p',{role:'alert',class:'dsmapp-portal-error',text:(typeof code==='string'&&messages[code])||messages.portal_unavailable||''}))
+  }
+  element.replaceChildren(...parts)
+ }
+ void access.status().then(current=>render(current),()=>{})
+ return {
+  refresh:()=>access.status().then(current=>render(current)),
+  dispose(){disposed=true;element.replaceChildren()},
+ }
 }

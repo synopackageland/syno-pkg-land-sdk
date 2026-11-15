@@ -66,8 +66,8 @@ export interface PortalAccess {
  register?(): Promise<PortalStatus>
  unregister?(): Promise<PortalStatus>
  openControlPanel(): void
- // The SDK's plain panel, on the DSM window's access only; Vue apps use
- // portal/PortalSettings.vue, and createPortalAccess leaves it out.
+ // The SDK's plain panel for UIs without their own; Vue apps use
+ // portal/PortalSettings.vue. DSM windows of older CLIs leave it out.
  mountPanel?(element: HTMLElement): {refresh(): Promise<void>; dispose(): void}
 }
 
@@ -183,6 +183,12 @@ export interface Context {
  // fall back to English, then the key; {name} takes params.name, and
  // params.count picks key.one or key.other.
  t?: (key: string, params?: Record<string, unknown>) => string
+ // The App's link to share or bookmark, without a hash: its short path on
+ // DSM's origin (ui.short_paths, DSM 7.2+) when the CLI declared one, else its
+ // entry page /webman/3rdparty/<package>/app/entry.html. Add the App's own
+ // ?link=/route; DSM's sign-in keeps the query but replaces the hash. Set by
+ // the SDK entry context; DSM windows of older CLIs leave it out.
+ entryURL?: string
  // Whether the installed package has replaced the UI this page loaded: DSM
  // keeps an App's scripts after a package upgrade until the page reloads. The
  // CLI's DSM window provides it; AppShell then offers to reload the page.

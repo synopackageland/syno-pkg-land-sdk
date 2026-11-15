@@ -30,6 +30,12 @@
     "reason": "Fallback target choice: a slow alias probe sends the visitor to DSM's App start instead of the alias sign-in; nothing is failed and no request is retried by the clock"
   },
   {
+    "file": "ts/src/entry/boot.ts",
+    "statement": "export const LAUNCH_HANDOFF_MAX_AGE_MS = 30 * 60 * 1000",
+    "class": "B",
+    "reason": "Expiry of a launch route kept in sessionStorage across a DSM sign-in; an older hint is dropped, no request is failed or retried"
+  },
+  {
     "file": "api/ingress.go",
     "statement": "srv := &http.Server{Handler: h, ReadHeaderTimeout: 30 * time.Second}",
     "class": "B",

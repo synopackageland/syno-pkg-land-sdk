@@ -44,7 +44,8 @@ export function openFileInFileStation(path:string,options:FileStationOptions={})
 }
 
 // The CLI's DSM window applies the same rule (host-file-navigation.ts).
-function sharedFolderPath(path:string):boolean{
+/** One canonical shared-folder path (/share/...): no empty, . or .. segment, backslash or control character. */
+export function sharedFolderPath(path:string):boolean{
  if(path.length>4096||/[\x00-\x1f\x7f\\]/.test(path))return false
  const parts=path.split('/')
  return parts[0]===''&&parts.length>1&&parts.slice(1).every(part=>part!==''&&part!=='.'&&part!=='..')

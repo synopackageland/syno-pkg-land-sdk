@@ -5,19 +5,39 @@ import {format, uiLocale, type Message} from '../i18n'
 import {createNativeHost, nativeLaunchParams, onNativeLaunch} from '../mobile/index'
 import {createPortalAccess} from '../portal/access'
 import {createSignInCache} from './cache'
+import {dsmLinkOpener, withDsmLinks} from './dsm-links'
 
 export interface AppContextOptions extends Partial<Omit<Context, 'call' | 'batch' | 'files' | 'portal'>> {
  packageId: string
  build: string
  token?: string
  session?: ReturnType<typeof createDsmSession>
- /** Absolute entry URL, captured before an optional portal rewrite. */
- entryURL?: string
+ /** Absolute URL of the page that booted, captured before any history
+ * rewrite; defaults to location.href. CGI, WebAPI and update URLs follow it. */
+ pageURL?: string
+ /** The App's short path on DSM's origin (ui.short_paths, DSM 7.2+), such as
+ * /notes; ctx.entryURL is then that path instead of the entry page. */
+ shortPath?: string
  fetch?: typeof globalThis.fetch
  portal?: {defaultAlias: string; entry?: boolean}
  portalAccess?: Context['portal']
  messages?: Readonly<Record<string, Readonly<Record<string, Message>>>>
  sessionRetryOperations?: Readonly<Record<string, SessionRetryOperation>>
+}
+
+const SHORT_PATH = /^\/[a-z0-9]+(?:-[a-z0-9]+)*$/
+
+/** The link to share or bookmark: an explicit same-origin entryURL, else the
+ * short path on this origin, else the entry page (on its alias prefix, if any). */
+function shareableEntryURL(options: AppContextOptions, at: URL, entry: string): string {
+ if(typeof options.entryURL === 'string') {
+  try {
+   const given = new URL(options.entryURL, at)
+   if(given.origin === at.origin && !given.username && !given.password) {given.hash = ''; return given.href}
+  } catch {/* Fall back to the derived link */}
+ }
+ if(typeof options.shortPath === 'string' && SHORT_PATH.test(options.shortPath)) return new URL(options.shortPath, at.origin).href
+ return entry
 }
 
 export function entryURLs(packageId: string, href: string) {
@@ -32,7 +52,7 @@ export function entryURLs(packageId: string, href: string) {
 
 /** One ctx builder for full-page entries and CLI windows with their existing host/lifecycle adapters. */
 export function createAppContext(options: AppContextOptions): Context {
- const at = new URL(options.entryURL ?? location.href)
+ const at = new URL(options.pageURL ?? location.href)
  const urls = entryURLs(options.packageId, at.href)
  const request = options.fetch ?? globalThis.fetch
  let current = options.token
@@ -51,7 +71,9 @@ export function createAppContext(options: AppContextOptions): Context {
   throw {code: `dsm_${reply?.error?.code ?? 'error'}`}
  })
  const launchDisposers = new Set<() => void>()
- const baseHost = options.host ?? createNativeHost({dsmStandalone: true, dsmLanguage: options.lang ?? null, appLocale: locale})
+ // Outside DSM's desktop, DSM Apps open through DSM's launch link on this origin.
+ const openDsm = dsmLinkOpener(at.origin)
+ const baseHost = options.host ?? withDsmLinks(createNativeHost({dsmStandalone: true, dsmLanguage: options.lang ?? null, appLocale: locale}), openDsm)
  const cache = createSignInCache(options.packageId)
  if(options.user?.name && session.token()) cache.set('entry', session.token()!, {
   user: options.user.name, admin: options.user.isAdmin, lang: options.lang, locale,
@@ -84,37 +106,82 @@ export function createAppContext(options: AppContextOptions): Context {
   user: options.user, appWindow: options.appWindow, executor: options.executor, authorization: options.authorization, delegate: options.delegate,
   call: client.call, batch: client.batch, webApi, files: {endpoint: urls.cgi, token: session.token},
   reopen: options.reopen ?? (() => () => {}), launchParams, onLaunch,
+  entryURL: shareableEntryURL(options, at, urls.entry),
   uiUpdate: options.uiUpdate ?? {async check(signal) {
-   try {
-    const url = new URL(urls.entry)
+   const read = async (name: string) => {
+    const url = new URL(name, urls.entry)
     url.searchParams.set('launch', String(Date.now()))
     const response = await request(url.href, {cache: 'no-store', mode: 'same-origin', redirect: 'error', credentials: 'same-origin', signal})
-    if(!response.ok) return false
-    const doc = new DOMParser().parseFromString(await response.text(), 'text/html')
-    const build = doc.querySelector('meta[name="synopkgland-build"]')?.getAttribute('content')
-    return !!build && !!options.build && build !== options.build
+    return response.ok ? response : undefined
+   }
+   try {
+    // The CLI's fixed entry page names the build in entry.json; older entry
+    // pages carry it in their own meta.
+    let build: unknown
+    const pointer = await read('entry.json').catch(() => undefined)
+    if(pointer) {try {build = (await pointer.json() as {v?: unknown; build?: unknown} | null)?.build} catch {/* Not a pointer */}}
+    if(typeof build !== 'string') {
+     const page = await read('entry.html')
+     if(!page) return false
+     build = new DOMParser().parseFromString(await page.text(), 'text/html').querySelector('meta[name="synopkgland-build"]')?.getAttribute('content')
+    }
+    return typeof build === 'string' && !!build && !!options.build && build !== options.build
    } catch {return false}
   }},
  }
  ctx.portal = options.portalAccess ?? (options.portal ? createPortalAccess({appId: `SYNO.SDS.${options.packageId}.Instance`,
   defaultAlias: options.portal.defaultAlias, entry: options.portal.entry, locale, location: at,
   call: client.call, send: webApi, isAdmin: () => ctx.user?.isAdmin === true,
-  launch: app => {host.openApp(app)},
+  launch: (app, params) => {if(host.platform().host === 'standalone-web' && !options.host) openDsm(app, params); else host.openApp(app)},
  }) : undefined)
  return ctx
 }
 
-/** CLI-compatible bounded launch text, with native link → route normalization. */
+/**
+ * DSM hands a url launcher's launchParam on as the characters of the text,
+ * `0=l&1=i&2=n&3=k&…`, after the App's own `link=%2Fx`. Rebuilds that text,
+ * or keeps a plain launchParam, and reads it as DSM reads one: `&` and `=`
+ * split it, then each key and value is URL-decoded.
+ */
+function dsmLaunchParam(value: string | null): Array<[string, string]> {
+ if(!value || value.length > 65536) return []
+ let text = value
+ const chars = /(\d+)=([\s\S])(?:&|$)/y
+ if(/^0=/.test(value)) {
+  const out: string[] = []
+  chars.lastIndex = 0
+  while(chars.lastIndex < value.length) {
+   const at = chars.lastIndex, match = chars.exec(value)
+   if(!match || Number(match[1]) !== out.length) {out.length = 0; chars.lastIndex = at; break}
+   out.push(match[2]!)
+  }
+  if(out.length) text = out.join('')
+ }
+ const pairs: Array<[string, string]> = []
+ for(const part of text.split('&')) {
+  if(!part) continue
+  const split = part.indexOf('=')
+  try {pairs.push([decodeURIComponent(split < 0 ? part : part.slice(0, split)), decodeURIComponent(split < 0 ? '' : part.slice(split + 1))])}
+  catch {/* Malformed escapes are not the App's values */}
+ }
+ return pairs
+}
+
+/** CLI-compatible bounded launch text, with native link → route normalization.
+ * A launch DSM forwarded to the entry (launchParam) adds its values; the
+ * page's own query wins. */
 export function entryLaunchParams(search: string): LaunchParams {
  const out: Record<string, string> = Object.create(null)
  const query = new URLSearchParams(search)
  let count = 0
- query.forEach((value, key) => {
-  if(count >= 32 || ['launch', 'className', 'instanceName', 'dsm_version', 'title'].includes(key) || !/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(key)) return
+ const add = (key: string, value: string) => {
+  if(count >= 32 || key in out || ['launch', 'launchParam', 'className', 'instanceName', 'dsm_version', 'title'].includes(key) || !/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(key)) return
   if(value.length > 2048 || /[\u0000-\u001f\u007f]/.test(value)) return
   out[key] = value
   count++
- })
+ }
+ query.forEach((value, key) => add(key, value))
+ for(const [key, value] of dsmLaunchParam(query.get('launchParam'))) add(key, value)
  const native = nativeLaunchParams({link: out.link, intake: out.intake})
  // The native validator owns these values, including route validation.
  delete out.link; delete out.intake
