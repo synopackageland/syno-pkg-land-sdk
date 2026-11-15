@@ -74,7 +74,8 @@ changing its gateway configuration.
 
 Before installation or upgrade, the CLI invokes the bundled gateway executable's
 read-only `ingress-check` command. `CheckIngressOwnership` checks DSM native
-entries, saved aliases, stopped SDK declarations and active nginx locations.
+entries, saved aliases, stopped SDK declarations (gateway and daemon ingress and
+`ui.short_paths` redirects) and active nginx locations.
 An overlap or unreadable/unknown inventory fails closed with a readable install
 error. DSM's worker owns registration, upgrade replacement and uninstall cleanup;
 the checker writes no registry and never removes another owner's configuration.
