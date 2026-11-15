@@ -355,3 +355,77 @@ test('a hung alias probe picks DSM App start after the probe wait', async () => 
  await pending
  expect(new URL(opts.navigate.mock.calls[0]![0]).searchParams.get('launchApp')).toBe('SYNO.SDS.ExampleApp.Instance')
 })
+
+const ingressURL = 'https://localhost/synopkgland/ExampleApp/'
+const cgiURL = 'https://localhost/webman/3rdparty/ExampleApp/cgi/api.cgi'
+const refusal = (code: string) => new Response(JSON.stringify({success: false, error: {code}}))
+
+test('a declared daemon ingress reads app.status there, with the same token, and mounts without the CGI', async () => {
+ const request = statusFetch(), opts = options()
+ const ctx = await bootEntryPage({...opts, daemonIngress: '/synopkgland/ExampleApp/', fetch: request})
+ expect(opts.navigate).not.toHaveBeenCalled()
+ expect(opts.mount).toHaveBeenCalledOnce()
+ expect(request).toHaveBeenCalledTimes(1)
+ const [url, init] = request.mock.calls[0]!
+ expect(url).toBe(ingressURL)
+ expect(init).toMatchObject({method: 'POST', mode: 'same-origin', credentials: 'same-origin', redirect: 'error', headers: {'X-SYNO-TOKEN': 'sign-in'}})
+ expect(JSON.parse(String(init?.body))).toEqual({method: 'app.status', params: {}})
+ // The background check follows the same ingress; other calls keep the CGI.
+ request.mockImplementation(async () => json({}))
+ const abort = new AbortController()
+ await ctx!.call('app.status', {}, {signal: abort.signal})
+ await ctx!.call('items.list')
+ expect(request.mock.calls.slice(1).map(call => call[0])).toEqual([ingressURL, cgiURL])
+ expect(request.mock.calls[1]![1]?.headers).toMatchObject({'X-SYNO-TOKEN': 'sign-in'})
+ expect(ctx!.files?.endpoint).toBe(cgiURL)
+ ctx!.host.dispose()
+})
+
+test('under a portal alias the ingress stays at the origin root', async () => {
+ history.replaceState(null, '', '/myalias/webman/3rdparty/ExampleApp/app/entry.html')
+ const request = statusFetch()
+ const ctx = await bootEntryPage({...options(), pageURL: 'https://localhost/myalias/webman/3rdparty/ExampleApp/app/entry.html', daemonIngress: '/synopkgland/ExampleApp/', fetch: request})
+ expect(request.mock.calls[0]![0]).toBe(ingressURL)
+ ctx!.host.dispose()
+})
+
+test('a daemon refusal is final: no CGI status, DSM sign-in', async () => {
+ const request = vi.fn<typeof globalThis.fetch>(async () => refusal('session_required')), opts = options()
+ expect(await bootEntryPage({...opts, daemonIngress: '/synopkgland/ExampleApp/', fetch: request})).toBeUndefined()
+ expect(request.mock.calls.map(call => call[0])).toEqual([ingressURL])
+ expect(opts.navigate).toHaveBeenCalledOnce()
+})
+
+test('a daemon that did not answer sends that status read to the CGI', async () => {
+ for(const unavailable of [() => {throw new TypeError('network')}, () => new Response('', {status: 502}), () => new Response('', {status: 404})]) {
+  localStorage.clear()
+  const request = vi.fn<typeof globalThis.fetch>(async url => url === ingressURL ? unavailable() : json(account)), opts = options()
+  const ctx = await bootEntryPage({...opts, daemonIngress: '/synopkgland/ExampleApp/', fetch: request})
+  expect(request.mock.calls.map(call => call[0])).toEqual([ingressURL, cgiURL])
+  expect(opts.mount).toHaveBeenCalledOnce()
+  ctx!.host.dispose()
+ }
+})
+
+test('the daemon busy reply retries at the ingress, never turning into a sign-out', async () => {
+ vi.useFakeTimers()
+ const request = vi.fn<typeof globalThis.fetch>()
+  .mockImplementationOnce(async () => refusal('busy'))
+  .mockImplementation(async () => json(account))
+ const opts = options()
+ const pending = bootEntryPage({...opts, daemonIngress: '/synopkgland/ExampleApp/', fetch: request})
+ await vi.advanceTimersByTimeAsync(ENTRY_STATUS_RETRY_DELAYS_MS[0]!)
+ const ctx = await pending
+ expect(request.mock.calls.map(call => call[0])).toEqual([ingressURL, ingressURL])
+ expect(opts.navigate).not.toHaveBeenCalled()
+ ctx!.host.dispose()
+})
+
+test('an ingress other than the package path is refused before any request', async () => {
+ for(const daemonIngress of ['/synopkgland/OtherApp/', '/synopkgland/exampleapp/', 'https://evil.example/synopkgland/ExampleApp/', '//evil.example/synopkgland/ExampleApp/', '/synopkgland/ExampleApp', '']) {
+  const request = statusFetch()
+  await expect(bootEntryPage({...options(), daemonIngress, fetch: request})).rejects.toThrow('Invalid daemon ingress')
+  expect(request).not.toHaveBeenCalled()
+  expect(() => createAppContext({packageId: 'ExampleApp', build: 'b', token: 't', pageURL: entryURL, daemonIngress, fetch: request})).toThrow('Invalid daemon ingress')
+ }
+})

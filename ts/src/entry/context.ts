@@ -1,5 +1,5 @@
 import {createClient, type SessionRetryOperation} from '../client'
-import type {Context, LaunchParams} from '../context'
+import type {CallOptions, Context, LaunchParams} from '../context'
 import {createDsmSession} from '../dsm/session.js'
 import {format, uiLocale, type Message} from '../i18n'
 import {createNativeHost, nativeLaunchParams, onNativeLaunch} from '../mobile/index'
@@ -23,6 +23,11 @@ export interface AppContextOptions extends Partial<Omit<Context, 'call' | 'batch
  portalAccess?: Context['portal']
  messages?: Readonly<Record<string, Readonly<Record<string, Message>>>>
  sessionRetryOperations?: Readonly<Record<string, SessionRetryOperation>>
+ /** The manifest's daemon.ingress path, exactly `/synopkgland/<packageId>/`,
+  * which the CLI writes into the generated entry. When present, app.status
+  * goes to the App's daemon on the page's origin instead of a CGI process;
+  * every other call keeps the CGI. Never take it from the page URL. */
+ daemonIngress?: string
 }
 
 const SHORT_PATH = /^\/[a-z0-9]+(?:-[a-z0-9]+)*$/
@@ -50,6 +55,38 @@ export function entryURLs(packageId: string, href: string) {
  return {base, cgi: `${base}webman/3rdparty/${packageId}/cgi/api.cgi`, entry: `${base}webman/3rdparty/${packageId}/app/entry.html`, webApi: `${base}webapi/entry.cgi`, token: `${base}webman/login.cgi?enable_syno_token=yes`}
 }
 
+/** The same-origin status endpoint, or undefined without daemon.ingress.
+ * DSM's nginx serves the ingress at the origin root in its own server
+ * blocks, so a portal alias prefix is not part of it. */
+export function statusEndpoint(packageId: string, href: string, daemonIngress: string | undefined): string | undefined {
+ if(daemonIngress === undefined) return undefined
+ if(!/^[A-Za-z][A-Za-z0-9]{1,63}$/.test(packageId) || daemonIngress !== `/synopkgland/${packageId}/`) throw new Error('Invalid daemon ingress')
+ return new URL(daemonIngress, new URL(href).origin).href
+}
+
+/** Statuses at which the daemon cannot have answered: nginx has no such
+ * location (404) or could not reach the daemon (502–504). */
+const DAEMON_UNAVAILABLE = new Set([404, 502, 503, 504])
+
+/** A fetch for app.status: the daemon ingress first, then the CGI when the
+ * daemon did not answer. app.status only reads, so a second send is safe.
+ * A decoded reply from the daemon, a refusal or busy included, is final.
+ * A missing location keeps the CGI for the rest of the page. */
+export function statusFetch(request: typeof globalThis.fetch, ingress: string, cgi: string): typeof globalThis.fetch {
+ let missing = false
+ return async (_input, init) => {
+  if(missing) return request(cgi, init)
+  let response: Response
+  try {response = await request(ingress, init)} catch(error) {
+   if(init?.signal?.aborted) throw error
+   return request(cgi, init)
+  }
+  if(init?.signal?.aborted || !DAEMON_UNAVAILABLE.has(response.status)) return response
+  if(response.status === 404) missing = true
+  return request(cgi, init)
+ }
+}
+
 /** One ctx builder for full-page entries and CLI windows with their existing host/lifecycle adapters. */
 export function createAppContext(options: AppContextOptions): Context {
  const at = new URL(options.pageURL ?? location.href)
@@ -58,8 +95,14 @@ export function createAppContext(options: AppContextOptions): Context {
  let current = options.token
  const session = options.session ?? createDsmSession({read: () => current, write: value => {current = value},
   fetch: (_url, init) => request(urls.token, init)})
- const client = createClient({endpoint: urls.cgi, requestTimeout: options.requestTimeout, fetch: request,
-  sessionRetry: {session, operations: options.sessionRetryOperations ?? {}}})
+ const sessionRetry = {session, operations: options.sessionRetryOperations ?? {}}
+ const client = createClient({endpoint: urls.cgi, requestTimeout: options.requestTimeout, fetch: request, sessionRetry})
+ // app.status, including the EntryGuard's background check, follows the
+ // manifest's daemon ingress with the same cookie, token, timeout and signal.
+ const ingress = statusEndpoint(options.packageId, at.href, options.daemonIngress)
+ const status = ingress && createClient({endpoint: ingress, requestTimeout: options.requestTimeout, fetch: statusFetch(request, ingress, urls.cgi), sessionRetry})
+ const call: Context['call'] = status ? <T,>(method: string, params?: Record<string, unknown>, callOptions?: CallOptions) =>
+  (method === 'app.status' ? status : client).call<T>(method, params, callOptions) : client.call
  const locale = options.locale || uiLocale(options.lang || globalThis.navigator?.language || 'en')
  const webApi: NonNullable<Context['webApi']> = options.webApi ?? (async (api, method, version, params) => {
   const body = new URLSearchParams({api, method, version: String(version)})
@@ -104,7 +147,7 @@ export function createAppContext(options: AppContextOptions): Context {
   locale, lang: options.lang, t: options.t ?? t, host, fullPage: options.fullPage ?? true,
   requestTimeout: options.requestTimeout, displayName: options.displayName, appIcon: options.appIcon ? new URL(options.appIcon, at).href : undefined,
   user: options.user, appWindow: options.appWindow, executor: options.executor, authorization: options.authorization, delegate: options.delegate,
-  call: client.call, batch: client.batch, webApi, files: {endpoint: urls.cgi, token: session.token},
+  call, batch: client.batch, webApi, files: {endpoint: urls.cgi, token: session.token},
   reopen: options.reopen ?? (() => () => {}), launchParams, onLaunch,
   entryURL: shareableEntryURL(options, at, urls.entry),
   uiUpdate: options.uiUpdate ?? {async check(signal) {
@@ -131,7 +174,7 @@ export function createAppContext(options: AppContextOptions): Context {
  }
  ctx.portal = options.portalAccess ?? (options.portal ? createPortalAccess({appId: `SYNO.SDS.${options.packageId}.Instance`,
   defaultAlias: options.portal.defaultAlias, entry: options.portal.entry, locale, location: at,
-  call: client.call, send: webApi, isAdmin: () => ctx.user?.isAdmin === true,
+  call, send: webApi, isAdmin: () => ctx.user?.isAdmin === true,
   launch: (app, params) => {if(host.platform().host === 'standalone-web' && !options.host) openDsm(app, params); else host.openApp(app)},
  }) : undefined)
  return ctx

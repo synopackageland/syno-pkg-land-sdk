@@ -107,10 +107,39 @@ rule), and for `ctx.portal.openControlPanel()`. A native shell keeps its own
 host. `ctx.portal.mountPanel(element)` renders the plain portal panel for UIs
 without their own, as in a DSM window.
 
+## Status through the daemon ingress
+
+An App whose manifest declares `daemon.ingress` gets
+`daemonIngress: '/synopkgland/<Package>/'` in its generated entry options.
+Its `app.status` reads, the first one at boot and the EntryGuard's background
+checks through `ctx.call`, then go to the App's daemon at that path on the
+entry's origin instead of starting a CGI process. A CGI process reserves its
+whole fallback memory budget from the daemon, so on a NAS whose budget is
+already held by running workers the CGI can answer `busy` to every status
+read, while the daemon answers at once.
+
+The request is the same JSON POST with the same cookie, `X-SYNO-TOKEN`,
+same-origin mode, request deadline and abort signal. The daemon runs the same
+SDK session, EntryGate and permission checks as the CGI; a reachable daemon
+does not make a caller signed in. Its decoded reply is final: a refusal hands
+off to DSM, and `busy` is retried at the ingress like a CGI `busy`.
+
+Only a daemon that did not answer sends that read to the CGI: a network
+failure, or HTTP 502, 503 or 504 from nginx. A 404 means DSM's nginx has no
+such path (an older package, or an address whose server block lacks it), and
+keeps every later status read of the page on the CGI. Every other call,
+files and HTTP transfers keep the CGI.
+
+The path must be exactly `/synopkgland/<packageId>/` with the case-sensitive
+package ID; anything else, a full URL included, throws before any request.
+DSM serves it at the origin root, so a portal alias prefix is not added. The
+value comes only from the generated options, never from the page URL. Without
+`daemonIngress`, `app.status` uses the CGI as before.
+
 ## A shared context
 
 `createAppContext(options)` is also available to a generated DSM window. Pass
-the window's `host`, `appWindow`, `session`, `fullPage`, `reopen`, `onLaunch`,
+the window's `host`, `appWindow`, `session`, `daemonIngress`, `fullPage`, `reopen`, `onLaunch`,
 `launchParams`, `user`, `executor`, `portalAccess` and `webApi` when present.
 Pass `uiUpdate` to retain a window's existing config/hash check when it does
 not generate an entry page. `packageId` and `build` are required. `pageURL` is the original absolute URL
