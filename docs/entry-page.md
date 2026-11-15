@@ -34,6 +34,16 @@ Pass this option from the App entry or generator to enable early loading. It
 is optional for existing callers; the SDK cannot infer a module URL hidden in
 a mount callback. A missing or failed preload keeps the ordinary import path.
 
+A classic App script (an `app.js` that reads `document.currentScript`) is named
+by `appScript` instead: the SDK adds `<link rel="preload" as="script">`, and the
+`<script>` that `mount` adds later reuses the download. `preload` lists more ES
+modules the first screen imports, such as the App's main chunk; each gets a
+`modulepreload`. Every URL follows the `appBundle` rules and must be exactly
+the URL the App later loads (a chunk an `app.js?v=…` resolves relative to
+itself has no query). All URLs are checked before any download starts; one
+invalid URL refuses the boot. The CLI fills these from the build and from the
+App's `entry-preload.json` (see the CLI's entry page documentation).
+
 DSM serves package files without `Cache-Control` and with a 1970
 `Last-Modified`, so browsers keep them for years and open them without asking
 DSM, even after an upgrade. The CLI's entry page is therefore the same bytes

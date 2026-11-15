@@ -93,7 +93,7 @@ func serveIngress(ctx context.Context, socket string, h http.Handler) error {
 		ln.Close()
 		return err
 	}
-	srv := &http.Server{Handler: h, ReadHeaderTimeout: 30 * time.Second}
+	srv := &http.Server{Handler: h, ReadHeaderTimeout: 30 * time.Second, ConnContext: accepted}
 	done := make(chan error, 1)
 	go func() { done <- srv.Serve(ln) }()
 	select {

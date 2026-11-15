@@ -4,7 +4,7 @@ import {createServer} from 'node:http'
 import {readFile} from 'node:fs/promises'
 import {chromium} from 'playwright-core'
 
-let pendingToken, pendingIdentity, tokenArrived, identityArrived, bundleRequests = 0
+let pendingToken, pendingIdentity, tokenArrived, identityArrived, bundleRequests = 0, classicRequests = 0, chunkRequests = 0
 const server = createServer(async (request, response) => {
  const path = new URL(request.url, 'http://localhost').pathname
  if(path === '/webman/login.cgi') {pendingToken = response; tokenArrived(); return}
@@ -19,6 +19,27 @@ const server = createServer(async (request, response) => {
   response.end(`import '/dependency.js'; window.bundleExecuted = true; export function mount(root, ctx) {root.textContent = ctx.user.name; window.mounted = true}`)
  } else if(path === '/dependency.js') {
   response.end('window.dependencyExecuted = true')
+ } else if(path === '/classic.js') {
+  // A classic app.js (document.currentScript) that imports its main chunk when mounted.
+  classicRequests++
+  response.setHeader('Cache-Control', 'max-age=3600')
+  response.end(`window.bundleExecuted = true; window.DsmPackageApps = {ExampleApp: {mount: async (root, ctx) => {await import('/chunk.js'); root.textContent = ctx.user.name; window.mounted = true}}}`)
+ } else if(path === '/chunk.js') {
+  chunkRequests++
+  response.setHeader('Cache-Control', 'max-age=3600')
+  response.end('window.dependencyExecuted = true')
+ } else if(path.endsWith('/classic.html')) {
+  response.end(`<div id="app"></div><script type="module">
+   import {bootEntryPage} from '/dist/entry.js'
+   window.bootDone = false
+   bootEntryPage({packageId: 'ExampleApp', build: 'build-a', root: document.querySelector('#app'),
+    appScript: '/classic.js?v=build-a', preload: ['/chunk.js'], navigate: () => {window.navigated = true},
+    mount: async (root, ctx) => {
+     const app = await new Promise((resolve, reject) => {const script = document.createElement('script'); script.src = '/classic.js?v=build-a'; script.onload = () => resolve(window.DsmPackageApps.ExampleApp); script.onerror = reject; document.head.appendChild(script)})
+     return app.mount(root, ctx)
+    },
+   }).then(ctx => {window.ctx = ctx; window.bootDone = true})
+  </script>`)
  } else {
   response.end(`<div id="app"></div><script type="module">
    import {bootEntryPage} from '/dist/entry.js'
@@ -35,15 +56,17 @@ const origin = `http://localhost:${server.address().port}`
 const browser = await chromium.launch({headless: true, ...(process.env.CHROMIUM_PATH ? {executablePath: process.env.CHROMIUM_PATH} : {}), args: ['--no-sandbox']})
 const reply = (response, body) => response.writeHead(200, {'Content-Type': 'application/json'}).end(JSON.stringify(body))
 try {
- for(const outcome of ['success', 'token-failure', 'identity-failure']) {
-  pendingToken = pendingIdentity = undefined; bundleRequests = 0
+ for(const [layout, outcome] of [['module', 'success'], ['module', 'token-failure'], ['module', 'identity-failure'], ['classic', 'success'], ['classic', 'identity-failure']]) {
+  pendingToken = pendingIdentity = undefined; bundleRequests = classicRequests = chunkRequests = 0
+  const classic = layout === 'classic'
   const tokenArrival = new Promise(resolve => {tokenArrived = resolve})
   const identityArrival = new Promise(resolve => {identityArrived = resolve})
   const context = await browser.newContext(), page = await context.newPage(), errors = []
   page.on('pageerror', error => errors.push(error.message))
-  const bundle = page.waitForResponse(response => response.url() === `${origin}/app.js?v=build-a`, {timeout: 5000})
-  await page.goto(`${origin}/webman/3rdparty/ExampleApp/app/entry.html`)
-  await (await bundle).finished()
+  const downloads = (classic ? ['/classic.js?v=build-a', '/chunk.js'] : ['/app.js?v=build-a']).map(path =>
+   page.waitForResponse(response => response.url() === `${origin}${path}`, {timeout: 5000}))
+  await page.goto(`${origin}/webman/3rdparty/ExampleApp/app/${classic ? 'classic' : 'entry'}.html`)
+  for(const download of downloads) await (await download).finished()
   await tokenArrival
   assert.ok(pendingToken, 'token request is pending while the bundle has already downloaded')
   assert.equal(pendingIdentity, undefined)
@@ -61,9 +84,10 @@ try {
   await page.waitForFunction(() => window.bootDone)
   assert.deepEqual(await execution(), outcome === 'success' ? [true, true, true] : [false, false, false])
   assert.equal(await page.evaluate(() => !!window.navigated), outcome !== 'success')
-  assert.equal(bundleRequests, 1, 'mount reuses the preloaded module request')
+  if(classic) assert.deepEqual([classicRequests, chunkRequests], [1, 1], 'mount reuses the preloaded script and chunk requests')
+  else assert.equal(bundleRequests, 1, 'mount reuses the preloaded module request')
   assert.deepEqual(errors, [])
-  console.log(`entry preload: ${outcome}: bundle fetched before token/identity; execution order preserved`)
+  console.log(`entry preload: ${layout} ${outcome}: bundle fetched before token/identity; execution order preserved`)
   await context.close()
  }
 } finally {await browser.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve))}

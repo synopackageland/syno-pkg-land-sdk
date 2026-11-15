@@ -230,6 +230,38 @@ test.each(['token', 'identity'] as const)('a failed %s never mounts a preloaded 
  expect(opts.navigate).toHaveBeenCalledOnce()
 })
 
+test('preloads a classic App script and first-screen modules before the token, without executing them', async () => {
+ const opts = {...options(), token: undefined, appScript: './app.js?v=build-a', preload: ['./chunks/main-1a2b.js', './chunks/vendor-3c4d.js']}
+ let token!: (response: Response) => void
+ const request = vi.fn<typeof globalThis.fetch>(url => {
+  if(String(url).includes('login.cgi')) return new Promise(resolve => {token = resolve})
+  return Promise.resolve(json(account))
+ })
+ const pending = bootEntryPage({...opts, fetch: request})
+ const script = document.querySelector<HTMLLinkElement>('link[rel=preload]')
+ expect(script?.as).toBe('script')
+ expect(script?.href).toBe('https://localhost/webman/3rdparty/ExampleApp/app/app.js?v=build-a')
+ expect(script?.crossOrigin).toBeNull()
+ expect([...document.querySelectorAll<HTMLLinkElement>('link[rel=modulepreload]')].map(link => [link.href, link.crossOrigin])).toEqual([
+  ['https://localhost/webman/3rdparty/ExampleApp/app/chunks/main-1a2b.js', 'anonymous'],
+  ['https://localhost/webman/3rdparty/ExampleApp/app/chunks/vendor-3c4d.js', 'anonymous'],
+ ])
+ expect(document.querySelector('script[src]')).toBeNull()
+ expect(opts.mount).not.toHaveBeenCalled()
+ token(new Response(JSON.stringify({success: true, SynoToken: 'token'})))
+ const ctx = await pending
+ expect(opts.mount).toHaveBeenCalledOnce()
+ ctx!.host.dispose()
+})
+
+test('one unsafe first-screen URL refuses every preload before identity', async () => {
+ const opts = options(), request = statusFetch()
+ await expect(bootEntryPage({...opts, appScript: './app.js?v=build-a', preload: ['./chunks/main.js', 'https://outside.example/x.js'], fetch: request})).rejects.toThrow('Invalid App bundle URL')
+ expect(document.querySelector('link[rel=preload], link[rel=modulepreload]')).toBeNull()
+ expect(request).not.toHaveBeenCalled()
+ expect(opts.mount).not.toHaveBeenCalled()
+})
+
 test.each(['https://outside.example/app.js', '//outside.example/app.js', 'javascript:alert(1)', 'data:text/javascript,alert(1)', 'https://user:pass@localhost/app.js'])('refuses an unsafe bundle URL before preload or identity: %s', async appBundle => {
  const opts = options(), request = statusFetch()
  await expect(bootEntryPage({...opts, appBundle, fetch: request})).rejects.toThrow('Invalid App bundle URL')
