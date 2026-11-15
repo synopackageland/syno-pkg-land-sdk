@@ -34,6 +34,16 @@ Pass this option from the App entry or generator to enable early loading. It
 is optional for existing callers; the SDK cannot infer a module URL hidden in
 a mount callback. A missing or failed preload keeps the ordinary import path.
 
+DSM serves package files without `Cache-Control` and with a 1970
+`Last-Modified`, so browsers keep them for years and open them without asking
+DSM, even after an upgrade. The CLI's entry page is therefore the same bytes
+in every build, `launch.html`, and its url launcher,
+`app` short path and mobile registration open it. Older CLIs wrote the page
+as `entry.html` with the build in it; a browser that opened it keeps that
+build, so `entry.html` stays only as the same fixed page for older links, and
+`ctx.entryURL` names `launch.html`. Use this SDK with a CLI that writes
+`launch.html`.
+
 The CLI names the build in the entry's `entry.json` (`{"v": 1, "build": …}`);
 older entry pages carry `<meta name="synopkgland-build" content="…">` instead.
 The same hash stamps the entry module, App script, CSS and icons with `?v=`,
@@ -93,7 +103,7 @@ read into `ctx.launchParams` too; the page's own query wins.
 `ctx.entryURL` is the App's address to share or bookmark, without a hash: the
 short path on DSM's origin (`https://<nas>/<path>`) when the CLI passes
 `shortPath` (a `ui.short_paths` entry, DSM 7.2 and later), otherwise the entry
-page `/webman/3rdparty/<package>/app/entry.html`, below the alias prefix when
+page `/webman/3rdparty/<package>/app/launch.html`, below the alias prefix when
 the page is. Add the App's route as `?link=/…`: DSM's sign-in keeps the query
 but replaces the hash. An explicit same-origin `entryURL` option wins. The
 short path exists on DSM's own server (5000/5001 and DSM's custom domain), not
