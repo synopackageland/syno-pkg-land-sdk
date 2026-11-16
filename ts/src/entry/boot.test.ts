@@ -475,3 +475,72 @@ test('an ingress other than the package path is refused before any request', asy
   expect(() => createAppContext({packageId: 'ExampleApp', build: 'b', token: 't', pageURL: entryURL, daemonIngress, fetch: request})).toThrow('Invalid daemon ingress')
  }
 })
+
+// An entry cache written before the hint existed, or before the user changed
+// DSM's display language, must not keep the App in the old language.
+const enuAccount = {user: 'alice', admin: false, lang: 'enu', locale: 'en'}
+const settle = () => new Promise(resolve => setTimeout(resolve, 0))
+
+test('a cached sign-in still sends the DSM language hint and reloads once into the new language', async () => {
+ const reload = vi.fn()
+ const first = await bootEntryPage({...options(), fetch: vi.fn(async () => json(enuAccount)), reload})
+ expect(first?.locale).toBe('en')
+ first!.host.dispose()
+ vi.mocked(readDsmLanguage).mockResolvedValue('cht')
+ const request = statusFetch(), mount = vi.fn()
+ const ctx = await bootEntryPage({...options(), fetch: request, mount, reload})
+ // The cached account mounts first; the hint goes out in the background.
+ expect(ctx?.locale).toBe('en')
+ expect(mount).toHaveBeenCalledOnce()
+ await settle()
+ expect(request).toHaveBeenCalledOnce()
+ expect(JSON.parse(String(request.mock.calls[0]![1]?.body))).toEqual({method: 'app.status', params: {dsmLanguage: 'cht'}})
+ expect(reload).toHaveBeenCalledOnce()
+ ctx!.host.dispose()
+ // After the reload the cache answers the new language: no second reload.
+ const after = await bootEntryPage({...options(), fetch: statusFetch(), reload})
+ expect(after?.locale).toBe('zh-TW')
+ await settle()
+ expect(reload).toHaveBeenCalledOnce()
+ after!.host.dispose()
+ vi.mocked(readDsmLanguage).mockResolvedValue(undefined)
+})
+
+test('a cached sign-in keeps its language when DSM cannot be read, when nothing changed, or after user input', async () => {
+ const reload = vi.fn()
+ ;(await bootEntryPage({...options(), fetch: vi.fn(async () => json(enuAccount)), reload}))!.host.dispose()
+ // An unreadable DSM language sends nothing and keeps the cached screen.
+ const quiet = statusFetch()
+ const unread = await bootEntryPage({...options(), fetch: quiet, reload})
+ await settle()
+ expect(quiet).not.toHaveBeenCalled()
+ expect(unread?.locale).toBe('en')
+ unread!.host.dispose()
+ // A failing status never fails or reloads the mounted App.
+ vi.mocked(readDsmLanguage).mockResolvedValue('cht')
+ const refused = await bootEntryPage({...options(), fetch: vi.fn(async () => new Response(JSON.stringify({success: false, error: {code: 'session_required'}}))), reload})
+ await settle()
+ expect(refused?.locale).toBe('en')
+ refused!.host.dispose()
+ // Unchanged language: the hint is sent, nothing reloads.
+ vi.mocked(readDsmLanguage).mockResolvedValue('enu')
+ const same = await bootEntryPage({...options(), fetch: vi.fn(async () => json(enuAccount)), reload})
+ await settle()
+ same!.host.dispose()
+ // The user already typed: the cache learns the language for the next open,
+ // the open page is not reloaded under them.
+ vi.mocked(readDsmLanguage).mockResolvedValue('cht')
+ let answer!: (response: Response) => void
+ const pending = vi.fn(() => new Promise<Response>(resolve => {answer = resolve}))
+ const busy = await bootEntryPage({...options(), fetch: pending, reload})
+ await settle()
+ window.dispatchEvent(new KeyboardEvent('keydown', {key: 'a'}))
+ answer(json(account))
+ await settle()
+ busy!.host.dispose()
+ expect(reload).not.toHaveBeenCalled()
+ const next = await bootEntryPage({...options(), fetch: statusFetch(), reload})
+ expect(next?.locale).toBe('zh-TW')
+ next!.host.dispose()
+ vi.mocked(readDsmLanguage).mockResolvedValue(undefined)
+})

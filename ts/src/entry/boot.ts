@@ -21,6 +21,9 @@ export interface EntryPageOptions extends AppContextOptions {
  mount(root: HTMLElement, ctx: Context): unknown | Promise<unknown>
  /** Override navigation for an embedding host. */
  navigate?: (url: string) => void
+ /** Override the one reload that applies a DSM display language that differs
+  * from a cached sign-in's, for an embedding host. */
+ reload?: () => void
  /** Show the portal alias in the address bar after mount (the address a
   * reload then opens). Off by default: a reload of the alias boots DSM's
   * whole desktop before the App, the entry page does not. */
@@ -63,6 +66,21 @@ function takeLaunch(packageId: string): {link?: string; intake?: string} | undef
   return link || intake ? {link, intake} : undefined
  } catch {return undefined}
 }
+/** A tab reloads at most once into the same changed language. */
+const relocaleKey = (packageId: string) => `synopkgland.${packageId}.relocale`
+function reloadOnce(packageId: string, locale: string): boolean {
+ try {
+  const storage = globalThis.sessionStorage
+  if(!storage || storage.getItem(relocaleKey(packageId)) === locale) return false
+  storage.setItem(relocaleKey(packageId), locale)
+  return true
+ } catch {return false}
+}
+function relocaled(packageId: string) {
+ try {globalThis.sessionStorage?.removeItem(relocaleKey(packageId))} catch {/* optional storage */}
+}
+/** Input that makes a reload lose the user's work. */
+const USER_INPUT = ['pointerdown', 'keydown'] as const
 type Account = Pick<AppStatus, 'user' | 'admin' | 'lang' | 'locale'>
 const isAccount = (value: unknown): value is Account => {
  const v = value as Partial<Account> | null
@@ -156,15 +174,22 @@ export async function bootEntryPage(options: EntryPageOptions): Promise<Context 
  catch {return fallback()}
  if(!token) return fallback()
  const cache = createSignInCache(options.packageId)
+ const statusClient = () => createClient({endpoint: ingress ?? urls.cgi, requestTimeout: options.requestTimeout,
+  fetch: ingress ? statusFetch(request, ingress, urls.cgi) : request, token: () => token})
+ const dsmLanguage = () => readDsmLanguage(request, urls.webApi, token!, options.requestTimeout)
+ const localeOf = (value: Account) => value.locale || uiLocale(value.lang || globalThis.navigator?.language || 'en')
  let account = cache.get('entry', token, isAccount)
+ // A cached sign-in mounts without waiting; DSM's display language is still
+ // read meanwhile and sent as the status hint, so a language changed in DSM,
+ // or a cache written before the hint existed, does not stay in effect. An
+ // unreadable language sends nothing and keeps the cached one.
+ const recheck = account ? dsmLanguage().then(language => language === undefined ? undefined : readAccount(statusClient(), language)).catch(() => undefined) : undefined
  if(!account) {
-  const client = createClient({endpoint: ingress ?? urls.cgi, requestTimeout: options.requestTimeout,
-   fetch: ingress ? statusFetch(request, ingress, urls.cgi) : request, token: () => token})
-  account = await readAccount(client, await readDsmLanguage(request, urls.webApi, token, options.requestTimeout))
+  account = await readAccount(statusClient(), await dsmLanguage())
   if(!account) return fallback()
   cache.set('entry', token, account)
  }
- const locale = account.locale || uiLocale(account.lang || globalThis.navigator?.language || 'en')
+ const locale = localeOf(account)
  // A launch kept across a sign-in comes back when this page carries none.
  const own = entryLaunchParams(at.search)
  const kept = takeLaunch(options.packageId)
@@ -198,7 +223,21 @@ export async function bootEntryPage(options: EntryPageOptions): Promise<Context 
  }
  if(options.displayName) document.title = options.displayName
  options.root.lang = locale
- try {await options.mount(options.root, ctx)} catch(error) {ctx.host.dispose(); throw error}
+ let touched = false
+ const touch = () => {touched = true}
+ const untouch = () => {for(const type of USER_INPUT) globalThis.removeEventListener?.(type, touch, true)}
+ if(recheck) for(const type of USER_INPUT) globalThis.addEventListener?.(type, touch, true)
+ try {await options.mount(options.root, ctx)} catch(error) {untouch(); ctx.host.dispose(); throw error}
+ // A different language from DSM replaces the cached one, and the page
+ // reloads once into it unless the user has started working; then the next
+ // open shows it. The EntryGuard, not this display read, decides access.
+ if(recheck) void recheck.then(fresh => {
+  untouch()
+  if(!fresh || fresh.user !== ctx.user?.name) return
+  cache.set('entry', token!, fresh)
+  if(localeOf(fresh) === locale) {relocaled(options.packageId); return}
+  if(active && !touched && reloadOnce(options.packageId, localeOf(fresh))) (options.reload ?? (() => location.reload()))()
+ })
  const bridge = nativeBridge()
  if(bridge && typeof globalThis.performance?.getEntriesByName === 'function') {
   let observer: PerformanceObserver | undefined

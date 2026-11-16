@@ -217,6 +217,16 @@ language (Personal > Display language), mapped to the SDK locales (`cht` →
 
 The values are display information; they never authorize a request.
 
+A sign-in already in the entry cache mounts at once in its cached language and
+reads the DSM language meanwhile; when DSM answered, it sends that hint to
+`app.status` in the background. A different language replaces the cached one
+and reloads the page once into it (at most once per language in a tab;
+`reload` overrides the reload). After the user has pressed a key or pointer,
+the open page stays and the next open shows the new language. An unreadable
+DSM language or a failed status keeps the cached language and fails nothing.
+So a cache written before the hint existed, or before the user changed DSM's
+display language, follows DSM on the next open.
+
 A non-nil `api.AppLanguage` replaces steps 1–2 with the App's own preference
 (a DSM code or a BCP 47 tag). It receives the request; an empty result or an
 error uses the browser's language. `app.status` never fails because a
