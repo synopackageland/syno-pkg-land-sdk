@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 )
@@ -144,5 +145,29 @@ func TestAppLanguageCacheIsBounded(t *testing.T) {
 	}
 	if cache.users[strings.Repeat("u", 6)] != "jpn" || cache.users["new"] != "enu" {
 		t.Fatal("cache dropped a recent user")
+	}
+}
+
+// The language cases Go and the Rust SDK share: the same hint, cache and
+// Accept-Language decisions in both (spec/language/app-status-cases.json).
+func TestAppStatusSharedLanguageCases(t *testing.T) {
+	withLanguages(t)
+	raw, err := os.ReadFile("../spec/language/app-status-cases.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var spec struct {
+		Cases []struct{ User, Params, AcceptLanguage, Lang, Locale string }
+	}
+	if err := json.Unmarshal(raw, &spec); err != nil || len(spec.Cases) == 0 {
+		t.Fatalf("cases: %v", err)
+	}
+	handler := AppStatusHandler("ExampleApp", "1", nil)
+	for i, tc := range spec.Cases {
+		caller := Caller{identity: Identity{User: tc.User}, authenticated: true}
+		status := callStatus(t, handler, caller, statusRequest(tc.AcceptLanguage), tc.Params)
+		if status.Lang != tc.Lang || status.Locale != tc.Locale {
+			t.Fatalf("case %d %s %s: got %q %q, want %q %q", i, tc.User, tc.Params, status.Lang, status.Locale, tc.Lang, tc.Locale)
+		}
 	}
 }

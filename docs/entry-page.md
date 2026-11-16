@@ -194,12 +194,30 @@ status fields can return `api.AppStatus` embedded in its own response,
 preserving its existing fields; call the helper with the route's request and
 params so the language hint below reaches it.
 
+### Rust status handlers
+
+A Rust App (`syno-pkg-land-app`) makes the same decision with
+`app_status(ctx, params, package, version)`, which returns the same fields as
+`api.AppStatus`:
+
+```rust
+app.method("app.status", |ctx, p| syno_pkg_land_app::app_status(ctx, p, ID, VERSION));
+```
+
+An App with status fields of its own adds `app_language(ctx, params)`'s
+`(lang, locale)` to them. Both take the request's `params`, so the hint below
+reaches them; there is no custom-language callback. A Rust App answers one call
+per process, so step 2 below starts empty on every request, as a CGI does.
+
 ### Display language
 
 With a nil `language`, `app.status` answers in the caller's DSM display
 language (Personal > Display language), mapped to the SDK locales (`cht` →
 `zh-TW`, `chs` → `zh-CN`, `enu` → `en`, `jpn` → `ja`, `krn` → `ko`, `ger` →
-`de`, `fre` → `fr`, `spn` → `es`, `ita` → `it`):
+`de`, `fre` → `fr`, `spn` → `es`, `ita` → `it`). That table lives in
+`spec/language/dsm-languages.json`; `scripts/dsm-languages.mjs` generates the
+Go, Rust and TypeScript copies and its `--check` fails a stale one. Go and Rust
+run the same decisions from `spec/language/app-status-cases.json`:
 
 1. The entry page reads `SYNO.Core.UserSettings` and `SYNO.Core.Region.Language`
    from DSM on its own origin, with its own session, in one compound request,

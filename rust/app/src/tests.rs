@@ -349,3 +349,54 @@ fn client_results_and_public_errors_preserve_credential_like_content() {
         json!({"code":"token_count","message":"password sid tokenCount sidebar"})
     );
 }
+
+/// The language cases the Go SDK runs too (spec/language/app-status-cases.json).
+#[test]
+fn app_status_language_matches_the_shared_cases() {
+    let spec: Value =
+        serde_json::from_str(include_str!("../../../spec/language/app-status-cases.json")).unwrap();
+    let cases = spec["cases"].as_array().unwrap();
+    assert!(!cases.is_empty());
+    let mut cache = crate::language::LanguageCache::default();
+    for (i, case) in cases.iter().enumerate() {
+        let got = cache.decide(
+            case["user"].as_str().unwrap(),
+            case["params"].as_str().unwrap(),
+            case["acceptLanguage"].as_str().unwrap(),
+        );
+        let want = (
+            case["lang"].as_str().unwrap().to_string(),
+            case["locale"].as_str().unwrap().to_string(),
+        );
+        assert_eq!(got, want, "case {i}: {case}");
+    }
+}
+
+#[test]
+fn app_language_cache_is_bounded() {
+    let mut cache = crate::language::LanguageCache::default();
+    for i in 0..261 {
+        cache.store(&"u".repeat(i + 1), "cht");
+    }
+    // Storing again moves a user to the newest end.
+    cache.store(&"u".repeat(6), "jpn");
+    cache.store("new", "enu");
+    assert_eq!(cache.len(), 256);
+    assert_eq!(cache.get(&"u".repeat(7)), None);
+    assert_eq!(cache.get(&"u".repeat(6)), Some("jpn"));
+    assert_eq!(cache.get("new"), Some("enu"));
+}
+
+#[test]
+fn app_status_answers_in_the_hinted_dsm_language() {
+    let mut app = App::new();
+    app.method("app.status", |ctx, p| app_status(ctx, p, "ExampleApp", "1"));
+    let mut rt = Runtime::start(app);
+    rt.call("app.status", r#"{"dsmLanguage":"cht"}"#);
+    assert_eq!(
+        rt.recv(),
+        json!({"t": "result", "id": "1", "ok": true, "data": {
+            "package": "ExampleApp", "version": "1", "user": "alice", "admin": false,
+            "lang": "cht", "locale": "zh-TW"}})
+    );
+}

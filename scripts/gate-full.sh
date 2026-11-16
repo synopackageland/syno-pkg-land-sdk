@@ -3,10 +3,11 @@
 # --fast selects integrations by changed paths for explicit targeted work.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
-node --test "$root/scripts/check-internal-content.test.mjs" "$root/scripts/sdk-version.test.mjs" "$root/scripts/executor-manifest.test.mjs"
+node --test "$root/scripts/check-internal-content.test.mjs" "$root/scripts/sdk-version.test.mjs" "$root/scripts/dsm-languages.test.mjs" "$root/scripts/executor-manifest.test.mjs"
 node --test "$root/scripts/check-timeout-policy.test.mjs"
 node "$root/scripts/check-timeout-policy.mjs"
 node "$root/scripts/sdk-version.mjs" --check
+node "$root/scripts/dsm-languages.mjs" --check
 node "$root/scripts/protocol-limits.mjs" --check
 node "$root/scripts/executor-manifest.mjs" --check
 node "$root/scripts/check-internal-content.mjs" --repo "$root"

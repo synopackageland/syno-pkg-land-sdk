@@ -57,8 +57,7 @@ func AppStatusHandler(packageID, version string, language AppLanguage) RequestHa
 
 var appLanguageTag = regexp.MustCompile(`^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8}){0,3}$`)
 
-// dsmLocales maps DSM display-language codes to the SDK's UI locales.
-var dsmLocales = map[string]string{"enu": "en", "cht": "zh-TW", "chs": "zh-CN", "jpn": "ja", "krn": "ko", "ger": "de", "fre": "fr", "spn": "es", "ita": "it"}
+// dsmLocales (dsm_languages.gen.go) maps DSM display-language codes to UI locales.
 
 func appLanguage(lang string) (string, string) {
 	if locale, ok := dsmLocales[lang]; ok {
