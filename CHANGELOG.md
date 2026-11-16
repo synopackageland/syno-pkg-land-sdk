@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.53.48 (2026-11-16)
+
+- `bootEntryPage` sends the DSM display-language hint for a sign-in already in the entry cache too. Before, a cached sign-in skipped the DSM read and `app.status`, so a user whose cache predated 0.53.47, or who changed DSM's display language, kept the old language. The cached screen still mounts at once; the DSM read and the hinted `app.status` run in the background. A different language updates the cache and reloads the page once into it (once per language in a tab, and not after the user pressed a key or pointer: then the next open shows it); the new `reload` option overrides that reload. An unreadable language or a failed status keeps the cached language (#230). See [Display language](docs/entry-page.md#display-language).
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.47 (2026-11-16)
 
 - `app.status` answers in the caller's DSM display language. `bootEntryPage` reads the user's language on DSM's own origin with the page's own session (`SYNO.Core.UserSettings`, else `SYNO.Core.Region.Language` when the user follows the system) and sends it as the `dsmLanguage` parameter. `api.AppStatusHandler` with a nil language uses that hint, else the user's last hint in this process (up to 256 users), else the browser's Accept-Language; `def`, an unknown code or no hint use the browser. The backend never reads DSM with the browser's session. **`api.AppLanguage` now also receives the `*http.Request`** (`func(ctx, caller, r)`); update a custom callback's signature. A custom callback's error uses the browser's language instead of failing. An App whose `operations.json` describes `app.status` params should declare the optional `dsmLanguage` string (#228). See [Display language](docs/entry-page.md#display-language).
