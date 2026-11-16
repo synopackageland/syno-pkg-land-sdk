@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "description": "app.status language decisions with the SDK default (no custom language), in order, against one fresh per-process cache. params is the raw app.status params text; acceptLanguage the request's Accept-Language header. Go (api) and Rust (syno-pkg-land-app) run these same cases.",
+  "cases": [
+    {"user": "alice", "params": "{}", "acceptLanguage": "en-US", "lang": "", "locale": "en-US"},
+    {"user": "alice", "params": "{\"dsmLanguage\":\"cht\"}", "acceptLanguage": "en-US", "lang": "cht", "locale": "zh-TW"},
+    {"user": "alice", "params": "{}", "acceptLanguage": "en-US", "lang": "cht", "locale": "zh-TW"},
+    {"user": "alice", "params": "{\"dsmLanguage\":\"def\"}", "acceptLanguage": "en-US", "lang": "", "locale": "en-US"},
+    {"user": "alice", "params": "{\"dsmLanguage\":\"jpn\"}", "acceptLanguage": "en-US", "lang": "jpn", "locale": "ja"},
+    {"user": "alice", "params": "{\"dsmLanguage\":\"\"}", "acceptLanguage": "en-US", "lang": "", "locale": "en-US"},
+    {"user": "alice", "params": "{\"dsmLanguage\":\"rus\"}", "acceptLanguage": "en-US", "lang": "", "locale": "en-US"},
+    {"user": "alice", "params": "{\"dsmLanguage\":\"ger\"}", "acceptLanguage": "en-US", "lang": "ger", "locale": "de"},
+    {"user": "alice", "params": "{\"dsmLanguage\":\"<script>\"}", "acceptLanguage": "en-US", "lang": "ger", "locale": "de"},
+    {"user": "alice", "params": "not json", "acceptLanguage": "en-US", "lang": "ger", "locale": "de"},
+    {"user": "alice", "params": "{\"dsmLanguage\":null}", "acceptLanguage": "en-US", "lang": "ger", "locale": "de"},
+    {"user": "bob", "params": "{\"dsmLanguage\":\"fre\"}", "acceptLanguage": "en-US", "lang": "fre", "locale": "fr"},
+    {"user": "alice", "params": "{}", "acceptLanguage": "en-US", "lang": "ger", "locale": "de"},
+    {"user": "carol", "params": "{}", "acceptLanguage": "ja-JP, en;q=0.8", "lang": "", "locale": "ja-JP"},
+    {"user": "carol", "params": "{}", "acceptLanguage": "ko-KR;q=0.9", "lang": "", "locale": "ko-KR"},
+    {"user": "carol", "params": "{}", "acceptLanguage": "bad<script>", "lang": "", "locale": ""},
+    {"user": "carol", "params": "{}", "acceptLanguage": "", "lang": "", "locale": ""},
+    {"user": "carol", "params": "{\"dsmLanguage\":\"krn\"}", "acceptLanguage": "", "lang": "krn", "locale": "ko"}
+  ]
+}

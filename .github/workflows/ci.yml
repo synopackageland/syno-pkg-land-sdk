@@ -41,6 +41,7 @@ jobs:
         run: |
           node --test scripts/check-internal-content.test.mjs scripts/sdk-version.test.mjs scripts/executor-manifest.test.mjs scripts/release-gate-plan.test.mjs
           node scripts/sdk-version.mjs --check
+          node scripts/dsm-languages.mjs --check
           node scripts/executor-manifest.mjs --check
       - name: Fast SDK gate
         run: bash ops/private-ci/sdk-fast.sh

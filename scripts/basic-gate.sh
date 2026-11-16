@@ -3,9 +3,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 npm run check:docs
-node --test scripts/check-internal-content.test.mjs scripts/sdk-version.test.mjs scripts/executor-manifest.test.mjs scripts/release-gate-plan.test.mjs scripts/check-timeout-policy.test.mjs
+node --test scripts/check-internal-content.test.mjs scripts/sdk-version.test.mjs scripts/dsm-languages.test.mjs scripts/executor-manifest.test.mjs scripts/release-gate-plan.test.mjs scripts/check-timeout-policy.test.mjs
 node scripts/check-timeout-policy.mjs
 node scripts/sdk-version.mjs --check
+node scripts/dsm-languages.mjs --check
 node scripts/protocol-limits.mjs --check
 node scripts/admission-limits.mjs --check
 node scripts/executor-manifest.mjs --check

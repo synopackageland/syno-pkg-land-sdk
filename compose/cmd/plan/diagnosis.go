@@ -78,8 +78,7 @@ func renderNativeDiagnosis(d compose.ImageDiagnosis, catalog map[string]string, 
 }
 
 func diagnosisLanguage(language string) string {
-	aliases := map[string]string{"enu": "en", "cht": "zh-TW", "chs": "zh-CN", "jpn": "ja", "krn": "ko", "ger": "de", "fre": "fr", "spn": "es", "ita": "it"}
-	if alias := aliases[language]; alias != "" {
+	if alias := dsmLocales[language]; alias != "" {
 		language = alias
 	}
 	return language

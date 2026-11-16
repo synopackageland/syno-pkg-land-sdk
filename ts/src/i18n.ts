@@ -1,7 +1,9 @@
 // Every catalog lives in ../i18n/<capability>/<locale>.json; en types the others.
+import {dsmLocales} from './dsmLanguages.gen'
 export type UiLocale='en'|'zh-TW'|'zh-CN'|'ja'|'ko'|'de'|'fr'|'es'|'it'
 export const uiLocales:readonly UiLocale[]=['en','zh-TW','zh-CN','ja','ko','de','fr','es','it']
-const aliases:Record<string,UiLocale>={enu:'en',cht:'zh-TW',chs:'zh-CN',jpn:'ja',krn:'ko',ger:'de',fre:'fr',spn:'es',ita:'it'}
+// DSM display-language codes, generated from spec/language/dsm-languages.json.
+const aliases:Record<string,UiLocale>=dsmLocales
 
 /** The built-in UI locale (shared by these catalogs and the UI's own text) for a DSM or BCP-47 language tag. */
 export function uiLocale(locale:string):UiLocale{

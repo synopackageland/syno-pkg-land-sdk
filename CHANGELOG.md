@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.53.49 (2026-11-16)
+
+- Rust Apps answer `app.status` in the caller's DSM display language. `syno-pkg-land-app` adds `app_status(ctx, params, package, version)`, which returns the fields of Go's `api.AppStatus`, and `app_language(ctx, params)`, which returns `(lang, locale)` for an `app.status` with fields of its own. Both decide as `api.AppStatusHandler` with a nil language: the entry page's `dsmLanguage` hint, else the user's last hint in this process, else the first `Accept-Language` tag (`ctx.locale`). `def`, an empty or unknown code and no hint follow the browser. Before, a Rust App had only the browser's language. See [Rust status handlers](docs/entry-page.md#rust-status-handlers).
+- One DSM display-language table, `spec/language/dsm-languages.json`. `scripts/dsm-languages.mjs` generates the Go, Rust and TypeScript tables; its `--check` in the gates fails a stale or hand-edited copy. `spec/language/app-status-cases.json` holds the language decisions that Go and Rust both test.
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.48 (2026-11-16)
 
 - `bootEntryPage` sends the DSM display-language hint for a sign-in already in the entry cache too. Before, a cached sign-in skipped the DSM read and `app.status`, so a user whose cache predated 0.53.47, or who changed DSM's display language, kept the old language. The cached screen still mounts at once; the DSM read and the hinted `app.status` run in the background. A different language updates the cache and reloads the page once into it (once per language in a tab, and not after the user pressed a key or pointer: then the next open shows it); the new `reload` option overrides that reload. An unreadable language or a failed status keeps the cached language (#230). See [Display language](docs/entry-page.md#display-language).

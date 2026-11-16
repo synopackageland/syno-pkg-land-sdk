@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "description": "DSM display-language codes (SYNO.Core.UserSettings Personal.lang) and the SDK UI locale each one maps to. The Go, Rust and TypeScript tables are generated from this file by scripts/dsm-languages.mjs; a code missing here follows the browser's language.",
+  "languages": [
+    {"dsm": "enu", "locale": "en"},
+    {"dsm": "cht", "locale": "zh-TW"},
+    {"dsm": "chs", "locale": "zh-CN"},
+    {"dsm": "jpn", "locale": "ja"},
+    {"dsm": "krn", "locale": "ko"},
+    {"dsm": "ger", "locale": "de"},
+    {"dsm": "fre", "locale": "fr"},
+    {"dsm": "spn", "locale": "es"},
+    {"dsm": "ita", "locale": "it"}
+  ]
+}
