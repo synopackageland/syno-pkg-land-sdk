@@ -205,20 +205,17 @@ language (Personal > Display language), mapped to the SDK locales (`cht` →
    from DSM on its own origin, with its own session, in one compound request,
    and sends the result as `app.status` `{"dsmLanguage": "cht"}`. A personal
    `def` uses the system language; only administrators can read it (others
-   get DSM error 105), so their `def` sends `""`. The backend never replays
-   the browser's session for this.
-2. Without a hint, the backend answers the value it last knew for that user.
-   A long-running backend (a daemon) reads a missing value, or one older than
-   10 minutes, from DSM in the background with the same compound request on
-   `127.0.0.1:5000`, one read per user at a time; the reply never waits for
-   it. A CGI process ends with its reply, so it does not start that read.
-3. `def` with no readable system language, a language without an SDK locale,
-   and every failure use the browser's first `Accept-Language` tag.
+   get DSM error 105), so their `def` sends `""`.
+2. Without a hint, the backend answers the hint it last stored for that user
+   in this process (at most 256 users). A CGI process starts empty on every
+   request. The backend never reads DSM with the browser's session: DSM can
+   revoke a session that another address replays (see
+   [DSM session transport](dsm-session-transport.md)).
+3. `def` with no readable system language, no hint, a language without an
+   SDK locale, and every failure use the browser's first `Accept-Language`
+   tag.
 
-DSM revokes a browser session that another address replays (error 119 after
-150), while it accepts the same session from loopback. The background read
-therefore only goes to loopback, and only when no hint is available. The
-values are display information; they never authorize a request.
+The values are display information; they never authorize a request.
 
 A non-nil `api.AppLanguage` replaces steps 1–2 with the App's own preference
 (a DSM code or a BCP 47 tag). It receives the request; an empty result or an

@@ -814,11 +814,5 @@
     "statement": "case <-time.After(5 * time.Millisecond):",
     "class": "B",
     "reason": "Journal lock retry spacing only; acquisition keeps the caller context and cancels immediately when it ends"
-  },
-  {
-    "file": "api/app_language.go",
-    "statement": "appLanguageRefresh = 10 * time.Minute",
-    "class": "B",
-    "reason": "Display-language cache freshness: an older value is still answered while a background read runs; it never fails or delays app.status"
   }
 ]

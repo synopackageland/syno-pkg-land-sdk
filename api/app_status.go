@@ -28,11 +28,10 @@ type AppLanguage func(context.Context, Caller, *http.Request) (string, error)
 // Keep app.status authenticated in the App's permissions.json.
 //
 // With a nil language the caller's DSM display language comes first: the
-// entry page's dsmLanguage hint, else the last value known for this user.
-// A long-running backend reads a missing or old value from DSM in the
-// background; the reply never waits for it. "def" (follow the system, then
-// the browser) and every failure use the browser's Accept-Language.
-// See docs/entry-page.md.
+// entry page's dsmLanguage hint, else the last hint known for this user in
+// this process. "def" (DSM follows the browser), no hint and a language
+// without an SDK locale use the browser's Accept-Language. The backend never
+// reads DSM with the browser's session. See docs/entry-page.md.
 func AppStatusHandler(packageID, version string, language AppLanguage) RequestHandler {
 	return func(ctx context.Context, caller Caller, r *http.Request, raw json.RawMessage) (any, error) {
 		if !caller.Authenticated() {
@@ -44,7 +43,7 @@ func AppStatusHandler(packageID, version string, language AppLanguage) RequestHa
 				lang = value
 			}
 		} else {
-			lang = defaultLanguages.preference(caller.User(), r, raw)
+			lang = defaultLanguages.preference(caller.User(), raw)
 		}
 		if lang == "" && r != nil {
 			lang, _, _ = strings.Cut(r.Header.Get("Accept-Language"), ",")

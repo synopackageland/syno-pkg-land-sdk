@@ -9,12 +9,6 @@ Do not rely on particular DSM versions exempting localhost or HTTPS, change
 the NAS security setting, forge forwarding headers, or substitute an admin
 or package account.
 
-One read is the exception: when the entry page sent no display-language hint,
-a long-running backend reads the caller's DSM display language in the
-background, from loopback only, and never waits for it (see
-[Display language](entry-page.md#display-language)). DSM accepts a loopback
-replay but revokes a session replayed from another address.
-
 ## Browser file operations
 
 `createNasProvider(ctx)` and `FilesPage` keep their existing UI contracts.
