@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.53.47 (2026-11-16)
+
+- `app.status` answers in the caller's DSM display language. `bootEntryPage` reads the user's language on DSM's own origin with the page's own session (`SYNO.Core.UserSettings`, else `SYNO.Core.Region.Language` when the user follows the system) and sends it as the `dsmLanguage` parameter. `api.AppStatusHandler` with a nil language uses that hint, else the user's last hint in this process (up to 256 users), else the browser's Accept-Language; `def`, an unknown code or no hint use the browser. The backend never reads DSM with the browser's session. **`api.AppLanguage` now also receives the `*http.Request`** (`func(ctx, caller, r)`); update a custom callback's signature. A custom callback's error uses the browser's language instead of failing. An App whose `operations.json` describes `app.status` params should declare the optional `dsmLanguage` string (#228). See [Display language](docs/entry-page.md#display-language).
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.46 (2026-11-15)
 
 - `ctx.entryURL` names `launch.html`, the fixed entry page that the CLI's url launcher, `app` short path and mobile registration open (with a short path or an explicit `entryURL` it is unchanged). Browsers keep DSM's package files for years without asking, and older CLIs wrote the build into `entry.html`; `entry.html` stays as the same fixed page for older links, and `ctx.uiUpdate` still reads `entry.json`, then `entry.html`'s meta (#225). Use it with a CLI that writes `launch.html`.
