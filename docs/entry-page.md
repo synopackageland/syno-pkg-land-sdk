@@ -68,7 +68,9 @@ takes the first completed answer. Neither request is aborted; if both stay
 pending, boot keeps waiting.
 
 Identity/language display hints are cached for the package and sign-in. A miss
-calls `app.status` and mounts directly once it answers. A failure that is not
+reads the user's DSM display language on the page's own origin (see
+[Display language](#display-language)), then calls `app.status` and mounts
+directly once it answers. A failure that is not
 a refusal (`busy`, `request_timeout`, an unreadable reply or a network error)
 is retried after each wait in `ENTRY_STATUS_RETRY_DELAYS_MS` (250, 500, 1000
 and 2000 ms, so at most five attempts). The number of attempts bounds the
@@ -187,12 +189,38 @@ api.HandleRequest("app.status", api.AppStatusHandler(packageID, version, nil))
 ```
 
 Keep `app.status` authenticated in `permissions.json`. The helper reports the
-verified caller, package/version and `lang`/`locale`. Its optional
-`api.AppLanguage` callback reads the App's trusted DSM language preference;
-a nil callback or an empty preference uses the first `Accept-Language`
-tag. Browser language is a fallback, not a claim about DSM's saved setting.
-An App with additional status fields can return `api.AppStatus` embedded in
-its own response, preserving its existing fields.
+verified caller, package/version and `lang`/`locale`. An App with additional
+status fields can return `api.AppStatus` embedded in its own response,
+preserving its existing fields; call the helper with the route's request and
+params so the language hint below reaches it.
+
+### Display language
+
+With a nil `language`, `app.status` answers in the caller's DSM display
+language (Personal > Display language), mapped to the SDK locales (`cht` →
+`zh-TW`, `chs` → `zh-CN`, `enu` → `en`, `jpn` → `ja`, `krn` → `ko`, `ger` →
+`de`, `fre` → `fr`, `spn` → `es`, `ita` → `it`):
+
+1. The entry page reads `SYNO.Core.UserSettings` and `SYNO.Core.Region.Language`
+   from DSM on its own origin, with its own session, in one compound request,
+   and sends the result as `app.status` `{"dsmLanguage": "cht"}`. A personal
+   `def` uses the system language; only administrators can read it (others
+   get DSM error 105), so their `def` sends `""`.
+2. Without a hint, the backend answers the hint it last stored for that user
+   in this process (at most 256 users). A CGI process starts empty on every
+   request. The backend never reads DSM with the browser's session: DSM can
+   revoke a session that another address replays (see
+   [DSM session transport](dsm-session-transport.md)).
+3. `def` with no readable system language, no hint, a language without an
+   SDK locale, and every failure use the browser's first `Accept-Language`
+   tag.
+
+The values are display information; they never authorize a request.
+
+A non-nil `api.AppLanguage` replaces steps 1–2 with the App's own preference
+(a DSM code or a BCP 47 tag). It receives the request; an empty result or an
+error uses the browser's language. `app.status` never fails because a
+language could not be read.
 
 ## Sign-in caches
 

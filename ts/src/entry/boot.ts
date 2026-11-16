@@ -6,6 +6,7 @@ import {uiLocale} from '../i18n'
 import {createSignInCache} from './cache'
 import {createAppContext, entryLaunchParams, entryURLs, statusEndpoint, statusFetch, type AppContextOptions} from './context'
 import {fetchEntryToken} from './token'
+import {readDsmLanguage} from './language'
 
 export interface EntryPageOptions extends AppContextOptions {
  root: HTMLElement
@@ -71,12 +72,14 @@ const isAccount = (value: unknown): value is Account => {
 
 /** One verified identity, or undefined when the CGI refused the caller,
  * answered without an identity, or failed every attempt. A failure that is
- * not a refusal is retried after each ENTRY_STATUS_RETRY_DELAYS_MS wait. */
-async function readAccount(client: ReturnType<typeof createClient>): Promise<Account | undefined> {
+ * not a refusal is retried after each ENTRY_STATUS_RETRY_DELAYS_MS wait.
+ * dsmLanguage, when DSM answered it, lets app.status answer in the DSM
+ * display language without the backend replaying this browser's session. */
+async function readAccount(client: ReturnType<typeof createClient>, dsmLanguage: string | undefined): Promise<Account | undefined> {
  for(let attempt = 0; ; attempt++) {
   let failure: unknown
   try {
-   const status = await client.call<AppStatus>('app.status')
+   const status = await client.call<AppStatus>('app.status', dsmLanguage === undefined ? {} : {dsmLanguage})
    return isAccount(status) ? {user: status.user, admin: status.admin, lang: status.lang, locale: status.locale} : undefined
   } catch(error) {failure = error}
   const code = (failure as {code?: unknown} | null)?.code
@@ -157,7 +160,7 @@ export async function bootEntryPage(options: EntryPageOptions): Promise<Context 
  if(!account) {
   const client = createClient({endpoint: ingress ?? urls.cgi, requestTimeout: options.requestTimeout,
    fetch: ingress ? statusFetch(request, ingress, urls.cgi) : request, token: () => token})
-  account = await readAccount(client)
+  account = await readAccount(client, await readDsmLanguage(request, urls.webApi, token, options.requestTimeout))
   if(!account) return fallback()
   cache.set('entry', token, account)
  }
