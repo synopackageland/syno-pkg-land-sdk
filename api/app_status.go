@@ -19,25 +19,32 @@ type AppStatus struct {
 	Locale  string `json:"locale"`
 }
 
-// AppLanguage reads an App's trusted DSM language preference, if available.
-// An empty result uses the browser's first Accept-Language tag instead.
-type AppLanguage func(context.Context, Caller) (string, error)
+// AppLanguage replaces the SDK's DSM display-language lookup with the App's
+// own preference: a DSM language code (cht, enu, …) or a BCP 47 tag. An empty
+// result or an error uses the browser's first Accept-Language tag instead.
+type AppLanguage func(context.Context, Caller, *http.Request) (string, error)
 
 // AppStatusHandler can be registered with HandleRequest("app.status", ...).
-// Keep app.status authenticated in the App's permissions.json. language may
-// be nil: browser language is the fallback, never a claim about a DSM setting.
+// Keep app.status authenticated in the App's permissions.json.
+//
+// With a nil language the caller's DSM display language comes first: the
+// entry page's dsmLanguage hint, else the last value known for this user.
+// A long-running backend reads a missing or old value from DSM in the
+// background; the reply never waits for it. "def" (follow the system, then
+// the browser) and every failure use the browser's Accept-Language.
+// See docs/entry-page.md.
 func AppStatusHandler(packageID, version string, language AppLanguage) RequestHandler {
-	return func(ctx context.Context, caller Caller, r *http.Request, _ json.RawMessage) (any, error) {
+	return func(ctx context.Context, caller Caller, r *http.Request, raw json.RawMessage) (any, error) {
 		if !caller.Authenticated() {
 			return nil, &Error{Code: "session_required", Message: "sign in to DSM again"}
 		}
 		lang := ""
 		if language != nil {
-			value, err := language(ctx, caller)
-			if err != nil {
-				return nil, err
+			if value, err := language(ctx, caller, r); err == nil {
+				lang = value
 			}
-			lang = value
+		} else {
+			lang = defaultLanguages.preference(caller.User(), r, raw)
 		}
 		if lang == "" && r != nil {
 			lang, _, _ = strings.Cut(r.Header.Get("Accept-Language"), ",")
@@ -51,9 +58,11 @@ func AppStatusHandler(packageID, version string, language AppLanguage) RequestHa
 
 var appLanguageTag = regexp.MustCompile(`^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8}){0,3}$`)
 
+// dsmLocales maps DSM display-language codes to the SDK's UI locales.
+var dsmLocales = map[string]string{"enu": "en", "cht": "zh-TW", "chs": "zh-CN", "jpn": "ja", "krn": "ko", "ger": "de", "fre": "fr", "spn": "es", "ita": "it"}
+
 func appLanguage(lang string) (string, string) {
-	aliases := map[string]string{"enu": "en", "cht": "zh-TW", "chs": "zh-CN", "jpn": "ja", "krn": "ko", "ger": "de", "fre": "fr", "spn": "es", "ita": "it"}
-	if locale, ok := aliases[lang]; ok {
+	if locale, ok := dsmLocales[lang]; ok {
 		return lang, locale
 	}
 	if len(lang) <= 35 && appLanguageTag.MatchString(lang) {

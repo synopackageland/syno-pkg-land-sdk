@@ -233,8 +233,8 @@ and TypeScript `mediaUrl` helper; see [media grants](docs/media.md) for owner ho
 session binding, renewal, and Range handling.
 
 Full-page Apps use [`@synopackageland/sdk/entry`](docs/entry-page.md) for boot,
-shared context and sign-in display caches; Go Apps can expose language fields
-with `api.AppStatusHandler`. Native mobile Apps use
+shared context and sign-in display caches; Go Apps answer `app.status` in the
+user's DSM display language with `api.AppStatusHandler`. Native mobile Apps use
 [`@synopackageland/sdk/mobile`](spec/native/v1/README.md) for actions and browser
 fallbacks; shell implementations use the DOM-free `./mobile/shell` contract.
 SynoPkgNative protocol 1 and the `mobile:` manifest are stable, with optional

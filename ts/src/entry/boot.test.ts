@@ -3,6 +3,11 @@
 import {afterEach, beforeEach, expect, test, vi} from 'vitest'
 import type {Context} from '../context'
 import {bootEntryPage, createAppContext, entryLaunchParams, ENTRY_STATUS_RETRY_DELAYS_MS, PORTAL_FALLBACK_PROBE_MS} from '../entry'
+import {readDsmLanguage} from './language'
+
+// The DSM display-language read has its own tests (language.test.ts); here
+// DSM does not answer it unless a test says so.
+vi.mock('./language', () => ({readDsmLanguage: vi.fn(async () => undefined)}))
 
 const entryURL = 'https://localhost/webman/3rdparty/ExampleApp/app/entry.html?launch=123&link=%2Fadd&intake=item'
 const account = {user: 'alice', admin: false, lang: 'cht', locale: 'zh-TW'}
@@ -36,6 +41,15 @@ test('cache miss calls status once, mounts without DSM navigation, and no portal
  const cached = await bootEntryPage({...opts, fetch: request})
  expect(request).toHaveBeenCalledTimes(1)
  cached!.host.dispose()
+})
+
+test.each([['cht', {dsmLanguage: 'cht'}], ['', {dsmLanguage: ''}], [undefined, {}]])('DSM display language %j reaches app.status as its hint', async (language, params) => {
+ vi.mocked(readDsmLanguage).mockResolvedValueOnce(language)
+ const request = statusFetch()
+ const ctx = await bootEntryPage({...options(), fetch: request, requestTimeout: 9000})
+ expect(readDsmLanguage).toHaveBeenLastCalledWith(request, 'https://localhost/webapi/entry.cgi', 'sign-in', 9000)
+ expect(JSON.parse(String(request.mock.calls[0]![1]?.body))).toEqual({method: 'app.status', params})
+ ctx!.host.dispose()
 })
 
 test('older status without language mounts using browser language', async () => {
