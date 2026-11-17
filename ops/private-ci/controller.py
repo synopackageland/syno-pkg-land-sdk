@@ -10,6 +10,7 @@ import re
 import signal
 import socket
 import subprocess
+import sys
 import tarfile
 import tempfile
 import time
@@ -18,10 +19,12 @@ import urllib.parse
 import urllib.request
 
 OWNER = 'synopackageland'
+# Private repositories only. Public repositories (the SDK included) use
+# GitHub-hosted runners and must never be listed here.
 REPOS = (
-    'syno-package-land', 'syno-pkg-land-sdk', 'syno-pkg-land-cli',
+    'syno-package-land', 'syno-pkg-land-cli',
     'syno-pkg-land-templates', 'syno-pkg-land-ui', 'syno-pkg-land-freshrss',
-    'syno-pkg-land-openlist', 'syno-pkg-land-uptime-kuma', 'syno-pkg-connect',
+    'syno-pkg-land-openlist', 'syno-pkg-connect',
     'syno-pkg-gopeed', 'syno-reclaim', 'synopkgland-community-apps',
 )
 MANAGED = {'ci.managed': 'private-ci-v1', 'ci.role': 'runner'}
@@ -30,13 +33,31 @@ IDLE_AGE = 300
 CACHE_VOLUMES = {'ci-cache-go': '/cache/go', 'ci-cache-cargo': '/cache/cargo',
                  'ci-cache-npm': '/cache/npm'}
 THREAD_GOBUILD = 'synopkgland-cache-gobuild'
+# Health: a poll counts as failed when tick() raises. After this many
+# consecutive failures (about five minutes) the controller logs UNHEALTHY and the
+# Docker health check reports unhealthy. Per-repository failures are counted
+# separately and never fail the whole poll.
+UNHEALTHY_AFTER = 10
+REPO_BACKOFF = 600  # Seconds to skip a repository GitHub reports as missing.
+HEALTH_FILE = '/tmp/ci-health.json'
+HEALTH_STALE = 600
 LOG = logging.getLogger('ci')
 
 
 class APIError(Exception):
-    def __init__(self, status):
-        self.status = status
-        super().__init__(f'API HTTP {status}')
+    def __init__(self, status, source='api', method='GET', path=''):
+        self.status, self.source, self.method, self.path = status, source, method, path
+        # Paths are built from fixed names and numeric ids; no query values or
+        # credentials. Strip any query string anyway.
+        super().__init__(f'{source} HTTP {status} {method} /{path.split("?")[0].lstrip("/")}'.rstrip())
+
+
+def describe(error, secret=None):
+    """One-line, credential-free description of an exception for logs."""
+    text = f'{type(error).__name__}: {error}' if str(error) else type(error).__name__
+    if isinstance(secret, str) and secret:
+        text = text.replace(secret, '[redacted]')
+    return text[:300]
 
 
 class GitHub:
@@ -56,7 +77,7 @@ class GitHub:
                 return json.loads(body) if body else None
         except urllib.error.HTTPError as error:
             # Response bodies and request objects can contain credentials.
-            raise APIError(error.code) from None
+            raise APIError(error.code, 'github', method, path) from None
 
     def pages(self, path, key):
         for page in range(1, 101):
@@ -115,7 +136,7 @@ class Docker:
             response = conn.getresponse()
             raw = response.read()
             if response.status >= 400:
-                raise APIError(response.status)
+                raise APIError(response.status, 'docker', method, path)
             return json.loads(raw) if raw else None
         finally:
             conn.close()
@@ -129,15 +150,28 @@ class Docker:
 
     @staticmethod
     def cache_mounts():
-        return [{'Type': 'volume', 'Source': name, 'Target': target}
+        # VolumeOptions labels apply if Docker has to recreate a volume that was
+        # removed (for example by a host-wide prune) while the controller ran,
+        # so ensure_caches() still recognises it after a restart.
+        return [{'Type': 'volume', 'Source': name, 'Target': target,
+                 'VolumeOptions': {'Labels': {'ci.managed': 'private-ci-v1', 'ci.role': 'cache'}}}
                 for name, target in CACHE_VOLUMES.items()]
+
+    def ensure_image(self, image):
+        try:
+            self.request('GET', '/images/' + urllib.parse.quote(image, safe='') + '/json')
+        except APIError as error:
+            if error.status == 404:
+                raise RuntimeError(f'runner image {image} is missing; rerun deploy.sh') from None
+            raise
 
     def ensure_caches(self):
         for name in CACHE_VOLUMES:
             volume = self.request('POST', '/volumes/create', {
                 'Name': name, 'Labels': {'ci.managed': 'private-ci-v1', 'ci.role': 'cache'}})
             if volume.get('Labels') != {'ci.managed': 'private-ci-v1', 'ci.role': 'cache'}:
-                raise ValueError('cache volume ownership mismatch')
+                raise ValueError(f'cache volume {name} exists without CI ownership labels; '
+                                 'remove it after draining CI')
 
     def trim_caches(self, image, thread=False):
         name = 'ci-trim-gobuild' if thread else 'ci-trim-cache'
@@ -256,6 +290,8 @@ class Controller:
         self.last_orphan_scan = 0
         self.cache_ready = False
         self.last_daily_trim = 0
+        self.repo_failures = {}
+        self.repo_skip_until = {}
 
     @staticmethod
     def prefix(repo):
@@ -267,6 +303,34 @@ class Controller:
         meta = self.gh.request(self.prefix(repo))
         return (meta.get('private') is True and not meta.get('archived')
                 and meta.get('full_name', '').lower() == f'{OWNER}/{repo}')
+
+    def repo_ok(self, repo):
+        count = self.repo_failures.pop(repo, 0)
+        self.repo_skip_until.pop(repo, None)
+        if count >= UNHEALTHY_AFTER:
+            LOG.info('repo %s recovered after %d failed polls', repo, count)
+
+    def repo_failed(self, repo, stage, error):
+        """Record one repository's failure; the caller skips only that repo."""
+        count = self.repo_failures.get(repo, 0) + 1
+        self.repo_failures[repo] = count
+        detail = describe(error, getattr(self.gh, 'token', None))
+        missing = isinstance(error, APIError) and error.source == 'github' and error.status in (403, 404)
+        if missing:
+            # Renamed, deleted, transferred or no longer covered by the token.
+            # Back off instead of calling the API every poll.
+            self.repo_skip_until[repo] = time.time() + REPO_BACKOFF
+        if count == UNHEALTHY_AFTER or (count > UNHEALTHY_AFTER and count % 100 == 0):
+            LOG.error('UNHEALTHY repo %s: %d consecutive failed polls (%s: %s); '
+                      'its private-ci jobs will not run. Check the REPOS allowlist '
+                      'in controller.py and the token\'s repository access.',
+                      repo, count, stage, detail)
+        elif count < UNHEALTHY_AFTER:
+            LOG.warning('repo %s skipped (%s: %s)%s', repo, stage, detail,
+                        f'; retry in {REPO_BACKOFF}s' if missing else '')
+
+    def skipped(self, repo):
+        return time.time() < self.repo_skip_until.get(repo, 0)
 
     def retire(self, container):
         labels = container['Labels']
@@ -281,28 +345,32 @@ class Controller:
                     raise
         LOG.info('runner retired')
 
+    def should_retire(self, container):
+        labels = container['Labels']
+        repo = labels.get('ci.repo')
+        age = time.time() - float(labels.get('ci.created', '0'))
+        if container['State'] != 'running' or age > MAX_AGE or repo not in REPOS:
+            return True
+        try:
+            # A private-to-public transition removes existing runners too.
+            if not self.private(repo):
+                return True
+            if age > IDLE_AGE:
+                runner = self.gh.request(self.prefix(repo) + '/actions/runners/' + labels['ci.runner-id'])
+                return not runner.get('busy', False)
+        except APIError as error:
+            if error.source == 'github' and error.status == 404:
+                return True  # Repository or registration is gone.
+            raise
+        return False
+
     def reconcile(self):
         active = []
         for c in self.docker.containers():
             labels = c.get('Labels', {})
             if any(labels.get(key) != value for key, value in MANAGED.items()):
                 continue
-            repo = labels.get('ci.repo')
-            age = time.time() - float(labels.get('ci.created', '0'))
-            retire = c['State'] != 'running' or age > MAX_AGE or repo not in REPOS
-            if not retire:
-                # A private-to-public transition removes existing runners too.
-                retire = not self.private(repo)
-            if not retire and age > IDLE_AGE:
-                try:
-                    runner = self.gh.request(self.prefix(repo) + '/actions/runners/' + labels['ci.runner-id'])
-                    retire = not runner.get('busy', False)
-                except APIError as error:
-                    if error.status == 404:
-                        retire = True
-                    else:
-                        raise
-            if retire:
+            if self.should_retire(c):
                 self.retire(c)
             else:
                 active.append(c)
@@ -311,17 +379,34 @@ class Controller:
         ids = {(c['Labels']['ci.repo'], int(c['Labels']['ci.runner-id'])) for c in active}
         if time.time() - self.last_orphan_scan >= 600:
             for repo in REPOS:
-                for runner in self.gh.pages(self.prefix(repo) + '/actions/runners', 'runners'):
-                    if (re.fullmatch(r'ci-linux-01', runner['name'])
-                            and 'private-ci' in {v['name'].lower() for v in runner['labels']}
-                            and (repo, runner['id']) not in ids):
-                        self.gh.request(self.prefix(repo) + '/actions/runners/' + str(runner['id']), method='DELETE')
+                if self.skipped(repo):
+                    continue
+                try:
+                    for runner in self.gh.pages(self.prefix(repo) + '/actions/runners', 'runners'):
+                        if (re.fullmatch(r'ci-linux-01', runner['name'])
+                                and 'private-ci' in {v['name'].lower() for v in runner['labels']}
+                                and (repo, runner['id']) not in ids):
+                            self.gh.request(self.prefix(repo) + '/actions/runners/' + str(runner['id']),
+                                            method='DELETE')
+                except (APIError, OSError, ValueError, KeyError, RuntimeError) as error:
+                    # One unreachable repository must not block the others.
+                    self.repo_failed(repo, 'orphan scan', error)
             self.last_orphan_scan = time.time()
         return active
+
+    def has_queued_job(self, prefix):
+        for status in ('queued', 'in_progress'):
+            # Matrix/dependent jobs may queue while the run is in_progress.
+            runs = self.gh.pages(prefix + f'/actions/runs?status={status}', 'workflow_runs')
+            if any(eligible(job) for run in runs for job in
+                   self.gh.pages(prefix + f'/actions/runs/{run["id"]}/jobs?filter=latest', 'jobs')):
+                return True
+        return False
 
     def tick(self):
         if self.reconcile():
             return  # Global capacity one, including jobs surviving restart.
+        self.docker.ensure_image(self.image)
         if not self.cache_ready:
             self.docker.ensure_caches()
             self.cache_ready = True
@@ -334,20 +419,21 @@ class Controller:
         for offset in range(len(REPOS)):
             index = (self.cursor + offset) % len(REPOS)
             repo = REPOS[index]
+            if self.skipped(repo):
+                continue
             prefix = self.prefix(repo)
-            runs = self.gh.pages(prefix + '/actions/runs?status=queued', 'workflow_runs')
-            found = any(eligible(job) for run in runs for job in
-                        self.gh.pages(prefix + f'/actions/runs/{run["id"]}/jobs?filter=latest', 'jobs'))
-            # Matrix/dependent jobs may queue while the run is in_progress.
-            if not found:
-                runs = self.gh.pages(prefix + '/actions/runs?status=in_progress', 'workflow_runs')
-                found = any(eligible(job) for run in runs for job in
-                            self.gh.pages(prefix + f'/actions/runs/{run["id"]}/jobs?filter=latest', 'jobs'))
+            try:
+                # Recheck visibility immediately before registration.
+                found = self.has_queued_job(prefix) and self.private(repo)
+            except (APIError, OSError, ValueError, KeyError, RuntimeError) as error:
+                # Discovery is per repository: skip it, keep polling the rest.
+                self.repo_failed(repo, 'job discovery', error)
+                continue
+            self.repo_ok(repo)
             if not found:
                 continue
-            # Recheck immediately before registration.
-            if not self.private(repo):
-                continue
+            # Registration and launch errors still fail the poll: they are
+            # controller/host problems, not one repository's.
             self.docker.dependency_bundles = {}
             if repo != 'syno-pkg-land-sdk':
                 dependencies = ['sdk', 'templates'] if repo in {'syno-pkg-land-cli', 'syno-pkg-land-templates'} else ['sdk']
@@ -372,13 +458,65 @@ class Controller:
             return
 
 
+class Health:
+    """Consecutive poll failures, surfaced in logs and a Docker health file."""
+
+    def __init__(self, path=HEALTH_FILE, secret=None):
+        self.path, self.secret = path, secret
+        self.failures = 0
+        self.last_ok = None
+
+    def write(self, controller):
+        state = {'last_ok': self.last_ok, 'consecutive_failures': self.failures,
+                 'unhealthy_repos': sorted(r for r, n in controller.repo_failures.items()
+                                           if n >= UNHEALTHY_AFTER)}
+        try:
+            tmp = self.path + '.tmp'
+            with open(tmp, 'w') as handle:
+                json.dump(state, handle)
+            os.replace(tmp, self.path)
+        except OSError:
+            pass  # Health reporting must never stop the controller.
+
+    def ok(self, controller):
+        if self.failures >= UNHEALTHY_AFTER:
+            LOG.info('controller recovered after %d failed polls', self.failures)
+        self.failures, self.last_ok = 0, time.time()
+        self.write(controller)
+
+    def failed(self, controller, error):
+        self.failures += 1
+        detail = describe(error, self.secret)
+        if self.failures == UNHEALTHY_AFTER or (self.failures > UNHEALTHY_AFTER and self.failures % 100 == 0):
+            LOG.error('UNHEALTHY controller: %d consecutive failed polls; no private-ci job '
+                      'can start. Last error: %s', self.failures, detail)
+        else:
+            LOG.error('reconcile failed: %s', detail)
+        self.write(controller)
+
+
+def check_health(path=HEALTH_FILE, now=None):
+    """Docker HEALTHCHECK: exit 0 only after a recent successful poll."""
+    try:
+        with open(path) as handle:
+            state = json.load(handle)
+    except (OSError, ValueError):
+        return 1
+    last_ok = state.get('last_ok')
+    now = time.time() if now is None else now
+    if not last_ok or now - last_ok > HEALTH_STALE or state.get('consecutive_failures', 0) >= UNHEALTHY_AFTER:
+        return 1
+    return 0
+
+
 def main():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
     with open('/run/secrets/github_token') as secret:
         token = secret.read().strip()
     if not token:
         raise RuntimeError('empty token file')
     controller = Controller(GitHub(token), Docker(), os.environ.get('CI_RUNNER_IMAGE', 'ci-runner:1'))
+    health = Health(secret=token)
     stopping = False
 
     def stop(*_):
@@ -387,14 +525,15 @@ def main():
 
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
-    LOG.info('controller ready; capacity=1; interval=30s')
+    LOG.info('controller ready; capacity=1; interval=30s; repos=%d', len(REPOS))
     while not stopping:
         try:
             controller.tick()
         except Exception as error:
-            # Do not dump traceback, URLs, request data or response bodies.
-            LOG.error('reconcile failed: %s%s', type(error).__name__,
-                      f' HTTP {error.status}' if isinstance(error, APIError) else '')
+            # Do not dump traceback, request data or response bodies.
+            health.failed(controller, error)
+        else:
+            health.ok(controller)
         for _ in range(30):
             if stopping:
                 break
@@ -402,4 +541,6 @@ def main():
 
 
 if __name__ == '__main__':
+    if sys.argv[1:] == ['--health']:
+        sys.exit(check_health())
     main()
