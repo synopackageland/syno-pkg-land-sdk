@@ -45,6 +45,10 @@ ARG PLAYWRIGHT_VERSION=1.58.2
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
 RUN npx -y "playwright@${PLAYWRIGHT_VERSION}" install --with-deps chromium \
     && chmod -R a+rX /opt/ms-playwright && rm -rf /root/.npm /var/lib/apt/lists/*
+# Package tests anchor disposable fixtures at the DSM package root
+# (/var/packages/<package>), as a real NAS does. Only this directory is owned by
+# the job user; fixtures live in the job container's own layer and vanish with it.
+RUN install -d -o 1001 -g 1001 -m 0755 /var/packages
 COPY --chmod=755 runner-entrypoint.sh /usr/local/bin/ci-entrypoint
 COPY cache_trim.py /app/cache_trim.py
 WORKDIR /home/runner

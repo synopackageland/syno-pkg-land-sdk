@@ -63,6 +63,11 @@ never download a browser during a job. `PLAYWRIGHT_VERSION` in
 repository: each Playwright release expects its own browser revision. After a
 UI upgrade of playwright, bump it and rerun `deploy.sh`.
 
+`/var/packages` exists and is owned by the job user, so package tests can create
+disposable fixtures at the real DSM package path (`/var/packages/<package>`).
+Fixtures live in the
+job container's own layer and are removed with the container.
+
 Private workflows use `[self-hosted, private-ci]`. Docker-dependent, release,
 publishing and full cross-architecture checks stay manual; no host socket or
 privileged DinD is available. `sdk-fast.sh` runs the shared basic checks. Runtime
