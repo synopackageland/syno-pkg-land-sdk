@@ -239,6 +239,13 @@ class HealthTests(unittest.TestCase):
                 self.assertRaisesRegex(RuntimeError, 'ci-runner:1 is missing'):
             docker.ensure_image('ci-runner:1')
 
+    def test_jit_config_never_reaches_runner_argv(self):
+        script = (pathlib.Path(__file__).parent / 'runner-entrypoint.sh').read_text()
+        self.assertNotIn('--jitconfig', script)
+        self.assertIn('export ACTIONS_RUNNER_INPUT_JITCONFIG', script)
+        self.assertIn('rm /home/runner/.jitconfig', script)
+        self.assertIn('exec ./run.sh\n', script)
+
     def test_recreated_cache_volumes_keep_ownership_labels(self):
         for mount in Docker.cache_mounts():
             self.assertEqual(mount['VolumeOptions']['Labels'],
