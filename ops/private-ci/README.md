@@ -9,7 +9,10 @@ is dedicated to CI and disables inter-container communication.
 Only the controller has access to the host Docker socket and the root-owned
 token file. Jobs run as `runner` (UID 1001), with no host mounts, no capabilities,
 no privilege escalation and no published ports. They receive a single-use JIT
-configuration through a file, which is removed before the runner starts.
+configuration through a 0600 file. The entrypoint deletes the file and passes the
+value through the runner's `ACTIONS_RUNNER_INPUT_JITCONFIG` environment input,
+never argv; the runner removes that variable from its environment on startup,
+so job steps do not inherit it.
 Containers and their writable layers are removed after a job exits, after five
 minutes idle, or after one hour maximum. Only the three bounded cache volumes
 persist; source workspaces and complete target trees remain disposable.
@@ -52,6 +55,13 @@ disabling TLS validation. The private image uses the public npm mirror at
 network; lockfile integrity checks remain enabled. No registry credential is
 included. Images contain public toolchains, public trust certificates and the
 runner binary verified against its pinned SHA-256.
+
+The runner image also preinstalls Playwright's Chromium (with its system
+libraries) in `/opt/ms-playwright` (`PLAYWRIGHT_BROWSERS_PATH`), so browser tests
+never download a browser during a job. `PLAYWRIGHT_VERSION` in
+`Runner.Dockerfile` must equal the playwright version locked by the private UI
+repository: each Playwright release expects its own browser revision. After a
+UI upgrade of playwright, bump it and rerun `deploy.sh`.
 
 Private workflows use `[self-hosted, private-ci]`. Docker-dependent, release,
 publishing and full cross-architecture checks stay manual; no host socket or
@@ -136,8 +146,8 @@ only the controller has the Docker socket. Delete only these three `ci-cache-*`
 volumes after stopping/draining CI to reset the shared cache.
 
 `cache-probe.py` compiles this repo's Go/Rust code and installs locked npm
-packages. The SDK workflow runs it for infrastructure changes; manual dispatch
-can select `cache_probe` after the workflow is merged. Compare its `CACHE_PROBE`
+packages. Run it from a private repository job (the SDK repository is public and
+uses GitHub-hosted runners). Compare its `CACHE_PROBE`
 JSON and sccache statistics on two fresh jobs at the same commit. A warm cache
 is a performance aid, not product or release certification.
 

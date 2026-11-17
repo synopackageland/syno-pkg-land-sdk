@@ -661,7 +661,7 @@
   },
   {
     "file": "ops/private-ci/controller.py",
-    "statement": "LOG.info('controller ready; capacity=1; interval=30s')",
+    "statement": "LOG.info('controller ready; capacity=1; interval=30s; repos=%d', len(REPOS))",
     "class": "B",
     "reason": "Informational reconciliation interval text, not a request deadline"
   },
