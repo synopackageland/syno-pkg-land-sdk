@@ -29,6 +29,7 @@ REPOS = (
 )
 MANAGED = {'ci.managed': 'private-ci-v1', 'ci.role': 'runner'}
 MAX_AGE = 3600
+JOB_TMPFS = 'rw,exec,nosuid,nodev,mode=1777,size=2g'
 IDLE_AGE = 300
 CACHE_VOLUMES = {'ci-cache-go': '/cache/go', 'ci-cache-cargo': '/cache/cargo',
                  'ci-cache-npm': '/cache/npm'}
@@ -236,6 +237,9 @@ class Docker:
                     'NPM_CONFIG_CACHE=/cache/npm'],
             'HostConfig': {'NetworkMode': 'ci-jobs', 'Memory': 4 * 1024**3,
                            'Mounts': self.cache_mounts(),
+                           # DSM's /tmp is tmpfs and package code checks for it.
+                           # Docker defaults tmpfs to noexec; jobs run binaries from /tmp.
+                           'Tmpfs': {'/tmp': JOB_TMPFS},
                            'MemorySwap': 4 * 1024**3, 'NanoCpus': 2_000_000_000,
                            'PidsLimit': 512, 'CapDrop': ['ALL'],
                            'SecurityOpt': ['no-new-privileges:true'],

@@ -67,6 +67,12 @@ UI upgrade of playwright, bump it and rerun `deploy.sh`.
 disposable fixtures at the real DSM package path (`/var/packages/<package>`).
 Fixtures live in the
 job container's own layer and are removed with the container.
+The image also contains Connect's installed-package runtime directory
+(`/var/packages/SynoPkgConnect/var/run`, 0700, job user), so its backend tests
+run in place instead of asking for Docker.
+Job containers also mount `/tmp` as tmpfs (2 GiB cap, exec allowed), as on DSM;
+package code that keeps transient secrets there checks that it is tmpfs. Its
+pages count against the job's 4 GiB memory limit.
 
 Private workflows use `[self-hosted, private-ci]`. Docker-dependent, release,
 publishing and full cross-architecture checks stay manual; no host socket or
