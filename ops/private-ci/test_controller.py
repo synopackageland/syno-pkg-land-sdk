@@ -77,6 +77,11 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(spec['Hostname'], 'ci-linux-01')
         self.assertNotIn('one-time-config', str(spec))
         self.assertLessEqual(spec['HostConfig']['Memory'], 4 * 1024**3)
+        tmp = spec['HostConfig']['Tmpfs']['/tmp'].split(',')
+        self.assertIn('nosuid', tmp)
+        self.assertIn('size=2g', tmp)
+        self.assertIn('exec', tmp)
+        self.assertNotIn('noexec', tmp)
 
     def test_invalid_dependency_payload_never_starts_job(self):
         for name, data in [('sdk', b'not a bundle'), ('../../outside', b'# v2 git bundle\n')]:
