@@ -67,7 +67,7 @@ host details from being injected into logs, but cannot hide the public egress IP
 from a program that explicitly queries an external service.
 
 Check `docker logs ci-controller`, `docker ps -a --filter label=ci.managed=private-ci-v1`
-and GitHub job logs. Restart only `ci-controller` to verify recovery. To uninstall,
+and GitHub job logs. See **Health** below for the failure signals. Restart only `ci-controller` to verify recovery. To uninstall,
 stop the controller, wait for its one active job to finish, remove only managed
 job containers/runner registrations, then remove `ci-controller`, `ci-jobs`, the
 two `ci-` images and the two installation directories. Do not prune Docker.
@@ -143,3 +143,35 @@ is a performance aid, not product or release certification.
 
 Default release and CI checks use `pnpm run gates`. Run `pnpm run gates:full`
 only when explicitly requested. Cache measurement requires manual dispatch.
+
+## Health
+
+Each 30-second poll either succeeds or fails as a whole. Failures log one
+credential-free line naming the error and, for API errors, the source (GitHub
+or Docker), status, method and path. After 10 consecutive failed polls (about
+five minutes) the controller logs `UNHEALTHY controller` and the Docker health
+check turns `unhealthy`; recovery logs `controller recovered`. Check it with:
+
+```sh
+docker inspect -f '{{.State.Health.Status}}' ci-controller
+docker logs --since 1h ci-controller 2>&1 | grep -E 'UNHEALTHY|skipped|failed'
+```
+
+Repository problems are isolated. If one allowlisted repository cannot be read
+(renamed, deleted, made public, or outside the token's access), only that
+repository is skipped: other repositories keep their runners. The log names the
+repository (`repo <name> skipped (...)`); a GitHub 403/404 also backs that
+repository off for ten minutes. After 10 consecutive failures it logs
+`UNHEALTHY repo <name>`, and the health file lists it under `unhealthy_repos`
+without failing the controller health check. Fix it by updating `REPOS` in
+`controller.py` and redeploying.
+
+Host-level problems still fail the poll, because no job could start: a missing
+`ci-runner:1` image (`runner image ci-runner:1 is missing; rerun deploy.sh`),
+unlabeled `ci-cache-*` volumes, Docker errors and JIT registration or launch
+errors. A host-wide `docker image prune -a` or `docker system prune --volumes`
+removes the idle runner image and cache volumes; rerun `deploy.sh` to rebuild
+the image. Cache volumes are recreated with their ownership labels.
+
+When a repository is renamed, made public or deleted, update `REPOS` in the
+same change. Public repositories use GitHub-hosted runners and are never listed.
