@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.53.50 (2026-11-18)
 
 - An entry page opened through its short path keeps the short path in the address bar. When DSM's short-path redirect marks the page (`?spl-short=<path>` first in the query, from CLI with short-path landings) and the path is the boot's `shortPath`, `bootEntryPage` removes the marker, adds `<base href>` with the entry page's URL and shows the short path with the rest of the query and the hash. A DSM sign-in in the same tab keeps it through the launch hand-off. Package, CGI and WebAPI URLs stay anchored to the entry page; the short path wins over `rewriteToAlias`. Pages opened without the marker keep their URL. See [Links and DSM Apps](docs/entry-page.md#links-and-dsm-apps).
 
