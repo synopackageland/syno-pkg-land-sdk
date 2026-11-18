@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.53.53 (2026-11-18)
+
+- Installer ports may rewrite the identity gateway's second-origin nginx server block (`sso/native-origin-nginx.conf`). Since 0.53.51 every install and upgrade of an App that declares `identity_gateway.origin` failed in preinst with `INSTALL_PORT_INVALID` (on an upgrade DSM had already removed the installed version), and `installsettings.ChangePorts` refused the same configuration. Rebuild such an App with this SDK.
+- A port template allowlist test that also runs under root, where the installer port preparation tests skip.
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.52 (2026-11-18)
 
 - No AI write runs without a person's click. **`Tool.Gate` never returns `run` for a `local` write on the AI or MCP channel**: an AI turn gets `card` with or without Allow changes, and MCP gets `card` with Allow changes (else `refuse`). Allow changes only unlocks `propose`. ctl, a person, still runs a `local` change with `AllowChanges`. An App that ran local changes directly when Allow changes was on now gets `card`: drop that branch and return the card. See [Gate decisions](docs/ai-operation-semantics.md#gate-decisions).

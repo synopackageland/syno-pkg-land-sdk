@@ -218,3 +218,46 @@ func TestChangePortsRefusesInvalidRequests(t *testing.T) {
 		t.Fatal("refused change rewrote the payload")
 	}
 }
+
+// The CLI writes these files with @@PORT_<key>@@ placeholders. portConfig runs
+// no ownership check, so this guard also runs under root, where the
+// preparation tests above skip: a template the allowlist does not admit makes
+// every install and upgrade of such an App fail in preinst.
+func TestPortConfigAdmitsEveryGeneratedPortTemplate(t *testing.T) {
+	generated := []string{
+		"sso/gateway.json",
+		"sso/native-nginx.conf",
+		"sso/native-origin-nginx.conf",
+		"ui/config",
+		"ui/window-0003.js",
+		"daemon/config.json",
+		"compose/request.json",
+		"install/settings.json",
+	}
+	files := map[string]string{}
+	for _, path := range generated {
+		if !portPath(path) {
+			t.Errorf("port template %s is not admitted", path)
+		}
+		files[path] = "@@PORT_gateway_origin@@"
+	}
+	dir := t.TempDir()
+	os.Mkdir(filepath.Join(dir, "install"), 0700)
+	raw, _ := json.Marshal(PortConfig{Schema: 1, Package: "ExampleApp", Ports: map[string]Port{
+		"gateway_origin": {Default: 5443, Protocol: "tcp", Conflict: ConflictWarn},
+	}, Files: files})
+	os.WriteFile(filepath.Join(dir, "install/ports.json"), raw, 0600)
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
+	if _, err := portConfig(root, "ExampleApp"); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"sso/other.conf", "../sso/gateway.json", "ui/../x.js", "etc/nginx.conf"} {
+		if portPath(path) {
+			t.Errorf("%s admitted", path)
+		}
+	}
+}
