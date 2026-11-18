@@ -97,12 +97,12 @@ func originPortFixture(t *testing.T) (string, string) {
 		"gateway_origin": {Default: 28443, Protocol: "tcp", Conflict: ConflictWarn},
 	}, Files: map[string]string{
 		"sso/gateway.json":      `{"listen":{"http":@@PORT_gateway_http@@},"origin":{"https":@@PORT_gateway_origin@@}}`,
-		"sso/native-nginx.conf": "listen @@PORT_gateway_origin@@ ssl;",
+		"sso/native-origin-nginx.conf": "listen @@PORT_gateway_origin@@ ssl;",
 	}}
 	raw, _ := json.Marshal(cfg)
 	os.WriteFile(filepath.Join(root, "install/ports.json"), raw, 0600)
 	os.WriteFile(filepath.Join(root, "sso/gateway.json"), []byte(`{"listen":{"http":28000},"origin":{"https":28443}}`), 0600)
-	os.WriteFile(filepath.Join(root, "sso/native-nginx.conf"), []byte("listen 28443 ssl;"), 0600)
+	os.WriteFile(filepath.Join(root, "sso/native-origin-nginx.conf"), []byte("listen 28443 ssl;"), 0600)
 	return root, state
 }
 
@@ -173,7 +173,7 @@ func TestChangePortsRewritesGeneratedFilesAndTheRememberedValue(t *testing.T) {
 	}
 	for path, want := range map[string]string{
 		"sso/gateway.json":      `{"listen":{"http":28000},"origin":{"https":28600}}`,
-		"sso/native-nginx.conf": "listen 28600 ssl;",
+		"sso/native-origin-nginx.conf": "listen 28600 ssl;",
 	} {
 		if b, _ := os.ReadFile(filepath.Join(root, path)); string(b) != want {
 			t.Fatalf("%s: %s", path, b)

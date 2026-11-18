@@ -52,7 +52,7 @@ func ValidPort(n int) bool {
 }
 func portPath(path string) bool {
 	switch path {
-	case "sso/gateway.json", "sso/native-nginx.conf", "ui/config", "daemon/config.json", "compose/request.json", "install/settings.json":
+	case "sso/gateway.json", "sso/native-nginx.conf", "sso/native-origin-nginx.conf", "ui/config", "daemon/config.json", "compose/request.json", "install/settings.json":
 		return true
 	}
 	return regexp.MustCompile(`^ui/[A-Za-z0-9_.-]+\.js$`).MatchString(path) && !strings.Contains(path, "..")
