@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- An entry page opened through its short path keeps the short path in the address bar. When DSM's short-path redirect marks the page (`?spl-short=<path>` first in the query, from CLI with short-path landings) and the path is the boot's `shortPath`, `bootEntryPage` removes the marker, adds `<base href>` with the entry page's URL and shows the short path with the rest of the query and the hash. A DSM sign-in in the same tab keeps it through the launch hand-off. Package, CGI and WebAPI URLs stay anchored to the entry page; the short path wins over `rewriteToAlias`. Pages opened without the marker keep their URL. See [Links and DSM Apps](docs/entry-page.md#links-and-dsm-apps).
+
 ## 0.53.49 (2026-11-16)
 
 - Rust Apps answer `app.status` in the caller's DSM display language. `syno-pkg-land-app` adds `app_status(ctx, params, package, version)`, which returns the fields of Go's `api.AppStatus`, and `app_language(ctx, params)`, which returns `(lang, locale)` for an `app.status` with fields of its own. Both decide as `api.AppStatusHandler` with a nil language: the entry page's `dsmLanguage` hint, else the user's last hint in this process, else the first `Accept-Language` tag (`ctx.locale`). `def`, an empty or unknown code and no hint follow the browser. Before, a Rust App had only the browser's language. See [Rust status handlers](docs/entry-page.md#rust-status-handlers).

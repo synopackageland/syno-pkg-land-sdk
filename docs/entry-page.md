@@ -121,6 +121,19 @@ but replaces the hash. An explicit same-origin `entryURL` option wins. The
 short path exists on DSM's own server (5000/5001 and DSM's custom domain), not
 on an Application Portal's own domain or port.
 
+A page opened through that short path keeps it in the address bar. DSM's
+redirect puts `spl-short=<path>` first in the query; when it names
+`shortPath`, the boot removes it, adds `<base href>` with the entry page's
+URL (unless the page has a `<base>`), and replaces the address with the short
+path, the rest of the query and the hash before signing in. If the boot hands
+off to DSM's sign-in, the tab's launch hand-off keeps the short path, and the
+entry page DSM opens afterwards shows it again. A reload then opens the short
+path. Package, CGI, WebAPI and update URLs stay anchored to the entry page,
+and the App's relative URLs resolve through the `<base>`; code that reads
+`location.pathname` sees the short path. A link that is only a fragment
+resolves to the entry page itself. The short path wins over `rewriteToAlias`.
+A page opened without the marker, or with another path's, keeps its URL.
+
 A full page outside DSM's desktop has no `SYNO.SDS.AppLaunch`. Its browser
 host opens DSM's launch link (`/?launchApp=…&launchParam=…`) in a new tab for
 `ctx.host.openApp(appId)`, `openFileManager(path)` and `revealFile(path)`
