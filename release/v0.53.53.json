@@ -1,0 +1,44 @@
+{
+  "version": "0.53.53",
+  "executorVersion": "0.53.6",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.53",
+    "@synopackageland/app": "0.53.53",
+    "syno-pkg-land-app": "0.53.53",
+    "synopkgland_app": "0.53.53"
+  },
+  "executorDigests": {
+    "x86_64": "e77dbf846ea4555355fa15ee3a6ca3b20e1b1aaa9768321243589d9ec15ffabe",
+    "aarch64": "741a7c37757b56b3acc304cef56de5e59c1ca9278a83be0f1e1ff1ad17b24dd6",
+    "armv7": "f0a3059b982d0210621254adf7d1a3343d2a89d114e053e5b3bd646898293b1a",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Focused release gate: Go tests of installsettings (as root and as an ordinary user, including the new root-independent port template allowlist check) and idgateway, go vet and build, docs and version checks, executor manifest check, basic gate and npm pack scans. No full gate, QEMU, executor rebuild, crate publication or NAS acceptance."
+  },
+  "ui": {
+    "builtAgainst": "0.25.10",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.25.10.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Installer ports may rewrite the identity gateway's second-origin nginx server block (sso/native-origin-nginx.conf). Without it every install and upgrade of an App that declares identity_gateway.origin failed in preinst with INSTALL_PORT_INVALID, and ChangePorts refused it.",
+    "A port template allowlist test that also runs under root, where the preparation tests skip.",
+    "Reuse executor 0.53.6 unchanged: executor sources and build inputs are unchanged."
+  ]
+}
