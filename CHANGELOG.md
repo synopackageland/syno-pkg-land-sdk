@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.53.51 (2026-11-18)
+
+- A path-ingress identity gateway can serve a second origin on its own HTTPS port. `Config.Origin` (`origin` in gateway JSON: `https`, a package Unix socket `upstream`, optional `cookies` and `headers`) runs a second `Front` on `/tmp/synopkgland-gateway-<package>-origin.sock` behind DSM nginx: no ingress path, administrators only, its own cookie `synopkgland_sso_<package>_origin`, only that port's authority and no response-header timeout (long polls and WebSocket). The authorize CGI accepts that origin's return (`AuthorizeCGI.OriginPort`); a cold sign-in there returns `login_required`. Capability: `idgateway.OriginVersion = 1`. See [Second origin port](docs/path-ingress.md#second-origin-port).
+- Cookie mode `dsm-passthrough` (`OriginCookiesDSMPassthrough`) forwards DSM's own `_SSID`, `_CrPoSt` and `stay_login` in both directions and leaves response `Set-Cookie` to the upstream; it strips only the gateway's cookies and DSM's `id` and `did`.
+- Installer ports may declare `"conflict": "warn"`: a port DSM lists as in use is kept with an `INSTALL_PORT_CONFLICT_WARNING`; format, range, reserved and duplicate values are still refused. `installsettings.ChangePorts` changes installed ports after installation (for an App's settings page) and keeps them across upgrades; restart the package to apply them. See [Change ports after installation](docs/install-ports.md#change-ports-after-installation).
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.50 (2026-11-18)
 
 - An entry page opened through its short path keeps the short path in the address bar. When DSM's short-path redirect marks the page (`?spl-short=<path>` first in the query, from CLI with short-path landings) and the path is the boot's `shortPath`, `bootEntryPage` removes the marker, adds `<base href>` with the entry page's URL and shows the short path with the rest of the query and the hash. A DSM sign-in in the same tab keeps it through the launch hand-off. Package, CGI and WebAPI URLs stay anchored to the entry page; the short path wins over `rewriteToAlias`. Pages opened without the marker keep their URL. See [Links and DSM Apps](docs/entry-page.md#links-and-dsm-apps).
