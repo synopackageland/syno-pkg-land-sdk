@@ -202,8 +202,9 @@ ctl commands, AI/MCP tools and the App reference from that one source. English
 summaries are not maintained in a second skill or document. Each operation needs
 an explicit `ai` class: read, preview, draft, propose, local, one-click,
 human-only or hidden. Reads and previews cannot mutate; drafts require a
-non-mutating preview and human confirmation; local changes need the turn's
-Allow changes. Long operations use a fixed job flow. Optional consent, targets,
+non-mutating preview and human confirmation; no AI write runs without a
+person's click, and Allow changes only lets the model propose. The shared
+proposal, receipt and AI audit formats are in the same document. Long operations use a fixed job flow. Optional consent, targets,
 risk, tier, undo, audit, MCP and ctl exposure, ctl gateways, runtime-tool
 carriers, labels and shared schema `$defs` are described in
 [AI operation semantics](docs/ai-operation-semantics.md), together with

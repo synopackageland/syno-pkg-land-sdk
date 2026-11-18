@@ -62,7 +62,7 @@ func TestRuntimeNamespaceCoexistsWithStaticTools(t *testing.T) {
 	if dynamic.AuditClass() != "change" || static.AuditClass() != dynamic.AuditClass() {
 		t.Fatal("runtime tool audit differs")
 	}
-	if dynamic.Gate(Turn{Via: ViaAI}) != GateCard || dynamic.Gate(Turn{Via: ViaAI, AllowChanges: true}) != GateRun || dynamic.Gate(Turn{Via: ViaMCP}) != GateRefuse {
+	if dynamic.Gate(Turn{Via: ViaAI}) != GateCard || dynamic.Gate(Turn{Via: ViaAI, AllowChanges: true}) != GateCard || dynamic.Gate(Turn{Via: ViaMCP}) != GateRefuse {
 		t.Fatal("Allow-changes rule")
 	}
 	rows := byName["plugin__rows"]
@@ -133,7 +133,11 @@ func TestToolGateTable(t *testing.T) {
 		{"notes.propose", Turn{Via: ViaAI, AllowChanges: true}, GatePropose},
 		{"notes.propose", Turn{Via: ViaMCP}, GateRefuse},
 		{"notes.save", Turn{Via: ViaAI}, GateCard},
-		{"notes.save", Turn{Via: ViaAI, AllowChanges: true}, GateRun},
+		// Allow changes never runs an AI write: a local change is still a card.
+		{"notes.save", Turn{Via: ViaAI, AllowChanges: true}, GateCard},
+		{"notes.save", Turn{Via: ViaMCP}, GateRefuse},
+		{"notes.save", Turn{Via: ViaMCP, AllowChanges: true}, GateCard},
+		{"notes.propose", Turn{Via: ViaMCP, AllowChanges: true}, GatePropose},
 		{"notes.save", Turn{Via: ViaCtl, AllowChanges: true}, GateRun},
 		{"notes.export", Turn{Via: ViaAI, AllowChanges: true}, GateCard},
 		{"notes.export", Turn{Via: ViaMCP}, GateCard},

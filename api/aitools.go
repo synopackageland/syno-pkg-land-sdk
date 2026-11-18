@@ -210,12 +210,16 @@ const (
 	ViaCtl = "ctl" // a person through ctl
 )
 
-// Turn is what the server bound to this call: its channel and whether the
-// person switched on Allow changes for this turn. Nothing in a model's call
-// can set either.
+// Turn is what the server bound to this call: its channel, whether the
+// person switched on Allow changes, and the App's conversation, turn and tool
+// call IDs for proposals and audit. Nothing in a model's call can set them.
+// Allow changes lets the model propose changes; it never runs one.
 type Turn struct {
-	Via          string
-	AllowChanges bool
+	Via            string
+	AllowChanges   bool
+	ConversationID string
+	TurnID         string
+	ToolCallID     string
 }
 
 // GateDecision tells the App runtime what to do with one tool call.
@@ -230,8 +234,12 @@ const (
 	GateRefuse         GateDecision = "refuse"
 )
 
-// Gate applies the metadata rules. The App still runs its authorization,
-// draft gate, target checks and audit after a run or propose decision.
+// Gate applies the metadata rules. On the AI and MCP channels no write ever
+// returns GateRun: a write is a card, a proposal or a preview that a person
+// confirms (see Propose). Allow changes only unlocks propose. ctl is a person
+// and runs a local change when it passes AllowChanges as its confirmation.
+// The App still runs its authorization, draft gate, target checks and audit
+// after a run or propose decision.
 func (t Tool) Gate(turn Turn) GateDecision {
 	op := t.Operation
 	switch turn.Via {
@@ -264,10 +272,12 @@ func (t Tool) Gate(turn Turn) GateDecision {
 			return GateIntentRequired
 		}
 	case AILocal:
-		if turn.AllowChanges {
-			return GateRun
-		}
-		if turn.Via == ViaAI {
+		switch {
+		case turn.Via == ViaCtl:
+			if turn.AllowChanges {
+				return GateRun
+			}
+		case turn.Via == ViaAI || turn.AllowChanges:
 			return GateCard
 		}
 	case AIOneClick:
