@@ -1,0 +1,45 @@
+{
+  "version": "0.53.52",
+  "executorVersion": "0.53.6",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.52",
+    "@synopackageland/app": "0.53.52",
+    "syno-pkg-land-app": "0.53.52",
+    "synopkgland_app": "0.53.52"
+  },
+  "executorDigests": {
+    "x86_64": "e77dbf846ea4555355fa15ee3a6ca3b20e1b1aaa9768321243589d9ec15ffabe",
+    "aarch64": "741a7c37757b56b3acc304cef56de5e59c1ca9278a83be0f1e1ff1ad17b24dd6",
+    "armv7": "f0a3059b982d0210621254adf7d1a3343d2a89d114e053e5b3bd646898293b1a",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Focused release gate: Go tests of api (gate table, no AI write runs on the AI or MCP channel, proposal create/confirm/expiry/cancel/finish/retention, canonical digests, AI audit events), go vet and build, docs and version checks, executor manifest check, basic gate and npm pack scans. No full gate, QEMU, executor rebuild, crate publication or NAS acceptance."
+  },
+  "ui": {
+    "builtAgainst": "0.25.10",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.25.10.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "Tool.Gate never runs a local write on the AI or MCP channel: an AI turn gets a card with or without Allow changes; Allow changes only unlocks propose. ctl still runs local changes with AllowChanges.",
+    "Shared AI write approval: Tool.Propose and api.AIProposal with server-side Confirm (principal, params and preview digests, expiry), Finish, Cancel, Supersede, Expire, AIReceipt.ForModel, Removable retention, DigestJSON and DigestValue.",
+    "Shared AI audit format api.AIAuditEvent from Tool.AuditCall and AIProposal.AuditEvent; api.Turn gains ConversationID, TurnID and ToolCallID.",
+    "Reuse executor 0.53.6 unchanged: executor sources and build inputs are unchanged."
+  ]
+}

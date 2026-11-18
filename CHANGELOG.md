@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.53.52 (2026-11-18)
+
+- No AI write runs without a person's click. **`Tool.Gate` never returns `run` for a `local` write on the AI or MCP channel**: an AI turn gets `card` with or without Allow changes, and MCP gets `card` with Allow changes (else `refuse`). Allow changes only unlocks `propose`. ctl, a person, still runs a `local` change with `AllowChanges`. An App that ran local changes directly when Allow changes was on now gets `card`: drop that branch and return the card. See [Gate decisions](docs/ai-operation-semantics.md#gate-decisions).
+- Shared AI write approval: `Tool.Propose` makes an `api.AIProposal` for every `card`, `propose` or `preview` decision (random ID, principal, method, params and preview digests, turn attribution, `expires_at`, state). `Confirm` checks the person's click on the server (state, expiry at the server's clock, principal, digests) and moves it to `uncertain`; `Finish`, `Cancel`, `Supersede` and `Expire` record the rest. `AIReceipt.ForModel` gives the outcome an App may report back to the model; `Removable` drives the App's retention cleanup (`DefaultProposalRetention`, 30 days). `DigestJSON` and `DigestValue` give canonical SHA-256 digests. Default lifetime 10 minutes, at most 15. See [Write approval](docs/ai-operation-semantics.md#write-approval).
+- Shared AI audit format: `api.AIAuditEvent` with `proposed_by: "ai"`, `allow_changes`, conversation, turn and tool call IDs, `proposal_id` and `params_digest`. `Tool.AuditCall` describes a model call; `AIProposal.AuditEvent` a proposal's state. Storage stays in the App. `api.Turn` gains `ConversationID`, `TurnID` and `ToolCallID`. See [AI audit events](docs/ai-operation-semantics.md#ai-audit-events).
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.51 (2026-11-18)
 
 - A path-ingress identity gateway can serve a second origin on its own HTTPS port. `Config.Origin` (`origin` in gateway JSON: `https`, a package Unix socket `upstream`, optional `cookies` and `headers`) runs a second `Front` on `/tmp/synopkgland-gateway-<package>-origin.sock` behind DSM nginx: no ingress path, administrators only, its own cookie `synopkgland_sso_<package>_origin`, only that port's authority and no response-header timeout (long polls and WebSocket). The authorize CGI accepts that origin's return (`AuthorizeCGI.OriginPort`); a cold sign-in there returns `login_required`. Capability: `idgateway.OriginVersion = 1`. See [Second origin port](docs/path-ingress.md#second-origin-port).

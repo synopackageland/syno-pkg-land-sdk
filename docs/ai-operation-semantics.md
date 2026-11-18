@@ -16,14 +16,102 @@ its registered handler. Validation runs in the SDK (`ValidateOperationRegistry`,
 | `read` | read | Runs the fixed flow |
 | `preview` | read | Runs the fixed flow; a draft names it |
 | `draft` | write, destructive | Runs the named preview only; a person confirms the write |
-| `propose` | write | Stores a proposal (for example a draft change) when the turn allows changes; a person reviews and applies it |
-| `local` | write | A reversible change to the App's own state. Runs when the person switched on Allow changes for this turn; otherwise the model gets a card the person presses |
+| `propose` | write | Stores a proposal (for example a draft change) when the person switched on Allow changes; a person reviews and applies it |
+| `local` | write | A reversible change to the App's own state. The model always gets a card the person presses, with or without Allow changes |
 | `one-click` | any | Never runs on a model call; the model gets a card the person presses |
 | `human-only` | any | Not a tool. ctl with normal confirmation unless `ctl: hidden` |
 | `hidden` | any | Not a tool, not a ctl command |
 
+No AI write runs without a person's click. On the AI and MCP channels
+`Tool.Gate` never returns `run` for a write: it returns `card`, `propose` or
+`preview`, and the write runs only after a person confirms it (see
+[Write approval](#write-approval)). Allow changes is an input the App binds
+from its own UI; it only lets the model propose changes.
+
 `propose`, `local` and `one-click` need a per-turn decision that ctl does not
 have, so `ctl tool` returns a dry-run plan for them and never executes.
+
+## Gate decisions
+
+`tool.Gate(api.Turn{Via, AllowChanges})`:
+
+| `ai` | AI chat | AI chat, Allow changes | MCP | MCP, Allow changes | ctl |
+| --- | --- | --- | --- | --- | --- |
+| `read`, `preview` | run | run | run | run | run |
+| `draft` | preview | preview | preview | preview | preview |
+| `propose` | intent-required | propose | refuse | propose | refuse |
+| `local` | card | card | refuse | card | run with AllowChanges, else refuse |
+| `one-click` | card | card | card | card | card |
+
+MCP rows apply when the operation's `mcp` is `exposed`; `human-only` gives
+`card` and `hidden` gives `refuse`. ctl refuses an operation with `ctl: hidden`.
+
+## Write approval
+
+The SDK holds the approval contract; each App keeps its own UI (an Allow
+changes switch, cards or both) and its own storage. Every `card`, `propose`
+and `preview` decision becomes an `api.AIProposal`:
+
+```go
+turn := api.Turn{Via: api.ViaAI, AllowChanges: allow, ConversationID: conv, TurnID: turnID, ToolCallID: call.ID}
+params, err := tool.Bind(call.Args)
+p, err := tool.Propose(turn, caller.User, params, time.Now(), 0) // 0: DefaultProposalTTL (10 min); at most MaxProposalTTL (15 min)
+p.PreviewDigest, err = api.DigestValue(preview)                 // what the person will see, if any
+// store p; audit p.AuditEvent(now); give the model p.ID and the App's card
+
+// The person's click, on the server:
+err = p.Confirm(api.AIConfirmation{Principal: caller.User, ParamsDigest: sent.ParamsDigest, PreviewDigest: sent.PreviewDigest}, time.Now())
+// ErrProposalExpired (p is now expired; save it), ErrProposalPrincipal,
+// ErrProposalDigest or ErrProposalClosed refuse the click.
+// Save p (state uncertain) durably, dispatch, then:
+err = p.Finish(api.ProposalSucceeded, "Saved note n1", "", receipt, time.Now())
+```
+
+| Field | Meaning |
+| --- | --- |
+| `id` | 32 lowercase hex characters from a random source |
+| `principal` | The person whose turn it is; only they can confirm or cancel |
+| `method`, `via`, `decision` | The operation, the channel and the gate decision |
+| `params_digest` | `DigestJSON` of the bound params |
+| `preview_digest` | `DigestValue` of what the person is shown; empty when none |
+| `allow_changes`, `conversation_id`, `turn_id`, `tool_call_id` | The turn's binding |
+| `created_at`, `expires_at` | `expires_at` is checked by the server in `Confirm`, never only by the page |
+| `state` | `awaiting-human`, `uncertain`, `accepted`, `succeeded`, `partial`, `failed`, `canceled`, `expired`, `superseded` |
+| `receipt` | `proposal_id`, `state`, `confirmed_by`, `confirmed_at`, `finished_at`, `code`, `summary`, `result` |
+
+- `Confirm` checks state, expiry at the server's clock, principal, params
+  digest and preview digest, then moves the proposal to `uncertain`. Save it
+  before dispatch. After a crash, look an `uncertain` proposal's outcome up;
+  never dispatch it again.
+- `Finish` records `accepted` (a job still runs), then `succeeded`, `partial`
+  or `failed`. `Cancel(principal, now)` and `Supersede(now)` close an
+  awaiting proposal; `Expire(now)` closes one past `expires_at` (for a sweep).
+- `Receipt.ForModel()` gives `proposal_id`, `state`, `summary` and `code` for
+  an App that reports the outcome back to the model. `result` and
+  `confirmed_by` stay in the App.
+- `Removable(now, retention)` says when an App may delete a stored proposal:
+  it ended (or expired unconfirmed) at least `retention` ago; 0 is
+  `DefaultProposalRetention` (30 days). `uncertain` and `accepted` proposals
+  are never removable.
+- `DigestJSON` is the lowercase hex SHA-256 of canonical JSON (sorted keys, no
+  insignificant space, numbers as written); empty params digest as `{}`.
+
+## AI audit events
+
+`api.AIAuditEvent` is the shared audit format; the App writes it to its own
+audit store (`Fields()` gives a map with the JSON names).
+
+- `tool.AuditCall(turn, params, now)`: event `ai.tool` for one model call,
+  with the gate `decision` and `audit_class`.
+- `p.AuditEvent(now)`: event `ai.proposal` with the proposal's `state`; record
+  one when the proposal is created and after every state change. `actor` is
+  the person who confirmed.
+
+Both carry `proposed_by: "ai"` (AI and MCP channels), `via`, `method`,
+`allow_changes` (always present), `conversation_id`, `turn_id`,
+`tool_call_id` and `params_digest`; proposal events add `proposal_id`. Put the
+`proposal_id` on the App's own business audit entry of the confirmed write too,
+so the write traces back to the AI turn.
 
 ## Fields
 
@@ -110,7 +198,8 @@ tools, err := catalog.Tools("app", api.RuntimeNamespace{
 })
 // Per call: tool.Bind(args) merges fixed values (a model cannot change them),
 // tool.Gate(api.Turn{Via: api.ViaAI, AllowChanges: allow}) says run, preview,
-// propose, card, intent-required or refuse; tool.Consent(params),
+// propose, card, intent-required or refuse (a write is never run on a model
+// call; see Write approval); tool.Consent(params),
 // tool.AuditClass() and tool.Undo(result) come from the carrier.
 ```
 

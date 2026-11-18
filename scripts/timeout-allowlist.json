@@ -820,5 +820,23 @@
     "statement": "case <-time.After(5 * time.Millisecond):",
     "class": "B",
     "reason": "Journal lock retry spacing only; acquisition keeps the caller context and cancels immediately when it ends"
+  },
+  {
+    "file": "api/aiproposal.go",
+    "statement": "DefaultProposalTTL = 10 * time.Minute",
+    "class": "B",
+    "reason": "Approval window of an AI proposal: a person's late confirmation is refused and the proposal expires; no call or handler is cut off by the clock"
+  },
+  {
+    "file": "api/aiproposal.go",
+    "statement": "MaxProposalTTL = 15 * time.Minute",
+    "class": "B",
+    "reason": "Upper bound an App may choose for an AI proposal's approval window; no call or handler is cut off by the clock"
+  },
+  {
+    "file": "api/aiproposal.go",
+    "statement": "DefaultProposalRetention = 30 * 24 * time.Hour",
+    "class": "B",
+    "reason": "Retention of ended AI proposal records before an App may delete them; no call or handler is cut off by the clock"
   }
 ]
