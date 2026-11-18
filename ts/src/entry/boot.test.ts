@@ -544,3 +544,59 @@ test('a cached sign-in keeps its language when DSM cannot be read, when nothing 
  next!.host.dispose()
  vi.mocked(readDsmLanguage).mockResolvedValue(undefined)
 })
+
+const shortEntry = 'https://localhost/webman/3rdparty/ExampleApp/app/launch.html'
+const statusOnly = () => vi.fn<typeof globalThis.fetch>(async (_url, init) => init?.method === 'POST' ? json(account) : new Response('', {status: 404}))
+
+test('a page opened through its short path shows the short path, keeps the query and anchors URLs to the entry page', async () => {
+ sessionStorage.clear()
+ history.replaceState(null, '', `${shortEntry}?spl-short=go&link=%2Fadd#top`)
+ const request = statusOnly(), opts = {...options(), pageURL: undefined, shortPath: '/go'}
+ const ctx = await bootEntryPage({...opts, fetch: request})
+ expect(`${location.pathname}${location.search}${location.hash}`).toBe('/go?link=%2Fadd#top')
+ expect(document.querySelector('base')?.href).toBe(shortEntry)
+ expect(request.mock.calls[0]![0]).toBe('https://localhost/webman/3rdparty/ExampleApp/cgi/api.cgi')
+ expect(ctx?.launchParams).toEqual({link: '/add', route: '/add'})
+ expect(ctx?.entryURL).toBe('https://localhost/go')
+ ctx!.host.dispose()
+})
+
+test.each([
+ ['another short path', '?spl-short=other&link=%2Fadd', '/go'],
+ ['no declared short path', '?spl-short=go&link=%2Fadd', undefined],
+ ['a marker that is not first', '?link=%2Fadd&spl-short=go', '/go'],
+])('%s keeps the entry URL', async (_name, search, shortPath) => {
+ sessionStorage.clear()
+ history.replaceState(null, '', `${shortEntry}${search}`)
+ const ctx = await bootEntryPage({...options(), pageURL: undefined, shortPath, fetch: statusOnly()})
+ expect(location.pathname).toBe('/webman/3rdparty/ExampleApp/app/launch.html')
+ expect(document.querySelector('base')).toBeNull()
+ ctx!.host.dispose()
+})
+
+test('a short path survives a DSM sign-in in the same tab', async () => {
+ sessionStorage.clear()
+ history.replaceState(null, '', `${shortEntry}?spl-short=go&link=%2Fadd`)
+ const opts = {...options(), pageURL: undefined, shortPath: '/go', token: undefined}
+ await bootEntryPage({...opts, fetch: vi.fn(async () => new Response(JSON.stringify({success: false})))})
+ const url = new URL(opts.navigate.mock.calls[0]![0])
+ expect(url.searchParams.get('launchParam')).not.toContain('spl-short')
+ // DSM's sign-in opens the entry page again, without the marker or the query.
+ history.replaceState(null, '', shortEntry)
+ document.head.innerHTML = ''
+ const ctx = await bootEntryPage({...options(), pageURL: undefined, shortPath: '/go', fetch: statusOnly()})
+ expect(`${location.pathname}${location.search}`).toBe('/go?link=%2Fadd')
+ expect(ctx?.launchParams).toMatchObject({link: '/add'})
+ ctx!.host.dispose()
+})
+
+test('the short path wins over rewriteToAlias', async () => {
+ sessionStorage.clear()
+ history.replaceState(null, '', `${shortEntry}?spl-short=go`)
+ const request = vi.fn<typeof globalThis.fetch>(async (_url, init) => init?.method === 'POST' ? json(account) : new Response(''))
+ const ctx = await bootEntryPage({...options(), pageURL: undefined, shortPath: '/go', portal: {defaultAlias: 'example'}, rewriteToAlias: true, fetch: request})
+ await new Promise(resolve => setTimeout(resolve, 0))
+ expect(`${location.pathname}${location.search}`).toBe('/go')
+ expect(request.mock.calls.some(([url]) => String(url) === 'https://localhost/example/')).toBe(false)
+ ctx!.host.dispose()
+})
