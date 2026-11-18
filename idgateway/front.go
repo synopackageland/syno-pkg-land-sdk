@@ -146,8 +146,16 @@ type FrontConfig struct {
 	// SignedIn, when set, sees each verified sign-in.
 	SignedIn func(Subject)
 
+	// CookieName replaces the session cookie name (a second origin's Front).
+	CookieName string
+	// Cookies is "" (DSM cookies stripped both ways) or dsm-passthrough.
+	Cookies string
+
 	Now          func() time.Time
 	appPrivilege func(context.Context, string, string, string) (bool, error)
+	// origin marks the package's second origin, whose fixed admin-only entry
+	// is not part of the build-bound main entry policy.
+	origin bool
 }
 
 type txn struct {
@@ -200,8 +208,16 @@ func NewFront(cfg FrontConfig) (*Front, error) {
 	if err := validateSecureContext(cfg.SecureContext); err != nil {
 		return nil, err
 	}
-	if err := (Config{Entry: cfg.Entry, Access: cfg.Access, UpstreamAccess: cfg.UpstreamAccess, Groups: cfg.Groups, ComposeBlocked: cfg.ComposeBlocked, UpstreamAuthPaths: cfg.UpstreamAuthPaths, Passthrough: cfg.Passthrough, OptionalPassthrough: cfg.OptionalPassthrough}).checkEntryPolicy(); err != nil {
+	if cfg.origin && cfg.Entry != "admin-only" {
+		return nil, errors.New("the second origin is administrator-only")
+	}
+	if err := (Config{Entry: cfg.Entry, Access: cfg.Access, UpstreamAccess: cfg.UpstreamAccess, Groups: cfg.Groups, ComposeBlocked: cfg.ComposeBlocked, UpstreamAuthPaths: cfg.UpstreamAuthPaths, Passthrough: cfg.Passthrough, OptionalPassthrough: cfg.OptionalPassthrough}).checkEntryPolicy(); err != nil && !cfg.origin {
 		return nil, err
+	}
+	switch cfg.Cookies {
+	case "", OriginCookiesDSMPassthrough:
+	default:
+		return nil, errors.New("unsupported gateway cookie mode")
 	}
 	if err := validateUpstreamAuth(cfg.UpstreamAuthPaths, cfg.Passthrough, cfg.OptionalPassthrough); err != nil {
 		return nil, err
@@ -305,6 +321,9 @@ func NewFront(cfg FrontConfig) (*Front, error) {
 	}
 	cfg = scopeFront(cfg)
 	f := &Front{resourceWaiters: make(chan struct{}, resourceWaitLimit), brand: readAppBrand("/var/packages", cfg.Package), cfg: cfg, upstream: up, cookie: "synopkgland_sso_" + cfg.Package, txns: map[string]txn{}, sessions: map[string]session{}}
+	if cfg.CookieName != "" {
+		f.cookie = cfg.CookieName
+	}
 	if cfg.Provider != nil && cfg.Entry != "" {
 		cfg.Provider.admit = f.admitClient
 	}
@@ -896,7 +915,13 @@ func (f *Front) stripGatewayCookies(r *http.Request) {
 	}
 }
 
+// reservedCookie names cookies that never cross the gateway, in either
+// direction: the gateway's own, and DSM's sign-in cookies of the same host.
+// dsm-passthrough keeps DSM's non-HttpOnly browser cookies for a proxied DSM.
 func (f *Front) reservedCookie(name string) bool {
+	if f.cfg.Cookies == OriginCookiesDSMPassthrough {
+		return name == "id" || name == "did" || strings.HasPrefix(name, "synopkgland_sso_") || strings.HasPrefix(name, "spl_session_")
+	}
 	return name == "id" || name == "did" || name == "_SSID" || name == "_CrPoSt" || name == "stay_login" || strings.HasPrefix(name, "synopkgland_sso_") || strings.HasPrefix(name, "spl_session_")
 }
 

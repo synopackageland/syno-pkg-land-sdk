@@ -17,7 +17,16 @@ import (
 type Port struct {
 	Default  int    `json:"default"`
 	Protocol string `json:"protocol"`
+	// Conflict is "" (a confirmed service conflict refuses the port) or
+	// ConflictWarn (it is reported and the port is kept).
+	Conflict string `json:"conflict,omitempty"`
 }
+
+// ConflictWarn keeps a port that DSM's service registry reports in use and
+// reports a warning instead. Format, range, reserved and duplicate checks
+// still refuse it; DSM's resource acquisition and binding stay the final check.
+const ConflictWarn = "warn"
+
 type PortConfig struct {
 	Schema  int               `json:"schema"`
 	Package string            `json:"package"`
@@ -69,7 +78,7 @@ func portConfig(root *os.Root, pkg string) (PortConfig, error) {
 		return cfg, ErrPort
 	}
 	for key, p := range cfg.Ports {
-		if !keyPattern.MatchString(key) || !ValidPort(p.Default) || (p.Protocol != "tcp" && p.Protocol != "udp") {
+		if !keyPattern.MatchString(key) || !ValidPort(p.Default) || (p.Protocol != "tcp" && p.Protocol != "udp") || (p.Conflict != "" && p.Conflict != ConflictWarn) {
 			return cfg, ErrPort
 		}
 	}
@@ -133,10 +142,30 @@ func writePortFile(root *os.Root, path string, content []byte) error {
 
 // PreparePorts materializes only generated, bounded payload files. It does not
 // touch DSM configuration, bind sockets, call a shell or create pkgvar.
+// A warn-policy conflict is reported on stderr, which DSM keeps in the
+// package's installation log.
 func PreparePorts(payload, pkg, pkgvar string) error {
-	return preparePorts(payload, pkg, pkgvar, CheckPort)
+	return preparePortsWarn(payload, pkg, pkgvar, CheckPort, func(w string) { fmt.Fprintln(os.Stderr, w) })
 }
-func preparePorts(payload, pkg, pkgvar string, check func(context.Context, string, string, Port, int) error) error {
+
+type portCheck func(context.Context, string, string, Port, int) error
+
+func preparePorts(payload, pkg, pkgvar string, check portCheck) error {
+	return preparePortsWarn(payload, pkg, pkgvar, check, func(string) {})
+}
+
+// conflictWarning applies a port's conflict policy to a check result.
+func conflictWarning(key string, p Port, n int, err error) (string, error) {
+	if err == nil {
+		return "", nil
+	}
+	if p.Conflict == ConflictWarn {
+		return fmt.Sprintf("INSTALL_PORT_CONFLICT_WARNING: port %d (%s) may already be in use; it was kept: %v", n, key, err), nil
+	}
+	return "", fmt.Errorf("%w (%s)", err, key)
+}
+
+func preparePortsWarn(payload, pkg, pkgvar string, check portCheck, warn func(string)) error {
 	if os.Getuid() == 0 || os.Getuid() != os.Geteuid() {
 		return ErrPort
 	}
@@ -189,11 +218,22 @@ func preparePorts(payload, pkg, pkgvar string, check func(context.Context, strin
 			return ErrPort
 		}
 		used[id] = true
-		if e = check(context.Background(), pkg, key, p, n); e != nil {
-			return fmt.Errorf("%w (%s)", e, key)
+		warning, e := conflictWarning(key, p, n, check(context.Background(), pkg, key, p, n))
+		if e != nil {
+			return e
+		}
+		if warning != "" {
+			warn(warning)
 		}
 		values[key] = n
 	}
+	return materializePorts(root, cfg, pkg, keys, values)
+}
+
+// materializePorts renders the generated files, selected values, DSM service
+// definition and environment from the package's own port templates.
+func materializePorts(root *os.Root, cfg PortConfig, pkg string, keys []string, values map[string]int) error {
+	var err error
 	outputs := map[string][]byte{}
 	for path, template := range cfg.Files {
 		for key, n := range values {
@@ -227,6 +267,91 @@ func preparePorts(payload, pkg, pkgvar string, check func(context.Context, strin
 	}
 	return writePrivate(root, "install/ports.env", []byte(environment.String()))
 }
+
+// ChangePorts changes installed ports after installation, for an App's own
+// settings page. Run it as the package account. Only declared keys change;
+// format, range, reserved and duplicate values are refused and a conflict
+// follows each port's policy (warnings are returned). It rewrites the
+// generated payload files and the remembered values, so upgrades keep the
+// change. DSM applies the new nginx and service resources at the next package
+// start: restart the package afterwards (see selfrestart).
+func ChangePorts(payload, pkg, pkgvar string, changes map[string]int) ([]string, error) {
+	return changePorts(payload, pkg, pkgvar, changes, CheckPort)
+}
+
+func changePorts(payload, pkg, pkgvar string, changes map[string]int, check portCheck) ([]string, error) {
+	if os.Getuid() == 0 || os.Getuid() != os.Geteuid() || len(changes) == 0 {
+		return nil, ErrPort
+	}
+	root, err := openRoot(payload)
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close()
+	cfg, err := portConfig(root, pkg)
+	if err != nil {
+		return nil, err
+	}
+	values := map[string]int{}
+	keys := make([]string, 0, len(cfg.Ports))
+	for key := range cfg.Ports {
+		b, e := readPrivate(root, "install/port-values/"+key+".value")
+		if e != nil {
+			return nil, e
+		}
+		if values[key], e = portValue(string(b)); e != nil {
+			return nil, e
+		}
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for key, n := range changes {
+		if _, ok := cfg.Ports[key]; !ok || !ValidPort(n) {
+			return nil, fmt.Errorf("%w (%s)", ErrPort, key)
+		}
+		values[key] = n
+	}
+	used := map[string]bool{}
+	for _, key := range keys {
+		id := cfg.Ports[key].Protocol + ":" + strconv.Itoa(values[key])
+		if used[id] {
+			return nil, fmt.Errorf("%w (%s)", ErrPort, key)
+		}
+		used[id] = true
+	}
+	var warnings []string
+	for _, key := range keys {
+		n, changed := changes[key]
+		if !changed {
+			continue
+		}
+		warning, e := conflictWarning(key, cfg.Ports[key], n, check(context.Background(), pkg, key, cfg.Ports[key], n))
+		if e != nil {
+			return nil, e
+		}
+		if warning != "" {
+			warnings = append(warnings, warning)
+		}
+	}
+	if err = materializePorts(root, cfg, pkg, keys, values); err != nil {
+		return nil, err
+	}
+	state, err := openRoot(statePath(pkg, pkgvar))
+	if err != nil {
+		return nil, err
+	}
+	defer state.Close()
+	if err = privateDir(state, "install-ports"); err != nil {
+		return nil, err
+	}
+	for _, key := range keys {
+		if err = writePrivate(state, "install-ports/"+key+".value", []byte(strconv.Itoa(values[key]))); err != nil {
+			return nil, err
+		}
+	}
+	return warnings, nil
+}
+
 func RememberPorts(payload, pkg, pkgvar string) error {
 	root, err := openRoot(payload)
 	if err != nil {
