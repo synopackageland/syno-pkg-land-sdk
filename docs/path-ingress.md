@@ -81,3 +81,53 @@ error. DSM's worker owns registration, upgrade replacement and uninstall cleanup
 the checker writes no registry and never removes another owner's configuration.
 The stable menu CGI launches the selected base. Authentication, App privileges,
 relative callback/API/share policy and WebSocket admission are unchanged.
+
+## Second origin port
+
+`idgateway.OriginVersion = 1` adds `Config.Origin` (`"origin"` in gateway JSON),
+a second browser origin of a path-ingress gateway on its own HTTPS port:
+
+```json
+"origin": {
+  "https": 5443,
+  "upstream": "unix:/var/packages/<Package>/var/run/<name>.sock",
+  "cookies": "dsm-passthrough",
+  "headers": {"user": "X-Relay-User"}
+}
+```
+
+It needs `native_ingress`, no `compose_ingress`, a valid unreserved port that
+differs from the gateway's other ports, a Unix socket upstream of this package
+(as above), `cookies` empty or `dsm-passthrough`, and `headers.user` when any
+header is named. With an installer port `gateway_origin` in `install/ports.json`,
+the selected value replaces `https` when the configuration loads.
+
+DSM nginx owns the port and its certificate (the CLI's `server` block) and
+forwards every request to a second mutually authenticated socket,
+`/tmp/synopkgland-gateway-<Package>-origin.sock`, with the same native
+certificate as the path socket. The gateway serves a second `Front` there:
+
+- no ingress path: the origin's whole URL space goes to `origin.upstream`;
+- the entry is always `admin-only` (access `dsm-admins`), whatever the App's
+  entry policy; non-administrators never reach the upstream;
+- its own sessions and cookie, `synopkgland_sso_<Package>_origin`; revoking a
+  DSM user (deletion) ends sessions on both origins;
+- the browser authority must name the origin port; public, Connect and other
+  external origins are not accepted;
+- `headers.user` (and the other `headers`) send the administrator; without them
+  no identity is sent;
+- no response-header timeout, so long polls and WebSocket upgrades stay open.
+
+The authorize CGI (`AuthorizeCGI.OriginPort`) accepts the return
+`https://<same host>:<port>/_sso/return` only. Assertions are bound to that
+origin. The browser must already have a DSM session on the host: a cold sign-in
+returns `login_required` to the origin instead of starting DSM's login, because
+the main App's sign-in resume cannot return to another port.
+
+`cookies: dsm-passthrough` (`OriginCookiesDSMPassthrough`) is for an upstream that
+is itself a DSM web UI. Request cookies keep `_SSID`, `_CrPoSt`, `stay_login` and
+the upstream's other cookies; the gateway removes only its own cookies
+(`synopkgland_sso_*`, `spl_session_*`) and DSM's sign-in cookies `id` and `did`,
+which belong to the DSM origin on the same host. Response `Set-Cookie` headers are
+left to the upstream, except that it cannot set those reserved names. In the
+default mode the gateway strips DSM cookies as on every other route.

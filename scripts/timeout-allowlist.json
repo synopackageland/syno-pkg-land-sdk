@@ -594,6 +594,12 @@
     "reason": "Certificate validity, idle connection expiry or HTTP header framing; no parsed handler deadline"
   },
   {
+    "file": "idgateway/run.go",
+    "statement": "srv := &http.Server{Handler: originIngressHandler(cfg, gw.Origin), ReadHeaderTimeout: 30 * time.Second, IdleTimeout: idleTimeout}",
+    "class": "B",
+    "reason": "Certificate validity, idle connection expiry or HTTP header framing; no parsed handler deadline"
+  },
+  {
     "file": "idgateway/watch_linux.go",
     "statement": "const watchSettle = 200 * time.Millisecond",
     "class": "B",

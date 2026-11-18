@@ -195,7 +195,7 @@ func preparePortsWarn(payload, pkg, pkgvar string, check portCheck, warn func(st
 	for _, key := range keys {
 		p := cfg.Ports[key]
 		raw := os.Getenv("pkgwizard_port_" + key)
-		// Port changes use reinstall. An upgrade always retains installed values.
+		// An upgrade always retains installed values; ChangePorts changes them.
 		if os.Getenv("SYNOPKG_PKG_STATUS") == "UPGRADE" {
 			raw = ""
 		}
