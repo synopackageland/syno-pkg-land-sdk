@@ -52,11 +52,14 @@ func nativeTLSConfig(cfg Config) (*tls.Config, error) {
 }
 
 func nativeListener(cfg Config) (net.Listener, error) {
+	return nativeListenerAt(cfg, nativeSocketPath(cfg.Package))
+}
+
+func nativeListenerAt(cfg Config, path string) (net.Listener, error) {
 	tlsConfig, err := nativeTLSConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
-	path := nativeSocketPath(cfg.Package)
 	if info, err := os.Lstat(path); err == nil {
 		stat, ok := info.Sys().(*syscall.Stat_t)
 		if info.Mode()&os.ModeSocket == 0 || !ok || stat.Uid != uint32(os.Getuid()) {

@@ -189,6 +189,15 @@ func Run(ctx context.Context, cfg Config, ports DSMPorts, app []string) error {
 		servers = append(servers, srv)
 		go func() { errc <- srv.Serve(listener) }()
 	}
+	if gw.Origin != nil {
+		listener, err := originListener(cfg)
+		if err != nil {
+			return err
+		}
+		srv := &http.Server{Handler: originIngressHandler(cfg, gw.Origin), ReadHeaderTimeout: 30 * time.Second, IdleTimeout: idleTimeout}
+		servers = append(servers, srv)
+		go func() { errc <- srv.Serve(listener) }()
+	}
 	if !cfg.NativeIngress && cfg.Listen.HTTP != 0 {
 		if err := serve(":"+strconv.Itoa(cfg.Listen.HTTP), gw.Front, nil); err != nil {
 			return err

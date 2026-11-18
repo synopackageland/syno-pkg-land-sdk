@@ -53,9 +53,12 @@ type AuthorizeCGI struct {
 	Available func() bool
 	Key       []byte
 	AppPorts  []int
-	Verifier  SessionVerifier
-	Accounts  Accounts
-	Now       func() time.Time
+	// OriginPort is Config.Origin's HTTPS port: its gateway return is accepted
+	// on the same hostname, at the root path.
+	OriginPort int
+	Verifier   SessionVerifier
+	Accounts   Accounts
+	Now        func() time.Time
 }
 
 var txnPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,128}$`)
@@ -104,6 +107,9 @@ func (h *AuthorizeCGI) returnURL(r *http.Request) (*url.URL, bool) {
 
 func (h *AuthorizeCGI) returnURLWithExternal(r *http.Request, e External) (*url.URL, bool) {
 	ret, err := url.Parse(r.URL.Query().Get("return"))
+	if err == nil && h.originReturn(r, ret) {
+		return ret, true
+	}
 	if err != nil || (ret.Scheme != "http" && ret.Scheme != "https") || !validReturnPathAt(ret, h.IngressPath) {
 		return nil, false
 	}
@@ -118,6 +124,13 @@ func (h *AuthorizeCGI) returnURLWithExternal(r *http.Request, e External) (*url.
 		return nil, false
 	}
 	return ret, true
+}
+
+// originReturn is the second origin's return: HTTPS only (DSM's nginx serves
+// it with TLS), the configured port and the hostname the browser used for DSM.
+func (h *AuthorizeCGI) originReturn(r *http.Request, ret *url.URL) bool {
+	return h.OriginPort != 0 && ret.Scheme == "https" && ret.Port() == strconv.Itoa(h.OriginPort) &&
+		strings.EqualFold(ret.Hostname(), hostname(r.Host)) && validReturnPathAt(ret, "")
 }
 
 func (h *AuthorizeCGI) bootstrap(w http.ResponseWriter, r *http.Request, ret *url.URL) {
@@ -173,7 +186,8 @@ func (h *AuthorizeCGI) verify(w http.ResponseWriter, r *http.Request, ret *url.U
 	case errors.Is(err, api.ErrAdminRequired) || errors.Is(err, ErrGroupRequired):
 		q.Set("error", "access_denied")
 	case errors.Is(err, api.ErrNoSession) || errors.Is(err, ErrNoAccount):
-		if namePattern.MatchString(h.LoginApp) && r.URL.Query().Get("login_attempt") != "1" {
+		// The second origin has no launcher resume: it reports login_required.
+		if namePattern.MatchString(h.LoginApp) && r.URL.Query().Get("login_attempt") != "1" && !h.originReturn(r, ret) {
 			resume := r.URL.Query().Get("resume")
 			if resume == "" {
 				if index := external.Index(ret.Scheme + "://" + ret.Host); index >= 0 {

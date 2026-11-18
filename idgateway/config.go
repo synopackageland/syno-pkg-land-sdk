@@ -122,6 +122,8 @@ type Config struct {
 	OIDC                         *OIDCConfig                        `json:"oidc"`
 	Token                        *TokenConfig                       `json:"token"`
 	Account                      *AccountConfig                     `json:"account"`
+	// Origin is an optional second, administrator-only HTTPS origin.
+	Origin *OriginConfig `json:"origin,omitempty"`
 }
 
 var namePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
@@ -153,6 +155,9 @@ func LoadConfig(path string) (Config, error) {
 		if n := values["oidc_issuer"]; n != 0 && cfg.OIDC != nil {
 			cfg.OIDC.IssuerPort = n
 		}
+		if n := values[originPortKey]; n != 0 && cfg.Origin != nil {
+			cfg.Origin.HTTPS = n
+		}
 	}
 	if err := cfg.validate(); err != nil {
 		return Config{}, fmt.Errorf("%s: %w", path, err)
@@ -180,6 +185,9 @@ func (c Config) validate() error {
 		return err
 	}
 	if _, err := parseUnixUpstream(c.Package, c.Upstream, c.ComposeIngress != nil); err != nil {
+		return err
+	}
+	if err := c.validateOrigin(); err != nil {
 		return err
 	}
 	if err := c.External.validate(); err != nil {
@@ -360,7 +368,9 @@ func (c Config) Deletions() *Deletions {
 // Deletions, when the configuration has an account section, acts on deleted
 // DSM accounts.
 type Gateway struct {
-	Front     *Front
+	Front *Front
+	// Origin serves Config.Origin; nil without one.
+	Origin    *Front
 	Provider  *Provider
 	Secrets   map[string]string
 	Deletions *Deletions
@@ -417,13 +427,27 @@ func Build(cfg Config, ports DSMPorts) (*Gateway, error) {
 	if gw.Front, err = NewFront(front); err != nil {
 		return nil, err
 	}
+	if cfg.Origin != nil {
+		if gw.Origin, err = cfg.originFront(key, ports); err != nil {
+			return nil, err
+		}
+		gw.Origin.cfg.SignedIn = front.SignedIn
+	}
 	if gw.Deletions != nil {
-		gw.Deletions.Revoke = gw.Front.RevokeUID
+		gw.Deletions.Revoke = gw.RevokeUID
 		gw.Deletions.Deleted = func(p PendingDeletion) {
 			log.Printf("account deletions: deleted uid %d (%s), queued %s, %d earlier failed attempts", p.UID, p.Name, p.Since.Format(time.RFC3339), p.Attempts)
 		}
 	}
 	return gw, nil
+}
+
+// RevokeUID ends every session of uid on all of the gateway's origins.
+func (g *Gateway) RevokeUID(uid int) {
+	g.Front.RevokeUID(uid)
+	if g.Origin != nil {
+		g.Origin.RevokeUID(uid)
+	}
 }
 
 func (c Config) provider(secrets map[string]string) (*Provider, error) {
