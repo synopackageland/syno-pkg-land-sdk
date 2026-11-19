@@ -1,0 +1,45 @@
+{
+  "version": "0.53.54",
+  "executorVersion": "0.53.6",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.54",
+    "@synopackageland/app": "0.53.54",
+    "syno-pkg-land-app": "0.53.54",
+    "synopkgland_app": "0.53.54"
+  },
+  "executorDigests": {
+    "x86_64": "e77dbf846ea4555355fa15ee3a6ca3b20e1b1aaa9768321243589d9ec15ffabe",
+    "aarch64": "741a7c37757b56b3acc304cef56de5e59c1ca9278a83be0f1e1ff1ad17b24dd6",
+    "armv7": "f0a3059b982d0210621254adf7d1a3343d2a89d114e053e5b3bd646898293b1a",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Focused release gate: installsettings regressions including a supervised TCP listener and unchanged daemon inventory through stop/start; gateway and Compose Port/Origin tests; Go vet/build; Node and frontend builds and packed consumer checks; docs, version and executor manifest checks; both npm archives scanned for internal content and secrets. No full gate, QEMU, executor rebuild, crate publication or NAS acceptance."
+  },
+  "ui": {
+    "builtAgainst": "0.25.10",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.25.10.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "ChangePorts saves the existing retained install-ports selection without rewriting running daemon inventory, nginx resources or installed runtime values. Stops and starts retain the installed ports until installation or upgrade.",
+    "ReadPortStatus exposes configured, effective and pending ports; PortsPendingMessage supplies an English Package Center Manual Install hint for Apps to translate. Effective configuration still requires listener health before claiming it is listening.",
+    "Installation applies pending ports before acquiring DSM resources, regenerates nginx configuration and carries installer-selected gateway HTTPS ports into retained HTTPS origins. Explicit wizard input and independent external origins retain their validation.",
+    "Reuse executor 0.53.6 unchanged: executor sources and build inputs are unchanged."
+  ]
+}
