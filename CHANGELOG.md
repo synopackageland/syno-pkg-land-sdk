@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.53.54 (2026-11-19)
+
+- `installsettings.ChangePorts` saves ports for the next installation or upgrade without rewriting the running daemon inventory, nginx resources or installed runtime settings. Stops and starts keep the effective ports; no restart is requested. In Package Center, use Manual Install to reinstall the same SPK or install an upgrade; if DSM rejects the same version, wait for the next upgrade. See [Installer-selected ports](docs/install-ports.md).
+- `ReadPortStatus` exposes configured, effective and pending ports. `PortsPendingMessage` provides an English installation hint for Apps to translate. Effective configuration must be combined with the App's listener health before labeling a port as listening.
+- Installation applies pending ports before DSM acquires resources and regenerates nginx configuration. Retained gateway HTTPS origins adopt the installer-selected port in the incoming payload; explicit wizard input and independent external origins keep their validation.
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.53 (2026-11-18)
 
 - Installer ports may rewrite the identity gateway's second-origin nginx server block (`sso/native-origin-nginx.conf`). Since 0.53.51 every install and upgrade of an App that declares `identity_gateway.origin` failed in preinst with `INSTALL_PORT_INVALID` (on an upgrade DSM had already removed the installed version), and `installsettings.ChangePorts` refused the same configuration. Rebuild such an App with this SDK.
