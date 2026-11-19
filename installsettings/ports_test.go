@@ -96,7 +96,7 @@ func originPortFixture(t *testing.T) (string, string) {
 		"gateway_http":   {Default: 28000, Protocol: "tcp"},
 		"gateway_origin": {Default: 28443, Protocol: "tcp", Conflict: ConflictWarn},
 	}, Files: map[string]string{
-		"sso/gateway.json":      `{"listen":{"http":@@PORT_gateway_http@@},"origin":{"https":@@PORT_gateway_origin@@}}`,
+		"sso/gateway.json":             `{"listen":{"http":@@PORT_gateway_http@@},"origin":{"https":@@PORT_gateway_origin@@}}`,
 		"sso/native-origin-nginx.conf": "listen @@PORT_gateway_origin@@ ssl;",
 	}}
 	raw, _ := json.Marshal(cfg)
@@ -152,45 +152,188 @@ func TestPortConfigRejectsAnUnknownConflictPolicy(t *testing.T) {
 	}
 }
 
-func TestChangePortsRewritesGeneratedFilesAndTheRememberedValue(t *testing.T) {
+func TestChangePortsLeavesInstalledFilesUntilInstallation(t *testing.T) {
+	for _, phase := range []string{"INSTALL", "UPGRADE"} {
+		t.Run(phase, func(t *testing.T) {
+			root, state := originPortFixture(t)
+			t.Setenv("SYNOPKG_PKG_STATUS", "INSTALL")
+			if err := preparePorts(root, "ExampleApp", state, availablePort); err != nil {
+				t.Fatal(err)
+			}
+			if err := RememberPorts(root, "ExampleApp", state); err != nil {
+				t.Fatal(err)
+			}
+			conflict := func(_ context.Context, _, key string, _ Port, n int) error {
+				if n == 28600 {
+					return ErrPort
+				}
+				return nil
+			}
+			warnings, err := changePorts(root, "ExampleApp", state, map[string]int{"gateway_origin": 28600}, conflict)
+			if err != nil || len(warnings) != 1 || !strings.Contains(warnings[0], "28600") {
+				t.Fatal(warnings, err)
+			}
+			assertPortStatus(t, root, state, "gateway_origin", PortStatus{Configured: 28600, Effective: 28443, Pending: true})
+			for path, want := range map[string]string{
+				"sso/gateway.json":             `{"listen":{"http":28000},"origin":{"https":28443}}`,
+				"sso/native-origin-nginx.conf": "listen 28443 ssl;",
+			} {
+				if b, _ := os.ReadFile(filepath.Join(root, path)); string(b) != want {
+					t.Fatalf("%s: %s", path, b)
+				}
+			}
+			sc, _ := os.ReadFile(filepath.Join(root, "install/ExampleApp.sc"))
+			env, _ := os.ReadFile(filepath.Join(root, "install/ports.env"))
+			if !strings.Contains(string(sc), `dst.ports="28443/tcp"`) || !strings.Contains(string(env), "SYNOPKGLAND_PORT_GATEWAY_ORIGIN=28443") || !strings.Contains(string(env), "SYNOPKGLAND_PORT_GATEWAY_HTTP=28000") {
+				t.Fatal(string(sc), string(env))
+			}
+			if values, err := PortValues(root); err != nil || values["gateway_origin"] != 28443 {
+				t.Fatal(values, err)
+			}
+			// Model the incoming payload, separately from the running installation.
+			incoming, _ := originPortFixture(t)
+			t.Setenv("SYNOPKG_PKG_STATUS", phase)
+			t.Setenv("pkgwizard_port_gateway_origin", "28443")
+			if err := preparePorts(incoming, "ExampleApp", state, availablePort); err != nil {
+				t.Fatal(err)
+			}
+			if values, _ := PortValues(incoming); values["gateway_origin"] != 28600 || values["gateway_http"] != 28000 {
+				t.Fatal(values)
+			}
+			if b, _ := os.ReadFile(filepath.Join(incoming, "sso/native-origin-nginx.conf")); string(b) != "listen 28600 ssl;" {
+				t.Fatalf("incoming nginx was not regenerated: %s", b)
+			}
+			if err := RememberPorts(incoming, "ExampleApp", state); err != nil {
+				t.Fatal(err)
+			}
+			assertPortStatus(t, incoming, state, "gateway_origin", PortStatus{Configured: 28600, Effective: 28600})
+		})
+	}
+}
+
+func assertPortStatus(t *testing.T, root, state, key string, want PortStatus) {
+	t.Helper()
+	status, err := ReadPortStatus(root, "ExampleApp", state)
+	if err != nil || status[key] != want {
+		t.Fatalf("status[%s] = %+v, %v; want %+v", key, status[key], err, want)
+	}
+}
+
+func TestPortStatusAndSuccessivePendingChanges(t *testing.T) {
 	root, state := originPortFixture(t)
-	t.Setenv("SYNOPKG_PKG_STATUS", "INSTALL")
+	if err := preparePorts(root, "ExampleApp", state, availablePort); err != nil {
+		t.Fatal(err)
+	}
+	// No retained state yet: the installed selection is the configured value.
+	assertPortStatus(t, root, state, "gateway_origin", PortStatus{Configured: 28443, Effective: 28443})
+	for _, change := range []map[string]int{
+		{"gateway_origin": 28600},
+		{"gateway_http": 28100},
+	} {
+		if _, err := changePorts(root, "ExampleApp", state, change, availablePort); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertPortStatus(t, root, state, "gateway_origin", PortStatus{Configured: 28600, Effective: 28443, Pending: true})
+	assertPortStatus(t, root, state, "gateway_http", PortStatus{Configured: 28100, Effective: 28000, Pending: true})
+	// Validate against the whole configured selection, including pending ports.
+	if _, err := changePorts(root, "ExampleApp", state, map[string]int{"gateway_http": 28600}, availablePort); err == nil {
+		t.Fatal("duplicate pending port accepted")
+	}
+	assertPortStatus(t, root, state, "gateway_http", PortStatus{Configured: 28100, Effective: 28000, Pending: true})
+	if _, err := changePorts(root, "ExampleApp", state, map[string]int{"gateway_origin": 28443}, availablePort); err != nil {
+		t.Fatal(err)
+	}
+	assertPortStatus(t, root, state, "gateway_origin", PortStatus{Configured: 28443, Effective: 28443})
+}
+
+func TestPortStatusRefusesCorruptRetainedValues(t *testing.T) {
+	root, state := originPortFixture(t)
 	if err := preparePorts(root, "ExampleApp", state, availablePort); err != nil {
 		t.Fatal(err)
 	}
 	if err := RememberPorts(root, "ExampleApp", state); err != nil {
 		t.Fatal(err)
 	}
-	conflict := func(_ context.Context, _, key string, _ Port, n int) error {
-		if n == 28600 {
-			return ErrPort
-		}
-		return nil
-	}
-	warnings, err := changePorts(root, "ExampleApp", state, map[string]int{"gateway_origin": 28600}, conflict)
-	if err != nil || len(warnings) != 1 || !strings.Contains(warnings[0], "28600") {
-		t.Fatal(warnings, err)
-	}
-	for path, want := range map[string]string{
-		"sso/gateway.json":      `{"listen":{"http":28000},"origin":{"https":28600}}`,
-		"sso/native-origin-nginx.conf": "listen 28600 ssl;",
-	} {
-		if b, _ := os.ReadFile(filepath.Join(root, path)); string(b) != want {
-			t.Fatalf("%s: %s", path, b)
-		}
-	}
-	sc, _ := os.ReadFile(filepath.Join(root, "install/ExampleApp.sc"))
-	env, _ := os.ReadFile(filepath.Join(root, "install/ports.env"))
-	if !strings.Contains(string(sc), `dst.ports="28600/tcp"`) || !strings.Contains(string(env), "SYNOPKGLAND_PORT_GATEWAY_ORIGIN=28600") || !strings.Contains(string(env), "SYNOPKGLAND_PORT_GATEWAY_HTTP=28000") {
-		t.Fatal(string(sc), string(env))
-	}
-	// An upgrade keeps the changed value.
-	t.Setenv("SYNOPKG_PKG_STATUS", "UPGRADE")
-	if err := preparePorts(root, "ExampleApp", state, availablePort); err != nil {
+	path := filepath.Join(state, "install-ports/gateway_origin.value")
+	if err := os.WriteFile(path, []byte("bad"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if values, _ := PortValues(root); values["gateway_origin"] != 28600 || values["gateway_http"] != 28000 {
-		t.Fatal(values)
+	if _, err := ReadPortStatus(root, "ExampleApp", state); err == nil {
+		t.Fatal("corrupt pending state hidden")
+	}
+	if _, err := changePorts(root, "ExampleApp", state, map[string]int{"gateway_http": 28100}, availablePort); err == nil {
+		t.Fatal("corrupt pending state overwritten")
+	}
+}
+
+func TestPendingHTTPSPortUpdatesRetainedOriginOnlyDuringInstallation(t *testing.T) {
+	root, state := portFixture(t)
+	files := map[string]string{
+		"install/settings.json": `{"schema":1,"package":"ExampleApp","https_port":@@PORT_gateway_https@@,"settings":{"public_origin":{"type":"https-origin","label":"Public origin","required":true},"external_origin":{"type":"external-origin","label":"External origin"}}}`,
+		"sso/native-nginx.conf": "listen @@PORT_gateway_https@@ ssl;",
+	}
+	cfg := PortConfig{Schema: 1, Package: "ExampleApp", Ports: map[string]Port{
+		"gateway_https": {Default: 28443, Protocol: "tcp"},
+	}, Files: files}
+	makePayload := func(payload string) {
+		t.Helper()
+		raw, _ := json.Marshal(cfg)
+		if err := os.WriteFile(filepath.Join(payload, "install/ports.json"), raw, 0600); err != nil {
+			t.Fatal(err)
+		}
+		for path := range files {
+			if err := os.WriteFile(filepath.Join(payload, path), []byte("placeholder"), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := preparePorts(payload, "ExampleApp", state, availablePort); err != nil {
+			t.Fatal(err)
+		}
+	}
+	makePayload(root)
+	t.Setenv("pkgwizard_setting_public_origin", "https://app.example:28443")
+	t.Setenv("pkgwizard_setting_external_origin", "https://external.example")
+	if err := Prepare(root, "ExampleApp", state); err != nil {
+		t.Fatal(err)
+	}
+	if err := Remember(root, "ExampleApp", state); err != nil {
+		t.Fatal(err)
+	}
+	if err := RememberPorts(root, "ExampleApp", state); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := changePorts(root, "ExampleApp", state, map[string]int{"gateway_https": 28600}, availablePort); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(state, "install-settings/public_origin.value")); string(b) != "https://app.example:28443" {
+		t.Fatalf("pending change rewrote the effective origin: %s", b)
+	}
+	incoming, _ := portFixture(t)
+	t.Setenv("SYNOPKG_PKG_STATUS", "UPGRADE")
+	t.Setenv("pkgwizard_setting_public_origin", "")
+	t.Setenv("pkgwizard_setting_external_origin", "")
+	makePayload(incoming)
+	if err := Prepare(incoming, "ExampleApp", state); err != nil {
+		t.Fatalf("saved origin prevented pending HTTPS port installation: %v", err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(incoming, "install/values/public_origin.value")); string(b) != "https://app.example:28600" {
+		t.Fatalf("origin does not match the incoming listener: %s", b)
+	}
+	if b, _ := os.ReadFile(filepath.Join(incoming, "install/values/external_origin.value")); string(b) != "https://external.example" {
+		t.Fatalf("external origin changed: %s", b)
+	}
+	// Explicit installer input is validated as entered, never silently rebound.
+	t.Setenv("pkgwizard_setting_public_origin", "https://app.example:28443")
+	if err := Prepare(incoming, "ExampleApp", state); err == nil {
+		t.Fatal("explicit mismatched origin accepted")
+	}
+	t.Setenv("pkgwizard_setting_public_origin", "")
+	if err := os.WriteFile(filepath.Join(state, "install-settings/public_origin.value"), []byte("https://user@app.example:28443"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := Prepare(incoming, "ExampleApp", state); err == nil {
+		t.Fatal("malformed retained origin rebound")
 	}
 }
 

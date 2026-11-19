@@ -264,6 +264,12 @@ func Prepare(payload, pkg, pkgvar string) error {
 				return invalid
 			}
 			value = string(b)
+			if e == nil && s.Type == "https-origin" {
+				value, e = retainedHTTPSOrigin(root, c, value)
+				if e != nil {
+					return e
+				}
+			}
 		}
 		if value == "" && !s.Required {
 			continue
@@ -283,6 +289,39 @@ func Prepare(payload, pkg, pkgvar string) error {
 		}
 	}
 	return nil
+}
+
+// Only an installer-selected HTTPS listener may rebind the port of a retained
+// gateway origin. Explicit wizard input and external origins keep their own
+// validation; no installed or retained file is rewritten here.
+func retainedHTTPSOrigin(root *os.Root, c Config, value string) (string, error) {
+	if c.HTTPSPort == 0 {
+		return value, nil
+	}
+	ports, err := portConfig(root, c.Package)
+	if os.IsNotExist(err) {
+		return value, nil
+	}
+	if err != nil {
+		return "", err
+	}
+	if _, ok := ports.Ports["gateway_https"]; !ok {
+		return value, nil
+	}
+	b, err := readPrivate(root, "install/port-values/gateway_https.value")
+	if err != nil {
+		return "", err
+	}
+	selected, err := portValue(string(b))
+	if err != nil || selected != c.HTTPSPort || ValidateOrigin(value, 0) != nil {
+		return "", invalid
+	}
+	origin, err := url.Parse(value)
+	if err != nil {
+		return "", invalid
+	}
+	origin.Host = net.JoinHostPort(origin.Hostname(), strconv.Itoa(selected))
+	return origin.String(), nil
 }
 
 // Remember runs after DSM has created pkgvar; settings survive replacement of
