@@ -194,17 +194,18 @@ func preparePortsWarn(payload, pkg, pkgvar string, check portCheck, warn func(st
 	sort.Strings(keys)
 	for _, key := range keys {
 		p := cfg.Ports[key]
-		raw := os.Getenv("pkgwizard_port_" + key)
-		// An upgrade always retains installed values; ChangePorts changes them.
-		if os.Getenv("SYNOPKG_PKG_STATUS") == "UPGRADE" {
-			raw = ""
-		}
-		if raw == "" && previous != nil {
+		// Retained selections, including pending changes, take precedence over
+		// wizard defaults when installing over retained package data.
+		raw := ""
+		if previous != nil {
 			b, e := readPrivate(previous, key+".value")
 			if e != nil && !os.IsNotExist(e) {
 				return e
 			}
 			raw = string(b)
+		}
+		if raw == "" && os.Getenv("SYNOPKG_PKG_STATUS") != "UPGRADE" {
+			raw = os.Getenv("pkgwizard_port_" + key)
 		}
 		if raw == "" {
 			raw = strconv.Itoa(p.Default)
@@ -268,13 +269,13 @@ func materializePorts(root *os.Root, cfg PortConfig, pkg string, keys []string, 
 	return writePrivate(root, "install/ports.env", []byte(environment.String()))
 }
 
-// ChangePorts changes installed ports after installation, for an App's own
+// ChangePorts saves ports for the next installation or upgrade, for an App's own
 // settings page. Run it as the package account. Only declared keys change;
 // format, range, reserved and duplicate values are refused and a conflict
-// follows each port's policy (warnings are returned). It rewrites the
-// generated payload files and the remembered values, so upgrades keep the
-// change. DSM applies the new nginx and service resources at the next package
-// start: restart the package afterwards (see selfrestart).
+// follows each port's policy (warnings are returned). Only the retained
+// install-ports values change. Installed payload files, daemon inventory,
+// nginx resources and PortValues stay unchanged across package stops/starts.
+// ReadPortStatus distinguishes configured ports from the installed selection.
 func ChangePorts(payload, pkg, pkgvar string, changes map[string]int) ([]string, error) {
 	return changePorts(payload, pkg, pkgvar, changes, CheckPort)
 }
@@ -292,16 +293,14 @@ func changePorts(payload, pkg, pkgvar string, changes map[string]int, check port
 	if err != nil {
 		return nil, err
 	}
+	status, err := portStatuses(root, cfg, pkg, pkgvar)
+	if err != nil {
+		return nil, err
+	}
 	values := map[string]int{}
 	keys := make([]string, 0, len(cfg.Ports))
 	for key := range cfg.Ports {
-		b, e := readPrivate(root, "install/port-values/"+key+".value")
-		if e != nil {
-			return nil, e
-		}
-		if values[key], e = portValue(string(b)); e != nil {
-			return nil, e
-		}
+		values[key] = status[key].Configured
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
@@ -333,9 +332,6 @@ func changePorts(payload, pkg, pkgvar string, changes map[string]int, check port
 			warnings = append(warnings, warning)
 		}
 	}
-	if err = materializePorts(root, cfg, pkg, keys, values); err != nil {
-		return nil, err
-	}
 	state, err := openRoot(statePath(pkg, pkgvar))
 	if err != nil {
 		return nil, err
@@ -350,6 +346,72 @@ func changePorts(payload, pkg, pkgvar string, changes map[string]int, check port
 		}
 	}
 	return warnings, nil
+}
+
+// PortStatus separates the saved selection from the port materialized by the
+// installer. Effective is the port used when this installation starts; it does
+// not prove that the package is running or that its listener is healthy.
+type PortStatus struct {
+	Configured int  `json:"configured"`
+	Effective  int  `json:"effective"`
+	Pending    bool `json:"pending"`
+}
+
+// PortsPendingMessage is an English hint for Apps to translate and display
+// while any declared port is pending. Saving ports never requests a restart.
+const PortsPendingMessage = "Port changes are saved. In Package Center, use Manual Install to reinstall this package or install an upgrade. If DSM rejects the same version, wait for the next upgrade. Restarting does not apply port changes."
+
+// ReadPortStatus reads declared ports as the package account. A missing retained
+// value falls back to the installed selection; corrupt state returns an error.
+// Apps should combine this with their own listener health before claiming a
+// port is currently listening.
+func ReadPortStatus(payload, pkg, pkgvar string) (map[string]PortStatus, error) {
+	root, err := openRoot(payload)
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close()
+	cfg, err := portConfig(root, pkg)
+	if err != nil {
+		return nil, err
+	}
+	return portStatuses(root, cfg, pkg, pkgvar)
+}
+
+func portStatuses(root *os.Root, cfg PortConfig, pkg, pkgvar string) (map[string]PortStatus, error) {
+	previous, err := portState(pkg, pkgvar)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+	if previous != nil {
+		defer previous.Close()
+	}
+	status := make(map[string]PortStatus, len(cfg.Ports))
+	for key := range cfg.Ports {
+		b, err := readPrivate(root, "install/port-values/"+key+".value")
+		if err != nil {
+			return nil, err
+		}
+		effective, err := portValue(string(b))
+		if err != nil {
+			return nil, err
+		}
+		configured := effective
+		if previous != nil {
+			b, err := readPrivate(previous, key+".value")
+			if err != nil && !os.IsNotExist(err) {
+				return nil, err
+			}
+			if err == nil {
+				configured, err = portValue(string(b))
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+		status[key] = PortStatus{Configured: configured, Effective: effective, Pending: configured != effective}
+	}
+	return status, nil
 }
 
 func RememberPorts(payload, pkg, pkgvar string) error {
