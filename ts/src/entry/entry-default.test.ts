@@ -132,7 +132,10 @@ test('an own launch, an old hand-off or a malformed one is not restored', async 
 test('a refusal keeps the launch too, before the portal sign-in', async () => {
  const opts = boot({pageURL: `${pageURL}?link=%2Fx`})
  await bootEntryPage({...opts, portal: {defaultAlias: 'example'}, fetch: vi.fn(async (_url, init) => init?.method === 'GET' ? new Response('') : refuse())})
- expect(opts.navigate).toHaveBeenCalledWith('https://localhost/example/?link=%2Fx')
+ const url = new URL(opts.navigate.mock.calls[0]![0])
+ expect(url.origin + url.pathname).toBe('https://localhost/example/')
+ expect(url.searchParams.get('link')).toBe('/x')
+ expect(url.searchParams.get('launchParam')).toBe('link=%2Fx&route=%2Fx')
  expect(JSON.parse(sessionStorage.getItem('synopkgland.ExampleApp.launch')!)).toMatchObject({v: 1, link: '/x'})
 })
 

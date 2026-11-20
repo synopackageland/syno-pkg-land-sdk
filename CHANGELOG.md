@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- A signed-out visitor who opens an entry page link now lands on the App's route after DSM's sign-in, not on its start page. After the Portal alias sign-in, DSM opens the App on the alias page as a DSM window, and that window reads only DSM's `launchParam`, so the route kept as `?link=` was lost. The boot now adds the launch to the alias URL as `launchParam` too, in the form `dsmLaunchURL` uses, and keeps `?link=` for the entry page. DSM's App start, used when the alias is off, also carries a hash route (`#/a/notes/42`) as `route` now. On DSM 7.3.2, both sign-ins kept `launchParam`, and the App's window opened at the route. See [Sign-in hand-off](docs/entry-page.md#sign-in-hand-off).
+- Sign-in redirects carry only what is safe to carry. Both sign-in URLs stay on the entry's origin at a fixed path (`/<alias>/` or `/?launchApp=…`). A `route` or `link` that `launchRoute` refuses is dropped from both `launchParam` and the query, and so is a hash that is not an App route. Query values named like a session or secret (`SynoToken`, `_sid`, `sid`, `did`, `token`, `access_token`, `id_token`, `refresh_token`, `password`, `passwd`, `otp_code`, `secret`) are never carried.
+- `launchRoute` also refuses a route that leaves the App once percent-decoded: `/%2Fevil.example`, `/%5Cevil` and double-encoded `/%252F%252F…` give undefined, like `//evil.example` and `/\evil` already did. Encoded characters later in a route (`/files/a%2Fb`, `?next=%2F%2Fx`) and malformed escapes stay valid. An App that relied on such a route now gets no launch route.
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.54 (2026-11-19)
 
 - `installsettings.ChangePorts` saves ports for the next installation or upgrade without rewriting the running daemon inventory, nginx resources or installed runtime settings. Stops and starts keep the effective ports; no restart is requested. In Package Center, use Manual Install to reinstall the same SPK or install an upgrade; if DSM rejects the same version, wait for the next upgrade. See [Installer-selected ports](docs/install-ports.md).
