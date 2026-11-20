@@ -284,6 +284,8 @@ test.each(['https://outside.example/app.js', '//outside.example/app.js', 'javasc
  expect(opts.mount).not.toHaveBeenCalled()
 })
 
+/** DSM's launchParam on a sign-in URL, read the way DSM and the entry read it. */
+const launchOf = (url: URL): Record<string, string> => ({...entryLaunchParams(`?launchParam=${encodeURIComponent(url.searchParams.get('launchParam') ?? '')}`)})
 const reply = (code: string) => new Response(JSON.stringify({success: false, error: {code}}))
 const statusCalls = (request: ReturnType<typeof vi.fn>) => request.mock.calls.filter(([, init]) => String((init as RequestInit | undefined)?.body ?? '').includes('"app.status"')).length
 
@@ -353,7 +355,13 @@ test('an active portal alias takes the fallback to its branded sign-in, keeping 
  const request = vi.fn<typeof globalThis.fetch>(async (url, init) => init?.method === 'GET'
   ? new Response('', {status: String(url) === 'https://localhost/example/' ? 200 : 404}) : reply('session_required'))
  expect(await bootEntryPage({...opts, fetch: request, portal: {defaultAlias: 'example'}})).toBeUndefined()
- expect(opts.navigate).toHaveBeenCalledExactlyOnceWith('https://localhost/example/?link=%2Fadd&intake=item')
+ expect(opts.navigate).toHaveBeenCalledOnce()
+ const url = new URL(opts.navigate.mock.calls[0]![0])
+ expect(url.origin + url.pathname).toBe('https://localhost/example/')
+ expect(url.searchParams.get('link')).toBe('/add')
+ expect(url.searchParams.get('intake')).toBe('item')
+ // After the alias sign-in DSM opens the App's window, which reads only DSM's launchParam.
+ expect(launchOf(url)).toEqual({link: '/add', route: '/add', intake: 'item'})
  expect(request.mock.calls.find(([, init]) => init?.method === 'GET')![1]).toMatchObject({redirect: 'error', cache: 'no-store', mode: 'same-origin'})
 })
 
@@ -368,6 +376,7 @@ test('an anonymous visitor reaches the alias sign-in with a hash route carried a
  expect(url.searchParams.get('link')).toBe('/a/notes/42')
  expect(url.searchParams.has('launch')).toBe(false)
  expect(url.hash).toBe('#/a/notes/42')
+ expect(launchOf(url)).toEqual({route: '/a/notes/42'})
 })
 
 test('an entry below the alias falls back to that alias', async () => {
@@ -375,7 +384,46 @@ test('an entry below the alias falls back to that alias', async () => {
  const request = vi.fn<typeof globalThis.fetch>(async (url, init) => init?.method === 'GET'
   ? new Response('', {status: String(url) === 'https://localhost/notes/' ? 200 : 404}) : reply('session_required'))
  await bootEntryPage({...opts, fetch: request, portal: {defaultAlias: 'example'}})
- expect(opts.navigate).toHaveBeenCalledExactlyOnceWith('https://localhost/notes/?link=%2Fx')
+ const url = new URL(opts.navigate.mock.calls[0]![0])
+ expect(url.origin + url.pathname).toBe('https://localhost/notes/')
+ expect(url.searchParams.get('link')).toBe('/x')
+ expect(launchOf(url)).toEqual({link: '/x', route: '/x'})
+})
+
+test('a signed-out visitor with only a hash route reaches DSM App start with that route in launchParam', async () => {
+ const opts = {...options(), token: undefined, pageURL: 'https://localhost/webman/3rdparty/ExampleApp/app/entry.html#/a/notes/42'}
+ await bootEntryPage({...opts, fetch: vi.fn<typeof globalThis.fetch>(async () => new Response(JSON.stringify({success: false})))})
+ const url = new URL(opts.navigate.mock.calls[0]![0])
+ expect(url.origin + url.pathname).toBe('https://localhost/')
+ expect(url.searchParams.get('launchApp')).toBe('SYNO.SDS.ExampleApp.Instance')
+ expect(launchOf(url)).toEqual({route: '/a/notes/42'})
+})
+
+// Security: a sign-in redirect stays on this origin at a fixed path, carries
+// only an App-relative route and never a session or secret.
+const UNSAFE_ROUTES = ['//evil.example/x', '/\\evil.example', 'https://evil.example/', 'javascript:alert(1)', '/%2Fevil.example', '/%5Cevil.example', '/%252F%252Fevil.example', '%2F%2Fevil.example']
+test.each([['the alias', 200], ['DSM App start', 404]])('a signed-out visitor sent to %s never carries an unsafe route or a credential', async (_name, aliasStatus) => {
+ for(const bad of UNSAFE_ROUTES) {
+  const page = new URL('https://localhost/webman/3rdparty/ExampleApp/app/entry.html')
+  page.searchParams.set('link', bad)
+  page.searchParams.set('route', bad)
+  page.searchParams.set('SynoToken', 'secret-token')
+  page.searchParams.set('_sid', 'secret-sid')
+  page.hash = bad
+  const opts = {...options(), token: undefined, pageURL: page.href}
+  const request = vi.fn<typeof globalThis.fetch>(async url => String(url).includes('login.cgi') ? new Response(JSON.stringify({success: false})) : new Response('', {status: aliasStatus}))
+  await bootEntryPage({...opts, fetch: request, portal: {defaultAlias: 'example'}})
+  const target = opts.navigate.mock.calls[0]![0]
+  const url = new URL(target)
+  expect(url.origin, bad).toBe('https://localhost')
+  expect(['/example/', '/'], bad).toContain(url.pathname)
+  expect(url.searchParams.get('link'), bad).toBeNull()
+  expect(url.hash, bad).toBe('')
+  const launch = launchOf(url)
+  expect(launch.route, bad).toBeUndefined()
+  expect(launch.link, bad).toBeUndefined()
+  expect(target, bad).not.toMatch(/secret-token|secret-sid|SynoToken|_sid/i)
+ }
 })
 
 test.each([

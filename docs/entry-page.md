@@ -77,6 +77,8 @@ and 2000 ms, so at most five attempts). The number of attempts bounds the
 retries; no clock fails a slow attempt, which keeps the client's own request
 deadline.
 
+### Sign-in hand-off
+
 The boot hands off to a DSM sign-in only when the caller cannot be verified:
 no token, an EntryGate refusal (`session_required`, `admin_required`,
 `app_privilege_denied`), a status without an identity, or every attempt
@@ -88,7 +90,33 @@ and keeps the query across it, so the boot goes there with the entry's query
 hash. An inactive (404) or unreachable alias, or one that has not answered
 within `PORTAL_FALLBACK_PROBE_MS` (4 s), sends the visitor to DSM's App start
 instead, with the App's launch intent preserved. Without `portal` the boot
-goes straight to DSM's App start. The status may return `lang` (DSM's
+goes straight to DSM's App start.
+
+After the alias sign-in, DSM opens the App on the alias page as a DSM window,
+not as the entry page, and that window's `ctx.launchParams` come only from
+DSM's `launchParam`. So the boot also puts the launch on the alias URL as
+`launchParam` (encoded as `dsmLaunchURL` encodes it); `?link=` stays for an
+entry page that opens there. DSM's App start (`/?launchApp=…&launchParam=…`)
+carries the same launch. Both carry the page's launch params, plus a hash
+route as `route` when the query names none. On DSM 7.3.2, both sign-ins kept
+`launchParam`, and the window opened at the route; an App following
+`followLaunchRoute` needs nothing of its own.
+
+What a sign-in URL may carry:
+
+- It stays on the entry's origin, at `/<alias>/` or `/`; no launch value
+  chooses the host or the path, so a link cannot redirect off the NAS.
+- `route`, `link` and the hash are kept only when `launchRoute` accepts them:
+  one leading `/`, no `//`, `\` or control character, and the same once
+  percent-decoded (`/%2F…`, `/%5C…`, `/%252F…` are refused). Anything else is
+  dropped, not rewritten.
+- A query value named like a session or secret (`SynoToken`, `_sid`, `sid`,
+  `did`, `token`, `access_token`, `id_token`, `refresh_token`, `password`,
+  `passwd`, `otp_code`, `secret`) is never carried.
+- The route only picks the page the App shows. The App's router must treat
+  it as navigation only: a launch route never confirms, saves or runs
+  anything, and the next request still meets the CGI's session, entry policy
+  and method checks. The status may return `lang` (DSM's
 code, for example `cht`) and `locale` (for example `zh-TW`); missing language
 falls back to the browser. These hints never authorize requests: the App CGI
 checks the session, entry policy and method permissions each time.

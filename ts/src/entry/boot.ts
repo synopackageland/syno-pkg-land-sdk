@@ -1,7 +1,7 @@
-import type {AppStatus, Context} from '../context'
+import type {AppStatus, Context, LaunchParams} from '../context'
 import {createClient} from '../client'
 import {nativeBridge} from '../mobile/index'
-import {dsmLaunchURL, launchRoute} from '../launch'
+import {dsmLaunchParamText, dsmLaunchURL, launchRoute} from '../launch'
 import {uiLocale} from '../i18n'
 import {createSignInCache} from './cache'
 import {createAppContext, entryLaunchParams, entryURLs, statusEndpoint, statusFetch, type AppContextOptions} from './context'
@@ -62,6 +62,8 @@ function showShortPath(at: URL, path: string): boolean {
   return true
  } catch {return false}
 }
+/** Query names that hold a DSM session or a secret; never put in launchParam. */
+const CREDENTIAL_PARAM = /^(?:synotoken|_?sid|did|token|access_token|id_token|refresh_token|password|passwd|otp_code|secret)$/i
 const handoffKey = (packageId: string) => `synopkgland.${packageId}.launch`
 /** DSM's sign-in, and DSM's redirect from an alias or launch link to a url
  * launcher, drop the entry's query and hash; this tab keeps the App's own
@@ -147,8 +149,22 @@ export async function bootEntryPage(options: EntryPageOptions): Promise<Context 
  // Below DSM's alias the prefix is the alias; otherwise the declared default.
  const prefix = new URL(urls.base).pathname
  const alias = () => new URL(prefix !== '/' ? prefix : `/${options.portal!.defaultAlias}/`, at.origin)
+ // What the page was opened to do, for DSM to hand the App's window after a
+ // sign-in: the page's launch params, with a hash route as `route` when the
+ // query names none. A route launchRoute refuses is dropped, and so is any
+ // value named like a credential: a sign-in address carries no session.
+ function signInLaunch(): LaunchParams {
+  const params: Record<string, string> = {...entryLaunchParams(at.search)}
+  for(const key of Object.keys(params)) if(CREDENTIAL_PARAM.test(key)) delete params[key]
+  if(params.route !== undefined && launchRoute(params) === undefined) delete params.route
+  const route = at.hash.startsWith('#') ? at.hash.slice(1) : ''
+  if(params.route === undefined && launchRoute({route}) !== undefined) params.route = route
+  return params
+ }
  // An active alias shows the App's branded DSM sign-in and keeps the query
- // across it (DSM replaces the hash), so the route rides along as ?link=.
+ // across it (DSM replaces the hash). After the sign-in DSM opens the App on
+ // the alias page as a DSM window, which reads DSM's launchParam only, so the
+ // launch rides along as launchParam; ?link= stays for the entry page.
  async function portalSignIn(): Promise<string | undefined> {
   const landing = alias()
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -163,10 +179,17 @@ export async function bootEntryPage(options: EntryPageOptions): Promise<Context 
   finally {clearTimeout(timer)}
   const query = new URLSearchParams(at.search)
   query.delete('launch')
+  const credentials: string[] = []
+  query.forEach((_value, key) => {if(CREDENTIAL_PARAM.test(key)) credentials.push(key)})
+  for(const key of credentials) query.delete(key)
+  if(query.has('link') && launchRoute({route: query.get('link')!}) === undefined) query.delete('link')
   const route = at.hash.startsWith('#') ? at.hash.slice(1) : ''
   if(!query.has('link') && launchRoute({route}) !== undefined) query.set('link', route)
+  query.delete('launchParam')
+  const launch = signInLaunch()
+  if(Object.keys(launch).length) query.set('launchParam', dsmLaunchParamText(launch))
   landing.search = query.toString()
-  landing.hash = at.hash
+  landing.hash = launchRoute({route}) !== undefined ? at.hash : ''
   return landing.href
  }
  // A portal alias first, else DSM's App start; both keep the launch intent.
@@ -175,7 +198,7 @@ export async function bootEntryPage(options: EntryPageOptions): Promise<Context 
   const route = at.hash.startsWith('#') ? at.hash.slice(1) : ''
   keepLaunch(options.packageId, launch.route ?? (launchRoute({route}) !== undefined ? route : undefined), launch.intake, short ? shortPath : undefined)
   const portal = options.portal ? await portalSignIn() : undefined
-  navigate(portal ?? dsmLaunchURL(at.origin, options.packageId, entryLaunchParams(at.search)))
+  navigate(portal ?? dsmLaunchURL(at.origin, options.packageId, signInLaunch()))
   return undefined
  }
  if(options.portal && !/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(options.portal.defaultAlias)) throw new Error('Invalid portal alias')

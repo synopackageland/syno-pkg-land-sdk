@@ -8,14 +8,27 @@ export const MAX_LAUNCH_ROUTE = 2048
  * The App route in launch params' `route`: a path from the App root, the part
  * a portal link puts after its `#`, such as `/a/notes/42`. One leading `/`, no
  * backslash or control character, at most MAX_LAUNCH_ROUTE characters; any
- * other value gives undefined. Hand it to the App's own router only.
+ * other value gives undefined. The same holds once percent-decoded, so
+ * `/%2Fevil.example` or `/%5Cevil` (a URL that leaves the origin once a
+ * router or a browser decodes it) gives undefined too. Hand it to the App's
+ * own router only.
  */
 export function launchRoute(params?: LaunchParams): string | undefined {
  const route = params?.route
- if(typeof route !== 'string' || route.length > MAX_LAUNCH_ROUTE) return undefined
- if(!route.startsWith('/') || route.startsWith('//') || /[\\\u0000-\u001f\u007f]/.test(route)) return undefined
+ if(typeof route !== 'string' || route.length > MAX_LAUNCH_ROUTE || !appPath(route)) return undefined
+ // Decode until stable (at most a few rounds): a double-encoded `%252F` is as
+ // unsafe as `%2F`. A malformed escape is literal text, checked as it is.
+ let text = route
+ for(let round = 0; round < 3 && text.includes('%'); round++) {
+  let decoded: string
+  try {decoded = decodeURIComponent(text)} catch {break}
+  if(decoded === text) break
+  if(!appPath(decoded)) return undefined
+  text = decoded
+ }
  return route
 }
+const appPath = (route: string) => route.startsWith('/') && !route.startsWith('//') && !/[\\\u0000-\u001f\u007f]/.test(route)
 
 /**
  * Runs navigate with the route of the launch that opened the DSM window, then
@@ -43,8 +56,14 @@ export function dsmLaunchURL(origin: string, packageId: string, params: LaunchPa
  if(!PACKAGE_ID.test(packageId)) throw new Error(`dsmLaunchURL: ${JSON.stringify(packageId)} is not a DSM package id`)
  const url = new URL('/', origin)
  url.searchParams.set('launchApp', `SYNO.SDS.${packageId}.Instance`)
- url.searchParams.set('launchParam', Object.entries(params).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&'))
+ url.searchParams.set('launchParam', dsmLaunchParamText(params))
  return url.href
+}
+
+/** DSM's launchParam text for params: `key=value` pairs joined by `&`, each
+ * key and value URL-encoded (the URL's query encodes the text once more). */
+export function dsmLaunchParamText(params: LaunchParams): string {
+ return Object.entries(params).map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&')
 }
 
 /** A link to a verified application ID on an explicitly known DSM origin.

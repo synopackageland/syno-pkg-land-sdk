@@ -12,8 +12,17 @@ test('a route is a path from the App root, the same one a portal link puts after
  expect(launchRoute({route:'/'.padEnd(MAX_LAUNCH_ROUTE,'x')})).toHaveLength(MAX_LAUNCH_ROUTE)
 })
 
+test('encoded characters inside a route stay the App\'s own',()=>{
+ expect(launchRoute({route:'/files/a%2Fb'})).toBe('/files/a%2Fb')
+ expect(launchRoute({route:'/search?q=100%25'})).toBe('/search?q=100%25')
+ expect(launchRoute({route:'/search?q=50%'})).toBe('/search?q=50%')
+ expect(launchRoute({route:'/a?next=%2F%2Fx'})).toBe('/a?next=%2F%2Fx')
+})
+
 test('no route, or a route that could leave the App, gives undefined',()=>{
- for(const route of [undefined,'','a/notes','//evil.example/x','/\\evil','https://evil.example/','javascript:alert(1)','/a\nb','/a\u0000b','/'.padEnd(MAX_LAUNCH_ROUTE+1,'x')])
+ for(const route of [undefined,'','a/notes','//evil.example/x','/\\evil','https://evil.example/','javascript:alert(1)','/a\nb','/a\u0000b','/'.padEnd(MAX_LAUNCH_ROUTE+1,'x'),
+  // Encoded the same way: a router or browser that decodes it would leave the App.
+  '/%2Fevil.example','/%2f%2fevil.example','/%5Cevil.example','/%252F%252Fevil.example','%2F%2Fevil.example','/a%0Ab','/a%00b'])
   expect(launchRoute(route===undefined?{}:{route})).toBeUndefined()
  expect(launchRoute(undefined)).toBeUndefined()
 })
