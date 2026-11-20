@@ -1,0 +1,45 @@
+{
+  "version": "0.53.55",
+  "executorVersion": "0.53.6",
+  "executorRootSDK": "v0.53.5-0.20261108042008-8de6636006f9",
+  "packages": {
+    "@synopackageland/sdk": "0.53.55",
+    "@synopackageland/app": "0.53.55",
+    "syno-pkg-land-app": "0.53.55",
+    "synopkgland_app": "0.53.55"
+  },
+  "executorDigests": {
+    "x86_64": "e77dbf846ea4555355fa15ee3a6ca3b20e1b1aaa9768321243589d9ec15ffabe",
+    "aarch64": "741a7c37757b56b3acc304cef56de5e59c1ca9278a83be0f1e1ff1ad17b24dd6",
+    "armv7": "f0a3059b982d0210621254adf7d1a3343d2a89d114e053e5b3bd646898293b1a",
+    "lifecycle": {
+      "x86_64": "9790e518b4c5793ad5c33605becd4384997a7be19b9f4daff12ea74f0a67af7b",
+      "aarch64": "054d5a9195fd15ccc646e4212d3fdc013e91f3d3db1067d0387c2c7f04032182",
+      "armv7": "66a8df4e689e3e4e98bc6c03975c6bac65e92fb0425e1e50c126187e727b11c1"
+    },
+    "goToolchain": "go1.26.10"
+  },
+  "verification": {
+    "executorSourceUnchanged": true,
+    "executorReleaseReused": true,
+    "canonicalTaskDefinitionsUnchanged": true,
+    "nasAcceptance": false,
+    "rustCratePublished": false,
+    "validation": "Focused release gate: ts vitest (entry hand-off, launchRoute and sign-in URL security cases), build and typecheck; Node build and packed consumer checks; docs, version and executor manifest checks; both npm archives scanned for internal content and secrets. Sign-in launchParam behaviour observed by hand on a DSM 7.3.2 controller (alias sign-in and DSM App start). No full gate, QEMU, executor rebuild, crate publication or NAS acceptance."
+  },
+  "ui": {
+    "builtAgainst": "0.25.10",
+    "peer": ">=0.23.5 <0.26.0",
+    "source": "https://registry.npmjs.org/@synopackageland/ui/-/ui-0.25.10.tgz"
+  },
+  "node": {
+    "build": "24.22.1",
+    "minimum": "22"
+  },
+  "changes": [
+    "A signed-out visitor who opens an entry page link lands on the App's route after DSM's sign-in. The Portal alias sign-in URL carries the launch as DSM's launchParam (the window DSM opens after sign-in reads only that) and keeps ?link=; DSM's App start also carries a hash route as route.",
+    "Sign-in URLs stay on the entry's origin at a fixed path, drop a route, link or hash that launchRoute refuses, and never carry values named like a session or secret.",
+    "launchRoute refuses a route that leaves the App once percent-decoded (/%2F…, /%5C…, /%252F…); encoded characters later in a route stay valid.",
+    "Reuse executor 0.53.6 unchanged: executor sources and build inputs are unchanged."
+  ]
+}

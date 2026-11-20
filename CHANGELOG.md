@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.53.55 (2026-11-20)
 
 - A signed-out visitor who opens an entry page link now lands on the App's route after DSM's sign-in, not on its start page. After the Portal alias sign-in, DSM opens the App on the alias page as a DSM window, and that window reads only DSM's `launchParam`, so the route kept as `?link=` was lost. The boot now adds the launch to the alias URL as `launchParam` too, in the form `dsmLaunchURL` uses, and keeps `?link=` for the entry page. DSM's App start, used when the alias is off, also carries a hash route (`#/a/notes/42`) as `route` now. On DSM 7.3.2, both sign-ins kept `launchParam`, and the App's window opened at the route. See [Sign-in hand-off](docs/entry-page.md#sign-in-hand-off).
 - Sign-in redirects carry only what is safe to carry. Both sign-in URLs stay on the entry's origin at a fixed path (`/<alias>/` or `/?launchApp=…`). A `route` or `link` that `launchRoute` refuses is dropped from both `launchParam` and the query, and so is a hash that is not an App route. Query values named like a session or secret (`SynoToken`, `_sid`, `sid`, `did`, `token`, `access_token`, `id_token`, `refresh_token`, `password`, `passwd`, `otp_code`, `secret`) are never carried.
