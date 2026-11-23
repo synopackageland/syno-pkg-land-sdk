@@ -140,7 +140,7 @@ func (c *controller) statusJSON(until time.Time) (int, error) {
 	} else if r.State != "failed" && r.State != "exited" {
 		r.State, r.Reason = "unavailable", "DAEMON_SUPERVISOR_UNAVAILABLE"
 	}
-	json.NewEncoder(os.Stdout).Encode(r)
+	json.NewEncoder(os.Stdout).Encode(c.logStatus(r))
 	if r.State == "stopped" {
 		return 3, nil
 	}
