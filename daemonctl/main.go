@@ -164,7 +164,11 @@ func owned(st os.FileInfo) bool {
 }
 
 func safeFile(path string) (*os.File, error) {
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0600)
+	return openDaemonFile(path, os.O_CREATE|os.O_RDWR)
+}
+
+func openDaemonFile(path string, flags int) (*os.File, error) {
+	f, err := os.OpenFile(path, flags|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0600)
 	if err != nil {
 		return nil, err
 	}
@@ -436,17 +440,11 @@ func (c *controller) start(until time.Time) error {
 		owner.Close()
 		return err
 	}
+	if err := checkDaemonLogs(c.dir); err != nil {
+		owner.Close()
+		return err
+	}
 	// Pass the already-held lifetime lock to the new supervisor. No handoff gap.
-	log, err := safeFile(filepath.Join(c.dir, "daemon.log"))
-	if err != nil {
-		owner.Close()
-		return err
-	}
-	defer log.Close()
-	if _, err := log.Seek(0, io.SeekEnd); err != nil {
-		owner.Close()
-		return err
-	}
 	reader, writer, err := os.Pipe()
 	if err != nil {
 		owner.Close()
@@ -467,7 +465,6 @@ func (c *controller) start(until time.Time) error {
 		return err
 	}
 	cmd.Env = []string{"PATH=/usr/bin:/bin", "SYNOPKGLAND_START_DEADLINE=" + token}
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = nil, log, log
 	cmd.ExtraFiles = []*os.File{writer, owner}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	err = cmd.Start()
@@ -486,10 +483,10 @@ func (c *controller) start(until time.Time) error {
 			if strings.HasPrefix(raw, "COMPOSE_STARTUP_TIMEOUT:") || raw == "COMPOSE_STARTUP_INTERRUPTED\n" {
 				err = errors.New(strings.TrimSpace(raw))
 			} else {
-				err = errors.New("daemon startup refused; inspect daemon/daemon.log")
+				err = errors.New("daemon startup refused; inspect daemon/daemon.log and daemon/daemon.log.1")
 			}
 		} else if err != nil {
-			err = errors.New("daemon startup failed; inspect daemon/daemon.log")
+			err = errors.New("daemon startup failed; inspect daemon/daemon.log and daemon/daemon.log.1")
 		}
 		ready <- err
 	}()
@@ -574,7 +571,7 @@ func (c *controller) uninstallUntil(until time.Time) error {
 	}
 }
 
-func (c *controller) supervise() error {
+func (c *controller) supervise() (result error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	ready, owner := os.NewFile(3, "ready"), os.NewFile(4, "owner.lock")
@@ -582,11 +579,12 @@ func (c *controller) supervise() error {
 		return errors.New("missing supervisor bootstrap")
 	}
 	defer ready.Close()
-	defer owner.Close()
-	if err := applyNoFile(c.NoFile); err != nil {
-		fmt.Fprintln(ready, err)
-		return err
-	}
+	logOwnsLock := false
+	defer func() {
+		if !logOwnsLock {
+			owner.Close()
+		}
+	}()
 	syscall.CloseOnExec(3)
 	syscall.CloseOnExec(4)
 	// These descriptors must be the private pipe and exactly our already-held lock.
@@ -605,6 +603,31 @@ func (c *controller) supervise() error {
 	if err := syscall.Flock(int(owner.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
 		return err
 	}
+	log, err := newDaemonLogCapture()
+	if err != nil {
+		fmt.Fprintln(ready, err)
+		return err
+	}
+	logOwnsLock = true
+	go func() {
+		defer close(log.done)
+		// Even if finalization times out, retain the lock while any log I/O
+		// is in flight. Process exit releases it if the writer is still stuck.
+		defer owner.Close()
+		files := newDaemonLogFiles(c.dir, daemonLogLimit)
+		defer files.close()
+		_ = files.open()
+		log.collect(files)
+	}()
+	defer func() {
+		if log.stopBy.IsZero() {
+			log.stopBy = time.Now().Add(time.Duration(c.Timeouts.Stop) * time.Second)
+		}
+		log.finish(runtimebudget.Inner(time.Until(log.stopBy)), result)
+	}()
+	if err := applyNoFile(c.NoFile); err != nil {
+		return err
+	}
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
 	defer signal.Stop(signals)
@@ -613,13 +636,13 @@ func (c *controller) supervise() error {
 		return errors.New("daemon start deadline missing")
 	}
 	if c.Network == nil {
-		return c.superviseNative(ready, signals)
+		return c.superviseNative(ready, signals, log)
 	}
 	// Launch the gateway while dependencies become ready. Its admission gate
 	// asks this supervisor for current readiness and serves the starting page.
 	// Availability probes run below, without spending a startup failure window.
 	cmd := c.child(c.Args)
-	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+	cmd.Stdout, cmd.Stderr = log.output, log.output
 	owned, err := supervision.Start(cmd)
 	if err != nil {
 		return err
@@ -647,7 +670,7 @@ func (c *controller) supervise() error {
 		return stop()
 	case <-time.After(min(time.Second, max(0, time.Until(until)))):
 	}
-	r := record{Supervisor: os.Getpid(), Child: cmd.Process.Pid, Birth: processBirth(cmd.Process.Pid), Digest: c.digest, State: "running"}
+	r := record{Supervisor: os.Getpid(), Child: cmd.Process.Pid, Birth: processBirth(cmd.Process.Pid), Digest: c.digest, State: "running", Log: daemonLogPath}
 	err = c.writeRecord(r)
 	if err != nil {
 		stop()
@@ -839,6 +862,7 @@ func (c *controller) supervise() error {
 					continue
 				}
 				stopUntil = minDeadline(deadline, time.Now().Add(time.Duration(c.Timeouts.Stop)*time.Second))
+				log.stopBy = stopUntil
 				conn.SetDeadline(stopUntil)
 				err := stop()
 				clean = err == nil

@@ -32,6 +32,9 @@ func main() {
 	raw, _ := json.Marshal(map[string]any{"uid": os.Geteuid(), "args": os.Args[1:], "env": os.Environ()})
 	fmtOutput := append(raw, '\n')
 	os.Stdout.Write(fmtOutput)
+	if os.Getenv("APP_MODE") == "streams" {
+		os.Stderr.WriteString("fixture stderr\n")
+	}
 	if os.Getenv("APP_MODE") == "ignore" {
 		signal.Ignore(syscall.SIGTERM, syscall.SIGINT)
 		for {
