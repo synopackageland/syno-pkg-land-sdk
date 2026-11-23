@@ -1,8 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.53.58 (2026-11-23)
 
 - SDK-managed daemons default to a 100 MiB active log and seven rotated gzip archives, from `daemon/daemon.log.1.gz` through `daemon/daemon.log.7.gz`. Apps can override both limits in the manifest. Low-priority background compression migrates legacy archives and keeps the source available until gzip publication succeeds. See [Daemon diagnostics](docs/native-daemon-restart.md#diagnostics).
+
+- Executor 0.53.6 is unchanged.
 
 ## 0.53.57 (2026-11-23)
 
