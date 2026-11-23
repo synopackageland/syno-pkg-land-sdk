@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -13,7 +16,9 @@ import (
 const (
 	daemonLogPath  = "daemon/daemon.log"
 	daemonLogName  = "daemon.log"
-	daemonLogLimit = 4 * 1024 * 1024
+	daemonLogLimit = 100 * 1024 * 1024
+	daemonLogKeep  = 7
+	maxLogKeep     = 20
 	logBlockSize   = 16 * 1024
 	logQueueSize   = 16
 )
@@ -130,43 +135,146 @@ func (l *daemonLogCapture) finish(budget time.Duration, err error) {
 	}
 }
 
-// Only the lock-owning supervisor's disk worker writes these two files. It
-// never passes a log file descriptor to another process.
+func (c config) logPolicy() (int64, int, error) {
+	var limit int64 = daemonLogLimit
+	if c.LogMaxMB != nil {
+		if *c.LogMaxMB < 1 || *c.LogMaxMB > 2048 {
+			return 0, 0, errors.New("daemon log_max_mb must be an integer from 1 to 2048 MiB")
+		}
+		limit = int64(*c.LogMaxMB) << 20
+	}
+	keep := daemonLogKeep
+	if c.LogKeepFiles != nil {
+		if *c.LogKeepFiles < 1 || *c.LogKeepFiles > maxLogKeep {
+			return 0, 0, fmt.Errorf("daemon log_keep_files must be an integer from 1 to %d", maxLogKeep)
+		}
+		keep = *c.LogKeepFiles
+	}
+	return limit, keep, nil
+}
+
+func archivePath(base string, index int) string {
+	return base + "." + strconv.Itoa(index)
+}
+
+func (c *controller) logHint() string {
+	first := archivePath(daemonLogPath, 1) + ".gz"
+	if c.logKeep > 1 {
+		first += " through " + archivePath(daemonLogPath, c.logKeep) + ".gz"
+	}
+	return "inspect " + daemonLogPath + " and " + first + " (omit .gz for archives awaiting compression)"
+}
+
+type logStatusRecord struct {
+	record
+	LogArchives []string `json:"log_archives"`
+}
+
+func (c *controller) logStatus(r record) logStatusRecord {
+	r.Log = daemonLogPath
+	paths := make([]string, c.logKeep)
+	for i := range paths {
+		paths[i] = archivePath(daemonLogPath, i+1) + ".gz"
+	}
+	return logStatusRecord{record: r, LogArchives: paths}
+}
+
+// The supervisor owns all writes. The disk worker and the compressor share
+// archive names under archiveMu, but compression itself runs outside the lock.
 type daemonLogFiles struct {
-	current, previous string
-	limit, size       int64
-	file              *os.File
+	current     string
+	limit, size int64
+	keep        int
+	file        *os.File
+	initialized bool
+	archiveMu   sync.Mutex
+	compress    chan struct{}
 }
 
-func newDaemonLogFiles(dir string, limit int64) *daemonLogFiles {
+func newDaemonLogFiles(dir string, limit int64, keep int) *daemonLogFiles {
 	path := filepath.Join(dir, daemonLogName)
-	return &daemonLogFiles{current: path, previous: path + ".1", limit: limit}
+	return &daemonLogFiles{current: path, limit: limit, keep: keep, compress: make(chan struct{}, 1)}
 }
 
-// Check the existing paths before accepting startup. Missing files are fine:
-// creation belongs to the disk worker and may fail temporarily, e.g. on ENOSPC.
-func checkDaemonLogs(dir string) error {
-	files := newDaemonLogFiles(dir, daemonLogLimit)
-	for _, path := range []string{files.current, files.previous} {
-		f, err := openDaemonFile(path, os.O_RDONLY)
-		if err == nil {
-			f.Close()
-		} else if !os.IsNotExist(err) {
+func (l *daemonLogFiles) compressionTemp() string {
+	return l.current + ".gz.tmp"
+}
+
+func daemonLogInfo(path string) (os.FileInfo, error) {
+	f, err := openDaemonFile(path, os.O_RDONLY)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", filepath.Base(path), err)
+	}
+	defer f.Close()
+	return f.Stat()
+}
+
+// Validate each raw and compressed archive before changing the rotation chain.
+// A raw file takes precedence if a previous run stopped after publishing the
+// gzip and before removing its source.
+func (l *daemonLogFiles) archives(keep int) ([]string, error) {
+	paths := make([]string, keep+1)
+	for i := 1; i <= keep; i++ {
+		raw := archivePath(l.current, i)
+		for _, path := range []string{raw + ".gz", raw} {
+			st, err := daemonLogInfo(path)
+			if err != nil {
+				return nil, err
+			}
+			if st != nil {
+				paths[i] = path
+			}
+		}
+	}
+	return paths, nil
+}
+
+// Missing files are fine. Creation and migration belong to the disk worker.
+func (l *daemonLogFiles) check() error {
+	for _, path := range []string{l.current, l.compressionTemp()} {
+		if _, err := daemonLogInfo(path); err != nil {
 			return err
+		}
+	}
+	_, err := l.archives(maxLogKeep)
+	return err
+}
+
+func (l *daemonLogFiles) open() error {
+	if !l.initialized {
+		if err := l.prepareArchives(); err != nil {
+			return err
+		}
+		l.initialized = true
+		l.scheduleCompression()
+	}
+	return l.openCurrent()
+}
+
+func (l *daemonLogFiles) prepareArchives() error {
+	l.archiveMu.Lock()
+	defer l.archiveMu.Unlock()
+	if err := l.check(); err != nil {
+		return err
+	}
+	if err := removeLog(l.compressionTemp()); err != nil {
+		return err
+	}
+	for i := l.keep + 1; i <= maxLogKeep; i++ {
+		raw := archivePath(l.current, i)
+		for _, path := range []string{raw, raw + ".gz"} {
+			if err := removeLog(path); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-func (l *daemonLogFiles) open() error {
-	previous, err := openDaemonFile(l.previous, os.O_RDWR)
-	if err == nil {
-		_, err = trimDaemonLog(previous, l.limit)
-		previous.Close()
-	}
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
+func (l *daemonLogFiles) openCurrent() error {
 	f, err := safeFile(l.current)
 	if err != nil {
 		return err
@@ -207,6 +315,9 @@ func (l *daemonLogFiles) Write(p []byte) (int, error) {
 		if err := l.rotate(); err != nil {
 			return 0, err
 		}
+		if err := l.openCurrent(); err != nil {
+			return 0, err
+		}
 	}
 	n, err := l.file.WriteAt(p, l.size)
 	l.size += int64(n)
@@ -214,30 +325,50 @@ func (l *daemonLogFiles) Write(p []byte) (int, error) {
 }
 
 func (l *daemonLogFiles) rotate() error {
-	current, err := openDaemonFile(l.current, os.O_RDONLY)
-	if err != nil {
-		return err
-	}
-	st, err := current.Stat()
-	current.Close()
+	l.archiveMu.Lock()
+	defer l.archiveMu.Unlock()
+	st, err := daemonLogInfo(l.current)
 	if err != nil {
 		return err
 	}
 	active, err := l.file.Stat()
-	if err != nil || !os.SameFile(st, active) {
+	if err != nil || st == nil || !os.SameFile(st, active) {
 		return errors.New("daemon log changed during rotation")
 	}
-	previous, err := openDaemonFile(l.previous, os.O_RDONLY)
-	if err == nil {
-		previous.Close()
-	} else if !os.IsNotExist(err) {
+	paths, err := l.archives(l.keep)
+	if err != nil {
 		return err
 	}
-	if err := os.Rename(l.current, l.previous); err != nil {
+	for i := l.keep; i > 0; i-- {
+		raw := archivePath(l.current, i)
+		// A published gzip can coexist with its raw source after an interrupted
+		// cleanup. Move a single authoritative copy so it cannot shadow a
+		// different archive during the next compression pass.
+		if paths[i] == raw || i == l.keep {
+			if err := removeLog(raw + ".gz"); err != nil {
+				return err
+			}
+		}
+		if i == l.keep {
+			if err := removeLog(raw); err != nil {
+				return err
+			}
+		} else if paths[i] != "" {
+			dest := archivePath(l.current, i+1)
+			if paths[i] != raw {
+				dest += ".gz"
+			}
+			if err := os.Rename(paths[i], dest); err != nil {
+				return err
+			}
+		}
+	}
+	if err := os.Rename(l.current, archivePath(l.current, 1)); err != nil {
 		return err
 	}
 	l.close()
-	return l.open()
+	l.scheduleCompression()
+	return nil
 }
 
 func (l *daemonLogFiles) close() {
@@ -245,4 +376,28 @@ func (l *daemonLogFiles) close() {
 		l.file.Close()
 		l.file = nil
 	}
+}
+
+func removeLog(path string) error {
+	err := os.Remove(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
+}
+
+func (l *daemonLogFiles) collect(log *daemonLogCapture) {
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	defer l.close()
+	defer func() {
+		cancel()
+		<-done
+	}()
+	go func() {
+		defer close(done)
+		l.compressLoop(ctx)
+	}()
+	_ = l.open()
+	log.collect(l)
 }

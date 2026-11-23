@@ -101,8 +101,10 @@ or cleanup. Uninstall commands are not restarted.
 
 `control status-json` exposes `state` (`starting`, `waiting`, `running`, `backoff`,
 `failed`, `exited`, `stopped`, `unavailable`), `attempts`, `retry_at`, `last_exit`
-(code/reason/permanent), the relative log pointer, restart count and existing
-process/config inventory. A live snapshot authenticates the supervisor; terminal
+(code/reason/permanent), `log` (the relative active log path), `log_archives`
+(configured gzip paths in newest-to-oldest order), restart count and existing
+process/config inventory. Archives appear as the log rotates. A live snapshot
+authenticates the supervisor; terminal
 saved state is diagnostic inventory, never readiness authority.
 
 `control status` returns 0 only when ready, 3 when stopped and 1 while waiting,
@@ -110,17 +112,32 @@ starting, backing off or failed. Fixed diagnostics include
 `DAEMON_WAITING_DEPENDENCY`, `DAEMON_RESTART_STARTING`, `DAEMON_RESTART_BACKOFF`,
 `DAEMON_RESTART_LIMIT`, `DAEMON_PERMANENT_ERROR` and `DAEMON_CHILD_EXIT`.
 The supervisor records a line for each state transition and captures the
-foreground child's stdout and stderr. For every SDK-managed daemon, the
-package's private `daemon/daemon.log` rotates at up to 4 MiB. It keeps one
-previous file, `daemon/daemon.log.1`, for up to 8 MiB total across both files.
-This leaves room for recent startup and restart diagnostics while bounding
-storage per package. The next daemon start trims oversized existing logs to
-their most recent 4 MiB. No App configuration is required.
+foreground child's stdout and stderr. The package's private, uncompressed
+`daemon/daemon.log` defaults to 100 MiB. Rotation keeps seven archives by
+default, from `daemon/daemon.log.1.gz` (newest) through
+`daemon/daemon.log.7.gz` (oldest). Each rotation ages the archives by one slot
+and expires the oldest. A native daemon or Compose web gateway may override
+either default in `dsm-package.yaml` and rebuild the SPK.
 
-Start with `daemon/daemon.log` when investigating a startup failure, and read
-`daemon/daemon.log.1` for earlier output. To follow across rotation, use
-`tail -F daemon/daemon.log`. The supervisor keeps draining the child's output
-while disk writes are slow or failing. It drops output when its queue fills or
+```yaml
+daemon:
+  log_max_mb: 100
+  log_keep_files: 7
+```
+
+`log_max_mb` accepts 1–2048 MiB and `log_keep_files` accepts 1–20 archives.
+Use integers. On start, an oversized active log keeps its newest bytes up to
+the configured limit, and archives beyond the configured count expire.
+Background gzip also migrates legacy `daemon/daemon.log.1`, keeping the newest
+bytes up to the limit if it is oversized. While compression is pending or has
+failed, the archive is still available under the same name without `.gz`.
+Compression retries on rotation and periodically while the supervisor runs.
+
+Inspect `daemon/daemon.log` for a startup failure and use
+`tail -F daemon/daemon.log` to follow it across rotation. Read earlier output
+with `zcat daemon/daemon.log.1.gz` or search the compressed files with
+`zgrep PATTERN daemon/daemon.log.*.gz`. The supervisor keeps draining the
+child's output while disk writes are slow or failing. It drops output when its queue fills or
 a write fails, and reports the number of dropped bytes in a
 `DAEMON_LOG_DROPPED` line when it can write again. Use the status commands for
 readiness and lifecycle state.

@@ -450,7 +450,8 @@ it reserves five additional seconds for handoff, a bounded in-flight probe and
 process stability. Until then no gateway forwards traffic. A timeout returns
 `COMPOSE_STARTUP_TIMEOUT` and a fixed last `phase` code, also recorded in
 `daemon/daemon.log`; it never copies probe URLs, bodies, credentials or raw errors.
-If the log has rotated, also check `daemon/daemon.log.1`.
+Use `zcat` or `zgrep` to read rotated gateway logs, from
+`daemon/daemon.log.1.gz` through `daemon/daemon.log.7.gz` by default.
 See [daemon log retention](native-daemon-restart.md#diagnostics).
 Cancellation stops the wait. Stop/uninstall keep their independent bounds.
 

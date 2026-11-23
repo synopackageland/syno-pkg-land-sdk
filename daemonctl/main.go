@@ -37,6 +37,8 @@ type deadlines struct {
 }
 type config struct {
 	NoFile           int               `json:"nofile,omitempty"`
+	LogMaxMB         *int              `json:"log_max_mb,omitempty"`
+	LogKeepFiles     *int              `json:"log_keep_files,omitempty"`
 	Dependencies     *dependencyPolicy `json:"dependencies,omitempty"`
 	Restart          *restartPolicy    `json:"restart,omitempty"`
 	OperationSeconds int               `json:"operation_seconds,omitempty"`
@@ -69,6 +71,8 @@ type controller struct {
 	config
 	dest, data, dir, digest string
 	installedInfo           string
+	logLimit                int64
+	logKeep                 int
 }
 
 func main() {
@@ -121,6 +125,10 @@ func load(dest, data string) (*controller, error) {
 	if err := validateNoFile(cfg.NoFile); err != nil {
 		return nil, err
 	}
+	logLimit, logKeep, err := cfg.logPolicy()
+	if err != nil {
+		return nil, err
+	}
 	if err := validateDependencies(cfg.Dependencies); err != nil {
 		return nil, err
 	}
@@ -139,7 +147,7 @@ func load(dest, data string) (*controller, error) {
 		return nil, errors.New("daemon restart policy requires a native daemon without Compose network supervision")
 	}
 	hash := sha256.Sum256(raw)
-	c := &controller{config: cfg, dest: dest, data: data, dir: filepath.Join(data, "daemon"), digest: hex.EncodeToString(hash[:])}
+	c := &controller{config: cfg, dest: dest, data: data, dir: filepath.Join(data, "daemon"), digest: hex.EncodeToString(hash[:]), logLimit: logLimit, logKeep: logKeep}
 	if err := os.Mkdir(c.dir, 0700); err != nil && !os.IsExist(err) {
 		return nil, err
 	}
@@ -352,7 +360,7 @@ func (c *controller) request(action string, until time.Time) error {
 		if action == "snapshot" {
 			var snapshot record
 			if json.Unmarshal([]byte(raw), &snapshot) == nil && snapshot.Digest == c.digest && snapshot.Supervisor == r.Supervisor {
-				json.NewEncoder(os.Stdout).Encode(snapshot)
+				json.NewEncoder(os.Stdout).Encode(c.logStatus(snapshot))
 				if snapshot.State != "running" {
 					return &snapshotError{}
 				}
@@ -440,9 +448,9 @@ func (c *controller) start(until time.Time) error {
 		owner.Close()
 		return err
 	}
-	if err := checkDaemonLogs(c.dir); err != nil {
+	if err := newDaemonLogFiles(c.dir, c.logLimit, c.logKeep).check(); err != nil {
 		owner.Close()
-		return err
+		return fmt.Errorf("daemon log startup check failed: %w; %s", err, c.logHint())
 	}
 	// Pass the already-held lifetime lock to the new supervisor. No handoff gap.
 	reader, writer, err := os.Pipe()
@@ -480,13 +488,15 @@ func (c *controller) start(until time.Time) error {
 	go func() {
 		raw, err := bufio.NewReader(io.LimitReader(reader, 256)).ReadString('\n')
 		if err == nil && raw != "ready\n" {
-			if strings.HasPrefix(raw, "COMPOSE_STARTUP_TIMEOUT:") || raw == "COMPOSE_STARTUP_INTERRUPTED\n" {
+			if strings.HasPrefix(raw, "COMPOSE_STARTUP_TIMEOUT:") {
+				err = fmt.Errorf("%s; %s", strings.TrimSpace(raw), c.logHint())
+			} else if raw == "COMPOSE_STARTUP_INTERRUPTED\n" {
 				err = errors.New(strings.TrimSpace(raw))
 			} else {
-				err = errors.New("daemon startup refused; inspect daemon/daemon.log and daemon/daemon.log.1")
+				err = fmt.Errorf("daemon startup refused; %s", c.logHint())
 			}
 		} else if err != nil {
-			err = errors.New("daemon startup failed; inspect daemon/daemon.log and daemon/daemon.log.1")
+			err = fmt.Errorf("daemon startup failed; %s", c.logHint())
 		}
 		ready <- err
 	}()
@@ -614,10 +624,7 @@ func (c *controller) supervise() (result error) {
 		// Even if finalization times out, retain the lock while any log I/O
 		// is in flight. Process exit releases it if the writer is still stuck.
 		defer owner.Close()
-		files := newDaemonLogFiles(c.dir, daemonLogLimit)
-		defer files.close()
-		_ = files.open()
-		log.collect(files)
+		newDaemonLogFiles(c.dir, c.logLimit, c.logKeep).collect(log)
 	}()
 	defer func() {
 		if log.stopBy.IsZero() {
