@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {spawnSync} from 'node:child_process';
-import {mkdtempSync, mkdirSync, copyFileSync, writeFileSync, rmSync, readFileSync} from 'node:fs';
+import {mkdtempSync, mkdirSync, copyFileSync, writeFileSync, rmSync, readFileSync, symlinkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {gatePlan} from './release-gate-plan.mjs';
@@ -28,4 +28,26 @@ test('real dispatcher selects basic by default and integrations only explicitly,
       assert.deepEqual(r.stdout.trim().split('\n'), want);
     }
   } finally { rmSync(root, {recursive: true, force: true}); }
+});
+test('the dispatcher runs the plan through a symlinked checkout and refuses an empty plan', () => {
+  const real = mkdtempSync(join(tmpdir(), 'sdk-gate-real-'));
+  const link = real + '-link';
+  try {
+    mkdirSync(join(real, 'scripts'));
+    for (const file of ['gate.sh', 'release-gate-plan.mjs']) copyFileSync(new URL(file, import.meta.url), join(real, 'scripts', file));
+    writeFileSync(join(real, 'scripts', 'basic-gate.sh'), 'echo basic\n');
+    symlinkSync(real, link);
+    // macOS /tmp is a symlink: the plan used to come out empty and the gate passed with nothing run.
+    const r = spawnSync('bash', [join(link, 'scripts/gate.sh')], {encoding: 'utf8', env: {...process.env, SPL_FULL_GATE: ''}});
+    assert.equal(r.status, 0, r.stderr);
+    assert.deepEqual(r.stdout.trim().split('\n'), ['basic']);
+    writeFileSync(join(real, 'scripts', 'release-gate-plan.mjs'), '');
+    const empty = spawnSync('bash', [join(real, 'scripts/gate.sh')], {encoding: 'utf8', env: {...process.env, SPL_FULL_GATE: ''}});
+    assert.notEqual(empty.status, 0);
+    assert.match(empty.stderr, /empty release gate plan/);
+    writeFileSync(join(real, 'scripts', 'release-gate-plan.mjs'), "console.log('surprise')\n");
+    const unknown = spawnSync('bash', [join(real, 'scripts/gate.sh')], {encoding: 'utf8', env: {...process.env, SPL_FULL_GATE: ''}});
+    assert.notEqual(unknown.status, 0);
+    assert.match(unknown.stderr, /unknown gate segment: surprise/);
+  } finally { rmSync(link, {force: true}); rmSync(real, {recursive: true, force: true}); }
 });

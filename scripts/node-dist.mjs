@@ -1,6 +1,6 @@
 // Compare committed module payloads with a fresh build without repairing them.
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync, rmSync, realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -22,7 +22,7 @@ export function checkNodeDist(root = fileURLToPath(new URL('../', import.meta.ur
   } finally { rmSync(work, { recursive: true, force: true }) }
 }
 
-if (import.meta.url === pathToFileURL(resolve(process.argv[1] ?? '')).href) {
+if (import.meta.url === pathToFileURL(realpathSync(resolve(process.argv[1] ?? ''))).href) {
   const changed = checkNodeDist()
   if (changed.length) {
     console.error(`node/dist differs from a fresh build: ${changed.join(', ')}; run pnpm --dir node run build`)
