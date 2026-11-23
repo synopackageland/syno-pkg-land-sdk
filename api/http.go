@@ -109,7 +109,8 @@ func (s *Server) serveHTTPRoute(w http.ResponseWriter, r *http.Request) bool {
 			writeStreamError(w, &Error{"session_required", "sign in to DSM again"})
 			return true
 		}
-		route.httpHandler.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), httpCallerKey{}, caller)))
+		ctx := context.WithValue(context.WithValue(r.Context(), httpCallerKey{}, caller), httpPathKey{}, requestPath)
+		route.httpHandler.ServeHTTP(w, r.WithContext(ctx))
 		return true
 	}
 	return false
@@ -128,16 +129,49 @@ func (s *Server) HTTPRoute(r *http.Request) string {
 	return ""
 }
 
+// Matches portal.aliasPattern: a DSM Application Portal alias is one segment.
+var portalAliasPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$`)
+
+// rawHTTPPath is the request path after the CGI's SCRIPT_NAME, or "".
+//
+// A DSM Application Portal serves the App under /<alias>/: DSM's nginx
+// rewrites /<alias>/webman/... to /webman/... before it runs the CGI, so
+// SCRIPT_NAME and PATH_INFO lose the alias while REQUEST_URI (r.URL) keeps
+// it. The path still comes from r.URL, whose raw form the canonical-path
+// check needs; exactly one alias segment may precede SCRIPT_NAME, and only
+// when nginx's PATH_INFO names the same path, so the alias provably went
+// through DSM's rewrite to this script. Longer prefixes never match.
 func rawHTTPPath(r *http.Request) string {
 	if os.Getenv("GATEWAY_INTERFACE") == "" {
 		return r.URL.Path
 	}
 	script := os.Getenv("SCRIPT_NAME")
-	if strings.HasPrefix(script, "/") && strings.HasPrefix(r.URL.Path, script+"/") {
-		return strings.TrimPrefix(r.URL.Path, script)
+	if !strings.HasPrefix(script, "/") {
+		return ""
+	}
+	if rest, ok := strings.CutPrefix(r.URL.Path, script+"/"); ok {
+		return "/" + rest
+	}
+	alias, after, ok := strings.Cut(strings.TrimPrefix(r.URL.Path, "/"), "/")
+	if !ok || !strings.HasPrefix(r.URL.Path, "/") || !portalAliasPattern.MatchString(alias) {
+		return ""
+	}
+	if rest, ok := strings.CutPrefix("/"+after, script+"/"); ok && os.Getenv("PATH_INFO") == "/"+rest {
+		return "/" + rest
 	}
 	return ""
 }
+
+// HTTPPath returns the request path below the CGI inside a HandleHTTP
+// handler, beginning with the route's prefix (for example "/files/a.txt"),
+// with or without a DSM Application Portal alias in the URL. Handlers use it
+// instead of trimming SCRIPT_NAME from r.URL.Path, which keeps the alias.
+func HTTPPath(ctx context.Context) string {
+	p, _ := ctx.Value(httpPathKey{}).(string)
+	return p
+}
+
+type httpPathKey struct{}
 
 // HTTPRouteMethod finds the raw transport registration through SDK middleware.
 // It does not authenticate the request or authorize its handler.

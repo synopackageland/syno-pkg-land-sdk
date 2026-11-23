@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Raw HTTP routes (`api.HandleHTTP`) work when the App is opened through its DSM Application Portal alias. DSM's nginx rewrites `/<alias>/webman/...` to `/webman/...` for the CGI but keeps the alias in the request URI, so every raw download and upload under `/<alias>/` was answered by the JSON dispatcher ("use POST"). The route now also matches when exactly one alias segment precedes `SCRIPT_NAME` and nginx's `PATH_INFO` names the same path. A longer prefix, an alias that is not one path segment, or a `PATH_INFO` that differs is still not a raw route; origin, entry, identity and permission checks are unchanged. Apps that removed the alias from raw URLs in the browser can drop that workaround. See [Fixed browser routes](docs/http-boundaries.md#fixed-browser-routes).
+- `api.HTTPPath(ctx)` returns the path below the CGI inside a `HandleHTTP` handler (`/files/a.txt`), with or without the alias. Use it instead of trimming `SCRIPT_NAME` from `r.URL.Path`, which keeps the alias.
+
 ## 0.53.55 (2026-11-20)
 
 - A signed-out visitor who opens an entry page link now lands on the App's route after DSM's sign-in, not on its start page. After the Portal alias sign-in, DSM opens the App on the alias page as a DSM window, and that window reads only DSM's `launchParam`, so the route kept as `?link=` was lost. The boot now adds the launch to the alias URL as `launchParam` too, in the form `dsmLaunchURL` uses, and keeps `?link=` for the entry page. DSM's App start, used when the alias is off, also carries a hash route (`#/a/notes/42`) as `route` now. On DSM 7.3.2, both sign-ins kept `launchParam`, and the App's window opened at the route. See [Sign-in hand-off](docs/entry-page.md#sign-in-hand-off).

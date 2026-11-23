@@ -36,8 +36,17 @@ before dispatch. The handler receives the original URL, query and body;
 `?method=` does not select another method on a raw route.
 CGI matches the path after its trusted `SCRIPT_NAME`: a `/proxy/` registration
 can receive `/webman/3rdparty/SampleApp/cgi/api.cgi/proxy/item` where the web
-server supports PATH_INFO. The handler retains that original URL; the App
-chooses how to rewrite it for an upstream. SDK identity, description and
+server supports PATH_INFO. Under a DSM Application Portal alias the browser
+URL is `/<alias>/webman/3rdparty/SampleApp/cgi/api.cgi/proxy/item`: DSM's nginx
+drops the alias from `SCRIPT_NAME` and `PATH_INFO` but keeps it in the request
+URI. The route still matches when exactly one alias segment (`A-Z`, `a-z`,
+`0-9`, `_`, `-`, starting with a letter or digit) precedes `SCRIPT_NAME` and
+nginx's `PATH_INFO` names the same path; any longer prefix, or a `PATH_INFO`
+that differs, is not a raw route. The access checks are the same with or
+without the alias. The handler retains the original URL, alias included; use
+`api.HTTPPath(r.Context())` (`/proxy/item` in both cases) rather than trimming
+`SCRIPT_NAME` from `r.URL.Path`. The App chooses how to rewrite it for an
+upstream. SDK identity, description and
 deadline middleware preserve this raw routing without parsing its body.
 
 Raw method keys cannot be invoked through JSON, batch or query-selected
