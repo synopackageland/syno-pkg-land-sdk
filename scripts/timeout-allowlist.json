@@ -102,6 +102,12 @@
     "reason": "Grace after lifecycle cancellation before escalating the owned process group"
   },
   {
+    "file": "daemonctl/log_gzip.go",
+    "statement": "retry := time.NewTicker(time.Minute)",
+    "class": "B",
+    "reason": "Maintenance cadence for pending log archives while the daemon is idle. Ticks never bound compression, lifecycle operations or application requests."
+  },
+  {
     "file": "daemonctl/main.go",
     "statement": "time.Sleep(20 * time.Millisecond)",
     "class": "B",
