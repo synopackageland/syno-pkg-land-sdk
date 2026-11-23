@@ -109,8 +109,21 @@ saved state is diagnostic inventory, never readiness authority.
 starting, backing off or failed. Fixed diagnostics include
 `DAEMON_WAITING_DEPENDENCY`, `DAEMON_RESTART_STARTING`, `DAEMON_RESTART_BACKOFF`,
 `DAEMON_RESTART_LIMIT`, `DAEMON_PERMANENT_ERROR` and `DAEMON_CHILD_EXIT`.
-One bounded log line per state transition is written to private
-`daemon/daemon.log`; raw child output is not a status API.
+The supervisor records a line for each state transition and captures the
+foreground child's stdout and stderr. For every SDK-managed daemon, the
+package's private `daemon/daemon.log` rotates at up to 4 MiB. It keeps one
+previous file, `daemon/daemon.log.1`, for up to 8 MiB total across both files.
+This leaves room for recent startup and restart diagnostics while bounding
+storage per package. The next daemon start trims oversized existing logs to
+their most recent 4 MiB. No App configuration is required.
+
+Start with `daemon/daemon.log` when investigating a startup failure, and read
+`daemon/daemon.log.1` for earlier output. To follow across rotation, use
+`tail -F daemon/daemon.log`. The supervisor keeps draining the child's output
+while disk writes are slow or failing. It drops output when its queue fills or
+a write fails, and reports the number of dropped bytes in a
+`DAEMON_LOG_DROPPED` line when it can write again. Use the status commands for
+readiness and lifecycle state.
 
 Apps may expose bounded fields through an authenticated API. They must not give
 the browser direct process/log access. Runtime JSON dependency/fatal-code options

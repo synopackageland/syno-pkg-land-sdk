@@ -54,11 +54,11 @@ func (c *controller) dependencies(ctx context.Context) error {
 // superviseNative keeps the existing control and stop-fence ownership, while
 // every retry decision comes from supervision.Policy. A failed series exits:
 // its persisted snapshot survives, but no watcher or timer survives it.
-func (c *controller) superviseNative(ready *os.File, signals <-chan os.Signal) error {
+func (c *controller) superviseNative(ready *os.File, signals <-chan os.Signal, log *daemonLogCapture) error {
 	clean := false
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	r := record{Supervisor: os.Getpid(), Digest: c.digest, State: "starting", Log: "daemon/daemon.log"}
+	r := record{Supervisor: os.Getpid(), Digest: c.digest, State: "starting", Log: daemonLogPath}
 	if err := c.writeRecord(r); err != nil {
 		return err
 	}
@@ -166,7 +166,7 @@ func (c *controller) superviseNative(ready *os.File, signals <-chan os.Signal) e
 			r.Reason = "DAEMON_CHILD_EXIT"
 		}
 		if r.State != previous {
-			supervisorLog(os.Stderr, "state=%s attempts=%d next=%s reason=%s log=%s", r.State, r.Attempts, r.RetryAt.UTC().Format(time.RFC3339), r.Reason, r.Log)
+			supervisorLog(log, "state=%s attempts=%d next=%s reason=%s log=%s", r.State, r.Attempts, r.RetryAt.UTC().Format(time.RFC3339), r.Reason, r.Log)
 		}
 		return c.writeRecord(r)
 	}
@@ -227,7 +227,7 @@ func (c *controller) superviseNative(ready *os.File, signals <-chan os.Signal) e
 						if err == nil {
 							cmd := c.child(c.Args)
 							cmd.Env = append(cmd.Env, "TMPDIR="+temp)
-							cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+							cmd.Stdout, cmd.Stderr = log.output, log.output
 							proc, err = supervision.Start(cmd)
 						}
 					}
@@ -387,6 +387,7 @@ func (c *controller) superviseNative(ready *os.File, signals <-chan os.Signal) e
 					conn.Close()
 					continue
 				}
+				log.stopBy = until
 				conn.SetDeadline(until)
 				clean = true
 				cancel()

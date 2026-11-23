@@ -450,6 +450,8 @@ it reserves five additional seconds for handoff, a bounded in-flight probe and
 process stability. Until then no gateway forwards traffic. A timeout returns
 `COMPOSE_STARTUP_TIMEOUT` and a fixed last `phase` code, also recorded in
 `daemon/daemon.log`; it never copies probe URLs, bodies, credentials or raw errors.
+If the log has rotated, also check `daemon/daemon.log.1`.
+See [daemon log retention](native-daemon-restart.md#diagnostics).
 Cancellation stops the wait. Stop/uninstall keep their independent bounds.
 
 This budget begins after DSM's Container Manager startup worker returns. It does
