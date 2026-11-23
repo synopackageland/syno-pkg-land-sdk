@@ -153,6 +153,61 @@ func TestHTTPRoutesUseCGIPathInfoWithoutChangingTheOriginalURL(t *testing.T) {
 	}
 }
 
+func TestHTTPRoutesUnderOnePortalAliasSegment(t *testing.T) {
+	t.Setenv("GATEWAY_INTERFACE", "CGI/1.1")
+	const script = "/webman/3rdparty/SampleApp/cgi/api.cgi"
+	t.Setenv("SCRIPT_NAME", script)
+	var seen []string
+	srv, err := NewServerWithPermissions(&fakeAuth{user: "operator"}, []byte(httpPolicy),
+		HandleHTTP("/proxy/", "app.proxy", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			seen = append(seen, r.URL.Path+" "+HTTPPath(r.Context()))
+			w.WriteHeader(204)
+		})))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// DSM's nginx rewrites /<alias>/webman/... for the CGI: SCRIPT_NAME and
+	// PATH_INFO lose the alias, REQUEST_URI keeps it.
+	for _, c := range []struct {
+		uri, pathInfo string
+		served        bool
+	}{
+		{script + "/proxy/item", "/proxy/item", true},
+		{script + "/proxy/item", "", true},
+		{"/app/" + script[1:] + "/proxy/item", "/proxy/item", true},
+		{"/app/" + script[1:] + "/proxy/item", "", false},
+		{"/app/" + script[1:] + "/proxy/item", "/proxy/other", false},
+		{"/a/b/" + script[1:] + "/proxy/item", "/proxy/item", false},
+		{"/-x/" + script[1:] + "/proxy/item", "/proxy/item", false},
+		{"/app" + script + "x/proxy/item", "/proxy/item", false},
+		{"/app/" + script[1:], "", false},
+	} {
+		t.Setenv("PATH_INFO", c.pathInfo)
+		seen = nil
+		r := httptest.NewRequest("GET", c.uri, nil)
+		w := httptest.NewRecorder()
+		srv.ServeHTTP(w, r)
+		if routed := srv.HTTPRoute(r) != ""; routed != c.served || (len(seen) == 1) != c.served {
+			t.Fatalf("%s (PATH_INFO %q): routed=%v calls=%d status=%d", c.uri, c.pathInfo, routed, len(seen), w.Code)
+		}
+		if c.served && seen[0] != c.uri+" /proxy/item" {
+			t.Fatalf("handler saw %q", seen[0])
+		}
+	}
+	// The access decision is unchanged under an alias.
+	t.Setenv("PATH_INFO", "/proxy/item")
+	denied, err := NewServerWithPermissions(&fakeAuth{err: ErrNoSession}, []byte(httpPolicy),
+		HandleHTTP("/proxy/", "app.proxy", http.HandlerFunc(func(http.ResponseWriter, *http.Request) { t.Fatal("anonymous caller reached the handler") })))
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	denied.ServeHTTP(w, httptest.NewRequest("GET", "/app/"+script[1:]+"/proxy/item", nil))
+	if w.Code < 400 {
+		t.Fatalf("anonymous alias request: %d", w.Code)
+	}
+}
+
 func TestHTTPStreamingAndWebSocketUpgrade(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Upgrade") == "websocket" {
