@@ -1,9 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.53.56 (2026-11-23)
 
 - Raw HTTP routes (`api.HandleHTTP`) work when the App is opened through its DSM Application Portal alias. DSM's nginx rewrites `/<alias>/webman/...` to `/webman/...` for the CGI but keeps the alias in the request URI, so every raw download and upload under `/<alias>/` was answered by the JSON dispatcher ("use POST"). The route now also matches when exactly one alias segment precedes `SCRIPT_NAME` and nginx's `PATH_INFO` names the same path. A longer prefix, an alias that is not one path segment, or a `PATH_INFO` that differs is still not a raw route; origin, entry, identity and permission checks are unchanged. Apps that removed the alias from raw URLs in the browser can drop that workaround. See [Fixed browser routes](docs/http-boundaries.md#fixed-browser-routes).
 - `api.HTTPPath(ctx)` returns the path below the CGI inside a `HandleHTTP` handler (`/files/a.txt`), with or without the alias. Use it instead of trimming `SCRIPT_NAME` from `r.URL.Path`, which keeps the alias.
+- Executor 0.53.6 is unchanged.
 
 ## 0.53.55 (2026-11-20)
 
