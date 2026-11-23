@@ -2,7 +2,7 @@
 // scripts/test/internal-content.test.mjs at 3f375fe943eb864bf7245fadc25732e0c8749301.
 // Keep this file identical in CLI, SDK and UI; no runtime dependency is needed.
 import {execFileSync} from 'node:child_process';
-import {readFileSync, readdirSync, lstatSync, mkdtempSync, rmSync} from 'node:fs';
+import {readFileSync, readdirSync, lstatSync, mkdtempSync, rmSync, realpathSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {resolve, relative, join, posix} from 'node:path';
 import {pathToFileURL} from 'node:url';
@@ -90,7 +90,7 @@ export function packageFindings(root, rules = defaultRules()) {
   } finally { rmSync(work, {recursive: true, force: true}); }
 }
 
-if (import.meta.url === pathToFileURL(resolve(process.argv[1] ?? '')).href) {
+if (import.meta.url === pathToFileURL(realpathSync(resolve(process.argv[1] ?? ''))).href) {
   const [mode, input] = process.argv.slice(2);
   if (!['--repo', '--directory', '--tarball', '--package'].includes(mode) || !input || process.argv.length !== 4) {
     console.error('usage: node scripts/check-internal-content.mjs --repo|--directory|--tarball|--package <path>');
