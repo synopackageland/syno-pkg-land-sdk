@@ -418,8 +418,11 @@ class Controller:
         # No CI job is reading/writing these volumes while they are pruned.
         self.docker.trim_caches(self.image)
         if time.time() - self.last_daily_trim >= 86400:
-            self.docker.trim_caches(self.image, thread=True)
             self.last_daily_trim = time.time()
+            try:
+                self.docker.trim_caches(self.image, thread=True)
+            except (APIError, OSError, RuntimeError, ValueError) as error:
+                LOG.warning('shared Go cache trim failed (%s); continuing CI dispatch', type(error).__name__)
         for offset in range(len(REPOS)):
             index = (self.cursor + offset) % len(REPOS)
             repo = REPOS[index]

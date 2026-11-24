@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
-from cache_trim import MAX_AGE, old_files, trim, usage
+from cache_trim import MAX_AGE, old_files, trim, trim_thread_cache, usage
 from controller import CACHE_VOLUMES, THREAD_GOBUILD, Controller, Docker, REPOS, APIError
 
 
@@ -55,6 +55,33 @@ class TrimTests(unittest.TestCase):
         self.assertFalse(stale.exists())
         self.assertTrue(fresh.exists())
         self.assertTrue(other.exists())
+
+    def test_shared_trim_preserves_denied_entries_and_continues(self):
+        denied = self.file('thread/a/denied', 4)
+        gone = self.file('thread/a/gone', 4)
+        stale = self.file('thread/b/stale', 4)
+        fresh = self.file('thread/b/fresh', 1)
+        outside = self.file('outside/old', 4)
+        (self.base / 'thread/link').symlink_to(outside.parent, target_is_directory=True)
+        original_unlink = os.unlink
+
+        def unlink(name, *, dir_fd):
+            if name == 'denied':
+                raise PermissionError(13, 'permission denied')
+            if name == 'gone':
+                original_unlink(name, dir_fd=dir_fd)
+                raise FileNotFoundError(2, 'entry disappeared')
+            original_unlink(name, dir_fd=dir_fd)
+
+        with patch('cache_trim.os.unlink', side_effect=unlink):
+            result = trim_thread_cache(self.base / 'thread', self.now)
+        self.assertEqual(result['removed_files'], 1)
+        self.assertEqual(result['skipped_entries'], 2)
+        self.assertTrue(denied.exists())
+        self.assertFalse(gone.exists())
+        self.assertFalse(stale.exists())
+        self.assertTrue(fresh.exists())
+        self.assertTrue(outside.exists())
 
     def test_cargo_sources_are_removed_as_complete_crates(self):
         a = self.file('cargo/registry/src/index/crate-1/src/lib.rs', 10)
@@ -128,6 +155,18 @@ class CacheDockerTests(unittest.TestCase):
         self.assertEqual(docker.trim_caches.call_count, 3)
         self.assertEqual(sum(bool(call.kwargs.get('thread')) for call in docker.trim_caches.call_args_list), 1)
         docker.ensure_caches.assert_called_once()
+
+    def test_daily_trim_failure_does_not_block_dispatch_or_retry_each_poll(self):
+        gh, docker = Mock(), Mock()
+        gh.pages.return_value = []
+        docker.trim_caches.side_effect = [None, RuntimeError('failure'), None]
+        c = Controller(gh, docker, 'ci-runner:1')
+        with patch.object(c, 'reconcile', return_value=[]):
+            with self.assertLogs('ci', level='WARNING'):
+                c.tick()
+            gh.pages.assert_called()
+            c.tick()
+        self.assertEqual(docker.trim_caches.call_count, 3)
 
     def test_trim_failure_prevents_dispatch(self):
         gh, docker = Mock(), Mock()
