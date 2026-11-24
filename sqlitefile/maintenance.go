@@ -28,6 +28,13 @@ func Maintain(ctx context.Context, db *sql.DB) error {
 		return err
 	}
 	defer conn.Close()
+	return MaintainConn(ctx, conn)
+}
+
+// MaintainConn runs the same upkeep as Maintain using a connection already
+// owned by the caller. It leaves the connection open and requires exclusive
+// use of the connection outside a transaction.
+func MaintainConn(ctx context.Context, conn *sql.Conn) error {
 	if _, err := conn.ExecContext(ctx, "PRAGMA main.optimize"); err != nil {
 		return fmt.Errorf("optimize SQLite database: %w", err)
 	}

@@ -75,6 +75,8 @@ Hyper Backup runs.
 
 For App-owned databases, see [SQLite file layout and maintenance](docs/sqlite-file-layout.md)
 for Btrfs NoCOW setup, existing database conversion and scheduled upkeep.
+Use [SQLite stores for Go Apps](docs/sqlite-store.md) for a read pool, a
+single writer and work-bounded group commit.
 
 ## Testing an App with the executor
 
