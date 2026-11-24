@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.53.61
+
+- `sqlitestore`: write priorities and per-write durability (`WriteWith`), `WriteTx` for `*sql.Tx` code, interruptible writes, `AfterCommit`, `Exclusive`, `MaintainWith`, `Pending`, `OpenReader`, `OverflowReaders`, `ConnectionInit`, `DSNParams`, `JournalSizeLimit`, `BusyRetry`, `Observe` and `Turn`. BEGIN IMMEDIATE and COMMIT wait out other processes' locks without replay. See [SQLite stores for Go Apps](docs/sqlite-store.md).
+- `sqlitefile`: `ConfigureWith` and `MaintainConnWith`; `PrepareDir` is needed only when creating the database directory.
+- Reuse the existing executor release and digests.
+
 ## 0.53.60
 
 - Add the Go `sqlitestore` package for WAL reader pools, single-writer group commit by work, and scheduled SQLite maintenance.
