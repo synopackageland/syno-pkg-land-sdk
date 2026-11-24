@@ -6,6 +6,12 @@
     "reason": "Default SQLite busy-handler lock wait; this is configurable per store and does not time or flush a group commit"
   },
   {
+    "file": "sqlitestore/writer.go",
+    "statement": "const busyRetryDelay = 25 * time.Millisecond",
+    "class": "B",
+    "reason": "Spacing between BEGIN IMMEDIATE/COMMIT attempts while another process holds the SQLite write lock; it never fails, expires or replays a write"
+  },
+  {
     "file": "executor/audit_buffer.go",
     "statement": "auditCheckInterval = time.Minute",
     "class": "B",

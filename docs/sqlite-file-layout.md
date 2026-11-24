@@ -6,10 +6,13 @@ SQLite driver and decides when to schedule maintenance.
 
 ## Prepare the database directory
 
-Call `sqlitefile.PrepareDir(dbDir)` before opening any database in a dedicated
-App data directory. It creates missing directories with mode `0700`. On Btrfs
-it sets the directory's NoCOW flag so new main databases, WALs, shared-memory
-files and rollback journals inherit it. Existing files keep their own flags.
+Call `sqlitefile.PrepareDir(dbDir)` when your App creates its dedicated
+database directory. It creates missing directories with mode `0700`. On Btrfs
+it sets the directory's NoCOW flag. Files and subdirectories created in it
+later inherit the flag, including main databases, WALs, shared-memory files
+and rollback journals, so an existing directory needs no call before each
+open. Existing files keep their own flags. `sqlitestore.Open` calls
+`PrepareDir` only when it creates the directory.
 An explicit compression flag or Btrfs compression property on the directory
 takes precedence. A failed filesystem optimization is logged once per process.
 A failure to create the directory is returned to the App.
@@ -91,7 +94,12 @@ VACUUM].
 | Helper | Default behavior |
 | --- | --- |
 | `Configure(ctx, conn)` | Set a 64 MiB retained journal size limit and a 1,000-page WAL auto-checkpoint threshold on the supplied `*sql.Conn`. |
-| `Maintain(ctx, db)` | Run `PRAGMA optimize`. If the main DB uses incremental auto-vacuum and its freelist is at least 20% of all pages, reclaim up to 1,024 pages. |
+| `ConfigureWith(ctx, conn, opts)` | The same, with `JournalSizeLimit` (bytes) and `AutoCheckpointPages` from `ConfigureOptions`. |
+| `Maintain(ctx, db)`, `MaintainConn(ctx, conn)` | Run `PRAGMA optimize`. If the main DB uses incremental auto-vacuum and its freelist is at least 20% of all pages, reclaim up to 1,024 pages. |
+| `MaintainConnWith(ctx, conn, opts)` | The same, with `MaintainOptions`: `OptimizeMask` (for example `0x10002`), `AnalysisLimit` (rows ANALYZE reads per index; restored afterwards) and `VacuumPages` per call. |
+
+Maintenance is bounded by work, never by elapsed time: the analysis limit and
+the page count cap what one call does. Run it again later for more.
 
 Apply `Configure` on each physical writer connection outside a transaction.
 For pooled drivers with initialization hooks or DSN pragmas, configure the

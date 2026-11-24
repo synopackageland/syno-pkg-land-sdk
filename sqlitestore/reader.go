@@ -8,8 +8,7 @@ import (
 	"fmt"
 )
 
-func openReader(ctx context.Context, d driver.Driver, path string, limit int, pragmas []string) (*sql.DB, error) {
-	dsn := fileURI(path, "ro")
+func openReader(ctx context.Context, d driver.Driver, dsn string, limit, overflow int, pragmas []string) (*sql.DB, error) {
 	var base driver.Connector = namedConnector{driver: d, dsn: dsn}
 	if dc, ok := d.(driver.DriverContext); ok {
 		var err error
@@ -19,7 +18,7 @@ func openReader(ctx context.Context, d driver.Driver, path string, limit int, pr
 		}
 	}
 	db := sql.OpenDB(readerConnector{Connector: base, pragmas: pragmas})
-	db.SetMaxOpenConns(limit)
+	db.SetMaxOpenConns(limit + overflow)
 	db.SetMaxIdleConns(limit)
 	if err := db.PingContext(ctx); err != nil {
 		_ = db.Close()

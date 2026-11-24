@@ -6,17 +6,51 @@ import (
 	"fmt"
 )
 
+// ConfigureOptions overrides Configure's defaults. Zero values keep them.
+type ConfigureOptions struct {
+	JournalSizeLimit    int64 // Bytes kept after a checkpoint; default 64 MiB.
+	AutoCheckpointPages int   // WAL pages that trigger a checkpoint; default 1000.
+}
+
 // Configure sets a 64 MiB retained journal size limit and auto-checkpoint
 // threshold of 1000 pages. Apply it on every physical writer connection,
 // outside transactions. It leaves the App's journal and synchronous modes alone.
 func Configure(ctx context.Context, conn *sql.Conn) error {
-	if _, err := conn.ExecContext(ctx, "PRAGMA main.journal_size_limit=67108864"); err != nil {
+	return ConfigureWith(ctx, conn, ConfigureOptions{})
+}
+
+// ConfigureWith is Configure with App-chosen limits.
+func ConfigureWith(ctx context.Context, conn *sql.Conn, opts ConfigureOptions) error {
+	if opts.JournalSizeLimit < 0 || opts.AutoCheckpointPages < 0 {
+		return fmt.Errorf("SQLite journal limits must be nonnegative")
+	}
+	if opts.JournalSizeLimit == 0 {
+		opts.JournalSizeLimit = 64 << 20
+	}
+	if opts.AutoCheckpointPages == 0 {
+		opts.AutoCheckpointPages = 1000
+	}
+	if _, err := conn.ExecContext(ctx, fmt.Sprintf("PRAGMA main.journal_size_limit=%d", opts.JournalSizeLimit)); err != nil {
 		return fmt.Errorf("set SQLite journal size limit: %w", err)
 	}
-	if _, err := conn.ExecContext(ctx, "PRAGMA wal_autocheckpoint=1000"); err != nil {
+	if _, err := conn.ExecContext(ctx, fmt.Sprintf("PRAGMA wal_autocheckpoint=%d", opts.AutoCheckpointPages)); err != nil {
 		return fmt.Errorf("set SQLite WAL autocheckpoint: %w", err)
 	}
 	return nil
+}
+
+// MaintainOptions bounds MaintainConnWith by work, never by elapsed time.
+// Zero values keep Maintain's defaults.
+type MaintainOptions struct {
+	// OptimizeMask is the PRAGMA optimize argument, such as 0x10002.
+	// Zero runs plain PRAGMA optimize.
+	OptimizeMask uint32
+	// AnalysisLimit bounds the rows ANALYZE examines per index during
+	// optimize. Zero leaves the connection's setting.
+	AnalysisLimit int
+	// VacuumPages is the most pages one incremental vacuum reclaims.
+	// Default 1024.
+	VacuumPages int
 }
 
 // Maintain runs PRAGMA optimize and, in incremental auto-vacuum mode, reclaims
@@ -35,7 +69,33 @@ func Maintain(ctx context.Context, db *sql.DB) error {
 // owned by the caller. It leaves the connection open and requires exclusive
 // use of the connection outside a transaction.
 func MaintainConn(ctx context.Context, conn *sql.Conn) error {
-	if _, err := conn.ExecContext(ctx, "PRAGMA main.optimize"); err != nil {
+	return MaintainConnWith(ctx, conn, MaintainOptions{})
+}
+
+// MaintainConnWith is MaintainConn with explicit work bounds. A changed
+// analysis limit is restored before it returns.
+func MaintainConnWith(ctx context.Context, conn *sql.Conn, opts MaintainOptions) error {
+	if opts.AnalysisLimit < 0 || opts.VacuumPages < 0 {
+		return fmt.Errorf("SQLite maintenance limits must be nonnegative")
+	}
+	if opts.VacuumPages == 0 {
+		opts.VacuumPages = 1024
+	}
+	if opts.AnalysisLimit > 0 {
+		var previous int
+		if err := conn.QueryRowContext(ctx, "PRAGMA analysis_limit").Scan(&previous); err != nil {
+			return fmt.Errorf("read SQLite analysis limit: %w", err)
+		}
+		if _, err := conn.ExecContext(ctx, fmt.Sprintf("PRAGMA analysis_limit=%d", opts.AnalysisLimit)); err != nil {
+			return fmt.Errorf("set SQLite analysis limit: %w", err)
+		}
+		defer conn.ExecContext(context.WithoutCancel(ctx), fmt.Sprintf("PRAGMA analysis_limit=%d", previous))
+	}
+	optimize := "PRAGMA main.optimize"
+	if opts.OptimizeMask != 0 {
+		optimize = fmt.Sprintf("PRAGMA main.optimize=0x%x", opts.OptimizeMask)
+	}
+	if _, err := conn.ExecContext(ctx, optimize); err != nil {
 		return fmt.Errorf("optimize SQLite database: %w", err)
 	}
 
@@ -55,7 +115,7 @@ func MaintainConn(ctx context.Context, conn *sql.Conn) error {
 	if pages == 0 || freePages == 0 || freePages*5 < pages {
 		return nil
 	}
-	rows, err := conn.QueryContext(ctx, "PRAGMA main.incremental_vacuum(1024)")
+	rows, err := conn.QueryContext(ctx, fmt.Sprintf("PRAGMA main.incremental_vacuum(%d)", opts.VacuumPages))
 	if err != nil {
 		return fmt.Errorf("start SQLite incremental vacuum: %w", err)
 	}
