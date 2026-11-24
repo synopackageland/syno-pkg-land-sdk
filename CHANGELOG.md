@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.53.60
+
+- Add the Go `sqlitestore` package for WAL reader pools, single-writer group commit by work, and scheduled SQLite maintenance.
+- Reuse the existing executor release and digests.
+
 ## 0.53.59 (2026-11-24)
 
 - Add the driver-independent Go `sqlitefile` package for Btrfs NoCOW directory preparation, one-time SQLite database conversion, and scheduled maintenance. Conversion preserves persistent WAL mode, so reopening a converted database keeps WAL even without an explicit journal-mode setting. See [SQLite file layout and maintenance](docs/sqlite-file-layout.md).
