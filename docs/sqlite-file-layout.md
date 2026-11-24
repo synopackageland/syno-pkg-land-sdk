@@ -58,15 +58,17 @@ The maintenance opener uses the exact path supplied by the SDK, opens an
 existing file read/write and returns a fresh pool for the SDK to close. The App
 should register any extensions the schema requires. Keep schema migrations,
 attachments and changes to the journal or locking mode in the App's normal
-opener. Reapply application connection settings when reopening the database,
-including WAL mode if the App uses it.
+opener. The converter preserves WAL mode across reopen. Continue applying
+connection-local settings in the App's normal opener, including any
+non-default rollback journal mode.
 
 The converter acts when the directory is NoCOW and the existing database is
 CoW. It truncates the WAL with a fully synced checkpoint and checks for roughly
 one database's logical size plus 1 MiB free on the volume. It rebuilds the
-database with parameterized `VACUUM INTO`, checks the result with
-`quick_check(1)`, syncs the replacement, and renames it over the original. The
-SDK then syncs the parent directory. A failure before rename leaves the source
+database with parameterized `VACUUM INTO` and restores WAL on the replacement
+if the source used it. Then it checks the result with `quick_check(1)`, syncs
+the replacement, and renames it over the original. The SDK then syncs the
+parent directory. A failure before rename leaves the source
 database in place. Retry after addressing the error. The next attempt discards
 partial output from the previous attempt. If rename succeeded and directory
 sync failed, the result is `changed=true` with an error. Allow enough time for
