@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -226,6 +227,9 @@ type writeQueue struct {
 	// interactiveLast records which of Interactive and Background ran last.
 	interactiveLast bool
 	changed         chan struct{} // Closed and replaced whenever the queue changes.
+	// arriving counts callers inside enqueue that have not queued yet and
+	// are not waiting for queue space. An idle writer lets them join.
+	arriving atomic.Int64
 }
 
 func (q *writeQueue) signal() {
@@ -238,6 +242,15 @@ func (q *writeQueue) stop() {
 	defer q.mu.Unlock()
 	q.closing = true
 	q.signal()
+}
+
+// size counts the waiting operations. Hold q.mu.
+func (q *writeQueue) size() int {
+	n := 0
+	for _, items := range q.items {
+		n += len(items)
+	}
+	return n
 }
 
 func (q *writeQueue) empty() bool {
@@ -324,7 +337,20 @@ func observe(fn func(WriteStats), stats WriteStats) {
 
 func (s *Store) enqueue(j *job) error {
 	q := &s.queue
+	q.arriving.Add(1)
+	arriving := true
+	leave := func() {
+		if arriving {
+			q.arriving.Add(-1)
+			arriving = false
+		}
+	}
+	defer leave()
 	for {
+		if !arriving {
+			q.arriving.Add(1)
+			arriving = true
+		}
 		if err := j.ctx.Err(); err != nil {
 			return err
 		}
@@ -336,11 +362,14 @@ func (s *Store) enqueue(j *job) error {
 		if len(q.items[j.priority]) < s.opts.QueueSize {
 			j.enqueuedTurn = q.turn
 			q.items[j.priority] = append(q.items[j.priority], j)
+			leave()
 			q.signal()
 			q.mu.Unlock()
 			return nil
 		}
 		changed := q.changed
+		// Waiting for space is not arriving: the writer must not wait for it.
+		leave()
 		q.mu.Unlock()
 		select {
 		case <-changed:
@@ -385,8 +414,26 @@ func (q *writeQueue) next() Priority {
 
 func (s *Store) nextBatch() []*job {
 	q := &s.queue
+	woke := false
 	for {
 		q.mu.Lock()
+		if woke && !q.empty() {
+			// An idle writer was woken by the first of possibly several
+			// concurrent callers. Yield so callers already running can queue
+			// before the group forms, and keep yielding while they arrive, so
+			// a simultaneous burst shares one commit. Bounded by the item
+			// limit, never by a clock: a lone caller costs one yield. Callers
+			// the Go scheduler has not run yet can still form the next group.
+			for range s.opts.MaxBatchItems {
+				queued := q.size()
+				q.mu.Unlock()
+				runtime.Gosched()
+				q.mu.Lock()
+				if q.arriving.Load() == 0 && q.size() == queued {
+					break
+				}
+			}
+		}
 		if !q.empty() {
 			p := q.next()
 			q.turn++
@@ -433,6 +480,7 @@ func (s *Store) nextBatch() []*job {
 		changed := q.changed
 		q.mu.Unlock()
 		<-changed
+		woke = true
 	}
 }
 
