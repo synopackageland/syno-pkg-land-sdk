@@ -67,7 +67,7 @@ exclusive maintenance lock.
 | Retained WAL size | 64 MiB | `JournalSizeLimit` |
 | Per-connection setup | None | `ConnectionInit` statements once per physical connection; `DSNParams` on every file URI |
 | Pending operations | 128 per priority | `QueueSize` |
-| Work per transaction | 32 callbacks and 1 MiB in declared weights | `MaxBatchItems`, `MaxBatchBytes` |
+| Work per transaction | 32 callbacks and 1 MiB in declared weights | `MaxBatchItems`, `MaxBatchBytes`, and optional `MaxBatchWork` |
 
 Both read pools use `mode=ro` and set `query_only=ON` on each connection.
 Use `BackgroundReader` for long scans when you enable it. When another
@@ -85,7 +85,16 @@ the SQLite driver connection.
 The writer starts `BEGIN IMMEDIATE` and groups work already in the queue.
 An idle writer starts immediately. `WriteWeighted` uses an App-supplied byte
 estimate. An oversized callback runs alone, so split large imports into
-bounded pieces. `Write` uses the item limit without a byte estimate.
+bounded pieces. `Write` declares no byte cost.
+
+Set `Options.MaxBatchWork` to cap the sum of `WriteOptions.Work` in a
+shared transaction. Pick one count for all writers to the Store, such as
+SQL statements or input rows, and declare the count when submitting each
+callback with `WriteWith` or `WriteGroupedTx`. For example, with
+`MaxBatchWork: 100`, callbacks that each write 40 rows can share in pairs.
+Callbacks with zero or oversized counts run alone when the cap is enabled.
+The Store checks the declared counts before the group starts. Split large
+callbacks if they also need a per-callback limit.
 
 A callback runs in its own savepoint. When it returns an error or panics, its
 work is rolled back and the other callbacks can commit. The panic is
@@ -150,6 +159,7 @@ err := store.WriteWith(ctx, sqlitestore.WriteOptions{
 | `Priority: Background` | Bulk and periodic work. While Interactive and Background work both wait, the writer alternates between them when Urgent and aged work are absent |
 | `Durability` | The commit uses the stronger of this and the Store's `Durability`. A transaction never mixes durabilities; the writer switches `synchronous` between transactions on its one connection |
 | `Bytes` | The estimated cost, as in `WriteWeighted` |
+| `Work` | A nonnegative declared count for `MaxBatchWork` |
 | `Interruptible` | The write runs in its own transaction and its SQL follows the caller's context, so cancellation interrupts a running statement. It rolls back only this write |
 
 A running callback is never interrupted by a higher priority. Each priority
@@ -173,8 +183,8 @@ err := store.WriteTx(ctx, sqlitestore.WriteOptions{}, func(ctx context.Context, 
 The transaction runs alone on the writer, in priority order with other
 writes, and begins `IMMEDIATE`. With driver names `sqlite` (modernc) and
 `sqlite3` (mattn) the Store sets `_txlock=immediate` on the writer; for other
-drivers set the equivalent in `DSNParams`. It follows the caller's context:
-cancellation before commit rolls it back. Return nil to commit.
+drivers set the equivalent in `DSNParams`. Pass the supplied context to SQL
+methods. Return nil to commit.
 
 Use `WriteGroupedTx(ctx, opts, fn)` with the same callback signature to
 coalesce native transactions. Eligible callbacks share one `*sql.Tx`, run
@@ -185,8 +195,22 @@ success and leave the `sdk_` prefix for the Store. Finish using the handle
 within the callback and clear any callback-local state keyed by the handle.
 Use the supplied context for native grouped SQL to keep a SQLite interrupt
 from rolling back peer work. The Store checks the caller's cancellation
-before and after that callback. For both APIs the Store owns `Commit` and
-`Rollback`.
+before and after that callback. A cancellation observed before savepoint
+release rolls back that item. After release the caller gets the shared
+commit outcome. For both APIs the Store owns `Commit` and `Rollback`.
+
+Set `WriteOptions.BindCallerContext: true` on either native API to also
+bind `BEGIN`, the `*sql.Tx` lifetime, and `COMMIT` to the caller's
+context. With `WriteGroupedTx` this runs the callback in its own transaction
+so SQLite can interrupt and roll it back without affecting another caller.
+Use `ExecContext`, `QueryContext`, and other context-aware methods with the
+supplied context. Whether cancellation can interrupt a running SQL statement
+depends on the driver. The Store waits for the callback and transaction
+cleanup before returning. Cancellation that prevents commit returns a
+context error. If cancellation races with commit, the outcome depends on
+whether SQLite completed the commit. The Store uses the driver's result
+and never replays the callback. A canceled transaction may also replace
+the writer connection, which runs `ConfigureWriter` again.
 
 ## Take turns across database files
 
@@ -257,7 +281,9 @@ is missing or names an empty file and handle permissions and cleanup
 of partial output. Attached files require their own backups.
 
 The writer keeps up to 256 prepared single statements per connection, so
-repeated callbacks do not compile their SQL again.
+repeated callbacks do not compile their SQL again. It clears that cache
+before a caller-bound native transaction because cancellation can close
+the connection.
 
 ## Run maintenance
 

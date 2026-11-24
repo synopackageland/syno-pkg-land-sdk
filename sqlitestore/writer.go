@@ -50,12 +50,20 @@ type WriteOptions struct {
 	// durabilities.
 	Durability Durability
 	// Bytes is the estimated cost for batching. An item larger than the
-	// byte budget runs alone. Zero uses only the item limit.
+	// byte budget runs alone. Zero declares no byte cost.
 	Bytes int
+	// Work is the callback's declared count in the Store's MaxBatchWork
+	// unit. When MaxBatchWork is set, zero or oversized work runs alone.
+	Work int
 	// Interruptible runs the write in its own transaction and passes the
 	// caller's context to its SQL, so cancellation interrupts a running
 	// statement and rolls back only this write.
 	Interruptible bool
+	// BindCallerContext binds a native transaction's BEGIN, lifetime and
+	// COMMIT to the caller's context. Pass the callback context to SQL
+	// methods to interrupt running statements. WriteGroupedTx runs a
+	// bound callback alone so a SQLite interrupt cannot roll back peers.
+	BindCallerContext bool
 	// Observe, when set, receives this write's WriteStats after
 	// Options.Observe, on the caller's goroutine before WriteWith returns.
 	Observe func(WriteStats)
@@ -89,15 +97,15 @@ func (s *Store) Write(ctx context.Context, fn func(context.Context, Tx) error) e
 }
 
 // WriteWeighted is Write with an estimated byte cost for batching. An item
-// larger than the byte budget runs alone. A cost of zero uses the item limit.
+// larger than the byte budget runs alone. Zero declares no byte cost.
 func (s *Store) WriteWeighted(ctx context.Context, bytes int, fn func(context.Context, Tx) error) error {
 	return s.WriteWith(ctx, WriteOptions{Bytes: bytes}, fn)
 }
 
 // WriteWith is Write with a priority, durability and byte cost.
 func (s *Store) WriteWith(ctx context.Context, opts WriteOptions, fn func(context.Context, Tx) error) error {
-	if opts.Bytes < 0 || fn == nil || opts.Priority >= priorities || opts.Durability > Full {
-		return errors.New("SQLite write callback, priority, durability and nonnegative byte cost required")
+	if opts.Bytes < 0 || opts.Work < 0 || fn == nil || opts.Priority >= priorities || opts.Durability > Full || opts.BindCallerContext {
+		return errors.New("SQLite write callback, priority, durability and nonnegative byte and work costs required; BindCallerContext uses WriteTx or WriteGroupedTx")
 	}
 	return s.submit(s.newJob(ctx, opts, func(j *job) { j.write = fn }))
 }
@@ -105,9 +113,10 @@ func (s *Store) WriteWith(ctx context.Context, opts WriteOptions, fn func(contex
 // WriteTx runs fn in a database/sql transaction of its own on the writer,
 // for code written against *sql.Tx. The transaction begins IMMEDIATE (see
 // Options.DSNParams for drivers other than "sqlite" and "sqlite3"), follows
-// the caller's context like an Interruptible write, and commits when fn
-// returns nil. Bytes and Interruptible in opts are ignored. fn must not
-// commit or roll back tx; AfterCommit works with the context fn receives.
+// the caller's context for callback SQL and retry waits, and commits when
+// fn returns nil. BindCallerContext also binds BEGIN, the transaction
+// lifetime and COMMIT. Bytes, Work and Interruptible in opts are ignored.
+// fn must not commit or roll back tx; use its context for AfterCommit.
 func (s *Store) WriteTx(ctx context.Context, opts WriteOptions, fn func(context.Context, *sql.Tx) error) error {
 	if fn == nil || opts.Priority >= priorities || opts.Durability > Full {
 		return errors.New("SQLite transaction callback, priority and durability required")
@@ -121,18 +130,19 @@ func (s *Store) WriteTx(ctx context.Context, opts WriteOptions, fn func(context.
 // the sdk_ prefix; finish all work before returning and never commit or roll
 // back the shared transaction. SQL must use the supplied context, which keeps
 // cancellation local to each callback's savepoint. The Store checks the
-// caller's cancellation before and after the callback. Use WriteTx if the
-// callback needs interruptible SQL.
+// caller's cancellation before and after the callback. With
+// BindCallerContext the callback runs alone with WriteTx semantics.
 func (s *Store) WriteGroupedTx(ctx context.Context, opts WriteOptions, fn func(context.Context, *sql.Tx) error) error {
-	if fn == nil || opts.Bytes < 0 || opts.Priority >= priorities || opts.Durability > Full || opts.Interruptible {
-		return errors.New("SQLite grouped transaction callback, priority, durability and nonnegative byte cost required; interruptible writes use WriteTx")
+	if fn == nil || opts.Bytes < 0 || opts.Work < 0 || opts.Priority >= priorities || opts.Durability > Full || opts.Interruptible {
+		return errors.New("SQLite grouped transaction callback, priority, durability and nonnegative byte and work costs required; interruptible writes use WriteTx or BindCallerContext")
 	}
-	return s.submit(s.newJob(ctx, opts, func(j *job) { j.tx, j.groupTx = fn, true }))
+	return s.submit(s.newJob(ctx, opts, func(j *job) { j.tx, j.groupTx = fn, !opts.BindCallerContext }))
 }
 
 func (s *Store) newJob(ctx context.Context, opts WriteOptions, set func(*job)) *job {
 	j := &job{ctx: ctx, priority: opts.Priority, durability: max(opts.Durability, s.opts.Durability),
-		bytes: opts.Bytes, interruptible: opts.Interruptible, observe: opts.Observe}
+		bytes: opts.Bytes, work: opts.Work, interruptible: opts.Interruptible,
+		bindCallerContext: opts.BindCallerContext, observe: opts.Observe}
 	set(j)
 	return j
 }
@@ -186,16 +196,17 @@ type job struct {
 	groupTx   bool
 	exclusive func(context.Context, *sql.Conn) error
 	// interruptible runs alone and passes the caller's context to its SQL.
-	interruptible bool
-	priority      Priority
-	durability    Durability
-	bytes         int
-	observe       func(WriteStats)
-	queuedAt      time.Time
-	enqueuedTurn  uint64
-	hooks         []func() // Owned by the writer goroutine.
-	started       bool     // Protected by writeQueue.mu.
-	done          chan result
+	interruptible     bool
+	bindCallerContext bool
+	priority          Priority
+	durability        Durability
+	bytes, work       int
+	observe           func(WriteStats)
+	queuedAt          time.Time
+	enqueuedTurn      uint64
+	hooks             []func() // Owned by the writer goroutine.
+	started           bool     // Protected by writeQueue.mu.
+	done              chan result
 }
 
 // grouped reports whether the job may share a transaction.
@@ -382,12 +393,15 @@ func (s *Store) nextBatch() []*job {
 			items := q.items[p]
 			first := items[0]
 			batch, rest := []*job{first}, items[1:]
-			if first.grouped() {
+			workLimit := s.opts.MaxBatchWork
+			if first.grouped() && (workLimit == 0 || (first.work > 0 && first.work < workLimit)) {
 				rest = []*job{}
-				bytes := first.bytes
+				bytesLeft := s.opts.MaxBatchBytes - first.bytes
+				workLeft := workLimit - first.work
 				for i, j := range items[1:] {
 					if !j.grouped() || j.groupTx != first.groupTx || len(batch) == s.opts.MaxBatchItems ||
-						(j.durability == first.durability && j.bytes > s.opts.MaxBatchBytes-bytes) {
+						(j.durability == first.durability && (j.bytes > bytesLeft ||
+							(workLimit > 0 && (j.work == 0 || j.work > workLeft)))) {
 						// Keep FIFO order behind work that runs alone and an item
 						// that does not fit.
 						rest = append(rest, items[1+i:]...)
@@ -398,7 +412,10 @@ func (s *Store) nextBatch() []*job {
 						continue
 					}
 					batch = append(batch, j)
-					bytes += j.bytes
+					bytesLeft -= j.bytes
+					if workLimit > 0 {
+						workLeft -= j.work
+					}
 				}
 			}
 			q.items[p] = rest
@@ -507,11 +524,22 @@ func (s *Store) commit(batch []*job, results []result, timing *groupTiming) (err
 		return context.Cause(waitCtx)
 	}
 	ctx := context.WithoutCancel(waitCtx)
-	if err := s.ensureWriter(ctx); err != nil {
+	first := batch[0]
+	sqlCtx := ctx
+	if first.bindCallerContext {
+		sqlCtx = first.ctx
+		// database/sql can discard the connection on automatic rollback.
+		// Close the Store's prepared statements while the driver is live.
+		s.statements.reset()
+	}
+	if err := s.ensureWriter(sqlCtx); err != nil {
 		return err
 	}
-	first := batch[0]
-	if err := s.setSync(ctx, first.durability); err != nil {
+	if err := s.setSync(sqlCtx, first.durability); err != nil {
+		if first.bindCallerContext && sqlCtx.Err() != nil && s.writer != nil {
+			// The pragma may have applied before the driver saw cancellation.
+			s.resetWriter()
+		}
 		return err
 	}
 
@@ -520,16 +548,16 @@ func (s *Store) commit(batch []*job, results []result, timing *groupTiming) (err
 	if err := s.retryBusy(waitCtx, "BEGIN IMMEDIATE", func() error {
 		var err error
 		if first.tx != nil {
-			native, err = s.writer.BeginTx(ctx, nil)
+			native, err = s.writer.BeginTx(sqlCtx, nil)
 		} else {
 			_, err = s.writer.ExecContext(ctx, "BEGIN IMMEDIATE")
 		}
 		return err
 	}); err != nil {
-		if errors.Is(err, sql.ErrConnDone) {
+		if errors.Is(err, sql.ErrConnDone) || (first.bindCallerContext && sqlCtx.Err() != nil) {
 			s.resetWriter()
 		}
-		return fmt.Errorf("begin SQLite write: %w", err)
+		return fmt.Errorf("begin SQLite write: %w", withCancellation(sqlCtx, err))
 	}
 	if timing != nil {
 		timing.begin = time.Since(start)
@@ -540,7 +568,17 @@ func (s *Store) commit(batch []*job, results []result, timing *groupTiming) (err
 		if native != nil {
 			// Release database/sql's transaction and prepared statements.
 			// After a successful SQL COMMIT, SQLite has nothing to roll back.
-			if rollbackErr := native.Rollback(); committed && rollbackErr != nil &&
+			rollbackErr := native.Rollback()
+			if first.bindCallerContext && errors.Is(rollbackErr, sql.ErrTxDone) {
+				// database/sql may still be rolling back asynchronously.
+				// Close waits for the transaction and this writer pool has
+				// no idle connections. Do not start another SQL transaction
+				// on a connection that can still receive that rollback.
+				_ = s.writer.Close()
+				s.writer = nil
+				return
+			}
+			if committed && rollbackErr != nil &&
 				!errors.Is(rollbackErr, sql.ErrTxDone) && !noTransaction(rollbackErr) {
 				// The commit succeeded. Keep that outcome and replace the
 				// connection before serving the next group.
@@ -591,7 +629,7 @@ func (s *Store) commit(batch []*job, results []result, timing *groupTiming) (err
 	// marks a *sql.Tx done on the first Commit call, and SQLite drivers can
 	// roll the transaction back if that call returns SQLITE_BUSY.
 	err = s.retryBusy(commitCtx, "COMMIT", func() error {
-		_, err := executor.ExecContext(ctx, "COMMIT")
+		_, err := executor.ExecContext(sqlCtx, "COMMIT")
 		return err
 	})
 	if timing != nil {
@@ -599,7 +637,7 @@ func (s *Store) commit(batch []*job, results []result, timing *groupTiming) (err
 		timing.commit = timing.commitFinished.Sub(timing.commitStarted)
 	}
 	if err != nil {
-		return fmt.Errorf("commit SQLite write: %w", err)
+		return fmt.Errorf("commit SQLite write: %w", withCancellation(sqlCtx, err))
 	}
 	committed = true
 	return nil
@@ -624,6 +662,13 @@ func noTransaction(err error) bool {
 
 func (s *Store) callbackContext(j *job) context.Context {
 	return context.WithValue(context.WithValue(j.ctx, operationKey{}, s), itemKey{}, j)
+}
+
+func withCancellation(ctx context.Context, err error) error {
+	if canceled := ctx.Err(); canceled != nil && !errors.Is(err, canceled) {
+		return errors.Join(err, canceled)
+	}
+	return err
 }
 
 // batchContext ends only when every caller still participating in this
@@ -788,6 +833,8 @@ func (s *Store) callItem(j *job, native *sql.Tx, sqlCtx context.Context) (r resu
 	}
 	if r.err == nil {
 		r.err = j.ctx.Err()
+	} else if j.bindCallerContext {
+		r.err = withCancellation(j.ctx, r.err)
 	}
 	return r
 }

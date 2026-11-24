@@ -53,6 +53,9 @@ type Options struct {
 	QueueSize     int // Default 128 waiting operations per Priority.
 	MaxBatchItems int // Default 32 callbacks per transaction.
 	MaxBatchBytes int // Default 1 MiB of declared weight per transaction.
+	// MaxBatchWork caps the sum of declared WriteOptions.Work in a shared
+	// transaction. Zero disables this limit.
+	MaxBatchWork int
 
 	DisableForeignKeys bool // Foreign keys are enabled by default.
 	TempStoreMemory    bool // SQLite temporary storage defaults to FILE.
@@ -108,7 +111,7 @@ func (o *Options) defaults() error {
 	}{
 		{&o.Readers, 2}, {&o.OverflowReaders, 0}, {&o.BackgroundReaders, 0}, {&o.WriterCacheKiB, 2048},
 		{&o.ReaderCacheKiB, 512}, {&o.OverflowCacheKiB, 0}, {&o.BackgroundCacheKiB, 1024}, {&o.QueueSize, 128},
-		{&o.MaxBatchItems, 32}, {&o.MaxBatchBytes, 1 << 20},
+		{&o.MaxBatchItems, 32}, {&o.MaxBatchBytes, 1 << 20}, {&o.MaxBatchWork, 0},
 	} {
 		if *option.value < 0 {
 			return errors.New("SQLite pool, cache and queue limits must be nonnegative")

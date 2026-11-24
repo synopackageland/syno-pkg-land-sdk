@@ -16,7 +16,9 @@ import (
 
 func openStore(t testing.TB, opts sqlitestore.Options) *sqlitestore.Store {
 	t.Helper()
-	opts.DriverName = "sqlite"
+	if opts.DriverName == "" {
+		opts.DriverName = "sqlite"
+	}
 	path := filepath.Join(t.TempDir(), "private", "state #?%.db")
 	s, err := sqlitestore.Open(t.Context(), path, opts)
 	if err != nil {
