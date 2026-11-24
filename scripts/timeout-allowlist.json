@@ -1,5 +1,11 @@
 [
   {
+    "file": "sqlitestore/store.go",
+    "statement": "defaultBusyTimeoutMS = 5000",
+    "class": "B",
+    "reason": "Default SQLite busy-handler lock wait; this is configurable per store and does not time or flush a group commit"
+  },
+  {
     "file": "executor/audit_buffer.go",
     "statement": "auditCheckInterval = time.Minute",
     "class": "B",
