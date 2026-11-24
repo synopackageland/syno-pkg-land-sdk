@@ -320,25 +320,28 @@ func (s *Store) ensureWriter(ctx context.Context) error {
 	return nil
 }
 
-// applyWriterPragmas sets the Store's connection settings and its default
-// sync mode on the writer.
-func (s *Store) applyWriterPragmas(ctx context.Context, conn *sql.Conn) error {
-	if _, err := conn.ExecContext(ctx, "PRAGMA query_only=OFF"); err != nil {
-		return fmt.Errorf("restore SQLite writer query_only: %w", err)
-	}
-	for _, query := range append(s.opts.pragmas(s.opts.WriterCacheKiB), syncPragma(s.opts.Durability)) {
+// applyWriterPragmas sets the Store's connection settings. Pass setup only
+// when opening a physical connection, before setting its default sync mode.
+func (s *Store) applyWriterPragmas(ctx context.Context, conn *sql.Conn, setup []string) error {
+	queries := append([]string{"PRAGMA query_only=OFF"}, s.opts.pragmas(s.opts.WriterCacheKiB)...)
+	queries = append(queries, setup...)
+	for _, query := range append(queries, syncPragma(s.opts.Durability)) {
 		if _, err := conn.ExecContext(ctx, query); err != nil {
 			return fmt.Errorf("configure SQLite writer (%s): %w", query, err)
 		}
 	}
 	s.sync = s.opts.Durability
+	return nil
+}
+
+func (s *Store) configureCheckpoints(ctx context.Context, conn *sql.Conn) error {
 	return sqlitefile.ConfigureWith(ctx, conn, sqlitefile.ConfigureOptions{
 		JournalSizeLimit: s.opts.JournalSizeLimit, AutoCheckpointPages: s.opts.AutoCheckpointPages,
 	})
 }
 
 func (s *Store) configureWriter(ctx context.Context, conn *sql.Conn) error {
-	if err := s.applyWriterPragmas(ctx, conn); err != nil {
+	if err := s.applyWriterPragmas(ctx, conn, s.opts.ConnectionInit); err != nil {
 		return err
 	}
 	var mode string
@@ -353,12 +356,7 @@ func (s *Store) configureWriter(ctx context.Context, conn *sql.Conn) error {
 			return fmt.Errorf("SQLite refused WAL mode (got %q)", mode)
 		}
 	}
-	for _, query := range s.opts.ConnectionInit {
-		if _, err := conn.ExecContext(ctx, query); err != nil {
-			return fmt.Errorf("initialize SQLite writer (%s): %w", query, err)
-		}
-	}
-	return nil
+	return s.configureCheckpoints(ctx, conn)
 }
 
 func discard(conn *sql.Conn) {

@@ -469,7 +469,11 @@ func (s *Store) runExclusive(j *job) (err error) {
 			err = errors.Join(err, rollbackErr)
 			return
 		}
-		if restoreErr := s.applyWriterPragmas(ctx, conn); restoreErr != nil {
+		restoreErr := s.applyWriterPragmas(ctx, conn, nil)
+		if restoreErr == nil {
+			restoreErr = s.configureCheckpoints(ctx, conn)
+		}
+		if restoreErr != nil {
 			s.resetWriter()
 			err = errors.Join(err, restoreErr)
 		}
