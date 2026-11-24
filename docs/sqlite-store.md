@@ -37,9 +37,16 @@ return store.Reader.QueryRowContext(ctx, "SELECT count(*) FROM notes").Scan(&cou
 
 Open the database in a dedicated private directory under package data. When
 `Open` creates that directory it calls `sqlitefile.PrepareDir`; files created
-later in it inherit the directory's layout. The writer gets
-`sqlitefile.ConfigureWith` with `JournalSizeLimit` (default 64 MiB). New databases are created with mode
-`0600`. Apps own schema migrations and decide whether to [convert existing
+later in it inherit the directory's layout. New databases are created with
+mode `0600`. Set `MustExist: true` for runtime opens that must fail if the
+database is missing. It skips directory and file creation and lets SQLite's
+`mode=rw` open enforce existence.
+
+Apps own schema migrations. Run them before using the read pools. `Open`
+configures the writer immediately and opens physical interactive and
+background reader connections on first use, after migrations have run.
+Errors opening or initializing those reader connections surface on use.
+Apps also decide whether to [convert existing
 files to NoCOW](sqlite-file-layout.md#convert-an-existing-database) under an
 exclusive maintenance lock.
 
@@ -55,9 +62,10 @@ exclusive maintenance lock.
 | Trusted schema | Off | `AllowTrustedSchema` |
 | Cache per connection | 2,048 KiB writer, 512 KiB interactive, 1,024 KiB background | `WriterCacheKiB`, `ReaderCacheKiB`, `BackgroundCacheKiB` |
 | Read connections | 2 interactive, background pool disabled | `Readers`, `BackgroundReaders` |
-| Extra interactive connections under load | 0 | `OverflowReaders`; they close when released while `Readers` connections are idle |
+| Extra interactive connections under load | 0 | `OverflowReaders` adds capacity to `Reader`. `OverflowCacheKiB` defaults to `ReaderCacheKiB`. Connections with a distinct overflow cache close on release |
+| WAL auto-checkpoint | 1,000 pages | `AutoCheckpointPages` |
 | Retained WAL size | 64 MiB | `JournalSizeLimit` |
-| Per-connection setup | None | `ConnectionInit` statements on every connection; `DSNParams` on every file URI |
+| Per-connection setup | None | `ConnectionInit` statements once per physical connection; `DSNParams` on every file URI |
 | Pending operations | 128 per priority | `QueueSize` |
 | Work per transaction | 32 callbacks and 1 MiB in declared weights | `MaxBatchItems`, `MaxBatchBytes` |
 
@@ -68,7 +76,9 @@ sqlitestore.ReaderOptions{Conns: n})` opens one more pool with the same
 settings; the Store closes it too. Close rows and
 read transactions promptly so WAL checkpoints can advance. The Store owns
 the pools and their configuration. Use them for reads and let `Store.Close`
-close them.
+close them. If a distinct `OverflowCacheKiB` is set, `sql.Conn.Raw` on
+`Reader` exposes a wrapper whose `Unwrap() driver.Conn` method returns
+the SQLite driver connection.
 
 ## Write safely
 
@@ -88,7 +98,10 @@ queued operation or skips it before its callback starts. A running callback
 receives the caller's context for Go work. Its SQL runs without cancellation
 because a SQLite interrupt can roll back the entire group. If cancellation is
 observed before the callback's savepoint is released, the writer rolls the
-item back. After that boundary the caller receives the commit outcome.
+item back. After that boundary the caller receives the shared commit outcome.
+A canceled caller whose savepoint was released may still commit with its
+peers. If all callers with successful callbacks cancel while waiting to
+commit, the writer rolls the transaction back.
 
 Use the supplied transaction for all writes and any reads that need to see
 those writes. Return promptly on SQL errors and finish reading or close all
@@ -104,8 +117,8 @@ busy timeout for that workload.
 
 ## Attach other files and add connection settings
 
-`ConnectionInit` runs on every connection, writer and readers, after the
-Store's own settings and before readers turn on `query_only`. Use it for an
+`ConnectionInit` runs once per physical connection, after the Store's
+connection pragmas and before readers turn on `query_only`. Use it for an
 `ATTACH` (with `?mode=ro` in the attached file's URI for a read-only
 attachment) or App pragmas:
 
@@ -133,15 +146,18 @@ err := store.WriteWith(ctx, sqlitestore.WriteOptions{
 | Option | Meaning |
 | --- | --- |
 | `Priority: Interactive` (default) | Work a caller waits for |
-| `Priority: Urgent` | Runs before every other waiting operation, at the next transaction boundary. Keep it for small writes that keep the App alive, such as a lease renewal |
-| `Priority: Background` | Bulk and periodic work. While Interactive and Background work both wait, the writer alternates between them, so neither starves and an Interactive write waits for at most one Background transaction |
+| `Priority: Urgent` | Normally runs first at the next transaction boundary. Keep it for small writes that keep the App alive, such as a lease renewal |
+| `Priority: Background` | Bulk and periodic work. While Interactive and Background work both wait, the writer alternates between them when Urgent and aged work are absent |
 | `Durability` | The commit uses the stronger of this and the Store's `Durability`. A transaction never mixes durabilities; the writer switches `synchronous` between transactions on its one connection |
 | `Bytes` | The estimated cost, as in `WriteWeighted` |
 | `Interruptible` | The write runs in its own transaction and its SQL follows the caller's context, so cancellation interrupts a running statement. It rolls back only this write |
 
 A running callback is never interrupted by a higher priority. Each priority
 has its own `QueueSize`, so a full Background queue never blocks an Urgent
-write.
+write. Queue heads become eligible for aging after eight writer dispatches.
+At the next boundary the oldest eligible head runs first, with normal
+priority rules breaking ties. Aging depends on the amount of work dispatched
+and has no time budget.
 
 ## Write with `*sql.Tx`
 
@@ -158,8 +174,19 @@ The transaction runs alone on the writer, in priority order with other
 writes, and begins `IMMEDIATE`. With driver names `sqlite` (modernc) and
 `sqlite3` (mattn) the Store sets `_txlock=immediate` on the writer; for other
 drivers set the equivalent in `DSNParams`. It follows the caller's context:
-cancellation rolls it back. Return nil to commit; do not call `Commit` or
-`Rollback` yourself.
+cancellation before commit rolls it back. Return nil to commit.
+
+Use `WriteGroupedTx(ctx, opts, fn)` with the same callback signature to
+coalesce native transactions. Eligible callbacks share one `*sql.Tx`, run
+serially under individual SDK savepoints, and return after the common
+commit. These callbacks batch with other `WriteGroupedTx` callbacks.
+Nested savepoints are supported. Finish or unwind them before returning
+success and leave the `sdk_` prefix for the Store. Finish using the handle
+within the callback and clear any callback-local state keyed by the handle.
+Use the supplied context for native grouped SQL to keep a SQLite interrupt
+from rolling back peer work. The Store checks the caller's cancellation
+before and after that callback. For both APIs the Store owns `Commit` and
+`Rollback`.
 
 ## Take turns across database files
 
@@ -189,10 +216,16 @@ writer retries `BEGIN IMMEDIATE` without starting any callback, until the
 lock is free or every caller in the waiting group cancels. A busy `COMMIT`
 keeps its transaction and is retried. Callbacks are never replayed.
 
-By default the writer waits 25 ms between attempts and never gives up. Set
-`Options.BusyRetry` to choose the delay per attempt or to give up; it
-receives a `BusyAttempt` with the statement, attempt number and error. When
-it gives up, the callers receive the busy error.
+By default the writer waits 25 ms between attempts. Use `Options.BusyRetry`
+to choose the delay or stop after an attempt count. It receives a
+`BusyAttempt` with the statement, one-based attempt number, SQLite error
+and context. For an individual write it is the caller's context. In a group
+it becomes done when all callers still participating in that phase cancel.
+The writer then stops retries and rolls back any uncommitted work. A policy
+that returns false gives callers the SQLite busy error. Cancellation is
+observed between SQLite attempts and can interrupt the retry delay. Keep
+`BusyTimeoutMS` small if the driver waits inside SQLite without observing
+cancellation.
 
 ## Observe writes
 
@@ -201,7 +234,9 @@ reached a transaction: queue wait, the group's `BEGIN`, callback and
 `COMMIT` durations, the commit's start and end time, group size, priority,
 durability and whether the write failed. It runs on the caller's goroutine
 after the outcome and must not block. `Store.Pending()` reports how many
-operations wait for the writer. `WriteOptions.Observe` receives the
+operations wait for the writer. `Store.PendingByPriority()` returns one
+snapshot indexed by priority, excluding running work and callers still
+waiting for admission. `WriteOptions.Observe` receives the
 same statistics for one write, after `Options.Observe`. Statistics contain
 no SQL or values.
 
@@ -209,9 +244,17 @@ no SQL or values.
 
 `Store.Exclusive(ctx, fn)` runs `fn` on the writer connection outside any
 transaction, between transactions. Use it for migrations that control their
-own transaction, `VACUUM`, `VACUUM INTO` or a checkpoint. `fn` gets the
+own transaction, in-place `VACUUM` or a checkpoint. `fn` gets the
 caller's context. Afterwards the Store rolls back any transaction `fn` left
-open and restores its connection settings.
+open and restores its managed pragmas. The connection retains any
+attachments set by `ConnectionInit`.
+
+`Store.VacuumInto(ctx, destination)` copies a committed snapshot of the
+main database using a dedicated `mode=ro` connection. It uses neither the
+writer queue nor the reader pools. The source connection omits
+`ConnectionInit` and `query_only`. Use a private destination path that
+is missing or names an empty file and handle permissions and cleanup
+of partial output. Attached files require their own backups.
 
 The writer keeps up to 256 prepared single statements per connection, so
 repeated callbacks do not compile their SQL again.
