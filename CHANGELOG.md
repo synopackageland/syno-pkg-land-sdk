@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.53.63
+
+- `sqlitestore`: opt in to caller-bound native transactions with `WriteOptions.BindCallerContext`. Set `Options.MaxBatchWork` to limit shared transactions by the sum of declared `WriteOptions.Work` counts. See [SQLite stores for Go Apps](docs/sqlite-store.md).
+- Reuse the existing executor release and digests.
+
 ## 0.53.62
 
 - `sqlitestore`: preserve connection initialization across `Exclusive` and open reader connections lazily after migrations. Add `MustExist`, `WriteGroupedTx`, dispatch-based priority aging and `PendingByPriority`, `AutoCheckpointPages`, `OverflowCacheKiB`, `VacuumInto`, and cancellation-aware retry for both BEGIN IMMEDIATE and COMMIT. See [SQLite stores for Go Apps](docs/sqlite-store.md).
