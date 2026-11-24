@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.53.62
+
+- `sqlitestore`: preserve connection initialization across `Exclusive` and open reader connections lazily after migrations. Add `MustExist`, `WriteGroupedTx`, dispatch-based priority aging and `PendingByPriority`, `AutoCheckpointPages`, `OverflowCacheKiB`, `VacuumInto`, and cancellation-aware retry for both BEGIN IMMEDIATE and COMMIT. See [SQLite stores for Go Apps](docs/sqlite-store.md).
+- Reuse the existing executor release and digests.
+
 ## 0.53.61
 
 - `sqlitestore`: write priorities and per-write durability (`WriteWith`), `WriteTx` for `*sql.Tx` code, interruptible writes, `AfterCommit`, `Exclusive`, `MaintainWith`, `Pending`, `OpenReader`, `OverflowReaders`, `ConnectionInit`, `DSNParams`, `JournalSizeLimit`, `BusyRetry`, `Observe` and `Turn`. BEGIN IMMEDIATE and COMMIT wait out other processes' locks without replay. See [SQLite stores for Go Apps](docs/sqlite-store.md).

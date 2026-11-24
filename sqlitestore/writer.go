@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/synopackageland/syno-pkg-land-sdk/sqlitefile"
@@ -32,8 +33,8 @@ type Priority uint8
 const (
 	// Interactive is the default, for work a person or caller waits for.
 	Interactive Priority = iota
-	// Urgent runs before any other waiting operation, for small writes that
-	// keep the App alive, such as a lease renewal.
+	// Urgent normally runs first, for small writes that keep the App alive,
+	// such as a lease renewal. Aged lower-priority work can run first.
 	Urgent
 	// Background is for bulk or periodic work. When Interactive and
 	// Background operations both wait, the writer alternates between them.
@@ -114,6 +115,21 @@ func (s *Store) WriteTx(ctx context.Context, opts WriteOptions, fn func(context.
 	return s.submit(s.newJob(ctx, opts, func(j *job) { j.tx = fn }))
 }
 
+// WriteGroupedTx is WriteWith for callbacks that require a *sql.Tx, such as
+// adapters using their own nested savepoints. Native callbacks batch with one
+// another and share the same transaction. Nested savepoint names must not use
+// the sdk_ prefix; finish all work before returning and never commit or roll
+// back the shared transaction. SQL must use the supplied context, which keeps
+// cancellation local to each callback's savepoint. The Store checks the
+// caller's cancellation before and after the callback. Use WriteTx if the
+// callback needs interruptible SQL.
+func (s *Store) WriteGroupedTx(ctx context.Context, opts WriteOptions, fn func(context.Context, *sql.Tx) error) error {
+	if fn == nil || opts.Bytes < 0 || opts.Priority >= priorities || opts.Durability > Full || opts.Interruptible {
+		return errors.New("SQLite grouped transaction callback, priority, durability and nonnegative byte cost required; interruptible writes use WriteTx")
+	}
+	return s.submit(s.newJob(ctx, opts, func(j *job) { j.tx, j.groupTx = fn, true }))
+}
+
 func (s *Store) newJob(ctx context.Context, opts WriteOptions, set func(*job)) *job {
 	j := &job{ctx: ctx, priority: opts.Priority, durability: max(opts.Durability, s.opts.Durability),
 		bytes: opts.Bytes, interruptible: opts.Interruptible, observe: opts.Observe}
@@ -167,6 +183,7 @@ type job struct {
 	ctx       context.Context
 	write     func(context.Context, Tx) error // set for grouped and interruptible writes
 	tx        func(context.Context, *sql.Tx) error
+	groupTx   bool
 	exclusive func(context.Context, *sql.Conn) error
 	// interruptible runs alone and passes the caller's context to its SQL.
 	interruptible bool
@@ -175,13 +192,14 @@ type job struct {
 	bytes         int
 	observe       func(WriteStats)
 	queuedAt      time.Time
+	enqueuedTurn  uint64
 	hooks         []func() // Owned by the writer goroutine.
 	started       bool     // Protected by writeQueue.mu.
 	done          chan result
 }
 
 // grouped reports whether the job may share a transaction.
-func (j *job) grouped() bool { return j.write != nil && !j.interruptible }
+func (j *job) grouped() bool { return j.groupTx || (j.write != nil && !j.interruptible) }
 
 type result struct {
 	err        error
@@ -193,6 +211,7 @@ type writeQueue struct {
 	mu      sync.Mutex
 	items   [priorities][]*job
 	closing bool
+	turn    uint64 // Writer dispatches, regardless of duration or batch size.
 	// interactiveLast records which of Interactive and Background ran last.
 	interactiveLast bool
 	changed         chan struct{} // Closed and replaced whenever the queue changes.
@@ -222,14 +241,21 @@ func (q *writeQueue) empty() bool {
 // Pending reports how many operations wait for the writer, not counting
 // the transaction or exclusive work it is running.
 func (s *Store) Pending() int {
+	counts := s.PendingByPriority()
+	return counts[Interactive] + counts[Urgent] + counts[Background]
+}
+
+// PendingByPriority reports a single snapshot of admitted waiting operations,
+// indexed by Priority. Aged work is counted under its original priority.
+func (s *Store) PendingByPriority() [priorities]int {
 	q := &s.queue
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	n := 0
-	for _, items := range q.items {
-		n += len(items)
+	var counts [priorities]int
+	for p, items := range q.items {
+		counts[p] = len(items)
 	}
-	return n
+	return counts
 }
 
 func (s *Store) submit(j *job) error {
@@ -297,6 +323,7 @@ func (s *Store) enqueue(j *job) error {
 			return ErrClosed
 		}
 		if len(q.items[j.priority]) < s.opts.QueueSize {
+			j.enqueuedTurn = q.turn
 			q.items[j.priority] = append(q.items[j.priority], j)
 			q.signal()
 			q.mu.Unlock()
@@ -312,9 +339,27 @@ func (s *Store) enqueue(j *job) error {
 	}
 }
 
-// next chooses the queue for the next transaction: Urgent first, then
-// Interactive and Background in turn while both wait.
+// Age lower priorities after eight writer dispatches. Choose the oldest
+// waiting head when both have aged; ties fall through to normal ordering.
+const agingTurns = 8
+
 func (q *writeQueue) next() Priority {
+	var aged Priority
+	var age uint64
+	for _, p := range [...]Priority{Urgent, Interactive, Background} {
+		if items := q.items[p]; len(items) != 0 {
+			wait := q.turn - items[0].enqueuedTurn
+			if wait >= agingTurns && (wait > age || (wait == age && aged == Interactive && p == Background && q.interactiveLast)) {
+				aged, age = p, wait
+			}
+		}
+	}
+	if age != 0 {
+		if aged != Urgent {
+			q.interactiveLast = aged == Interactive
+		}
+		return aged
+	}
 	if len(q.items[Urgent]) != 0 {
 		return Urgent
 	}
@@ -333,6 +378,7 @@ func (s *Store) nextBatch() []*job {
 		q.mu.Lock()
 		if !q.empty() {
 			p := q.next()
+			q.turn++
 			items := q.items[p]
 			first := items[0]
 			batch, rest := []*job{first}, items[1:]
@@ -340,7 +386,7 @@ func (s *Store) nextBatch() []*job {
 				rest = []*job{}
 				bytes := first.bytes
 				for i, j := range items[1:] {
-					if !j.grouped() || len(batch) == s.opts.MaxBatchItems ||
+					if !j.grouped() || j.groupTx != first.groupTx || len(batch) == s.opts.MaxBatchItems ||
 						(j.durability == first.durability && j.bytes > s.opts.MaxBatchBytes-bytes) {
 						// Keep FIFO order behind work that runs alone and an item
 						// that does not fit.
@@ -386,16 +432,7 @@ func (s *Store) run() {
 		}
 		results := make([]result, len(batch))
 		var err error
-		if turnErr := s.withTurn(context.Background(), func() error {
-			if batch[0].tx != nil {
-				err = s.runTx(batch[0], &results[0], timing)
-			} else {
-				err = s.commit(batch, results, timing)
-			}
-			return nil
-		}); turnErr != nil {
-			err = turnErr
-		}
+		err = s.withTurn(context.Background(), func() error { return s.commit(batch, results, timing) })
 		if err == nil {
 			s.afterCommit(batch, results)
 		}
@@ -418,23 +455,26 @@ func (s *Store) runExclusive(j *job) (err error) {
 	if err := s.ensureWriter(j.ctx); err != nil {
 		return err
 	}
+	conn := s.writer
 	defer func() {
 		// Leave the connection as the next group expects it: outside a
 		// transaction (an error here means none was open), with the Store's
 		// own settings.
 		ctx := context.WithoutCancel(j.ctx)
-		_, _ = s.writer.ExecContext(ctx, "ROLLBACK")
-		if restoreErr := s.applyWriterPragmas(ctx, s.writer); restoreErr != nil {
+		if errors.Is(err, sql.ErrConnDone) {
+			s.resetWriter()
+			return
+		}
+		if rollbackErr := s.rollback(ctx); rollbackErr != nil {
+			err = errors.Join(err, rollbackErr)
+			return
+		}
+		if restoreErr := s.applyWriterPragmas(ctx, conn); restoreErr != nil {
 			s.resetWriter()
 			err = errors.Join(err, restoreErr)
 		}
 	}()
-	err = j.exclusive(context.WithValue(j.ctx, operationKey{}, s), s.writer)
-	if errors.Is(err, sql.ErrConnDone) {
-		s.resetWriter()
-		return err
-	}
-	return err
+	return j.exclusive(context.WithValue(j.ctx, operationKey{}, s), conn)
 }
 
 type groupTiming struct {
@@ -457,23 +497,33 @@ func (s *Store) resetWriter() {
 }
 
 func (s *Store) commit(batch []*job, results []result, timing *groupTiming) (err error) {
-	ctx := context.Background()
+	waitCtx, stop := batchContext(batch)
+	defer stop()
+	if waitCtx.Err() != nil {
+		return context.Cause(waitCtx)
+	}
+	ctx := context.WithoutCancel(waitCtx)
 	if err := s.ensureWriter(ctx); err != nil {
 		return err
 	}
-	if err := s.setSync(ctx, batch[0].durability); err != nil {
+	first := batch[0]
+	if err := s.setSync(ctx, first.durability); err != nil {
 		return err
 	}
+
 	start := time.Now()
-	if err := s.begin(ctx, batch); err != nil {
+	var native *sql.Tx
+	if err := s.retryBusy(waitCtx, "BEGIN IMMEDIATE", func() error {
+		var err error
+		if first.tx != nil {
+			native, err = s.writer.BeginTx(ctx, nil)
+		} else {
+			_, err = s.writer.ExecContext(ctx, "BEGIN IMMEDIATE")
+		}
+		return err
+	}); err != nil {
 		if errors.Is(err, sql.ErrConnDone) {
 			s.resetWriter()
-		}
-		if errors.Is(err, errAllCanceled) {
-			for i, j := range batch {
-				results[i].err = j.ctx.Err()
-			}
-			return nil
 		}
 		return fmt.Errorf("begin SQLite write: %w", err)
 	}
@@ -481,57 +531,75 @@ func (s *Store) commit(batch []*job, results []result, timing *groupTiming) (err
 		timing.begin = time.Since(start)
 		start = time.Now()
 	}
+	committed := false
 	defer func() {
-		if err != nil {
+		if native != nil {
+			// Release database/sql's transaction and prepared statements.
+			// After a successful SQL COMMIT, SQLite has nothing to roll back.
+			if rollbackErr := native.Rollback(); committed && rollbackErr != nil &&
+				!errors.Is(rollbackErr, sql.ErrTxDone) && !noTransaction(rollbackErr) {
+				// The commit succeeded. Keep that outcome and replace the
+				// connection before serving the next group.
+				s.resetWriter()
+			}
+		}
+		if !committed {
 			err = errors.Join(err, s.rollback(ctx))
 		}
 	}()
-	if j := batch[0]; j.interruptible {
-		// Alone in its transaction: an interrupt can roll back only this
-		// write, so its SQL follows the caller's context.
-		results[0] = call(s.callbackContext(j), itemTx{s, s.callbackContext(j)}, j.write)
-		if results[0].err == nil {
-			results[0].err = j.ctx.Err()
+	executor := Tx(s.writer)
+	if native != nil {
+		executor = native
+	}
+
+	successful := make([]*job, 0, len(batch))
+	for i, j := range batch {
+		if err := j.ctx.Err(); err != nil {
+			results[i].err = err
+			continue
 		}
-		if results[0].err != nil || results[0].panicValue != nil {
-			j.hooks = nil
-			if err := s.rollback(ctx); err != nil {
-				return err
-			}
-			return nil
-		}
-	} else {
-		for i, j := range batch {
-			if err := j.ctx.Err(); err != nil {
-				results[i].err = err
-				continue
-			}
-			r, err := s.runItem(ctx, j)
+		if j.grouped() {
+			r, err := s.runItem(ctx, executor, native, j)
 			results[i] = r
 			if err != nil {
 				return err
 			}
+		} else {
+			results[i] = s.callItem(j, native, s.callbackContext(j))
+		}
+		if results[i].err == nil && results[i].panicValue == nil {
+			successful = append(successful, j)
 		}
 	}
 	if timing != nil {
 		timing.work = time.Since(start)
+	}
+	if len(successful) == 0 {
+		return nil
+	}
+
+	commitCtx, stopCommit := batchContext(successful)
+	defer stopCommit()
+	if timing != nil {
 		timing.commitStarted = time.Now()
 	}
-	err = s.retryBusy("COMMIT", func() error {
-		_, err := s.writer.ExecContext(ctx, "COMMIT")
+	// Use SQL COMMIT while the transaction is still live. database/sql
+	// marks a *sql.Tx done on the first Commit call, and SQLite drivers can
+	// roll the transaction back if that call returns SQLITE_BUSY.
+	err = s.retryBusy(commitCtx, "COMMIT", func() error {
+		_, err := executor.ExecContext(ctx, "COMMIT")
 		return err
-	}, nil)
+	})
 	if timing != nil {
 		timing.commitFinished = time.Now()
 		timing.commit = timing.commitFinished.Sub(timing.commitStarted)
 	}
 	if err != nil {
-		return fmt.Errorf("commit SQLite group: %w", err)
+		return fmt.Errorf("commit SQLite write: %w", err)
 	}
+	committed = true
 	return nil
 }
-
-var errAllCanceled = errors.New("every write in the group was canceled")
 
 // rollback ends the transaction on the writer. When SQLite already rolled
 // it back (after an interrupt), there is nothing left to do.
@@ -539,35 +607,59 @@ func (s *Store) rollback(ctx context.Context) error {
 	if s.writer == nil {
 		return nil
 	}
-	if _, err := s.writer.ExecContext(ctx, "ROLLBACK"); err != nil && !strings.Contains(err.Error(), "no transaction is active") {
+	if _, err := s.writer.ExecContext(ctx, "ROLLBACK"); err != nil && !noTransaction(err) {
 		s.resetWriter()
 		return fmt.Errorf("roll back SQLite group: %w", err)
 	}
 	return nil
 }
 
+func noTransaction(err error) bool {
+	return strings.Contains(err.Error(), "no transaction is active")
+}
+
 func (s *Store) callbackContext(j *job) context.Context {
 	return context.WithValue(context.WithValue(j.ctx, operationKey{}, s), itemKey{}, j)
 }
 
-// begin waits for other processes' write locks without starting any
-// callback, until every caller in the group gives up.
-func (s *Store) begin(ctx context.Context, batch []*job) error {
-	return s.retryBusy("BEGIN IMMEDIATE", func() error {
-		_, err := s.writer.ExecContext(ctx, "BEGIN IMMEDIATE")
-		return err
-	}, func() bool {
-		for _, j := range batch {
-			if j.ctx.Err() == nil {
-				return false
-			}
+// batchContext ends only when every caller still participating in this
+// phase has canceled. A single caller's cancellation cannot abort a peer.
+func batchContext(batch []*job) (context.Context, func()) {
+	if len(batch) == 1 {
+		return batch[0].ctx, func() {}
+	}
+	base := context.WithoutCancel(batch[0].ctx)
+	for _, j := range batch {
+		if j.ctx.Done() == nil {
+			return base, func() {}
 		}
-		return true
-	})
+	}
+	ctx, cancel := context.WithCancelCause(base)
+	var remaining atomic.Int64
+	remaining.Store(int64(len(batch)))
+	stops := make([]func() bool, 0, len(batch))
+	for _, j := range batch {
+		if j.ctx.Err() != nil {
+			if remaining.Add(-1) == 0 {
+				cancel(j.ctx.Err())
+			}
+			continue
+		}
+		stops = append(stops, context.AfterFunc(j.ctx, func() {
+			if remaining.Add(-1) == 0 {
+				cancel(j.ctx.Err())
+			}
+		}))
+	}
+	return ctx, func() {
+		for _, stop := range stops {
+			stop()
+		}
+		cancel(nil)
+	}
 }
 
-// busyRetryDelay spaces attempts while another process holds SQLite's write
-// lock after the busy handler gave up. It never fails or replays a callback.
+// busyRetryDelay spaces attempts; it is not a failure budget.
 const busyRetryDelay = 25 * time.Millisecond
 
 // BusyAttempt describes a BEGIN IMMEDIATE or COMMIT that found the database
@@ -576,27 +668,42 @@ type BusyAttempt struct {
 	Statement string // "BEGIN IMMEDIATE" or "COMMIT"
 	Attempt   int    // 1 for the first busy result
 	Err       error
+	// Context is the caller's context for a single write. For a group, it
+	// carries the first participating caller's values and becomes done
+	// when all still-participating callers cancel.
+	Context context.Context
 }
 
 // retryBusy repeats a statement that failed with SQLITE_BUSY. BEGIN
 // IMMEDIATE has done nothing yet; a busy COMMIT keeps its transaction open.
-func (s *Store) retryBusy(name string, statement func() error, abandon func() bool) error {
+func (s *Store) retryBusy(ctx context.Context, name string, statement func() error) error {
 	for attempt := 1; ; attempt++ {
+		if ctx.Err() != nil {
+			return context.Cause(ctx)
+		}
 		err := statement()
 		if !isBusy(err) {
 			return err
 		}
-		if abandon != nil && abandon() {
-			return errAllCanceled
+		if ctx.Err() != nil {
+			return context.Cause(ctx)
 		}
 		delay := busyRetryDelay
 		if s.opts.BusyRetry != nil {
 			var retry bool
-			if delay, retry = s.opts.BusyRetry(BusyAttempt{Statement: name, Attempt: attempt, Err: err}); !retry {
+			if delay, retry = s.opts.BusyRetry(BusyAttempt{Statement: name, Attempt: attempt, Err: err, Context: ctx}); !retry {
 				return err
 			}
 		}
-		time.Sleep(max(delay, 0))
+		if delay > 0 {
+			timer := time.NewTimer(delay)
+			select {
+			case <-timer.C:
+			case <-ctx.Done():
+				timer.Stop()
+				return context.Cause(ctx)
+			}
+		}
 	}
 }
 
@@ -618,73 +725,6 @@ func (s *Store) withTurn(ctx context.Context, fn func() error) error {
 		defer func() { <-t.token }()
 	}
 	return fn()
-}
-
-// runTx runs a WriteTx job in a database/sql transaction of its own.
-func (s *Store) runTx(j *job, r *result, timing *groupTiming) (err error) {
-	ctx := s.callbackContext(j)
-	if err := j.ctx.Err(); err != nil {
-		r.err = err
-		return nil
-	}
-	if err := s.ensureWriter(context.Background()); err != nil {
-		return err
-	}
-	if err := s.setSync(context.Background(), j.durability); err != nil {
-		return err
-	}
-	start := time.Now()
-	var tx *sql.Tx
-	if err := s.retryBusy("BEGIN IMMEDIATE", func() error {
-		var err error
-		tx, err = s.writer.BeginTx(ctx, nil)
-		return err
-	}, func() bool { return j.ctx.Err() != nil }); err != nil {
-		if errors.Is(err, errAllCanceled) {
-			r.err = j.ctx.Err()
-			return nil
-		}
-		if errors.Is(err, sql.ErrConnDone) {
-			s.resetWriter()
-		}
-		return fmt.Errorf("begin SQLite transaction: %w", err)
-	}
-	if timing != nil {
-		timing.begin = time.Since(start)
-		start = time.Now()
-	}
-	*r = callTx(ctx, tx, j.tx)
-	if r.err == nil {
-		r.err = j.ctx.Err()
-	}
-	if timing != nil {
-		timing.work = time.Since(start)
-	}
-	if r.err != nil || r.panicValue != nil {
-		j.hooks = nil
-		_ = tx.Rollback()
-		// database/sql may have ended the transaction on cancellation while
-		// SQLite still holds it; leave the connection outside a transaction.
-		return s.rollback(context.Background())
-	}
-	if timing != nil {
-		timing.commitStarted = time.Now()
-	}
-	err = tx.Commit()
-	if timing != nil {
-		timing.commitFinished = time.Now()
-		timing.commit = timing.commitFinished.Sub(timing.commitStarted)
-	}
-	if err != nil {
-		return errors.Join(fmt.Errorf("commit SQLite transaction: %w", err), s.rollback(context.Background()))
-	}
-	return nil
-}
-
-func callTx(ctx context.Context, tx *sql.Tx, fn func(context.Context, *sql.Tx) error) (r result) {
-	defer func() { r.panicValue = recover() }()
-	r.err = fn(ctx, tx)
-	return r
 }
 
 func isBusy(err error) bool {
@@ -714,25 +754,38 @@ func (s *Store) setSync(ctx context.Context, d Durability) error {
 	return nil
 }
 
-func (s *Store) runItem(ctx context.Context, j *job) (result, error) {
-	if _, err := s.writer.ExecContext(ctx, "SAVEPOINT sdk_item"); err != nil {
+func (s *Store) runItem(ctx context.Context, executor Tx, native *sql.Tx, j *job) (result, error) {
+	if _, err := executor.ExecContext(ctx, "SAVEPOINT sdk_item"); err != nil {
 		return result{}, fmt.Errorf("start SQLite write savepoint: %w", err)
 	}
-	callbackCtx := s.callbackContext(j)
-	r := call(callbackCtx, itemTx{s, context.WithoutCancel(callbackCtx)}, j.write)
-	if r.err == nil {
-		r.err = j.ctx.Err()
-	}
+	r := s.callItem(j, native, context.WithoutCancel(s.callbackContext(j)))
 	if r.err != nil || r.panicValue != nil {
-		j.hooks = nil
-		if _, err := s.writer.ExecContext(ctx, "ROLLBACK TO sdk_item"); err != nil {
+		if _, err := executor.ExecContext(ctx, "ROLLBACK TO sdk_item"); err != nil {
 			return r, fmt.Errorf("roll back SQLite write savepoint: %w", err)
 		}
 	}
-	if _, err := s.writer.ExecContext(ctx, "RELEASE sdk_item"); err != nil {
+	if _, err := executor.ExecContext(ctx, "RELEASE sdk_item"); err != nil {
 		return r, fmt.Errorf("release SQLite write savepoint: %w", err)
 	}
 	return r, nil
+}
+
+func (s *Store) callItem(j *job, native *sql.Tx, sqlCtx context.Context) (r result) {
+	defer func() {
+		r.panicValue = recover()
+		if r.err != nil || r.panicValue != nil {
+			j.hooks = nil
+		}
+	}()
+	if native != nil {
+		r.err = j.tx(sqlCtx, native)
+	} else {
+		r.err = j.write(s.callbackContext(j), itemTx{s, sqlCtx})
+	}
+	if r.err == nil {
+		r.err = j.ctx.Err()
+	}
+	return r
 }
 
 // afterCommit runs the hooks of a committed group in order. A hook panic is
@@ -751,12 +804,6 @@ func (s *Store) afterCommit(batch []*job, results []result) {
 		}
 		j.hooks = nil
 	}
-}
-
-func call(ctx context.Context, tx Tx, fn func(context.Context, Tx) error) (r result) {
-	defer func() { r.panicValue = recover() }()
-	r.err = fn(ctx, tx)
-	return r
 }
 
 // Use the caller's context values while keeping SQLite interrupt local to the

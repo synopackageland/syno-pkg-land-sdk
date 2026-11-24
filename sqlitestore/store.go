@@ -8,9 +8,11 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"time"
 
@@ -35,6 +37,7 @@ const (
 type Options struct {
 	DriverName string
 	Durability Durability
+	MustExist  bool // Open an existing database without creating the file or its directory.
 
 	BusyTimeoutMS int // Default 5000. Use -1 to disable SQLite lock waiting.
 	Readers       int // Default 2.
@@ -44,6 +47,7 @@ type Options struct {
 	BackgroundReaders  int // Default 0, which leaves BackgroundReader nil.
 	WriterCacheKiB     int // Default 2048.
 	ReaderCacheKiB     int // Default 512 per connection.
+	OverflowCacheKiB   int // Default ReaderCacheKiB; a distinct cache uses disposable overflow connections.
 	BackgroundCacheKiB int // Default 1024 per connection.
 
 	QueueSize     int // Default 128 waiting operations per Priority.
@@ -56,21 +60,24 @@ type Options struct {
 	// JournalSizeLimit is the WAL size kept after a checkpoint, in bytes.
 	// Zero uses the sqlitefile default of 64 MiB.
 	JournalSizeLimit int64
+	// AutoCheckpointPages sets the number of WAL pages that triggers an
+	// automatic checkpoint. Zero uses the sqlitefile default of 1000 pages.
+	AutoCheckpointPages int
 
 	// DSNParams are added to every connection's file URI, for driver
 	// options such as modernc's _txlock. The Store sets mode itself; with
 	// driver "sqlite" or "sqlite3" it also sets _txlock=immediate on the
 	// writer for WriteTx.
 	DSNParams url.Values
-	// ConnectionInit runs on every connection, writer and readers, after
-	// the Store's settings and before query_only on readers: for example
+	// ConnectionInit runs once per physical connection, after the Store's
+	// connection pragmas and before query_only on readers: for example
 	// ATTACH of another file (add ?mode=ro for a read-only attachment) or
 	// App pragmas. Statements take no arguments.
 	ConnectionInit []string
 	// BusyRetry decides what happens when BEGIN IMMEDIATE or COMMIT finds
 	// the database locked after the busy timeout: wait delay and retry, or
 	// give up with the busy error. By default the writer retries every
-	// 25 ms. A group whose callers have all canceled stops waiting anyway.
+	// 25 ms. A group stops retrying when its remaining callers cancel.
 	BusyRetry func(BusyAttempt) (delay time.Duration, retry bool)
 	// Turn, when shared by several Stores, makes their writes take turns.
 	Turn *Turn
@@ -100,7 +107,7 @@ func (o *Options) defaults() error {
 		fallback int
 	}{
 		{&o.Readers, 2}, {&o.OverflowReaders, 0}, {&o.BackgroundReaders, 0}, {&o.WriterCacheKiB, 2048},
-		{&o.ReaderCacheKiB, 512}, {&o.BackgroundCacheKiB, 1024}, {&o.QueueSize, 128},
+		{&o.ReaderCacheKiB, 512}, {&o.OverflowCacheKiB, 0}, {&o.BackgroundCacheKiB, 1024}, {&o.QueueSize, 128},
 		{&o.MaxBatchItems, 32}, {&o.MaxBatchBytes, 1 << 20},
 	} {
 		if *option.value < 0 {
@@ -110,11 +117,14 @@ func (o *Options) defaults() error {
 			*option.value = option.fallback
 		}
 	}
-	if max(o.WriterCacheKiB, o.ReaderCacheKiB, o.BackgroundCacheKiB) > 1<<31-1 {
+	if max(o.WriterCacheKiB, o.ReaderCacheKiB, o.OverflowCacheKiB, o.BackgroundCacheKiB) > math.MaxInt32 {
 		return errors.New("SQLite cache size exceeds the supported limit")
 	}
-	if o.JournalSizeLimit < 0 || o.DSNParams.Has("mode") {
-		return errors.New("SQLite journal size limit must be nonnegative and DSNParams must not set mode")
+	if o.OverflowReaders > math.MaxInt-o.Readers {
+		return errors.New("SQLite reader pool size exceeds the supported limit")
+	}
+	if o.JournalSizeLimit < 0 || o.AutoCheckpointPages < 0 || o.AutoCheckpointPages > math.MaxInt32 || o.DSNParams.Has("mode") {
+		return errors.New("invalid SQLite journal limits or DSNParams mode override")
 	}
 	return nil
 }
@@ -147,8 +157,8 @@ type Store struct {
 }
 
 // Open opens or creates a SQLite database in a dedicated, App-owned directory.
-// It prepares the directory, configures WAL and validates the read pools
-// before starting the writer. The App owns schema migrations.
+// It prepares the directory and configures the writer. Reader pools open
+// physical connections on first use, so the App can migrate first.
 func Open(ctx context.Context, path string, opts Options) (_ *Store, err error) {
 	if err := opts.defaults(); err != nil {
 		return nil, err
@@ -156,6 +166,12 @@ func Open(ctx context.Context, path string, opts Options) (_ *Store, err error) 
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
+	opts.ConnectionInit = slices.Clone(opts.ConnectionInit)
+	params := make(url.Values, len(opts.DSNParams))
+	for key, values := range opts.DSNParams {
+		params[key] = slices.Clone(values)
+	}
+	opts.DSNParams = params
 	if path == "" {
 		return nil, errors.New("SQLite database path is required")
 	}
@@ -173,7 +189,9 @@ func Open(ctx context.Context, path string, opts Options) (_ *Store, err error) 
 		return nil, err
 	}
 	writerDB.SetMaxOpenConns(1)
-	writerDB.SetMaxIdleConns(1)
+	// The Store pins the writer until it is discarded. Keep no idle
+	// connection that could return to ensureWriter already initialized.
+	writerDB.SetMaxIdleConns(0)
 	s := &Store{opts: opts, path: path, writerDB: writerDB, done: make(chan struct{}),
 		queue: writeQueue{changed: make(chan struct{})}}
 	defer func() {
@@ -181,23 +199,23 @@ func Open(ctx context.Context, path string, opts Options) (_ *Store, err error) 
 			_ = s.closeHandles()
 		}
 	}()
-	if err := prepareDir(filepath.Dir(path)); err != nil {
-		return nil, err
-	}
-	if err := prepareDatabase(path); err != nil {
-		return nil, fmt.Errorf("prepare SQLite database: %w", err)
+	if !opts.MustExist {
+		if err := prepareDir(filepath.Dir(path)); err != nil {
+			return nil, err
+		}
+		if err := prepareDatabase(path); err != nil {
+			return nil, fmt.Errorf("prepare SQLite database: %w", err)
+		}
 	}
 	if err := s.ensureWriter(ctx); err != nil {
 		return nil, err
 	}
-	s.Reader, err = openReader(ctx, writerDB.Driver(), opts.fileURI(path, "ro", nil), opts.Readers, opts.OverflowReaders,
-		opts.pragmas(opts.ReaderCacheKiB, true))
+	s.Reader, err = s.newReader(opts.Readers, opts.OverflowReaders, opts.ReaderCacheKiB, opts.OverflowCacheKiB)
 	if err != nil {
 		return nil, fmt.Errorf("open SQLite reader: %w", err)
 	}
 	if opts.BackgroundReaders > 0 {
-		s.BackgroundReader, err = openReader(ctx, writerDB.Driver(), opts.fileURI(path, "ro", nil), opts.BackgroundReaders, 0,
-			opts.pragmas(opts.BackgroundCacheKiB, true))
+		s.BackgroundReader, err = s.newReader(opts.BackgroundReaders, 0, opts.BackgroundCacheKiB, 0)
 		if err != nil {
 			return nil, fmt.Errorf("open SQLite background reader: %w", err)
 		}
@@ -253,7 +271,7 @@ func (o Options) fileURI(path, mode string, extra url.Values) string {
 	return u.String()
 }
 
-func (o Options) pragmas(cacheKiB int, readOnly bool) []string {
+func (o Options) pragmas(cacheKiB int) []string {
 	foreignKeys, tempStore, trustedSchema := "ON", "FILE", "OFF"
 	if o.DisableForeignKeys {
 		foreignKeys = "OFF"
@@ -264,18 +282,13 @@ func (o Options) pragmas(cacheKiB int, readOnly bool) []string {
 	if o.AllowTrustedSchema {
 		trustedSchema = "ON"
 	}
-	queries := []string{
+	return []string{
 		fmt.Sprintf("PRAGMA busy_timeout=%d", o.BusyTimeoutMS),
 		"PRAGMA foreign_keys=" + foreignKeys,
 		"PRAGMA temp_store=" + tempStore,
 		"PRAGMA trusted_schema=" + trustedSchema,
 		fmt.Sprintf("PRAGMA main.cache_size=-%d", cacheKiB),
 	}
-	queries = append(queries, o.ConnectionInit...)
-	if readOnly {
-		return append(queries, "PRAGMA query_only=ON")
-	}
-	return append(queries, syncPragma(o.Durability))
 }
 
 func syncPragma(d Durability) string {
@@ -310,13 +323,18 @@ func (s *Store) ensureWriter(ctx context.Context) error {
 // applyWriterPragmas sets the Store's connection settings and its default
 // sync mode on the writer.
 func (s *Store) applyWriterPragmas(ctx context.Context, conn *sql.Conn) error {
-	for _, query := range s.opts.pragmas(s.opts.WriterCacheKiB, false) {
+	if _, err := conn.ExecContext(ctx, "PRAGMA query_only=OFF"); err != nil {
+		return fmt.Errorf("restore SQLite writer query_only: %w", err)
+	}
+	for _, query := range append(s.opts.pragmas(s.opts.WriterCacheKiB), syncPragma(s.opts.Durability)) {
 		if _, err := conn.ExecContext(ctx, query); err != nil {
 			return fmt.Errorf("configure SQLite writer (%s): %w", query, err)
 		}
 	}
 	s.sync = s.opts.Durability
-	return nil
+	return sqlitefile.ConfigureWith(ctx, conn, sqlitefile.ConfigureOptions{
+		JournalSizeLimit: s.opts.JournalSizeLimit, AutoCheckpointPages: s.opts.AutoCheckpointPages,
+	})
 }
 
 func (s *Store) configureWriter(ctx context.Context, conn *sql.Conn) error {
@@ -335,7 +353,12 @@ func (s *Store) configureWriter(ctx context.Context, conn *sql.Conn) error {
 			return fmt.Errorf("SQLite refused WAL mode (got %q)", mode)
 		}
 	}
-	return sqlitefile.ConfigureWith(ctx, conn, sqlitefile.ConfigureOptions{JournalSizeLimit: s.opts.JournalSizeLimit})
+	for _, query := range s.opts.ConnectionInit {
+		if _, err := conn.ExecContext(ctx, query); err != nil {
+			return fmt.Errorf("initialize SQLite writer (%s): %w", query, err)
+		}
+	}
+	return nil
 }
 
 func discard(conn *sql.Conn) {
@@ -375,9 +398,12 @@ func (s *Store) OpenReader(ctx context.Context, opts ReaderOptions) (*sql.DB, er
 	if opts.CacheKiB == 0 {
 		opts.CacheKiB = s.opts.ReaderCacheKiB
 	}
-	db, err := openReader(ctx, s.writerDB.Driver(), s.opts.fileURI(s.path, "ro", nil), opts.Conns, 0,
-		s.opts.pragmas(opts.CacheKiB, true))
+	db, err := s.newReader(opts.Conns, 0, opts.CacheKiB, 0)
 	if err != nil {
+		return nil, fmt.Errorf("open SQLite reader: %w", err)
+	}
+	if err := db.PingContext(ctx); err != nil {
+		_ = db.Close()
 		return nil, fmt.Errorf("open SQLite reader: %w", err)
 	}
 	s.readers.Lock()
