@@ -31,7 +31,7 @@ func TestExclusiveAttachmentAndLazyReaders(t *testing.T) {
 	configured := 0
 	s, err := sqlitestore.Open(ctx, filepath.Join(dir, "main.db"), sqlitestore.Options{
 		DriverName: "sqlite", BackgroundReaders: 1, AutoCheckpointPages: 5000,
-		ConnectionInit:  []string{"ATTACH DATABASE '" + uri.String() + "' AS g"},
+		ConnectionInit:  []string{"ATTACH DATABASE '" + uri.String() + "' AS g", "PRAGMA synchronous=OFF"},
 		ConfigureWriter: func(context.Context, *sql.Conn) error { configured++; return nil },
 	})
 	if err != nil {
@@ -42,6 +42,9 @@ func TestExclusiveAttachmentAndLazyReaders(t *testing.T) {
 		t.Fatal("physical reader opened before migration")
 	}
 	if err := s.Exclusive(ctx, func(ctx context.Context, conn *sql.Conn) error {
+		if v := pragma(t, ctx, conn, "synchronous"); v != 1 {
+			return fmt.Errorf("initial synchronous = %d, want NORMAL", v)
+		}
 		_, err := conn.ExecContext(ctx, "CREATE TABLE main.items (value TEXT); INSERT INTO main.items VALUES ('main'); PRAGMA wal_autocheckpoint=13")
 		return err
 	}); err != nil {
