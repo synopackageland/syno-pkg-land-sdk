@@ -18,7 +18,7 @@ for module in . executor; do
   (cd "$module" && go vet ./... && go build ./...)
 done
 # Process lifetime and daemon/gateway suites belong to the optional integration gate.
-go test ./api ./dsm ./filestation ./jsonlimits ./identity
+go test ./api ./dsm ./filestation ./jsonlimits ./identity ./sqlitefile
 (cd python && python3 -B -m unittest discover -s tests)
 bash scripts/ts-gate.sh
 node scripts/check-internal-content.mjs --package node

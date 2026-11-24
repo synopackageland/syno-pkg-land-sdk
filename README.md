@@ -73,6 +73,9 @@ Native Apps appear in Hyper Backup as applications by default; see
 offline and online modes, the data version check, and the fixed root script
 Hyper Backup runs.
 
+For App-owned databases, see [SQLite file layout and maintenance](docs/sqlite-file-layout.md)
+for Btrfs NoCOW setup, existing database conversion and scheduled upkeep.
+
 ## Testing an App with the executor
 
 An App behind the bridge runtime reaches its executor at
