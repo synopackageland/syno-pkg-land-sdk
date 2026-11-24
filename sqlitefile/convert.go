@@ -27,6 +27,7 @@ type OpenDB func(path string) (*sql.DB, error)
 // replaces it. The caller must hold an App-wide exclusive lock and close all
 // database handles, including readers, until this call returns. The directory
 // must be App-controlled and names starting with .sqlitefile- are reserved.
+// The replacement preserves persistent WAL mode.
 //
 // changed reports whether the rename took place, including when only the
 // subsequent directory fsync fails. A false, nil result means no work was
@@ -85,9 +86,13 @@ func ConvertToNoCOW(ctx context.Context, path string, open OpenDB) (changed bool
 	}
 	defer func() { err = errors.Join(err, removeStaging(staging)) }()
 
+	var journalMode string
 	err = withConn(ctx, open, path, func(conn *sql.Conn) error {
 		if err := checkpoint(ctx, conn); err != nil {
 			return err
+		}
+		if err := conn.QueryRowContext(ctx, "PRAGMA main.journal_mode").Scan(&journalMode); err != nil {
+			return fmt.Errorf("read source SQLite journal mode: %w", err)
 		}
 		checkpointed, err := os.Stat(path)
 		if err != nil {
@@ -121,6 +126,17 @@ func ConvertToNoCOW(ctx context.Context, path string, open OpenDB) (changed bool
 		return false, err
 	}
 	if err := withConn(ctx, open, staging, func(conn *sql.Conn) error {
+		// VACUUM INTO builds a rollback-mode database. WAL is persistent
+		// across opens, so restore it before verifying and syncing the copy.
+		if journalMode == "wal" {
+			var restored string
+			if err := conn.QueryRowContext(ctx, "PRAGMA main.journal_mode=WAL").Scan(&restored); err != nil {
+				return fmt.Errorf("restore WAL mode on SQLite replacement: %w", err)
+			}
+			if restored != "wal" {
+				return fmt.Errorf("restore WAL mode on SQLite replacement: got %q", restored)
+			}
+		}
 		var result string
 		if err := conn.QueryRowContext(ctx, "PRAGMA main.quick_check(1)").Scan(&result); err != nil {
 			return fmt.Errorf("quick check of SQLite replacement: %w", err)

@@ -49,6 +49,14 @@ func sqliteInt(t *testing.T, db *sql.DB, stmt string) int64 {
 	return value
 }
 
+func checkJournalMode(t *testing.T, db *sql.DB, want string) {
+	t.Helper()
+	var mode string
+	if err := db.QueryRow("PRAGMA main.journal_mode").Scan(&mode); err != nil || mode != want {
+		t.Fatalf("journal mode = %q, %v; want %q", mode, err, want)
+	}
+}
+
 func TestSQLiteFileMaintenance(t *testing.T) {
 	ctx := context.Background()
 	for _, mode := range []string{"NONE", "INCREMENTAL"} {
@@ -169,6 +177,7 @@ func TestSQLiteFileBtrfsConversion(t *testing.T) {
 	}
 
 	db = sqliteNew(t, path)
+	checkJournalMode(t, db, "wal")
 	if got := sqliteInt(t, db, "PRAGMA user_version"); got != 20 {
 		t.Fatalf("user_version=%d", got)
 	}
@@ -178,7 +187,7 @@ func TestSQLiteFileBtrfsConversion(t *testing.T) {
 	if got := sqliteInt(t, db, "SELECT count(*) FROM entries WHERE id=1 AND value='retained'"); got != 1 {
 		t.Fatalf("matching source rows=%d", got)
 	}
-	sqliteExec(t, db, "PRAGMA journal_mode=WAL", "INSERT INTO entries VALUES (2, 'new')")
+	sqliteExec(t, db, "INSERT INTO entries VALUES (2, 'new')")
 	for _, suffix := range []string{"-wal", "-shm"} {
 		if got := sqlitefile.State(path + suffix); got != sqlitefile.StateOn {
 			t.Fatalf("%s state=%v", suffix, got)

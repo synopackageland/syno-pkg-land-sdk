@@ -196,4 +196,5 @@ func TestSQLiteFileBtrfsPreservesExtendedMetadata(t *testing.T) {
 	if !changed || err != nil {
 		t.Fatalf("conversion with matching metadata = %v, %v", changed, err)
 	}
+	checkJournalMode(t, sqliteNew(t, path), "delete")
 }

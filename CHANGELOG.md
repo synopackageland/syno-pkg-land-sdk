@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.53.59 (2026-11-24)
+
+- Add the driver-independent Go `sqlitefile` package for Btrfs NoCOW directory preparation, one-time SQLite database conversion, and scheduled maintenance. Conversion preserves persistent WAL mode, so reopening a converted database keeps WAL even without an explicit journal-mode setting. See [SQLite file layout and maintenance](docs/sqlite-file-layout.md).
+- Executor 0.53.6 is unchanged.
+
 ## 0.53.58 (2026-11-23)
 
 - SDK-managed daemons default to a 100 MiB active log and seven rotated gzip archives, from `daemon/daemon.log.1.gz` through `daemon/daemon.log.7.gz`. Apps can override both limits in the manifest. Low-priority background compression migrates legacy archives and keeps the source available until gzip publication succeeds. See [Daemon diagnostics](docs/native-daemon-restart.md#diagnostics).
