@@ -83,7 +83,11 @@ the SQLite driver connection.
 ## Write safely
 
 The writer starts `BEGIN IMMEDIATE` and groups work already in the queue.
-An idle writer starts immediately. `WriteWeighted` uses an App-supplied byte
+An idle writer starts without waiting on a clock. When it wakes, it first
+yields so callers already on their way can queue, and keeps yielding while
+they arrive, so a burst of simultaneous writes usually shares one commit. A
+lone caller costs one yield. A caller the Go scheduler has not run yet joins
+the next transaction. `WriteWeighted` uses an App-supplied byte
 estimate. An oversized callback runs alone, so split large imports into
 bounded pieces. `Write` declares no byte cost.
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.53.64
+
+- `sqlitestore`: an idle writer lets callers already running queue before it forms its first group, so a simultaneous burst usually shares one commit instead of paying one per arrival. No clock is involved; a lone caller costs one scheduler yield. See [SQLite stores for Go Apps](docs/sqlite-store.md).
+- Reuse the existing executor release and digests.
+
 ## 0.53.63
 
 - `sqlitestore`: opt in to caller-bound native transactions with `WriteOptions.BindCallerContext`. Set `Options.MaxBatchWork` to limit shared transactions by the sum of declared `WriteOptions.Work` counts. See [SQLite stores for Go Apps](docs/sqlite-store.md).
