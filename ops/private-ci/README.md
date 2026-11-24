@@ -146,9 +146,10 @@ temporarily exceed it; it is pruned after retirement, never while a CI job uses 
 
 The same controller runs a separate daily helper after startup and every 24 hours
 when CI is idle. Its **only** mount is the existing `synopkgland-cache-gobuild`:
-remove regular files with mtime older than three days, without following symlinks.
-It does not change other thread volumes, images or projects. No systemd timer
-is installed. A restart can repeat the harmless age check earlier than 24 hours.
+remove regular files with mtime older than three days, without following symlinks. It skips denied or concurrently removed entries
+and reports the count. A daily maintenance failure logs a warning and leaves
+runner dispatch available. The dedicated CI caches still require a successful
+trim before launch. No systemd timer is installed. A restart can repeat the harmless age check earlier than 24 hours.
 
 Caches may be poisoned by another trusted private repository of the same owner;
 this tradeoff is accepted. Public repositories are excluded at both controller

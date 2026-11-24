@@ -1,5 +1,6 @@
 """Bounded private CI cache pruning. No traversal of host paths or symlinks."""
 import argparse
+import errno
 import json
 import os
 from pathlib import Path
@@ -57,6 +58,40 @@ def old_files(root, now, use_atime):
                 path.unlink()
                 removed += 1
     return removed
+
+
+def trim_thread_cache(root, now):
+    """Clean the shared cache without crossing symlinks or changing permissions."""
+    result = {'thread_gobuild': True, 'removed_files': 0, 'skipped_entries': 0, 'age_days': 3}
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    expected = {errno.ENOENT, errno.ENOTDIR, errno.ELOOP, errno.EACCES, errno.EPERM}
+
+    def visit(fd):
+        for name in os.listdir(fd):
+            try:
+                info = os.stat(name, dir_fd=fd, follow_symlinks=False)
+                if stat.S_ISDIR(info.st_mode):
+                    child = os.open(name, flags, dir_fd=fd)
+                    try:
+                        visit(child)
+                    finally:
+                        os.close(child)
+                elif stat.S_ISREG(info.st_mode) and info.st_mtime < now - MAX_AGE:
+                    os.unlink(name, dir_fd=fd)
+                    result['removed_files'] += 1
+            except OSError as error:
+                if error.errno not in expected:
+                    raise
+                # Other gates may replace entries during this walk. This
+                # helper also cannot write directories owned by other users.
+                result['skipped_entries'] += 1
+
+    fd = os.open(root, flags)
+    try:
+        visit(fd)
+    finally:
+        os.close(fd)
+    return result
 
 
 def units(root, category):
@@ -137,13 +172,7 @@ def main():
     args = parser.parse_args()
     if args.thread_gobuild:
         # This mount is provided only to the daily helper, never to a job.
-        root = Path('/thread-gobuild')
-        if root.is_symlink() or not root.is_dir():
-            raise ValueError('missing gobuild volume')
-        before = usage([root])
-        count = old_files(root, time.time(), use_atime=False)
-        result = {'thread_gobuild': True, 'before': before,
-                  'after': usage([root]), 'removed_files': count, 'age_days': 3}
+        result = trim_thread_cache(Path('/thread-gobuild'), time.time())
     else:
         result = trim()
     print(json.dumps(result, sort_keys=True))
