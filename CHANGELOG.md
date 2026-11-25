@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.53.67 (2026-11-25)
+
+- Support static prefix pages declared as ui.path_pages by the CLI. A matching SDK entry uses the prefix for sharing, the HTML asset base for relative resources, and the DSM origin for API calls.
+- Resume the full path, query and fragment once in the same tab after DSM sign-in.
+- Include installed prefix pages in custom ingress ownership checks. Reuse the existing executor release and digests.
+
 ## 0.53.66
 
 - `AppShell` offers Sign out on the entry page that `ui.launch: new-page` opens, a portal alias and a short path (`host` `standalone-web` with `dsmStandalone: true`), as it already did in a DSM window. A page outside DSM and a native shell show the account without it.
