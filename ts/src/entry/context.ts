@@ -30,6 +30,8 @@ export interface AppContextOptions extends Partial<Omit<Context, 'call' | 'batch
  daemonIngress?: string
 }
 
+/** The build hash the CLI writes into entry.json and the page it serves. */
+const CLI_BUILD = /^[0-9a-f]{64}$/
 const SHORT_PATH = /^\/[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 /** The link to share or bookmark: an explicit same-origin entryURL, else the
@@ -163,18 +165,27 @@ export function createAppContext(options: AppContextOptions): Context {
     const response = await request(url.href, {cache: 'no-store', mode: 'same-origin', redirect: 'error', credentials: 'same-origin', signal})
     return response.ok ? response : undefined
    }
+   // Only two CLI build hashes can say the UI changed. Anything else, such
+   // as a page built by other tooling or an answer that is not the App's
+   // entry files (a gateway, a sign-in page, an error), is unknown: no notice.
+   if(!CLI_BUILD.test(options.build)) return false
    try {
     // The CLI's fixed entry page names the build in entry.json; older entry
     // pages carry it in their own meta.
     let build: unknown
     const pointer = await read('entry.json').catch(() => undefined)
-    if(pointer) {try {build = (await pointer.json() as {v?: unknown; build?: unknown} | null)?.build} catch {/* Not a pointer */}}
+    if(pointer) {
+     try {
+      const value = await pointer.json() as {v?: unknown; build?: unknown} | null
+      if(value?.v === 1) build = value.build
+     } catch {/* Not a pointer */}
+    }
     if(typeof build !== 'string') {
      const page = await read('entry.html')
      if(!page) return false
      build = new DOMParser().parseFromString(await page.text(), 'text/html').querySelector('meta[name="synopkgland-build"]')?.getAttribute('content')
     }
-    return typeof build === 'string' && !!build && !!options.build && build !== options.build
+    return typeof build === 'string' && CLI_BUILD.test(build) && build !== options.build
    } catch {return false}
   }},
  }
