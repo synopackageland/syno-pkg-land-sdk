@@ -188,6 +188,10 @@ An App whose own frame already names it and shows the account (a full-page
 web App) can drop DSM's banner with the CLI's `ui.banner: hidden` in
 `dsm-package.yaml`. The shell then shows the account, and on a DSM full page a
 Sign out button under it that calls `ctx.host.signOut()`, DSM's banner sign-out.
+The entry page (`ui.launch: new-page`), a portal alias and a short path count as
+DSM full pages too (`host` `standalone-web` with `dsmStandalone: true`): their
+sign-out ends the DSM session and reopens the page at its sign-in (see
+[entry pages](../docs/entry-page.md#sign-out)).
 An App with its own `sidebar-footer` offers sign-out itself with the same call;
 it answers `unsupported` outside DSM and is absent with CLIs before `ui.banner`.
 Keep the banner (the default) when the App relies on DSM for the account menu.
@@ -548,7 +552,7 @@ without a tab bar (`phone-tabs="none"`) and a DSM window. A page with `header: f
 through its own `PageHeader`, which stays.
 
 The account joins that bar where it would otherwise be a second control: on
-a DSM full page whose host can sign out (`ctx.host.signOut()`), the bar shows
+a DSM full page, the entry page included, whose host can sign out (`ctx.host.signOut()`), the bar shows
 an account icon, or, with the App's `header-actions`, an account entry after
 them under "…". It opens a sheet with the user, administrator or DSM user,
 and Sign out. The drawer's account footer is then left out. In DSM's portal

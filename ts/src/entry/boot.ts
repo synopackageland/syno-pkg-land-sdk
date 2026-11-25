@@ -19,8 +19,6 @@ export interface EntryPageOptions extends AppContextOptions {
   * main chunk, to modulepreload with the bundle. */
  preload?: readonly string[]
  mount(root: HTMLElement, ctx: Context): unknown | Promise<unknown>
- /** Override navigation for an embedding host. */
- navigate?: (url: string) => void
  /** Override the one reload that applies a DSM display language that differs
   * from a cached sign-in's, for an embedding host. */
  reload?: () => void

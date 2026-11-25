@@ -162,3 +162,41 @@ test('the plain portal panel renders the status and applies an alias', async () 
  reader.mountPanel!(other)
  await vi.waitFor(() => expect(other.querySelector('p')?.textContent).toBe(reader.messages.askAdmin))
 })
+
+// Sign-out ends the DSM session, then opens the address the page shows, now
+// without a session: the entry page, a portal alias or a short path each take
+// their own sign-in from there and keep the App's route, rather than leaving
+// the user on DSM's desktop.
+test.each([
+ ['the entry page', `${pageURL}?link=%2Fnotes%2F42`],
+ ['a portal alias', 'https://localhost/example/?link=%2Fnotes%2F42'],
+ ['a short path', 'https://localhost/notes?link=%2Fnotes%2F42'],
+])('sign-out from %s logs out of DSM, then reopens that address signed out', async (_name, shown) => {
+ const navigate = vi.fn<(url: string) => void>()
+ const request = vi.fn<typeof globalThis.fetch>(async () => json({}))
+ const ctx = createAppContext({packageId: 'ExampleApp', build: 'b', token: 't', pageURL, fetch: request, navigate, user: {name: 'alice', isAdmin: false}})
+ expect(Object.keys(localStorage).some(key => key.includes('ExampleApp'))).toBe(true)
+ history.replaceState(null, '', shown)
+ expect(ctx.host.signOut?.()).toEqual({status: 'requested'})
+ expect(Object.keys(localStorage).some(key => key.includes('ExampleApp'))).toBe(false)
+ await vi.waitFor(() => expect(navigate).toHaveBeenCalledOnce())
+ expect(navigate).toHaveBeenCalledWith(shown)
+ const [url, init] = request.mock.calls[0]!
+ expect(url).toBe('https://localhost/webapi/entry.cgi')
+ expect(Object.fromEntries(new URLSearchParams(String(init?.body)))).toEqual({api: 'SYNO.API.Auth', method: 'logout', version: '6'})
+ expect(new Headers(init?.headers).get('X-SYNO-TOKEN')).toBe('t')
+})
+
+test('sign-out reopens the page even when DSM does not answer the logout', async () => {
+ const navigate = vi.fn<(url: string) => void>()
+ const ctx = createAppContext({packageId: 'ExampleApp', build: 'b', token: 't', pageURL, navigate, fetch: vi.fn(async () => {throw new TypeError('offline')})})
+ ctx.host.signOut?.()
+ await vi.waitFor(() => expect(navigate).toHaveBeenCalledWith(pageURL))
+})
+
+test('a host the page brings keeps its own sign-out', () => {
+ const host = {platform: () => ({host: 'dsm'}), signOut: vi.fn(() => ({status: 'requested'} as const)), dispose: vi.fn()}
+ const ctx = createAppContext({packageId: 'ExampleApp', build: 'b', token: 't', pageURL, host: host as never})
+ ctx.host.signOut?.()
+ expect(host.signOut).toHaveBeenCalledOnce()
+})

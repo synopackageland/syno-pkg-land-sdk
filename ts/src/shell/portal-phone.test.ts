@@ -129,12 +129,12 @@ test('no banner, a root outside the window body or a detached root collapse noth
 
 const pages=[{id:'home',title:'Home'},{id:'meetings',title:'Meetings'},{id:'about',title:'About'}]
 const tabs=pages.slice(0,2).map(p=>({key:p.id,label:p.title}))
-function mountShell(target:HTMLElement,{fullPage=true,user='alice',actions=[] as {key:string;label:string;primary?:boolean}[]}={}){
+function mountShell(target:HTMLElement,{fullPage=true,user='alice',actions=[] as {key:string;label:string;primary?:boolean}[],platform=undefined as undefined|{host:string;dsmStandalone:boolean|null}}={}){
  const page=ref('home'),detail=ref(false),signOut=vi.fn(),selected=vi.fn()
  const app=createApp({render:()=>h(AppShell,{
   appRoot:true,locale:'en',pages,modelValue:page.value,'onUpdate:modelValue':(v:string)=>{page.value=v},
   headerActions:actions,onHeaderAction:selected,
-  ctx:{fullPage,displayName:'Meeting Notes',...(user?{user:{name:user,isAdmin:true}}:{}),host:{signOut,platform:()=>({host:'dsm',dsmStandalone:fullPage})} as never},
+  ctx:{fullPage,displayName:'Meeting Notes',...(user?{user:{name:user,isAdmin:true}}:{}),host:{signOut,platform:()=>platform??({host:'dsm',dsmStandalone:fullPage})} as never},
  },{
   tabbar:({page:current}:{page:string})=>h(AppTabBar,{items:tabs,modelValue:current,'onUpdate:modelValue':(v:string)=>{page.value=v}}),
   default:()=>detail.value?h(PageHeader,{title:'Weekly sync',back:true,onBack:()=>{detail.value=false}}):h('p','List'),
@@ -273,6 +273,33 @@ test('outside the portal a tab page draws a bar only for the account or actions;
    else expect(bar(root)?.querySelector('[data-ui-mobile-title]')?.textContent).toBe('Home')
   }finally{s.app.unmount();root.remove()}
  }
+})
+
+// The entry page (ui.launch: new-page), a portal alias or a short path: a page
+// of its own on DSM's origin. Its account signs out; a page outside DSM and a
+// native shell keep only the account.
+test.each([
+ [{host:'standalone-web',dsmStandalone:true},true],
+ [{host:'standalone-web',dsmStandalone:null},false],
+ [{host:'native-shell',dsmStandalone:true},false],
+] as const)('a phone entry page on %o offers sign out in the account sheet: %s',async(platform,shown)=>{
+ viewport(390)
+ const root=document.createElement('div');document.body.append(root)
+ const s=mountShell(root,{platform:{...platform}})
+ try{
+  await settle()
+  const account=bar(root)?.querySelector<HTMLButtonElement>('[data-ui-mobile-action]')
+  if(shown){
+   expect(account?.getAttribute('aria-label')).toBe('alice')
+   account!.click();await settle()
+   const dialog=document.querySelector('[role="dialog"]')!
+   Array.from(dialog.querySelectorAll('button')).find(b=>b.textContent?.includes('Sign out'))!.click()
+   expect(s.signOut).toHaveBeenCalledOnce()
+  }else{
+   expect(document.body.textContent).not.toContain('Sign out')
+   expect(s.signOut).not.toHaveBeenCalled()
+  }
+ }finally{s.app.unmount();root.remove()}
 })
 
 test('a tab page with phoneTitle: true keeps its title bar; other tab pages stay untitled',async()=>{

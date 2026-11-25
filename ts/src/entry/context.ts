@@ -28,6 +28,9 @@ export interface AppContextOptions extends Partial<Omit<Context, 'call' | 'batch
   * goes to the App's daemon on the page's origin instead of a CGI process;
   * every other call keeps the CGI. Never take it from the page URL. */
  daemonIngress?: string
+ /** Override navigation for an embedding host: the sign-in a page without a
+  * session opens, and the page a sign-out opens. */
+ navigate?: (url: string) => void
 }
 
 /** The build hash the CLI writes into entry.json and the page it serves. */
@@ -126,13 +129,20 @@ export function createAppContext(options: AppContextOptions): Context {
  const openDsm = dsmLinkOpener(at.origin)
  const baseHost = options.host ?? withDsmLinks(createNativeHost({dsmStandalone: true, dsmLanguage: options.lang ?? null, appLocale: locale}), openDsm)
  const cache = createSignInCache(options.packageId)
+ const navigate = options.navigate ?? (url => location.replace(url))
  if(options.user?.name && session.token()) cache.set('entry', session.token()!, {
   user: options.user.name, admin: options.user.isAdmin, lang: options.lang, locale,
  })
  const host = {...baseHost,
   ...(!options.host ? {signOut() {
    cache.clear()
-   void webApi('SYNO.API.Auth', 'logout', 6, {}).catch(() => {}).finally(() => {location.replace(new URL('/', at).href)})
+   // Then open the address the page shows now, signed out: each entry takes
+   // its own sign-in from there, the way it does when first opened without
+   // a session. The entry page and a short path go to DSM's sign-in, which
+   // opens the App again; a portal alias shows the App's branded sign-in.
+   // Either keeps the App's route. DSM's origin root would leave the user on
+   // the desktop instead, and on a portal's own port it is the App again.
+   void webApi('SYNO.API.Auth', 'logout', 6, {}).catch(() => {}).finally(() => {navigate(location.href)})
    return {status: 'requested'} as const
   }} : {}),
   dispose() {for(const dispose of [...launchDisposers]) dispose(); baseHost.dispose()},

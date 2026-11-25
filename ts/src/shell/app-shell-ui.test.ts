@@ -208,15 +208,23 @@ test.each([1365,390])('the published UI brand selects home and allows an App ove
 })
 
 // ui.banner: hidden leaves no DSM account menu: the shell's account signs out of DSM.
+// A page of its own on DSM's origin (the entry page from ui.launch: new-page, a
+// portal alias, a short path) reports standalone-web with dsmStandalone.
 test.each([
- {host:'dsm',signOut:true,shown:true},
- {host:'standalone-web',signOut:true,shown:false},
- {host:'dsm',signOut:false,shown:false},
-] as const)('a full page signs out from the sidebar account on $host (signOut=$signOut)',async({host,signOut,shown})=>{
+ {host:'dsm',dsmStandalone:true,signOut:true,shown:true},
+ {host:'dsm',dsmStandalone:null,signOut:true,shown:true},
+ {host:'standalone-web',dsmStandalone:true,signOut:true,shown:true},
+ {host:'standalone-web',dsmStandalone:null,signOut:true,shown:false},
+ {host:'standalone-web',dsmStandalone:false,signOut:true,shown:false},
+ {host:'native-shell',dsmStandalone:true,signOut:true,shown:false},
+ {host:'unavailable',dsmStandalone:true,signOut:true,shown:false},
+ {host:'dsm',dsmStandalone:true,signOut:false,shown:false},
+ {host:'standalone-web',dsmStandalone:true,signOut:false,shown:false},
+] as const)('a full page signs out from the sidebar account on $host (dsmStandalone=$dsmStandalone, signOut=$signOut)',async({host,dsmStandalone,signOut,shown})=>{
  vi.spyOn(HTMLElement.prototype,'getBoundingClientRect').mockReturnValue({width:1400} as DOMRect)
  const root=document.createElement('div');document.body.append(root)
  const requested=vi.fn(()=>({status:'requested'} as const))
- const hostAdapter={platform:()=>({host}),...(signOut?{signOut:requested}:{})}
+ const hostAdapter={platform:()=>({host,dsmStandalone}),...(signOut?{signOut:requested}:{})}
  const app=createApp({render:()=>h(AppShell,{locale:'en',modelValue:'home',pages:[{id:'home',title:'Home'}],
   ctx:{fullPage:true,displayName:'My App',user:{name:'alice',isAdmin:false},host:hostAdapter as never}})})
  try{
