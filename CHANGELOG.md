@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.53.65
+
+- `ctx.uiUpdate.check()` reports a replaced UI only when the page's build and the installed `entry.json` (or legacy entry page) build are both CLI build hashes and differ. Any other build, a gateway reply, a sign-in page, an error or a missing package is unknown, so `UiUpdateNotice` no longer shows "updated, reload" on every load of a DSM window whose build another tool rendered.
+- Reuse the existing executor release and digests.
+
 ## 0.53.64
 
 - `sqlitestore`: an idle writer lets callers already running queue before it forms its first group, so a simultaneous burst usually shares one commit instead of paying one per arrival. No clock is involved; a lone caller costs one scheduler yield. See [SQLite stores for Go Apps](docs/sqlite-store.md).
