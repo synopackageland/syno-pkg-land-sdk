@@ -688,3 +688,37 @@ test('the short path wins over rewriteToAlias', async () => {
  expect(request.mock.calls.some(([url]) => String(url) === 'https://localhost/example/')).toBe(false)
  ctx!.host.dispose()
 })
+
+test('a prefix page uses its asset base for preloads and the DSM origin for API calls', async () => {
+ sessionStorage.clear()
+ const path = '/reader/book/chapter?link=%2Fadd#section'
+ history.replaceState(null, '', path)
+ document.head.innerHTML = '<base href="/webman/3rdparty/ExampleApp/app/build/m/">'
+ const fetch = statusOnly()
+ const ctx = await bootEntryPage({...options(), pageURL: undefined, pathPages: ['/reader/'], appBundle: './chapter.js', appIcon: './icon.png', fetch, rewriteToAlias: true, portal: {defaultAlias: 'example'}})
+ expect(document.querySelector<HTMLLinkElement>('link[rel=modulepreload]')?.href).toBe('https://localhost/webman/3rdparty/ExampleApp/app/build/m/chapter.js')
+ expect(fetch.mock.calls[0]![0]).toBe('https://localhost/webman/3rdparty/ExampleApp/cgi/api.cgi')
+ expect(ctx?.entryURL).toBe('https://localhost/reader/')
+ expect(ctx?.appIcon).toBe('https://localhost/webman/3rdparty/ExampleApp/app/build/m/icon.png')
+ expect(ctx?.launchParams).toMatchObject({link: '/add'})
+ expect(location.href).toBe(`https://localhost${path}`)
+ ctx!.host.dispose()
+})
+
+test('the authenticated launcher navigates back to the complete prefix URL once', async () => {
+ sessionStorage.clear()
+ const path = '/reader/book/chapter?sort=1&sort=2#section'
+ history.replaceState(null, '', path)
+ const opts = {...options(), pageURL: undefined, pathPages: ['/reader/']}
+ await bootEntryPage({...opts, token: undefined, fetch: vi.fn(async () => new Response(JSON.stringify({success: false})))})
+ expect(new URL(opts.navigate.mock.calls[0]![0]).searchParams.get('launchApp')).toBe('SYNO.SDS.ExampleApp.Instance')
+ expect(opts.navigate.mock.calls[0]![0]).not.toContain('chapter')
+ history.replaceState(null, '', shortEntry)
+ const ctx = await bootEntryPage({...opts, fetch: statusOnly()})
+ expect(ctx).toBeUndefined()
+ expect(opts.navigate.mock.calls[1]![0]).toBe(`https://localhost${path}`)
+ const later = await bootEntryPage({...opts, fetch: statusOnly()})
+ expect(later?.entryURL).toBe(shortEntry)
+ expect(opts.navigate).toHaveBeenCalledTimes(2)
+ later!.host.dispose()
+})

@@ -18,6 +18,8 @@ export interface AppContextOptions extends Partial<Omit<Context, 'call' | 'batch
  /** The App's short path on DSM's origin (ui.short_paths, DSM 7.2+), such as
  * /notes; ctx.entryURL is then that path instead of the entry page. */
  shortPath?: string
+ /** Declared ui.path_pages prefixes. A matching page uses the prefix for shares. */
+ pathPages?: readonly string[]
  fetch?: typeof globalThis.fetch
  portal?: {defaultAlias: string; entry?: boolean}
  portalAccess?: Context['portal']
@@ -37,6 +39,12 @@ export interface AppContextOptions extends Partial<Omit<Context, 'call' | 'batch
 const CLI_BUILD = /^[0-9a-f]{64}$/
 const SHORT_PATH = /^\/[a-z0-9]+(?:-[a-z0-9]+)*$/
 
+/** The first segment of a path page, when the package has declared it. */
+export function pathPagePrefix(path: string, prefixes: readonly string[] | undefined): string | undefined {
+ const prefix = /^\/[a-z0-9]+(?:-[a-z0-9]+)*\//.exec(path)?.[0]
+ if(prefix && prefix.length <= 66 && prefixes?.includes(prefix)) return prefix
+}
+
 /** The link to share or bookmark: an explicit same-origin entryURL, else the
  * short path on this origin, else the entry page (on its alias prefix, if any). */
 function shareableEntryURL(options: AppContextOptions, at: URL, entry: string): string {
@@ -46,6 +54,8 @@ function shareableEntryURL(options: AppContextOptions, at: URL, entry: string): 
    if(given.origin === at.origin && !given.username && !given.password) {given.hash = ''; return given.href}
   } catch {/* Fall back to the derived link */}
  }
+ const prefix = pathPagePrefix(at.pathname, options.pathPages)
+ if(prefix) return new URL(prefix, at.origin).href
  if(typeof options.shortPath === 'string' && SHORT_PATH.test(options.shortPath)) return new URL(options.shortPath, at.origin).href
  return entry
 }
@@ -56,12 +66,12 @@ function shareableEntryURL(options: AppContextOptions, at: URL, entry: string): 
  * other bytes. entry.html stays as the same page for older links. */
 const ENTRY_PAGE = 'launch.html'
 
-export function entryURLs(packageId: string, href: string) {
+export function entryURLs(packageId: string, href: string, pathPages?: readonly string[]) {
  if(!/^[A-Za-z][A-Za-z0-9]{1,63}$/.test(packageId)) throw new Error('Invalid package id')
  const at = new URL(href)
  const marker = `/webman/3rdparty/${packageId}/`
  const index = at.pathname.indexOf(marker)
- const prefix = index < 0 ? new URL('./', at).pathname.replace(/\/$/, '') : at.pathname.slice(0, index)
+ const prefix = pathPagePrefix(at.pathname, pathPages) ? '' : index < 0 ? new URL('./', at).pathname.replace(/\/$/, '') : at.pathname.slice(0, index)
  const base = `${at.origin}${prefix}/`
  return {base, cgi: `${base}webman/3rdparty/${packageId}/cgi/api.cgi`, entry: `${base}webman/3rdparty/${packageId}/app/${ENTRY_PAGE}`, webApi: `${base}webapi/entry.cgi`, token: `${base}webman/login.cgi?enable_syno_token=yes`}
 }
@@ -101,7 +111,8 @@ export function statusFetch(request: typeof globalThis.fetch, ingress: string, c
 /** One ctx builder for full-page entries and CLI windows with their existing host/lifecycle adapters. */
 export function createAppContext(options: AppContextOptions): Context {
  const at = new URL(options.pageURL ?? location.href)
- const urls = entryURLs(options.packageId, at.href)
+ const urls = entryURLs(options.packageId, at.href, options.pathPages)
+ const assetBase = pathPagePrefix(at.pathname, options.pathPages) ? globalThis.document?.baseURI ?? at : at
  const request = options.fetch ?? globalThis.fetch
  let current = options.token
  const session = options.session ?? createDsmSession({read: () => current, write: value => {current = value},
@@ -163,7 +174,7 @@ export function createAppContext(options: AppContextOptions): Context {
  }
  const ctx: Context = {
   locale, lang: options.lang, t: options.t ?? t, host, fullPage: options.fullPage ?? true,
-  requestTimeout: options.requestTimeout, displayName: options.displayName, appIcon: options.appIcon ? new URL(options.appIcon, at).href : undefined,
+  requestTimeout: options.requestTimeout, displayName: options.displayName, appIcon: options.appIcon ? new URL(options.appIcon, assetBase).href : undefined,
   user: options.user, appWindow: options.appWindow, executor: options.executor, authorization: options.authorization, delegate: options.delegate,
   call, batch: client.batch, webApi, files: {endpoint: urls.cgi, token: session.token},
   reopen: options.reopen ?? (() => () => {}), launchParams, onLaunch,

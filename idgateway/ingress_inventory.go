@@ -19,8 +19,8 @@ func CheckIngressOwnership(pkg, prefix string) error {
 
 // packageNginxConfigs are the nginx files a CLI-built package can register
 // with DSM's web-config worker: gateway ingress, daemon ingress and
-// ui.short_paths redirects. A stopped package's file still reserves its paths.
-var packageNginxConfigs = []string{"sso/native-nginx.conf", "daemon/ingress-nginx.conf", "etc/short-paths-nginx.conf"}
+// UI short paths and prefix pages. A stopped package's file still reserves its paths.
+var packageNginxConfigs = []string{"sso/native-nginx.conf", "daemon/ingress-nginx.conf", "etc/short-paths-nginx.conf", "etc/path-pages-nginx.conf"}
 
 func pathsOverlap(a, b string) bool {
 	a, b = strings.TrimSuffix(a, "/"), strings.TrimSuffix(b, "/")

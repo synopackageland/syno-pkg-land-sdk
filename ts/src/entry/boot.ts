@@ -4,7 +4,7 @@ import {nativeBridge} from '../mobile/index'
 import {dsmLaunchParamText, dsmLaunchURL, launchRoute} from '../launch'
 import {uiLocale} from '../i18n'
 import {createSignInCache} from './cache'
-import {createAppContext, entryLaunchParams, entryURLs, statusEndpoint, statusFetch, type AppContextOptions} from './context'
+import {createAppContext, entryLaunchParams, entryURLs, pathPagePrefix, statusEndpoint, statusFetch, type AppContextOptions} from './context'
 import {fetchEntryToken} from './token'
 import {readDsmLanguage} from './language'
 
@@ -41,7 +41,7 @@ const REFUSALS = new Set(['session_required', 'admin_required', 'app_privilege_d
 /** How long a launch kept across a DSM sign-in stays usable. An expiry of a
  * stored hint, not a request deadline: an older one is dropped. */
 export const LAUNCH_HANDOFF_MAX_AGE_MS = 30 * 60 * 1000
-type Handoff = {v: 1; at: number; link?: string; intake?: string; short?: string}
+type Handoff = {v: 1; at: number; link?: string; intake?: string; short?: string; path?: string}
 const SHORT_PATH = /^\/[a-z0-9]+(?:-[a-z0-9]+)*$/
 /** The marker DSM's short-path redirect puts first in the query of the page it
  * opens (`/<path>` → `…?spl-short=<path>&…`). Only a page reached through the
@@ -66,11 +66,11 @@ const handoffKey = (packageId: string) => `synopkgland.${packageId}.launch`
 /** DSM's sign-in, and DSM's redirect from an alias or launch link to a url
  * launcher, drop the entry's query and hash; this tab keeps the App's own
  * route and intake for the entry that opens after it. */
-function keepLaunch(packageId: string, link: string | undefined, intake: string | undefined, short: string | undefined) {
- if(!link && !intake && !short) return
- try {globalThis.sessionStorage?.setItem(handoffKey(packageId), JSON.stringify({v: 1, at: Date.now(), ...(link ? {link} : {}), ...(intake ? {intake} : {}), ...(short ? {short} : {})}))} catch {/* optional storage */}
+function keepLaunch(packageId: string, link: string | undefined, intake: string | undefined, short: string | undefined, path?: string) {
+ if(!link && !intake && !short && !path) return
+ try {globalThis.sessionStorage?.setItem(handoffKey(packageId), JSON.stringify({v: 1, at: Date.now(), ...(link ? {link} : {}), ...(intake ? {intake} : {}), ...(short ? {short} : {}), ...(path ? {path} : {})}))} catch {/* optional storage */}
 }
-function takeLaunch(packageId: string): {link?: string; intake?: string; short?: string} | undefined {
+function takeLaunch(packageId: string): Omit<Handoff, 'v' | 'at'> | undefined {
  try {
   const storage = globalThis.sessionStorage
   const raw = storage?.getItem(handoffKey(packageId))
@@ -82,7 +82,8 @@ function takeLaunch(packageId: string): {link?: string; intake?: string; short?:
   const link = typeof value.link === 'string' && launchRoute({route: value.link}) !== undefined ? value.link : undefined
   const intake = typeof value.intake === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(value.intake) ? value.intake : undefined
   const short = typeof value.short === 'string' && SHORT_PATH.test(value.short) ? value.short : undefined
-  return link || intake || short ? {link, intake, short} : undefined
+  const path = typeof value.path === 'string' ? value.path : undefined
+  return {link, intake, short, path}
  } catch {return undefined}
 }
 /** A tab reloads at most once into the same changed language. */
@@ -134,14 +135,15 @@ export async function bootEntryPage(options: EntryPageOptions): Promise<Context 
  // Opened through its short path: drop the marker and show the short path.
  // Package, CGI and WebAPI URLs stay anchored to the entry page.
  const shortPath = typeof options.shortPath === 'string' && SHORT_PATH.test(options.shortPath) ? options.shortPath : undefined
- const marked = MARKED.exec(at.search)
+ const pathPage = pathPagePrefix(at.pathname, options.pathPages)
+ const marked = pathPage ? null : MARKED.exec(at.search)
  let short = false
  if(marked && shortPath === `/${marked[1]}`) {
   at.search = at.search.slice(marked[0].length)
   short = showShortPath(at, shortPath)
  }
  const request = options.fetch ?? globalThis.fetch
- const urls = entryURLs(options.packageId, at.href)
+ const urls = entryURLs(options.packageId, at.href, options.pathPages)
  const navigate = options.navigate ?? (url => location.replace(url))
  const ingress = statusEndpoint(options.packageId, at.href, options.daemonIngress)
  // Below DSM's alias the prefix is the alias; otherwise the declared default.
@@ -192,6 +194,12 @@ export async function bootEntryPage(options: EntryPageOptions): Promise<Context 
  }
  // A portal alias first, else DSM's App start; both keep the launch intent.
  async function fallback(): Promise<undefined> {
+  if(pathPage) {
+   // The whole URL stays in this tab. DSM sees only the application's launcher.
+   keepLaunch(options.packageId, undefined, undefined, undefined, at.pathname + at.search + at.hash)
+   navigate(dsmLaunchURL(at.origin, options.packageId, {}))
+   return undefined
+  }
   const launch = entryLaunchParams(at.search)
   const route = at.hash.startsWith('#') ? at.hash.slice(1) : ''
   keepLaunch(options.packageId, launch.route ?? (launchRoute({route}) !== undefined ? route : undefined), launch.intake, short ? shortPath : undefined)
@@ -209,7 +217,7 @@ export async function bootEntryPage(options: EntryPageOptions): Promise<Context 
   ...(options.preload ?? []).map(href => ({href, module: true})),
  ].map(({href, module}) => {
   let url: URL
-  try {url = new URL(href, at)} catch {throw new Error('Invalid App bundle URL')}
+  try {url = new URL(href, pathPage ? document.baseURI : at)} catch {throw new Error('Invalid App bundle URL')}
   if(!/^https?:$/.test(url.protocol) || url.origin !== at.origin || url.username || url.password) throw new Error('Invalid App bundle URL')
   const link = document.createElement('link')
   // A module preload must match the import's CORS mode; a classic one the plain <script>'s.
@@ -242,6 +250,14 @@ export async function bootEntryPage(options: EntryPageOptions): Promise<Context 
  // A launch kept across a sign-in comes back when this page carries none.
  const own = entryLaunchParams(at.search)
  const kept = takeLaunch(options.packageId)
+ if(kept?.path && pathPagePrefix(kept.path, options.pathPages) && !pathPage && at.pathname === new URL(urls.entry).pathname) {
+  // A tab handoff is one-shot and may only return to a configured prefix.
+  const target = new URL(kept.path, at.origin)
+  if(target.origin === at.origin && pathPagePrefix(target.pathname, options.pathPages)) {
+   navigate(target.href)
+   return undefined
+  }
+ }
  let launchParams = options.launchParams
  // The short path the page was opened with before a DSM sign-in.
  if(!short && kept?.short && kept.short === shortPath) short = showShortPath(at, shortPath)
@@ -259,7 +275,7 @@ export async function bootEntryPage(options: EntryPageOptions): Promise<Context 
  // A changed alias must not strand a reload on a 404. Probe before changing
  // history; package/WebAPI URLs above remain anchored to the original entry.
  async function landing() {
-  if(!options.portal || options.rewriteToAlias !== true || short) return
+  if(!options.portal || options.rewriteToAlias !== true || short || pathPage) return
   const landing = alias()
   try {
    const response = await request(landing.href, {method: 'GET', mode: 'same-origin', redirect: 'error', credentials: 'same-origin', cache: 'no-store'})
