@@ -178,6 +178,27 @@ and the App's relative URLs resolve through the `<base>`; code that reads
 resolves to the entry page itself. The short path wins over `rewriteToAlias`.
 A page opened without the marker, or with another path's, keeps its URL.
 
+### Prefix pages
+
+A CLI declaration such as `ui.path_pages: {/reader/: reader}` can serve
+the same HTML at `/reader/` and at a deep address such as
+`/reader/book/chapter`. On the DSM origin, boot that HTML with
+`bootEntryPage({ …, pathPages: ['/reader/'] })`. Set `ui.launch: new-page`
+so the DSM App launcher uses the generated entry page. The CLI supplies the
+declared prefixes to that launcher.
+
+On a matching path, `ctx.entryURL` is the prefix, unless overridden by an
+explicit same-origin `entryURL`. Use the browser's pathname to read the
+current route. Preloads resolve against the HTML's asset base. CGI, WebAPI
+and update URLs resolve against the DSM origin. The page keeps its address
+after boot, even with `rewriteToAlias` enabled.
+
+If the visitor needs to sign in, the boot opens the DSM App launcher and
+keeps the full path, query and fragment in that tab's session storage.
+After verifying the identity, the generated entry page opens that exact
+URL once. The hand-off uses the same expiry as the other launch data and
+only accepts a prefix in the package's current declaration.
+
 A full page outside DSM's desktop has no `SYNO.SDS.AppLaunch`. Its browser
 host opens DSM's launch link (`/?launchApp=…&launchParam=…`) in a new tab for
 `ctx.host.openApp(appId)`, `openFileManager(path)` and `revealFile(path)`

@@ -46,6 +46,7 @@ func TestIngressInventoryConflictsAndOwnUpgrade(t *testing.T) {
 		{"stopped portal", "var/packages/Other/target/etc/portal.json", `{"alias":"reader"}`},
 		{"stopped gateway", "var/packages/Other/target/sso/native-nginx.conf", `location ^~ /reader/ { }`},
 		{"stopped short path", "var/packages/Other/target/etc/short-paths-nginx.conf", "location = /reader {\n    return 302 /webman/3rdparty/Other/m/index.html$is_args$args;\n}\n"},
+		{"stopped path page", "var/packages/Other/target/etc/path-pages-nginx.conf", "location ^~ /reader/ { }"},
 		{"active literal", "usr/local/etc/nginx/conf.d/dsm.other.conf", `location = /reader { }`},
 		{"deep regex", "usr/local/etc/nginx/conf.d/dsm.other.conf", `location ~ ^/reader/(api|data)/ { }`},
 		{"active regex", "usr/local/etc/nginx/conf.d/dsm.other.conf", `location ~ ^/reader/ { }`},
