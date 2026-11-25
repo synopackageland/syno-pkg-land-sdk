@@ -214,10 +214,15 @@ const phoneTab = computed(() => phoneShell.value.phone && !inWindow.value && pho
 // A tab page that opts in (phoneTitle: true, a live screen) keeps its title bar.
 const untitledTab = computed(() => phoneTab.value && page.value?.phoneTitle !== true)
 const portalChrome = ref<PortalChrome>({brand:false,user:false})
-// Where DSM draws no account (ui.banner: hidden), the shell's account also signs out.
+// Where DSM draws no account (ui.banner: hidden), the shell's account also signs
+// out: in a DSM window, and on a page of its own on DSM's origin (the entry
+// page, a portal alias, a short path), whose host reports dsmStandalone. A
+// page outside DSM and a native shell, which keeps its own sign-in, do not.
 const canSignOut = computed(() => {
   const host = pageCtx.value?.host
-  return typeof host?.signOut === 'function' && host.platform().host === 'dsm'
+  if (typeof host?.signOut !== 'function') return false
+  const platform = host.platform()
+  return platform.host === 'dsm' || (platform.host === 'standalone-web' && platform.dsmStandalone === true)
 })
 function signOut() {accountOpen.value = false; pageCtx.value?.host?.signOut?.()}
 // A page's PageMeta menus lead the bar's "…" in the mobile layout, before the App's actions.

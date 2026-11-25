@@ -102,6 +102,22 @@ route as `route` when the query names none. On DSM 7.3.2, both sign-ins kept
 `launchParam`, and the window opened at the route; an App following
 `followLaunchRoute` needs nothing of its own.
 
+### Sign-out
+
+Without a host of its own, the entry's `ctx.host.signOut()` clears this
+package's sign-in cache, signs out of DSM (`SYNO.API.Auth` `logout`) and then
+opens the address the page shows, now without a session, through the
+`navigate` option (default `location.replace`). That page takes the same
+sign-in hand-off as a first open without a session: the entry page
+(`ui.launch: new-page`) and a short path go to DSM's App start, whose sign-in
+opens the App again; a portal alias shows the App's branded sign-in. The App's
+route survives either way. It opens the page even when DSM does not answer the
+logout, so a sign-out that did not happen shows the App again rather than a
+sign-in. `AppShell` offers this sign-out on the account wherever DSM draws no
+account: a DSM window, and a page of its own on DSM's origin (`host` is
+`standalone-web` and `dsmStandalone` is `true`). A page outside DSM and a native
+shell, which keeps its own sign-in, show the account without it.
+
 What a sign-in URL may carry:
 
 - It stays on the entry's origin, at `/<alias>/` or `/`; no launch value
