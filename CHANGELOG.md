@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.53.66
+
+- `AppShell` offers Sign out on the entry page that `ui.launch: new-page` opens, a portal alias and a short path (`host` `standalone-web` with `dsmStandalone: true`), as it already did in a DSM window. A page outside DSM and a native shell show the account without it.
+- The entry host's `ctx.host.signOut()` ends the DSM session and reopens the page's address signed out, so each entry takes its own sign-in hand-off and keeps the App's route, instead of leaving the user on DSM's desktop. `AppContextOptions.navigate` overrides where it goes. See [entry pages](docs/entry-page.md#sign-out).
+- `datamigrate`: a run with work to do takes an exclusive `flock` on `.data-version.lock` in the data directory and reads the state again under it, so concurrent CGI requests, the daemon and lifecycle scripts apply each migration once. The wait has no time limit; the new `RunContext` ends it on cancellation and stops before the next migration. An up-to-date run reads `data-version` only and takes no lock.
+- Reuse the existing executor release and digests.
+
 ## 0.53.65
 
 - `ctx.uiUpdate.check()` reports a replaced UI only when the page's build and the installed `entry.json` (or legacy entry page) build are both CLI build hashes and differ. Any other build, a gateway reply, a sign-in page, an error or a missing package is unknown, so `UiUpdateNotice` no longer shows "updated, reload" on every load of a DSM window whose build another tool rendered.
