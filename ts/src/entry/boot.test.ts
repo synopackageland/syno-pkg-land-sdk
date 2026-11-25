@@ -99,12 +99,15 @@ test('valid portal rewrites after a probe; a missing alias retains the working e
  }
 })
 
+const buildA = 'a'.repeat(64), buildB = 'b'.repeat(64)
+const pointer = (build: unknown) => new Response(JSON.stringify({v: 1, build}))
+
 test('uiUpdate compares the exact CLI hash and handles missing metadata, refusals and offline', async () => {
- let html = '<meta name="synopkgland-build" content="abc">'
+ let html = `<meta name="synopkgland-build" content="${buildA}">`
  const request = vi.fn<typeof globalThis.fetch>(async () => new Response(html))
- const ctx = createAppContext({packageId: 'ExampleApp', build: 'abc', token: 'token', pageURL: entryURL, fetch: request})
+ const ctx = createAppContext({packageId: 'ExampleApp', build: buildA, token: 'token', pageURL: entryURL, fetch: request})
  expect(await ctx.uiUpdate!.check()).toBe(false)
- html = '<meta content="abcd" name="synopkgland-build">'
+ html = `<meta content="${buildB}" name="synopkgland-build">`
  expect(await ctx.uiUpdate!.check()).toBe(true)
  html = '<script src="app.js?v=another-build"></script>'
  expect(await ctx.uiUpdate!.check()).toBe(false)
@@ -117,14 +120,51 @@ test('uiUpdate compares the exact CLI hash and handles missing metadata, refusal
 })
 
 test('uiUpdate reads the build from the fixed entry page pointer first', async () => {
- let build = 'abc'
+ let build = buildA
  const request = vi.fn<typeof globalThis.fetch>(async url => String(url).includes('entry.json')
-  ? new Response(JSON.stringify({v: 1, build})) : new Response('<meta name="synopkgland-build" content="other">'))
- const ctx = createAppContext({packageId: 'ExampleApp', build: 'abc', token: 'token', pageURL: entryURL, fetch: request})
+  ? pointer(build) : new Response(`<meta name="synopkgland-build" content="${buildB}">`))
+ const ctx = createAppContext({packageId: 'ExampleApp', build: buildA, token: 'token', pageURL: entryURL, fetch: request})
  expect(await ctx.uiUpdate!.check()).toBe(false)
- build = 'def'
+ build = buildB
  expect(await ctx.uiUpdate!.check()).toBe(true)
  expect(request.mock.calls.every(([url]) => String(url).includes('entry.json'))).toBe(true)
+ ctx.host.dispose()
+})
+
+// The DSM desktop, a portal alias and the entry page itself read the App's
+// entry.json on their own prefix; an App gateway on another prefix may answer.
+test.each([
+ ['DSM desktop', 'https://nas.example:5001/?launchApp=SYNO.SDS.ExampleApp.Instance', 'https://nas.example:5001/webman/3rdparty/ExampleApp/app/entry.json'],
+ ['portal alias', 'https://nas.example:5001/example/#/overview', 'https://nas.example:5001/example/webman/3rdparty/ExampleApp/app/entry.json'],
+ ['entry page', 'https://nas.example:5001/webman/3rdparty/ExampleApp/app/launch.html', 'https://nas.example:5001/webman/3rdparty/ExampleApp/app/entry.json'],
+])('uiUpdate on the %s reads that prefix\'s entry.json', async (_mode, pageURL, expected) => {
+ const request = vi.fn<typeof globalThis.fetch>(async () => pointer(buildB))
+ const ctx = createAppContext({packageId: 'ExampleApp', build: buildA, token: 'token', pageURL, fetch: request})
+ expect(await ctx.uiUpdate!.check()).toBe(true)
+ const url = new URL(String(request.mock.calls[0]![0]))
+ expect(url.origin + url.pathname).toBe(expected)
+ ctx.host.dispose()
+})
+
+test('uiUpdate is unknown, not stale, for anything but two CLI builds', async () => {
+ const answers: Array<[string, () => Response]> = [
+  ['a gateway sign-in refusal', () => new Response(JSON.stringify({error: 'dsm_sign_in_required'}), {status: 401})],
+  ['a gateway JSON answer', () => new Response(JSON.stringify({success: false, error: {code: 119}}))],
+  ['a single-page app', () => new Response('<!doctype html><div id="app"></div>')],
+  ['a pointer of another version', () => new Response(JSON.stringify({v: 2, build: buildB}))],
+  ['a pointer with a short build', () => pointer('6f49e3f0b24f')],
+  ['a missing package', () => new Response('Not found', {status: 404})],
+ ]
+ for(const [, answer] of answers) {
+  const ctx = createAppContext({packageId: 'ExampleApp', build: buildA, token: 'token', pageURL: entryURL, fetch: vi.fn(async () => answer())})
+  expect(await ctx.uiUpdate!.check()).toBe(false)
+  ctx.host.dispose()
+ }
+ // A page whose build is not a CLI hash, as a window another tool rendered, never asks.
+ const request = vi.fn<typeof globalThis.fetch>(async () => pointer(buildB))
+ const ctx = createAppContext({packageId: 'ExampleApp', build: '6f49e3f0b24f', token: 'token', pageURL: entryURL, fetch: request})
+ expect(await ctx.uiUpdate!.check()).toBe(false)
+ expect(request).not.toHaveBeenCalled()
  ctx.host.dispose()
 })
 
