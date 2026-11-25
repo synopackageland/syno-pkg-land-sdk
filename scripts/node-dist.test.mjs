@@ -39,6 +39,11 @@ test('release version generation rebuilds the committed Node payload', () => {
   try {
     for (const dir of ['scripts', 'ts', 'python/synopkgland_app', 'rust/app']) mkdirSync(join(work, dir), { recursive: true })
     cpSync(join(root, 'scripts/sdk-version.mjs'), join(work, 'scripts/sdk-version.mjs'))
+    // The Node build first checks the generated protocol limits against spec/.
+    for (const name of ['scripts/protocol-limits.mjs', 'spec/protocol/v1/limits.json', 'internal/wirelimits/limits.go',
+      'executor/internal/wirelimits/limits.go', 'ts/src/protocol/limits.ts', 'python/synopkgland_app/_limits.py']) {
+      cpSync(join(root, name), join(work, name), { recursive: true })
+    }
     for (const name of ['src', 'package.json', 'tsconfig.json', 'tsconfig.build.json']) {
       cpSync(join(root, 'node', name), join(work, 'node', name), { recursive: true })
     }
