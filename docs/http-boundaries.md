@@ -168,6 +168,27 @@ and every other method still requires a session. A request carrying
 `Origin`, `Referer` or `Sec-Fetch-Site` must pass `CheckOrigin`; service
 callbacks normally carry none.
 
+A route that a browser reaches from another site, such as a payment
+provider's return URL, its form POST back (ECPay `OrderResultURL`) or a link
+opened from mail or a chat message, opts in with `AllowCrossSiteNavigation`:
+
+```go
+route := api.HandleIntegration("app.pay.return", returnHandler).AllowCrossSiteNavigation()
+```
+
+That route also admits a cross-site, same-site or `Sec-Fetch-Site: none`
+request when it is a top-level navigation: a `GET` or `HEAD`, or a `POST`
+whose body is `application/x-www-form-urlencoded` or `multipart/form-data`,
+and, when the browser sends them, `Sec-Fetch-Mode: navigate` and
+`Sec-Fetch-Dest: document`. Before the handler runs, the SDK removes the
+`Cookie`, `X-SYNO-TOKEN` and `SynoToken` headers from such a request, so it
+never carries the DSM session or a cookie the App set; the handler verifies a
+token in the URL or body exactly as it would for a service callback. A
+same-origin request keeps its headers. Fetches, iframes, other content types
+and every route without the opt-in are still refused with `cross_origin`.
+`AllowCrossSiteNavigation` on any other kind of route fails server
+construction.
+
 The handler is the authentication boundary. Before acting it must verify the
 caller with a secret the App holds: a bot token, an HMAC signature, a webhook
 key or a signed, expiring locator. Bound its body, method and content type.

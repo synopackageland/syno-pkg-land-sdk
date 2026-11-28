@@ -39,6 +39,7 @@ type Route struct {
 	httpHandler     http.Handler
 	httpPrefix      string
 	integration     bool
+	navigation      bool
 	ceremony        bool
 }
 
