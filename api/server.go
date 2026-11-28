@@ -153,6 +153,9 @@ func newServer(auth Authenticator, p permissions, routes ...Route) (*Server, err
 		if route.integration != (route.policy == policyIntegration) {
 			return nil, errors.New("integration permission and HandleIntegration must be used together: " + method)
 		}
+		if route.navigation && !route.integration {
+			return nil, errors.New("AllowCrossSiteNavigation applies only to HandleIntegration routes: " + method)
+		}
 		if rule, owned := sdkPolicy(method); owned {
 			route.policy = rule
 		}

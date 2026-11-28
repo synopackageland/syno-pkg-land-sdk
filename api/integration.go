@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"mime"
 	"net/http"
 	"net/url"
 )
@@ -19,9 +20,26 @@ const IntegrationPermission = "integration"
 // route with one difference: the SDK skips the DSM session and App entry gate
 // for this method only, so h must verify the caller itself (token, HMAC, key
 // or signed locator) before acting. Browser-originated requests still pass
-// CheckOrigin. h may act for a DSM account only through ActAs.
+// CheckOrigin unless the route opts into AllowCrossSiteNavigation. h may act
+// for a DSM account only through ActAs.
 func HandleIntegration(method string, h http.Handler) Route {
 	return Route{method: method, httpHandler: h, integration: true}
+}
+
+// AllowCrossSiteNavigation lets a HandleIntegration route receive top-level
+// browser navigations that another site or no page started: a payment
+// provider's return redirect, its form POST back, or a link opened from mail
+// or a chat message. Such a navigation is a GET or HEAD, or a POST whose body
+// is a form (application/x-www-form-urlencoded or multipart/form-data); when
+// the browser sends Sec-Fetch-Mode or Sec-Fetch-Dest they must be "navigate"
+// and "document". The SDK removes the Cookie, X-SYNO-TOKEN and SynoToken
+// headers before h runs, so an admitted cross-site request never carries an
+// ambient DSM or App session; h must verify the request itself, as for any
+// integration call. Same-origin requests are unchanged and keep their
+// headers. Any other cross-site request is still refused with cross_origin.
+func (r Route) AllowCrossSiteNavigation() Route {
+	r.navigation = true
+	return r
 }
 
 // ErrNotIntegration means ActAs ran outside an integration handler.
@@ -95,17 +113,52 @@ func (s *Server) serveIntegration(w http.ResponseWriter, r *http.Request) bool {
 		writeStreamError(w, BadRequest("integration requests name one method"))
 		return true
 	}
-	// Services post without browser headers; a browser's request must still be same-origin.
+	// Services post without browser headers; a browser's request must still be
+	// same-origin, unless the route accepts cross-site navigations, which then
+	// lose every ambient credential.
 	if r.Header.Get("Origin") != "" || r.Header.Get("Referer") != "" || r.Header.Get("Sec-Fetch-Site") != "" {
 		if e := CheckOrigin(r); e != nil {
-			writeStreamError(w, e)
-			return true
+			if !s.routes[method].navigation || !topLevelNavigation(r) {
+				writeStreamError(w, e)
+				return true
+			}
+			r = withoutAmbientCredentials(r)
 		}
 	}
 	noteMethod(r, method)
 	ctx := context.WithValue(r.Context(), integrationKey{}, integrationScope{s.auth, s.entry})
 	s.routes[method].httpHandler.ServeHTTP(w, r.WithContext(ctx))
 	return true
+}
+
+// topLevelNavigation reports whether r looks like a browser loading a page:
+// a GET or HEAD, or a form POST, and, when the browser says so, a navigate
+// request for a document. A page cannot set the Sec-Fetch-* headers.
+func topLevelNavigation(r *http.Request) bool {
+	if mode := r.Header.Get("Sec-Fetch-Mode"); mode != "" && mode != "navigate" {
+		return false
+	}
+	if dest := r.Header.Get("Sec-Fetch-Dest"); dest != "" && dest != "document" {
+		return false
+	}
+	switch r.Method {
+	case http.MethodGet, http.MethodHead:
+		return true
+	case http.MethodPost:
+		media, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+		return err == nil && (media == "application/x-www-form-urlencoded" || media == "multipart/form-data")
+	}
+	return false
+}
+
+// withoutAmbientCredentials returns r with the browser's cookies and DSM
+// tokens removed, so a cross-site navigation cannot act as a signed-in user.
+func withoutAmbientCredentials(r *http.Request) *http.Request {
+	r = r.Clone(r.Context())
+	for _, name := range []string{"Cookie", "X-SYNO-TOKEN", "SynoToken"} {
+		r.Header.Del(name)
+	}
+	return r
 }
 
 // IntegrationRoute returns the integration method a request selects, or "".

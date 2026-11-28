@@ -259,3 +259,98 @@ func TestActAsOnlyInsideAnIntegrationHandler(t *testing.T) {
 }
 
 func sha256Hex(s string) string { return fmt.Sprintf("%x", sha256.Sum256([]byte(s))) }
+
+func TestCrossSiteNavigationReachesAnOptedInIntegrationRoute(t *testing.T) {
+	auth := &admitter{entryAuth: entryAuth{&fakeAuth{user: "operator"}, "app-privilege"}}
+	var seen []*http.Request
+	record := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seen = append(seen, r)
+		w.Write([]byte("landed"))
+	})
+	srv, err := NewServerWithPermissions(auth, []byte(`{"schema":1,"default":"administrators","methods":{"app.return":"integration","app.callback":"integration","app.read":"authenticated"}}`),
+		HandleIntegration("app.return", record).AllowCrossSiteNavigation(),
+		HandleIntegration("app.callback", record),
+		Handle("app.read", func(context.Context, Caller, json.RawMessage) (any, error) { return "ran", nil }))
+	if err != nil {
+		t.Fatal(err)
+	}
+	send := func(method, target, contentType string, headers map[string]string) *httptest.ResponseRecorder {
+		r := httptest.NewRequest(method, target, strings.NewReader("MerchantTradeNo=1"))
+		if contentType != "" {
+			r.Header.Set("Content-Type", contentType)
+		}
+		r.Header.Set("Cookie", "id=dsm-session; studio_customer=portal")
+		r.Header.Set("X-SYNO-TOKEN", "token")
+		for k, v := range headers {
+			r.Header.Set(k, v)
+		}
+		w := httptest.NewRecorder()
+		srv.ServeHTTP(w, r)
+		return w
+	}
+	nav := func(site string) map[string]string {
+		return map[string]string{"Sec-Fetch-Site": site, "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Dest": "document"}
+	}
+	form := "application/x-www-form-urlencoded"
+	crossFormPost := nav("cross-site")
+	crossFormPost["Origin"] = "https://payment.example"
+
+	// Admitted: return redirects, links opened from mail or chat, a provider's form POST back.
+	for _, tc := range []struct {
+		name, method, contentType string
+		headers                   map[string]string
+	}{
+		{"GET none", "GET", "", nav("none")},
+		{"GET cross-site", "GET", "", nav("cross-site")},
+		{"GET same-site", "GET", "", nav("same-site")},
+		{"GET foreign Referer only", "GET", "", map[string]string{"Referer": "https://checkout.example/pay"}},
+		{"form POST cross-site", "POST", form, crossFormPost},
+		{"multipart POST foreign Origin only", "POST", "multipart/form-data; boundary=x", map[string]string{"Origin": "https://payment.example"}},
+	} {
+		seen = nil
+		w := send(tc.method, "/api.cgi?method=app.return", tc.contentType, tc.headers)
+		if w.Code != 200 || w.Body.String() != "landed" || len(seen) != 1 {
+			t.Fatalf("%s: %d %s", tc.name, w.Code, w.Body)
+		}
+		for _, name := range []string{"Cookie", "X-SYNO-TOKEN", "SynoToken"} {
+			if seen[0].Header.Get(name) != "" {
+				t.Fatalf("%s: handler received ambient %s", tc.name, name)
+			}
+		}
+	}
+
+	// A same-origin request keeps its headers.
+	seen = nil
+	if w := send("GET", "/api.cgi?method=app.return", "", nav("same-origin")); w.Code != 200 || len(seen) != 1 || seen[0].Header.Get("Cookie") == "" {
+		t.Fatalf("same-origin: %d %s", w.Code, w.Body)
+	}
+
+	// Refused: non-navigation cross-site requests, routes that did not opt in, and ordinary RPC.
+	for _, tc := range []struct {
+		name, method, target, contentType string
+		headers                           map[string]string
+	}{
+		{"cross-site fetch", "GET", "/api.cgi?method=app.return", "", map[string]string{"Sec-Fetch-Site": "cross-site", "Sec-Fetch-Mode": "cors", "Sec-Fetch-Dest": "empty"}},
+		{"cross-site iframe", "GET", "/api.cgi?method=app.return", "", map[string]string{"Sec-Fetch-Site": "cross-site", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Dest": "iframe"}},
+		{"cross-site JSON POST", "POST", "/api.cgi?method=app.return", "application/json", crossFormPost},
+		{"cross-site text POST", "POST", "/api.cgi?method=app.return", "text/plain", map[string]string{"Origin": "https://evil.example"}},
+		{"cross-site PUT", "PUT", "/api.cgi?method=app.return", form, crossFormPost},
+		{"route without opt-in", "GET", "/api.cgi?method=app.callback", "", nav("cross-site")},
+		{"RPC cross-site navigation", "GET", "/api.cgi?method=app.read", "", nav("cross-site")},
+		{"RPC cross-site form POST", "POST", "/api.cgi?method=app.read", form, crossFormPost},
+	} {
+		seen = nil
+		w := send(tc.method, tc.target, tc.contentType, tc.headers)
+		if w.Code != 403 || !strings.Contains(w.Body.String(), "cross_origin") || len(seen) != 0 {
+			t.Fatalf("%s: %d %s ran=%d", tc.name, w.Code, w.Body, len(seen))
+		}
+	}
+}
+
+func TestCrossSiteNavigationRequiresHandleIntegration(t *testing.T) {
+	_, err := NewServerWithPermissions(&fakeAuth{}, []byte(`{"schema":1,"default":"administrators","methods":{"app.proxy":"authenticated"}}`),
+		HandleHTTP("/proxy/", "app.proxy", http.NotFoundHandler()).AllowCrossSiteNavigation())
+	if err == nil || !strings.Contains(err.Error(), "AllowCrossSiteNavigation") {
+		t.Fatalf("err = %v", err)
+	}
+}
