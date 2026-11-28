@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.53.68 (2026-11-28)
+
+- Add `HandleIntegration(...).AllowCrossSiteNavigation()`. A route that opts in accepts top-level cross-site navigations (GET/HEAD and form POST), such as payment returns and links opened from mail or chat, and strips Cookie, X-SYNO-TOKEN and SynoToken before the handler runs. Routes without the opt-in and ordinary RPC keep refusing cross-site requests.
+- Reuse the existing executor release and digests.
+
 ## 0.53.67 (2026-11-25)
 
 - Support static prefix pages declared as ui.path_pages by the CLI. A matching SDK entry uses the prefix for sharing, the HTML asset base for relative resources, and the DSM origin for API calls.
